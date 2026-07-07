@@ -1,0 +1,11 @@
+{
+  "id": "case-example",
+  "unitId": "unit-01",
+  "title": "Example Case",
+  "centralQuestion": "",
+  "sceneIds": [],
+  "activityIds": [],
+  "assessmentIds": [],
+  "evidenceIds": [],
+  "estimatedMinutes": 40
+}

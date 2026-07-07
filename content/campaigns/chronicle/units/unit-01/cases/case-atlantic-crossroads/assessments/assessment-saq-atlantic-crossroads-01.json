@@ -1,0 +1,10 @@
+{
+  "id": "assessment-saq-atlantic-crossroads-01",
+  "caseId": "case-atlantic-crossroads",
+  "type": "saq",
+  "title": "Unit 1 Historical Investigation (SAQ)",
+  "modeSupport": ["practice", "assigned", "exam-simulation"],
+  "responseParts": ["A", "B", "C"],
+  "sourceAccess": "side-by-side",
+  "status": "authoring-placeholder"
+}

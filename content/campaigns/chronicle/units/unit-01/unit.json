@@ -1,0 +1,9 @@
+{
+  "id": "unit-01",
+  "campaignId": "chronicle",
+  "title": "Period 1: 1491–1607",
+  "apushUnit": 1,
+  "dateRange": "1491–1607",
+  "unlockPolicy": "teacher-controlled",
+  "caseIds": ["case-atlantic-crossroads"]
+}

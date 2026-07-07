@@ -1,0 +1,22 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1d1d1d;
+  background: #f4efe4;
+}
+
+body {
+  margin: 0;
+}
+
+.foundation-screen {
+  max-width: 720px;
+  margin: 10vh auto;
+  padding: 2rem;
+}
+
+.eyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

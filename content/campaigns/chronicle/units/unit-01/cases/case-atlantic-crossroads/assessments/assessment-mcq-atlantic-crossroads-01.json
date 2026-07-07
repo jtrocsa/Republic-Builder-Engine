@@ -1,0 +1,9 @@
+{
+  "id": "assessment-mcq-atlantic-crossroads-01",
+  "caseId": "case-atlantic-crossroads",
+  "type": "mcq",
+  "title": "Unit 1 Evidence Verification (MCQ)",
+  "modeSupport": ["practice", "assigned", "exam-simulation"],
+  "questionCount": 4,
+  "status": "authoring-placeholder"
+}

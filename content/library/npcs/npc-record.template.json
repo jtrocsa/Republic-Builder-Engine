@@ -1,0 +1,10 @@
+{
+  "id": "npc-role-or-name",
+  "displayName": "",
+  "role": "",
+  "historicalStatus": "fictional-institute | historical-person",
+  "portraitPath": "",
+  "bio": "",
+  "dialogueTags": [],
+  "campaignIds": ["chronicle"]
+}

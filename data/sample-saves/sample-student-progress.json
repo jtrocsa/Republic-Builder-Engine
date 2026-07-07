@@ -1,0 +1,14 @@
+{
+  "player": {
+    "id": "sample-student",
+    "displayName": "Sample Chronicler"
+  },
+  "campaignProgress": {
+    "chronicle": {
+      "unlockedUnits": ["unit-01"],
+      "completedCases": [],
+      "archiveEvidenceIds": [],
+      "submissionIds": []
+    }
+  }
+}
