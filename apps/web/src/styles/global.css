@@ -313,3 +313,81 @@ button { font: inherit; }
   .ci-protocol-grid { grid-template-columns: 1fr; }
   .ci-protocol-grid article { min-height: 0; }
 }
+
+/* --------------------------------------------------------------------------
+   Chronicle Author Mode — development-only content editing controls
+   -------------------------------------------------------------------------- */
+.ci-topbar-controls { display: inline-flex; align-items: center; gap: .75rem; }
+.ci-author-toggle {
+  min-height: 34px;
+  padding: .46rem .62rem;
+  color: #d5e5df;
+  border: 1px solid rgba(162, 205, 193, .28);
+  border-radius: .52rem;
+  background: rgba(7, 30, 46, .6);
+  cursor: pointer;
+  font: 700 .59rem/1 'Cinzel', Georgia, serif;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.ci-author-toggle:hover { border-color: rgba(230, 194, 114, .62); transform: translateY(-1px); }
+.ci-author-toggle.is-active { color: #10283b; border-color: #f0ce7d; background: linear-gradient(135deg, #f4dc9c, #c98f35); }
+.ci-author-toggle:focus-visible { outline: 3px solid #f2d27f; outline-offset: 3px; }
+
+.ci-shell--authoring .ci-editable { position: relative; cursor: text; outline: 1px dashed rgba(244, 213, 137, .54); outline-offset: 5px; border-radius: .16rem; transition: outline-color .16s ease, background .16s ease; }
+.ci-shell--authoring .ci-editable:hover { outline-color: #ffe4a1; background: rgba(244, 211, 142, .08); }
+.ci-shell--authoring .ci-button.ci-editable { cursor: text; }
+.ci-shell--authoring .ci-editable::after { position: absolute; z-index: 2; top: -1.1rem; right: 0; padding: .18rem .33rem; color: #152c3d; border-radius: .22rem; background: #efd28d; content: 'Edit'; font: 700 .5rem/1 'Cinzel', Georgia, serif; letter-spacing: .05em; text-transform: uppercase; opacity: 0; pointer-events: none; }
+.ci-shell--authoring .ci-editable:hover::after { opacity: 1; }
+
+.ci-author-panel {
+  position: fixed;
+  z-index: 21;
+  top: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  width: min(430px, calc(100vw - 2rem));
+  flex-direction: column;
+  overflow: hidden;
+  color: #e9e1ca;
+  border: 1px solid rgba(237, 197, 113, .4);
+  border-radius: 1rem;
+  background: linear-gradient(165deg, #0c2940 0%, #061824 100%);
+  box-shadow: -20px 20px 70px rgba(0, 0, 0, .48), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.ci-author-panel__header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid rgba(237, 197, 113, .18); }
+.ci-author-panel__eyebrow { margin: 0 0 .42rem; color: #dcb465; font: 700 .58rem/1 'Cinzel', Georgia, serif; letter-spacing: .13em; text-transform: uppercase; }
+.ci-author-panel h2 { margin: 0; color: #fff0c8; font: 700 1.35rem/1 'Cinzel', Georgia, serif; }
+.ci-author-panel__header p:not(.ci-author-panel__eyebrow) { margin: .6rem 0 0; color: #b9cac6; font-size: .79rem; line-height: 1.52; }
+.ci-author-close { width: 2rem; height: 2rem; padding: 0; color: #ecd79e; border: 1px solid rgba(237, 197, 113, .3); border-radius: .45rem; background: rgba(255,255,255,.04); cursor: pointer; font-size: 1.35rem; line-height: 1; }
+.ci-author-close:hover { background: rgba(230, 190, 105, .13); }
+.ci-author-tabs { display: flex; flex-wrap: wrap; gap: .4rem; padding: .85rem 1.1rem; border-bottom: 1px solid rgba(237, 197, 113, .13); }
+.ci-author-tabs button { padding: .42rem .55rem; color: #bdcfc9; border: 1px solid rgba(195, 213, 205, .18); border-radius: 999px; background: rgba(255,255,255,.035); cursor: pointer; font: 700 .55rem/1 'Cinzel', Georgia, serif; letter-spacing: .04em; text-transform: uppercase; }
+.ci-author-tabs button:hover, .ci-author-tabs button.is-active { color: #10283b; border-color: #f0ce7d; background: linear-gradient(135deg, #f2db9f, #cf963d); }
+.ci-author-panel__notice { margin: .9rem 1.1rem .1rem; padding: .7rem .78rem; color: #d0d7ca; border: 1px solid rgba(139, 193, 177, .25); border-radius: .55rem; background: rgba(30, 91, 93, .15); font-size: .72rem; line-height: 1.5; }
+.ci-author-panel__notice strong { color: #d9ebcf; }
+.ci-author-form { display: grid; gap: .8rem; flex: 1; overflow-y: auto; padding: .9rem 1.1rem 1rem; }
+.ci-author-field { display: grid; gap: .38rem; padding: .72rem; border: 1px solid rgba(236, 196, 111, .16); border-radius: .6rem; background: rgba(255,255,255,.025); transition: border-color .16s ease, background .16s ease; }
+.ci-author-field.is-selected { border-color: rgba(245, 213, 136, .72); background: rgba(244, 211, 142, .08); }
+.ci-author-field > span { color: #e5c577; font: 700 .57rem/1.2 'Cinzel', Georgia, serif; letter-spacing: .08em; text-transform: uppercase; }
+.ci-author-field textarea { width: 100%; resize: vertical; padding: .55rem .6rem; color: #f5edda; border: 1px solid rgba(212, 183, 115, .3); border-radius: .42rem; background: rgba(2, 13, 23, .64); font: 400 .78rem/1.48 'DM Sans', system-ui, sans-serif; }
+.ci-author-field textarea:focus { outline: 2px solid rgba(242, 209, 126, .72); outline-offset: 2px; }
+.ci-author-field__warning { display: none; color: #f0c584; font-size: .67rem; line-height: 1.4; }
+.ci-author-field__warning.is-visible { display: block; }
+.ci-author-actions { display: flex; flex-wrap: wrap; gap: .45rem; padding: .9rem 1.1rem .75rem; border-top: 1px solid rgba(237, 197, 113, .16); }
+.ci-author-button { padding: .56rem .62rem; color: #e0e8df; border: 1px solid rgba(208, 224, 216, .22); border-radius: .45rem; background: rgba(255,255,255,.045); cursor: pointer; font: 700 .55rem/1 'Cinzel', Georgia, serif; letter-spacing: .04em; text-transform: uppercase; }
+.ci-author-button:hover { border-color: rgba(241, 207, 126, .64); background: rgba(240, 205, 125, .1); }
+.ci-author-button--primary { color: #112a3c; border-color: #f0ce7d; background: linear-gradient(135deg, #f2db9f, #cf963d); }
+.ci-author-button--danger { color: #ffcbbb; border-color: rgba(213, 105, 85, .42); }
+.ci-author-button--danger:hover { background: rgba(158, 60, 47, .24); }
+.ci-author-button--file { display: inline-flex; align-items: center; }
+.ci-author-panel__footnote { margin: 0; padding: 0 1.1rem 1rem; color: #8fa6a1; font-size: .67rem; line-height: 1.45; }
+
+@media (max-width: 620px) {
+  .ci-topbar-controls { gap: .4rem; }
+  .ci-author-toggle { padding: .42rem .48rem; font-size: .5rem; }
+  .ci-author-panel { top: .5rem; right: .5rem; bottom: .5rem; width: calc(100vw - 1rem); }
+  .ci-author-panel__header { padding: 1rem; }
+}
