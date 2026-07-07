@@ -1,13 +1,10 @@
 import './styles/global.css';
+import { mountChronicleInstitute } from './features/chronicle-institute/chronicle-institute.js';
 
 const app = document.querySelector('#app');
 
-if (app) {
-  app.innerHTML = `
-    <main class="foundation-screen">
-      <p class="eyebrow">Republic Builder Engine</p>
-      <h1>Chronicle Foundation</h1>
-      <p>Repository structure is ready. The first playable case is <strong>The Atlantic Crossroads</strong>.</p>
-    </main>
-  `;
+if (!app) {
+  throw new Error('Republic Builder could not find the #app mount element.');
 }
+
+mountChronicleInstitute(app);
