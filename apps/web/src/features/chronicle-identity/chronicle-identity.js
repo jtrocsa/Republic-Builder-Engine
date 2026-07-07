@@ -9,6 +9,7 @@ import {
   writeLocalContent
 } from '../../engine/content/author-content-store.js';
 import { readPlayerProfile, writePlayerProfile } from '../../engine/player/player-profile-store.js';
+import { mountAtlanticCrossroadsPreview } from '../case-player/atlantic-crossroads-preview.js';
 
 const CONTENT_KEY = 'republic-builder.chronicle.identity.author-content.v1';
 const AUTOSAVE_DELAY = 650;
@@ -352,7 +353,7 @@ export function mountChronicleIdentity(app, { onReturn } = {}) {
     app.querySelector('[data-registration-action="back"]')?.addEventListener('click', () => { screen = 'identity'; render(); });
     app.querySelector('[data-registration-action="enter"]')?.addEventListener('click', () => { profile = writePlayerProfile({ ...profile, codexIssued: true, fieldArrivalSeen: true }); screen = 'field'; render(); });
     app.querySelector('[data-field-action="talk"]')?.addEventListener('click', () => { fieldState.spoke = true; render(); });
-    app.querySelector('[data-field-action="complete"]')?.addEventListener('click', () => { fieldState.completeNotice = true; render(); });
+    app.querySelector('[data-field-action="complete"]')?.addEventListener('click', () => { fieldState.completeNotice = true; screen = 'case'; mountAtlanticCrossroadsPreview(app, { profile, onReturn: () => { screen = 'field'; render(); } }); });
     app.querySelector('[data-field-action="return"]')?.addEventListener('click', () => { screen = 'identity'; render(); });
 
     app.querySelector('[data-author-action="toggle"]')?.addEventListener('click', () => { authorOn = !authorOn; render(); });
