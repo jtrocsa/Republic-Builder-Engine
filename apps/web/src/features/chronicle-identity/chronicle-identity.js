@@ -41,19 +41,18 @@ const FIELD_PROP_ASSETS = {
 };
 
 const FIELD_MAP = [
-  'wwwwwwwwwwwwwwwwwwww',
-  'wwwwwwwwwwwwwwwwwwww',
-  'wwwwwwwwwwsssssswwww',
-  'wwwwwwwsssggggssswww',
-  'wwwwwssggggggggsswww',
-  'wwwssggggppgggggssww',
-  'wwssggggppggggggssww',
-  'wwssggggpppgggggssww',
-  'wwssgggggppgggggssww',
-  'wwwssggggppggggsswww',
-  'wwwwssggggggggsswwww',
-  'wwwwwwwsssssssswwwww',
-  'wwwwwwwwwwwwwwwwwwww'
+  'wwwwwwwwwwwwwwwwww',
+  'wwwwwwwwwwwwwwwwww',
+  'wwwwwwsssssswwwwww',
+  'wwwwwssggggggsswww',
+  'wwwwssggggggggssww',
+  'wwwssgggpppgggssww',
+  'wwssggggpppggggssw',
+  'wwssggggpppgggggss',
+  'wwwssggggppggggssw',
+  'wwwwssggggggggssww',
+  'wwwwwssggggggsswww',
+  'wwwwwwwsssssswwwww'
 ];
 const FIELD_COLUMNS = FIELD_MAP[0].length;
 const FIELD_ROWS = FIELD_MAP.length;
@@ -61,16 +60,16 @@ const FIELD_MOVE_DURATION = 185;
 const BLOCKED_TILES = new Set(['w', 'r']);
 const MENTOR_POSITION = { x: 12, y: 6 };
 const FIELD_PROPS = [
-  { type: 'beacon', x: 7, y: 9, label: 'Chronicle arrival beacon', scale: 1.12 },
-  { type: 'tent', x: 9, y: 5, label: 'Chronicle field tent', block: true, scale: 1.34 },
-  { type: 'crate', x: 10, y: 7, label: 'Field supplies', block: true, scale: .82 },
-  { type: 'lantern', x: 8, y: 7, label: 'Field lantern', scale: .72 },
-  { type: 'palm', x: 5, y: 4, label: 'Coastal palm', block: true, scale: 1.16 },
-  { type: 'palm', x: 15, y: 5, label: 'Coastal palm', block: true, scale: 1.1 },
-  { type: 'palm', x: 4, y: 8, label: 'Coastal palm', block: true, scale: 1.03 },
-  { type: 'palm', x: 15, y: 9, label: 'Coastal palm', block: true, scale: 1.04 },
-  { type: 'rowboat', x: 4, y: 10, label: 'Shore boat', block: true, scale: 1.1 },
-  { type: 'rocks', x: 16, y: 7, label: 'Shore rocks', block: true, scale: 1.05 }
+  { type: 'beacon', x: 6, y: 8, label: 'Chronicle arrival beacon', scale: 1.08 },
+  { type: 'tent', x: 9, y: 5, label: 'Chronicle field tent', block: true, scale: 1.30 },
+  { type: 'crate', x: 10, y: 7, label: 'Field supplies', block: true, scale: .84 },
+  { type: 'lantern', x: 7, y: 6, label: 'Field lantern', scale: .76 },
+  { type: 'palm', x: 6, y: 4, label: 'Coastal palm', block: true, scale: 1.16 },
+  { type: 'palm', x: 14, y: 5, label: 'Coastal palm', block: true, scale: 1.12 },
+  { type: 'palm', x: 5, y: 8, label: 'Coastal palm', block: true, scale: 1.06 },
+  { type: 'palm', x: 13, y: 9, label: 'Coastal palm', block: true, scale: 1.08 },
+  { type: 'rowboat', x: 5, y: 10, label: 'Shore boat', block: true, scale: 1.14 },
+  { type: 'rocks', x: 14, y: 7, label: 'Shore rocks', block: true, scale: 1.08 }
 ];
 
 let activeKeyCleanup = null;
@@ -267,7 +266,7 @@ function createFieldScreen(content, profile, state) {
   return `
     <main class="ci-field-shell ci-field-shell--polished">
       <section class="ci-field-header"><div><p class="ci-eyebrow">${escapeHtml(content.field.eyebrow)}</p><h1>${escapeHtml(content.field.title)}</h1><p class="ci-subtitle">${escapeHtml(content.field.subtitle)}</p><p class="ci-body">${escapeHtml(content.field.body)}</p></div><div class="ci-field-objective"><span>Current objective</span><strong id="ciFieldObjective">${escapeHtml(objective)}</strong></div></section>
-      <section class="ci-field-layout"><div class="ci-field-map ci-field-map--polished" id="ciFieldMap" style="--field-columns:${FIELD_COLUMNS};--field-rows:${FIELD_ROWS};" aria-label="Top-down Caribbean arrival field. Use arrow keys or WASD to move.">${fieldTileMarkup()}<div class="ci-field-atmosphere ci-field-atmosphere--one" aria-hidden="true"></div><div class="ci-field-atmosphere ci-field-atmosphere--two" aria-hidden="true"></div>${fieldPropsMarkup()}<div class="ci-field-player" id="ciFieldPlayer" data-facing="${state.facing}" style="${positionStyle(state.position)}"><span class="ci-field-player__shadow" aria-hidden="true"></span><img id="ciFieldPlayerSprite" src="${fieldSpriteFor(profile.appearance, state.facing, state.step)}" alt="${escapeHtml(displayName(profile))}, the Chronicler" /></div><div class="ci-field-mentor" style="${positionStyle(MENTOR_POSITION)}"><span class="ci-field-mentor__shadow" aria-hidden="true"></span><img src="${FIELD_PROP_ASSETS.mentor}" alt="${escapeHtml(content.field.mentorName)}, field mentor" /></div><div class="ci-field-mentor__signal" aria-hidden="true">!</div></div>
+      <section class="ci-field-layout"><div class="ci-field-map ci-field-map--polished" id="ciFieldMap" style="--field-columns:${FIELD_COLUMNS};--field-rows:${FIELD_ROWS};" aria-label="Top-down Caribbean arrival field. Use arrow keys or WASD to move.">${fieldTileMarkup()}<div class="ci-field-atmosphere ci-field-atmosphere--one" aria-hidden="true"></div><div class="ci-field-atmosphere ci-field-atmosphere--two" aria-hidden="true"></div>${fieldPropsMarkup()}<div class="ci-field-player" id="ciFieldPlayer" data-facing="${state.facing}" style="${positionStyle(state.position)}"><span class="ci-field-player__shadow" aria-hidden="true"></span><img id="ciFieldPlayerSprite" src="${fieldSpriteFor(profile.appearance, state.facing, state.step)}" alt="${escapeHtml(displayName(profile))}, the Chronicler" /></div><div class="ci-field-mentor" style="${positionStyle(MENTOR_POSITION)}"><span class="ci-field-mentor__shadow" aria-hidden="true"></span><img src="${FIELD_PROP_ASSETS.mentor}" alt="${escapeHtml(content.field.mentorName)}, field mentor" /></div><div class="ci-field-mentor__signal" aria-hidden="true" style="${positionStyle(MENTOR_POSITION)}">!</div></div>
       <aside class="ci-field-dialogue"><p class="ci-id-registry__kicker">Field channel</p><h2>${escapeHtml(content.field.mentorName)}</h2><span>${escapeHtml(content.field.mentorRole)}</span><p id="ciFieldContactText">${escapeHtml(prompt)}</p><button class="ci-button ci-button--primary ${canTalk ? '' : 'is-disabled'}" id="ciFieldTalkButton" type="button" data-field-action="talk" ${canTalk ? '' : 'disabled'}>${escapeHtml(content.field.interaction)} <span aria-hidden="true">→</span></button>${state.spoke ? `<button class="ci-button ci-button--secondary ci-field-complete ${state.completeNotice ? 'is-disabled' : ''}" type="button" data-field-action="complete" ${state.completeNotice ? 'disabled' : ''}>${escapeHtml(state.completeNotice ? 'Field entry complete' : content.field.continue)}</button>` : ''}<button class="ci-field-return" type="button" data-field-action="return">${escapeHtml(content.field.return)}</button><small>Movement: Arrow keys or WASD · Smooth field movement active</small></aside></section>
     </main>`;
 }
@@ -283,7 +282,7 @@ export function mountChronicleIdentity(app, { onReturn } = {}) {
   let content = readLocalContent(CONTENT_KEY, CHRONICLE_IDENTITY_DEFAULTS);
   let authorOn = false;
   let message = '';
-  let fieldState = { position: { x: 7, y: 9 }, spoke: false, completeNotice: false, facing: 'up', step: false, moving: false, queuedMove: null };
+  let fieldState = { position: { x: 8, y: 9 }, spoke: false, completeNotice: false, facing: 'up', step: false, moving: false, queuedMove: null };
   let autosaveTimer;
 
   const setAuthorStatus = (text) => { const status = app.querySelector('#ciIdentityAuthorStatus'); if (status) status.textContent = text; };

@@ -652,3 +652,116 @@ button { font: inherit; }
   .ci-field-map--polished { border-radius: .72rem; }
   .ci-field-dialogue > p { min-height: auto; }
 }
+
+/* --------------------------------------------------------------------------
+   Milestone 2.2.1 — Pokémon-style field reset
+   Restores PNG sprites, removes the visible tile-board effect, and fits the
+   scene comfortably inside an ordinary laptop viewport.
+   -------------------------------------------------------------------------- */
+.ci-field-shell--polished {
+  width: min(1180px, calc(100% - 36px));
+  min-height: auto;
+  padding: 1.35rem 0 1.5rem;
+}
+.ci-field-shell--polished .ci-field-header {
+  align-items: start;
+  gap: 1.1rem;
+}
+.ci-field-shell--polished .ci-field-header h1 {
+  max-width: none;
+  font-size: clamp(2.15rem, 4.1vw, 3.85rem);
+  line-height: .97;
+}
+.ci-field-shell--polished .ci-field-header .ci-subtitle { margin-top: .65rem; }
+.ci-field-shell--polished .ci-field-header .ci-body { max-width: 55ch; margin-top: .7rem; font-size: .92rem; line-height: 1.5; }
+.ci-field-shell--polished .ci-field-objective { width: min(300px, 30vw); padding: .76rem .85rem; }
+.ci-field-shell--polished .ci-field-layout {
+  grid-template-columns: minmax(0, 790px) minmax(270px, 320px);
+  justify-content: center;
+  align-items: start;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.ci-field-map--polished {
+  width: 100%;
+  max-height: 510px;
+  aspect-ratio: 3 / 2;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #0d526b, #0a3e55);
+  box-shadow: 0 20px 42px rgba(0,0,0,.28), inset 0 0 0 .28rem rgba(253,238,184,.11);
+}
+.ci-field-map--polished .ci-field-tile { box-shadow: none; }
+.ci-field-map--polished .ci-field-tile--water {
+  background:
+    repeating-linear-gradient(145deg, rgba(163,222,221,.16) 0 2px, transparent 2px 26px),
+    linear-gradient(135deg, #0e4d68, #167791);
+  background-size: auto, 100% 100%;
+  animation: ci-water-drift 4.5s linear infinite;
+}
+.ci-field-map--polished .ci-field-tile--water::before,
+.ci-field-map--polished .ci-field-tile--water::after { opacity: .42; animation: ci-water-shimmer 3.4s ease-in-out infinite alternate; }
+.ci-field-map--polished .ci-field-tile--water.is-shore::before {
+  bottom: 0;
+  height: 18%;
+  background: linear-gradient(180deg, rgba(255,242,195,.85), rgba(255,242,195,0));
+}
+.ci-field-map--polished .ci-field-tile--sand {
+  background:
+    radial-gradient(circle at 22% 28%, rgba(255,241,183,.34) 0 3%, transparent 4%),
+    radial-gradient(circle at 78% 70%, rgba(126,88,46,.12) 0 2%, transparent 3%),
+    linear-gradient(135deg, #d1aa60, #edd081);
+}
+.ci-field-map--polished .ci-field-tile--grass {
+  background:
+    radial-gradient(ellipse at 18% 74%, rgba(172,204,114,.18) 0 12%, transparent 13%),
+    radial-gradient(ellipse at 75% 28%, rgba(64,113,55,.14) 0 18%, transparent 19%),
+    linear-gradient(135deg, #47794d, #70a45d);
+}
+.ci-field-map--polished .ci-field-tile--grass::after {
+  width: 20%; height: 19%;
+  border-left-width: 1px; border-bottom-width: 1px;
+  opacity: .62;
+  animation: ci-grass-sway 3.5s ease-in-out infinite alternate;
+}
+.ci-field-map--polished .ci-field-tile--path {
+  background:
+    linear-gradient(90deg, rgba(255,220,142,.1), transparent 17% 83%, rgba(65,43,25,.1)),
+    linear-gradient(135deg, #94623c, #bd8653);
+}
+.ci-field-map--polished .ci-field-tile--path::after { display:none; }
+.ci-field-map--polished .ci-field-prop--palm { animation: ci-palm-sway 3.2s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.ci-field-map--polished .ci-field-prop--rowboat { animation: ci-boat-bob 3s ease-in-out infinite; }
+.ci-field-map--polished .ci-field-prop--lantern { animation: ci-lantern-flicker 1.9s ease-in-out infinite alternate; }
+.ci-field-map--polished .ci-field-prop--rocks { filter: drop-shadow(0 5px 3px rgba(0,0,0,.32)); }
+.ci-field-map--polished .ci-field-player,
+.ci-field-map--polished .ci-field-mentor {
+  width: calc((100% / var(--field-columns)) * 1.62);
+  height: calc((100% / var(--field-rows)) * 1.82);
+  transform: translate(-50%, -84%);
+}
+.ci-field-map--polished .ci-field-player img,
+.ci-field-map--polished .ci-field-mentor img { image-rendering: pixelated; image-rendering: crisp-edges; }
+.ci-field-map--polished .ci-field-player { transition: left .18s cubic-bezier(.2,.8,.25,1), top .18s cubic-bezier(.2,.8,.25,1); }
+.ci-field-mentor__signal { transform: translate(-50%, -205%); }
+.ci-field-dialogue { min-height: 400px; padding: 1.08rem; }
+.ci-field-dialogue > p { min-height: 7rem; }
+@keyframes ci-water-drift { from { background-position: 0 0, 0 0; } to { background-position: 24px 0, 0 0; } }
+@keyframes ci-water-shimmer { from { transform: translateX(0); opacity:.3; } to { transform: translateX(12%); opacity:.58; } }
+@keyframes ci-grass-sway { from { transform: rotate(-14deg) translateY(0); } to { transform: rotate(-7deg) translateY(-2%); } }
+@keyframes ci-palm-sway { from { translate: 0 0; rotate: -1deg; } to { translate: 1px -2px; rotate: 1deg; } }
+@keyframes ci-boat-bob { 0%,100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+@keyframes ci-lantern-flicker { from { filter: drop-shadow(0 0 3px rgba(244,201,104,.35)); } to { filter: drop-shadow(0 0 11px rgba(244,201,104,.88)); } }
+@media (max-width: 1080px) {
+  .ci-field-shell--polished .ci-field-layout { grid-template-columns: minmax(0, 1fr) 290px; }
+}
+@media (max-width: 900px) {
+  .ci-field-shell--polished .ci-field-layout { grid-template-columns: 1fr; }
+  .ci-field-map--polished { max-width: 790px; }
+  .ci-field-dialogue { min-height: auto; }
+}
+@media (max-width: 620px) {
+  .ci-field-shell--polished { width: min(100% - 24px, 1180px); }
+  .ci-field-shell--polished .ci-field-header h1 { font-size: clamp(2.1rem, 10vw, 3.2rem); }
+  .ci-field-shell--polished .ci-field-objective { width: auto; }
+  .ci-field-map--polished { border-radius: .72rem; }
+}
