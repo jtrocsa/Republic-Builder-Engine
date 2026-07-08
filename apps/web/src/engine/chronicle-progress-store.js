@@ -16,7 +16,9 @@ export const DEFAULT_PROGRESS = {
   pendingUploadCaseId: null,
   review: { answers: {}, saq: {} },
   unitComplete: false,
-  hubNotice: ''
+  hubNotice: '',
+  fieldNotice: '',
+  sourceActivities: {}
 };
 export function readProgress() {
   try {
@@ -28,6 +30,7 @@ export function readProgress() {
       responses: { ...DEFAULT_PROGRESS.responses, ...(saved.responses || {}) },
       reconstruction: { ...DEFAULT_PROGRESS.reconstruction, ...(saved.reconstruction || {}) },
       exchangeLedger: { ...DEFAULT_PROGRESS.exchangeLedger, ...(saved.exchangeLedger || {}) },
+      sourceActivities: { ...DEFAULT_PROGRESS.sourceActivities, ...(saved.sourceActivities || {}) },
       empireConnections: { ...DEFAULT_PROGRESS.empireConnections, ...(saved.empireConnections || {}) },
       empireOrder: Array.isArray(saved.empireOrder) ? saved.empireOrder : [],
       pendingUploadCaseId: saved.pendingUploadCaseId || null,

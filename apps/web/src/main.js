@@ -6,6 +6,16 @@ const app = document.querySelector('#app');
 const atlanticTable = new URL('./assets/maps/atlantic-navigation-table.png', import.meta.url).href;
 const waldseemuller = new URL('./assets/documents/source-waldseemuller-1507.jpg', import.meta.url).href;
 
+const recallBeaconBlue = new URL('./assets/chronicle-sprites/field/recall-beacon-blue.png', import.meta.url).href;
+const fieldNpcSprites = {
+  'taino-elder': new URL('./assets/chronicle-sprites/field/npc-taino-elder.png', import.meta.url).href,
+  'taino-gardener': new URL('./assets/chronicle-sprites/field/npc-taino-gardener.png', import.meta.url).href,
+  'taino-fisher': new URL('./assets/chronicle-sprites/field/npc-taino-fisher.png', import.meta.url).href,
+  'spanish-sailor': new URL('./assets/chronicle-sprites/field/npc-spanish-sailor.png', import.meta.url).href,
+  'columbus': new URL('./assets/chronicle-sprites/field/npc-columbus.png', import.meta.url).href,
+  'spanish-scribe': new URL('./assets/chronicle-sprites/field/npc-scribe.png', import.meta.url).href
+};
+
 const fieldSpriteAssets = {
   a: {
     down: { idle: new URL('./assets/chronicle-sprites/field/chronicler-a-down-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-a-down-step.png', import.meta.url).href },
@@ -18,17 +28,62 @@ const fieldSpriteAssets = {
     side: { idle: new URL('./assets/chronicle-sprites/field/chronicler-b-side-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-b-side-step.png', import.meta.url).href }
   }
 };
-const fieldMentorSprite = new URL('./assets/chronicle-sprites/field/field-mentor-idle.png', import.meta.url).href;
 const instituteHubBackground = new URL('./assets/institute/chronicle-institute-hub.png', import.meta.url).href;
 const instituteNpcSprites = {
   director: new URL('./assets/institute/director-rowan-hale.png', import.meta.url).href,
   amani: new URL('./assets/institute/researcher-amani-soto.png', import.meta.url).href,
   julian: new URL('./assets/institute/professor-julian-park.png', import.meta.url).href
 };
-let fieldMovement = { x: 2, y: 5, facing: 'right', moving: false, step: false, queued: null };
-const FIELD_GRID = { columns: 14, rows: 9 };
-const FIELD_BLOCKS = new Set(['6,4', '7,4', '6,5', '7,5', '4,6', '11,5']);
 
+let fieldMovement = { x: 8.3, y: 13.6, facing: 'right', moving: false, step: false, queued: null };
+const FIELD_GRID = { columns: 40, rows: 24, tile: 40 };
+const FIELD_STEP = 0.18;
+const FIELD_BLOCKS = [
+  // The field uses a Pokémon-style physics layer: feet collide with bases, not decorative overlap.
+  { x1: 2.9, y1: 7.2, x2: 9.9, y2: 9.7, kind: 'ship hull' },
+  { x1: 17.6, y1: 5.1, x2: 22.8, y2: 7.8, kind: 'garden' },
+  { x1: 22.6, y1: 8.0, x2: 26.3, y2: 10.8, kind: 'bohio one' },
+  { x1: 26.5, y1: 8.7, x2: 30.3, y2: 11.4, kind: 'bohio two' },
+  { x1: 24.1, y1: 11.3, x2: 27.9, y2: 14.2, kind: 'bohio three' },
+  { x1: 28.6, y1: 13.1, x2: 32.2, y2: 14.2, kind: 'canoe' },
+  { x1: 31.2, y1: 14.4, x2: 32.8, y2: 15.8, kind: 'campfire' },
+  { x1: 33.1, y1: 15.0, x2: 35.4, y2: 16.7, kind: 'crate' },
+  { x1: 31.6, y1: 16.5, x2: 35.4, y2: 19.2, kind: 'tent' },
+  { x1: 12.7, y1: 16.4, x2: 15.4, y2: 20.3, kind: 'southwest palm' },
+  { x1: 13.2, y1: 6.5, x2: 15.3, y2: 9.9, kind: 'north palm' },
+  { x1: 20.0, y1: 4.1, x2: 22.4, y2: 7.4, kind: 'garden palm' },
+  { x1: 34.0, y1: 10.8, x2: 36.0, y2: 14.5, kind: 'east palm' }
+];
+const FIELD_NPCS = [
+  { id: 'taino-elder', x: 27.4, y: 13.6, group: 'taino', name: 'Taíno community elder', label: 'Community elder', sprite: 'taino-elder', text: 'This dramatized field dialogue represents a community perspective. Preserve the observation: the village has houses, gardens, canoes, leadership, and daily work before European records describe it.' },
+  { id: 'taino-gardener', x: 21.6, y: 6.9, group: 'taino', name: 'Taíno gardener', label: 'Garden worker', sprite: 'taino-gardener', text: 'The field is not empty wilderness. Cassava, maize, and other cultivated foods are part of the record you are preserving.' },
+  { id: 'taino-fisher', x: 29.2, y: 15.6, group: 'taino', name: 'Taíno canoe worker', label: 'Canoe worker', sprite: 'taino-fisher', text: 'Canoes and shoreline work connect the village to water, travel, and exchange. Use observations like this before accepting outside descriptions at face value.' },
+  { id: 'spanish-sailor', x: 33.7, y: 16.2, group: 'spanish', name: 'Spanish sailor', label: 'Spanish sailor', sprite: 'spanish-sailor', text: 'The camp sees the island through voyage, crown, conversion, and profit. Compare that point of view with what you observe in the village.' },
+  { id: 'columbus', x: 5.8, y: 8.4, group: 'spanish', name: 'Christopher Columbus', label: 'Columbus', sprite: 'columbus', text: 'Dramatized encounter: Columbus is not a neutral narrator. His report was written for Spanish officials whose support mattered.' },
+  { id: 'spanish-scribe', x: 32.1, y: 18.0, group: 'spanish', name: 'Spanish scribe', label: 'Scribe', sprite: 'spanish-scribe', text: 'The written record can preserve evidence, but it also carries the writer’s purpose, audience, and assumptions.' }
+];
+const FIELD_SOURCE_POINTS = {
+  'taino-context': { x: 27.7, y: 15.2, label: 'Village investigation', kind: 'Observe + interview' },
+  'columbus-letter': { x: 6.6, y: 9.6, label: 'Columbus account', kind: 'Source encounter' },
+  'waldseemuller-map': { x: 11.0, y: 12.7, label: 'Map fragments', kind: 'Jigsaw reconstruction' }
+};
+const VILLAGE_OBSERVATIONS = [
+  { id: 'elder', title: 'Community elder', scene: 'Near the center of the village, an elder directs a dispute and points toward the shore where workers prepare canoes.', note: 'Leadership and social organization existed before Europeans arrived.' },
+  { id: 'bohio', title: 'Bohío homes', scene: 'Families move between rounded houses, stored food, and shared work spaces. The settlement is organized, occupied, and lived in.', note: 'Homes, family life, and settlement patterns contradict the idea of an empty island.' },
+  { id: 'garden', title: 'Garden and canoe work', scene: 'A garden worker and canoe worker coordinate food, water travel, and shoreline labor before the Spanish camp appears in the written record.', note: 'Food production and shoreline activity show a society with work, skill, and exchange.' }
+];
+const MAP_PIECES = [
+  { id: 'p1', label: 'Fragment A', col: 0, row: 0 },
+  { id: 'p2', label: 'Fragment B', col: 1, row: 0 },
+  { id: 'p3', label: 'Fragment C', col: 2, row: 0 },
+  { id: 'p4', label: 'Fragment D', col: 3, row: 0 },
+  { id: 'p5', label: 'Fragment E', col: 4, row: 0 },
+  { id: 'p6', label: 'Fragment F', col: 0, row: 1 },
+  { id: 'p7', label: 'Fragment G', col: 1, row: 1 },
+  { id: 'p8', label: 'Fragment H', col: 2, row: 1 },
+  { id: 'p9', label: 'Fragment I', col: 3, row: 1 },
+  { id: 'p10', label: 'Fragment J', col: 4, row: 1 }
+];
 const HUB_GRID = { columns: 18, rows: 12 };
 const HUB_BLOCKS = new Set([
   // perimeter
@@ -51,6 +106,12 @@ let instituteMovement = { x: 5, y: 9, facing: 'up', moving: false, step: false, 
 let hubDialogueId = null;
 
 let progress = readProgress();
+const VOLATILE_SCREENS = new Set(['source']);
+const VALID_SCREENS = new Set(['institute','archive','travel','field','village-activity','columbus-activity','map-jigsaw','source','codex','reconstruction','ledger','empire','upload','review','completion']);
+if (!VALID_SCREENS.has(progress.currentScreen) || VOLATILE_SCREENS.has(progress.currentScreen) || (progress.currentScreen === 'travel' && !progress.activeCaseId)) {
+  progress.currentScreen = progress.activeCaseId ? 'field' : 'institute';
+  saveProgress(progress);
+}
 let sourceOrigin = 'field';
 let openSourceId = null;
 let authorMode = false;
@@ -158,42 +219,149 @@ function travelScreen() {
 }
 
 function fieldPositionStyle() {
-  return `left:${(((fieldMovement.x + .5) / FIELD_GRID.columns) * 100).toFixed(3)}%;top:${(((fieldMovement.y + .52) / FIELD_GRID.rows) * 100).toFixed(3)}%;`;
+  return `left:${(fieldMovement.x * FIELD_GRID.tile).toFixed(1)}px;top:${(fieldMovement.y * FIELD_GRID.tile).toFixed(1)}px;`;
 }
 function fieldSpriteUrl() {
   const appearance = progress.profile.appearance === 'b' ? 'b' : 'a';
   const direction = fieldMovement.facing === 'left' || fieldMovement.facing === 'right' ? 'side' : fieldMovement.facing;
   return fieldSpriteAssets[appearance][direction][fieldMovement.moving ? 'step' : 'idle'];
 }
+function ellipse(x, y, cx, cy, rx, ry) { return (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2) <= 1; }
+function isCaribbeanLand(x, y) {
+  const mainBeach = ellipse(x, y, 20, 12.5, 17.5, 9.4);
+  const westCove = ellipse(x, y, 8.2, 12.8, 6.2, 5.9);
+  const eastPoint = ellipse(x, y, 31.7, 13.1, 7.4, 6.8);
+  const northVillage = ellipse(x, y, 23.2, 8.6, 7.1, 5.8);
+  return mainBeach || westCove || eastPoint || northVillage;
+}
+function rectsOverlap(a, b) {
+  return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+}
+function footBoxFor(x, y) {
+  const footY = y + 0.54;
+  return { x1: x - 0.26, x2: x + 0.26, y1: footY - 0.16, y2: footY + 0.18 };
+}
+function npcFootBox(npc) {
+  return { x1: npc.x - 0.34, x2: npc.x + 0.34, y1: npc.y + 0.18, y2: npc.y + 0.84 };
+}
 function isFieldBlocked(x, y) {
-  return x < 0 || y < 0 || x >= FIELD_GRID.columns || y >= FIELD_GRID.rows || FIELD_BLOCKS.has(`${x},${y}`);
+  if (x < 1.2 || y < 0.9 || x > FIELD_GRID.columns - 1.2 || y > FIELD_GRID.rows - 1.0) return true;
+  const foot = footBoxFor(x, y);
+  const landChecks = [
+    [foot.x1, foot.y1], [foot.x2, foot.y1],
+    [foot.x1, foot.y2], [foot.x2, foot.y2],
+    [(foot.x1 + foot.x2) / 2, foot.y2]
+  ];
+  if (!landChecks.every(([px, py]) => isCaribbeanLand(px, py))) return true;
+  if (FIELD_BLOCKS.some(block => rectsOverlap(foot, block))) return true;
+  return FIELD_NPCS.some(npc => rectsOverlap(foot, npcFootBox(npc)));
 }
 function updateFieldPlayer() {
   const player = document.getElementById('caseFieldPlayer');
   const sprite = document.getElementById('caseFieldPlayerSprite');
+  const world = document.getElementById('caribbeanWorld');
   if (!player || !sprite) return;
   player.style.cssText = fieldPositionStyle();
   player.dataset.facing = fieldMovement.facing;
   player.classList.toggle('is-walking', fieldMovement.moving);
   sprite.src = fieldSpriteUrl();
+  if (world) {
+    const viewport = world.parentElement.getBoundingClientRect();
+    const worldWidth = FIELD_GRID.columns * FIELD_GRID.tile;
+    const worldHeight = FIELD_GRID.rows * FIELD_GRID.tile;
+    const px = fieldMovement.x * FIELD_GRID.tile;
+    const py = fieldMovement.y * FIELD_GRID.tile;
+    const minX = Math.min(0, viewport.width - worldWidth);
+    const minY = Math.min(0, viewport.height - worldHeight);
+    const camX = Math.max(minX, Math.min(0, viewport.width / 2 - px));
+    const camY = Math.max(minY, Math.min(0, viewport.height / 2 - py));
+    world.style.transform = `translate(${camX}px, ${camY}px)`;
+  }
 }
 function moveFieldPlayer(dx, dy) {
   if (progress.currentScreen !== 'field') return;
   if (fieldMovement.moving) { fieldMovement.queued = [dx, dy]; return; }
-  const nx = fieldMovement.x + dx;
-  const ny = fieldMovement.y + dy;
+  const nx = Number((fieldMovement.x + dx * FIELD_STEP).toFixed(2));
+  const ny = Number((fieldMovement.y + dy * FIELD_STEP).toFixed(2));
   fieldMovement.facing = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down';
   if (isFieldBlocked(nx, ny)) { updateFieldPlayer(); return; }
   fieldMovement.x = nx; fieldMovement.y = ny; fieldMovement.moving = true; fieldMovement.step = !fieldMovement.step; updateFieldPlayer();
   window.setTimeout(() => {
     fieldMovement.moving = false; updateFieldPlayer();
     if (fieldMovement.queued) { const next = fieldMovement.queued; fieldMovement.queued = null; moveFieldPlayer(...next); }
-  }, 190);
+  }, 42);
 }
 
+function ensureSourceActivity(sourceId) {
+  progress.sourceActivities ??= {};
+  progress.sourceActivities[sourceId] ??= { observed: [], choice: null, placed: {}, completed: false };
+  return progress.sourceActivities[sourceId];
+}
+function sourceActivityRoute(sourceId) {
+  if (sourceId === 'taino-context') return 'village-activity';
+  if (sourceId === 'columbus-letter') return 'columbus-activity';
+  if (sourceId === 'waldseemuller-map') return 'map-jigsaw';
+  return 'source';
+}
+function sourcePointStyle(sourceId) {
+  const point = FIELD_SOURCE_POINTS[sourceId] || { x: 10, y: 10 };
+  return `left:${(point.x * FIELD_GRID.tile).toFixed(1)}px;top:${(point.y * FIELD_GRID.tile).toFixed(1)}px`;
+}
+function fieldSourceSignal(source, index) {
+  const secured = hasEvidence('case-001',source.id);
+  const point = FIELD_SOURCE_POINTS[source.id] || { label: source.title, kind: source.type };
+  const action = secured ? 'open-source' : 'start-source-activity';
+  return `<button class="source-signal source-signal--world ${secured ? 'is-secured' : ''} signal-${index+1}" style="${sourcePointStyle(source.id)}" data-action="${action}" data-source="${source.id}" data-origin="field"><i>${secured ? '✓' : '✦'}</i><b>${esc(point.kind)}</b><small>${esc(point.label)}</small></button>`;
+}
+function fieldNpcButton(npc) {
+  const sprite = fieldNpcSprites[npc.sprite] || fieldNpcSprites['taino-elder'];
+  return `<button class="field-npc field-npc--${esc(npc.group)}" style="left:${(npc.x * FIELD_GRID.tile).toFixed(1)}px;top:${(npc.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="Talk with ${esc(npc.name)}"><img src="${sprite}" alt=""><span>${esc(npc.label)}</span></button>`;
+}
+function recallBeacon() {
+  return `<button class="recall-beacon" style="left:${(8.1 * FIELD_GRID.tile).toFixed(1)}px;top:${(13.2 * FIELD_GRID.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive room"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
+}
 function fieldScreen() {
   const allSecured = countEvidence('case-001') === CASE_001_SOURCES.length;
-  return `${chrome()}<main class="shell case-field"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">Caribbean · 1493</p><h1>The Atlantic Crossroads</h1><p class="field-question">${esc(caseById('case-001').question)}</p><p>Move through the field with arrow keys or WASD. Open each record signal and submit your own reading before the Institute reveals added context.</p></section><section class="field-scene field-scene--interactive" id="caseFieldMap"><div class="shoreline"></div><div class="sandbank"></div><div class="grassland"></div><div class="pathing"></div><div class="field-arrival-marker"><span>Temporal arrival point</span></div><div class="field-prop prop-tree tree-one"></div><div class="field-prop prop-tree tree-two"></div><div class="field-prop prop-lantern"></div><div class="field-prop prop-boat"></div><div class="field-mentor field-mentor--png"><span>!</span><img src="${fieldMentorSprite}" alt="Maren Vale, Field Mentor"></div>${CASE_001_SOURCES.map((source, index) => `<button class="source-signal ${hasEvidence('case-001',source.id) ? 'is-secured' : ''} signal-${index+1}" data-action="open-source" data-source="${source.id}"><i>${hasEvidence('case-001',source.id) ? '✓' : '✦'}</i><b>${esc(source.type.split('·')[0])}</b><small>${esc(source.title)}</small></button>`).join('')}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || 'Chronicler')}"></div></section><aside class="field-channel"><p class="kicker">Field Channel</p><h2>Maren Vale</h2><p class="role">Senior Chronicler · Field Mentor</p><p>The record is made of different kinds of evidence. Do not let one account speak for everyone. Read each source for what it can establish—and what it cannot.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence('case-001')}</b></button>${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">Secure all three records to reconstruct the first-contact sequence.</p>`}</aside></main>`;
+  const fieldNotice = progress.fieldNotice || 'Use E / Enter near the blue recall beacon to return to the Institute. Interact with people and source sites to rebuild the record.';
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">Caribbean · 1493</p><h1>The Atlantic Crossroads</h1><p class="field-question">${esc(caseById('case-001').question)}</p><p>You are the only Chronicler in the field. Explore the village, shoreline, ship area, and Spanish camp. Evidence is earned through interaction, not floating collection.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world" id="caribbeanWorld" style="width:${FIELD_GRID.columns * FIELD_GRID.tile}px;height:${FIELD_GRID.rows * FIELD_GRID.tile}px"><div class="ocean-layer"></div><div class="island-sand island-main"></div><div class="island-sand island-west"></div><div class="island-sand island-east"></div><div class="island-grass grass-main"></div><button class="arrival-cove recall-cove" data-action="field-recall" aria-label="Return to Archive room"><span>Archive recall point</span></button>${recallBeacon()}<div class="spanish-ship"><span class="mast"></span><span class="sail sail-one"></span><span class="sail sail-two"></span><b>✚</b></div><div class="ship-shadow"></div><div class="village"><div class="bohio hut-one"><span></span></div><div class="bohio hut-two"><span></span></div><div class="bohio hut-three"><span></span></div><div class="canoe canoe-one"></div><div class="garden garden-one"></div></div><div class="spanish-camp"><div class="campfire"></div><div class="crate crate-one"></div><div class="tent-small"></div></div><div class="palm p1"></div><div class="palm p2"></div><div class="palm p3"></div><div class="palm p4"></div>${FIELD_NPCS.map(fieldNpcButton).join('')}${CASE_001_SOURCES.map(fieldSourceSignal).join('')}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || 'Chronicler')}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence('case-001')}</b></button>${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">Complete the village investigation, Columbus source encounter, and map reconstruction.</p>`}</aside></main>`;
+}
+
+function villageActivityScreen() {
+  const source = sourceById('taino-context');
+  const activity = ensureSourceActivity(source.id);
+  const observed = new Set(activity.observed || []);
+  const activeId = activity.activeObservation || VILLAGE_OBSERVATIONS.find(item => !observed.has(item.id))?.id || VILLAGE_OBSERVATIONS[0].id;
+  const active = VILLAGE_OBSERVATIONS.find(item => item.id === activeId) || VILLAGE_OBSERVATIONS[0];
+  const complete = VILLAGE_OBSERVATIONS.every(item => observed.has(item.id));
+  const cards = VILLAGE_OBSERVATIONS.map(item => `<button class="investigation-card ${observed.has(item.id) ? 'is-complete' : ''} ${active.id===item.id?'is-active':''}" data-action="observe-village" data-observe="${item.id}"><b>${esc(item.title)}</b><span>${esc(item.scene)}</span><i>${observed.has(item.id) ? 'Observation saved ✓' : 'Investigate this scene'}</i></button>`).join('');
+  return `${chrome()}<main class="shell activity-shell village-investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Village Investigation</h1><p>Do not begin with the European written record. Watch the village first, collect observations, and then use the context record to test what your field evidence suggests.</p><div class="activity-rule"><b>Goal:</b> investigate all three scenes, then open the context record and write your own interpretation.</div></section><section class="activity-board village-board"><div class="village-scene village-scene--animated"><div class="mini-garden"></div><div class="bohio mini-hut"><span></span></div><div class="mini-canoe"></div><img src="${fieldNpcSprites['taino-elder']}" alt="" class="mini-person elder"><img src="${fieldNpcSprites['taino-gardener']}" alt="" class="mini-person gardener"><img src="${fieldNpcSprites['taino-fisher']}" alt="" class="mini-person fisher"><div class="scene-dialogue"><b>${esc(active.title)}</b><p>${esc(active.scene)}</p><span>${esc(active.note)}</span></div></div><div class="investigation-grid">${cards}</div>${complete ? `<p class="activity-feedback success">Village record stabilized. You observed leadership, settlement, cultivated work, and shoreline activity before opening the secondary context note.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open context record →</button>` : `<p class="activity-feedback">${observed.size}/3 field scenes investigated. Click each scene to preserve what you observed.</p>`}</section></main>`;
+}
+
+function columbusActivityScreen() {
+  const source = sourceById('columbus-letter');
+  const activity = ensureSourceActivity(source.id);
+  const selected = activity.choice;
+  const choiceText = selected === 'audience'
+    ? 'Correct. POV is shaped by audience and purpose: Columbus emphasizes what would matter to Spanish sponsors and officials.'
+    : selected
+      ? 'Reconsider the speaker’s audience and purpose. A primary source is evidence, but it is not automatically neutral.'
+      : '';
+  return `${chrome()}<main class="shell activity-shell spanish-encounter-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Spanish Camp Source Encounter</h1><p>The dialogue below is dramatized and historically grounded. Use it to think about point of view before opening the actual letter excerpt.</p><div class="camp-dialogue quote-dialogue"><img src="${fieldNpcSprites.columbus}" alt=""><div><b>Christopher Columbus</b><p>“The sovereigns will want to know what this voyage can bring them: land, souls, trade, and another crossing.”</p></div></div><div class="camp-dialogue quote-dialogue"><img src="${fieldNpcSprites['spanish-scribe']}" alt=""><div><b>Spanish scribe</b><p>“Then the account must persuade as well as record. We write for the court, not only for ourselves.”</p></div></div></section><section class="activity-board"><h2>POV checkpoint</h2><p>Which statement best explains how point of view should shape a Chronicler’s reading of Columbus’s 1493 letter?</p><div class="choice-stack"><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="audience" ${selected==='audience'?'checked':''}> Columbus’s claims should be read alongside his audience and purpose because he was reporting to Spanish officials whose support mattered.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="neutral" ${selected==='neutral'?'checked':''}> The letter should be treated as neutral because firsthand accounts do not contain assumptions or motives.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="taino" ${selected==='taino'?'checked':''}> The letter mainly reveals the point of view of Taíno communities because it records their exact words.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="map" ${selected==='map'?'checked':''}> The letter is best used as a map source because it shows later European geographic labeling.</label></div>${choiceText ? `<p class="activity-feedback ${selected==='audience'?'success':'error'}">${esc(choiceText)}</p>` : ''}${selected==='audience' ? `<button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open Columbus letter →</button>` : ''}</section></main>`;
+}
+
+function mapJigsawScreen() {
+  const source = sourceById('waldseemuller-map');
+  const activity = ensureSourceActivity(source.id);
+  activity.placed ??= {};
+  const complete = MAP_PIECES.every(piece => activity.placed[piece.id] === piece.id);
+  const placedIds = new Set(Object.values(activity.placed));
+  const slots = MAP_PIECES.map(piece => {
+    const placed = activity.placed[piece.id];
+    const pieceInfo = MAP_PIECES.find(p=>p.id===placed);
+    return `<div class="map-slot map-slot--${piece.id} ${placed ? 'has-piece' : ''}" data-map-slot="${piece.id}">${pieceInfo ? `<div class="map-piece map-piece--${pieceInfo.id}" draggable="true" data-map-piece="${pieceInfo.id}"><span>${esc(pieceInfo.label)}</span></div>` : `<span>Place fragment</span>`}</div>`;
+  }).join('');
+  const tray = MAP_PIECES.filter(piece => !placedIds.has(piece.id)).sort((a,b)=>a.label.localeCompare(b.label)).map(piece => `<div class="map-piece map-piece--${piece.id}" draggable="true" data-map-piece="${piece.id}"><span>${esc(piece.label)}</span></div>`).join('');
+  return `${chrome()}<main class="shell activity-shell activity-shell--wide"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Map Reconstruction</h1><p>Reassemble ten fragments of the European world map. Some pieces have straight outer edges; others use puzzle-cut shapes. When the image resolves, decide what kind of evidence this map can provide.</p><div class="activity-rule"><b>Goal:</b> use the image details to place all ten fragments, then open the visual source reader.</div></section><section class="activity-board jigsaw-board jigsaw-board--ten"><div class="jigsaw-grid jigsaw-grid--ten">${slots}</div><div class="piece-tray piece-tray--ten">${tray || '<p>All fragments placed.</p>'}</div>${complete ? `<p class="activity-feedback success">Map reconstructed. This source is useful for changing European geographic knowledge, not for direct evidence of Taíno daily life.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open map source →</button>` : `<p class="activity-feedback">Drag each fragment into the matching place by image continuity, coastlines, text blocks, and straight outside edges.</p>`}</section></main>`;
 }
 
 function sourceVisual(source) {
@@ -204,6 +372,11 @@ function sourceVisual(source) {
 
 function sourceReader() {
   const source = sourceById(openSourceId);
+  if (!source) {
+    progress.currentScreen = sourceOrigin === 'codex' ? 'codex' : 'field';
+    save();
+    return `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Codex reader reset</p><h1>Source reader restored.</h1><p>The app recovered from a reload while a source reader was open. Return to the field and open the source again.</p><button class="btn btn-gold" data-action="field">Back to Caribbean field →</button></section></main>`;
+  }
   const response = progress.responses[source.id] || '';
   const revealed = progress.revealedContexts.includes(source.id);
   const secured = hasEvidence('case-001', source.id);
@@ -265,6 +438,9 @@ function render() {
     case 'archive': html = archiveScreen(); break;
     case 'travel': html = travelScreen(); activeTravelTimeout=setTimeout(()=>{ const c=caseById(progress.activeCaseId); progress.currentScreen=c.route; save(); render(); }, 2100); break;
     case 'field': html = fieldScreen(); break;
+    case 'village-activity': html = villageActivityScreen(); break;
+    case 'columbus-activity': html = columbusActivityScreen(); break;
+    case 'map-jigsaw': html = mapJigsawScreen(); break;
     case 'source': html = sourceReader(); break;
     case 'codex': html = codexScreen(); break;
     case 'reconstruction': html = reconstructionScreen(); break;
@@ -276,6 +452,8 @@ function render() {
     default: html = instituteScreen();
   }
   app.innerHTML = html;
+  if (progress.currentScreen === 'field') window.requestAnimationFrame(updateFieldPlayer);
+  if (progress.currentScreen === 'institute') window.requestAnimationFrame(updateInstitutePlayer);
 }
 
 function unlockNext(caseId) {
@@ -301,6 +479,12 @@ app.addEventListener('click', (event)=>{
   if (action==='hub-open-table') { progress.hubNotice='Navigation Table opened. Select a teacher-unlocked route.'; progress.currentScreen='archive'; save(); render(); return; }
   if (action==='hub-interact') { interactWithHubTarget(target.dataset.target); return; }
   if (action==='hub-dialogue-close') { hubDialogueId=null; render(); return; }
+  if (action==='field-talk') { const npc=FIELD_NPCS.find(item=>item.id===target.dataset.npc); if(npc){progress.fieldNotice=`${npc.name}: ${npc.text}`; save(); const notice=document.getElementById('fieldNotice'); if(notice) notice.textContent=progress.fieldNotice;} return; }
+  if (action==='field-recall') { progress.hubNotice='Temporal recall complete. You returned through the Archive room beacon.'; instituteMovement={x:13,y:9,facing:'up',moving:false,step:false,queued:null}; progress.currentScreen='institute'; save(); render(); return; }
+  if (action==='start-source-activity') { openSourceId=target.dataset.source; sourceOrigin='field'; ensureSourceActivity(openSourceId); progress.currentScreen=sourceActivityRoute(openSourceId); save(); render(); return; }
+  if (action==='open-activity-source') { openSourceId=target.dataset.source; sourceOrigin='field'; ensureSourceActivity(openSourceId).completed=true; progress.currentScreen='source'; save(); render(); return; }
+  if (action==='observe-village') { const a=ensureSourceActivity('taino-context'); a.observed ??=[]; a.activeObservation=target.dataset.observe; if(!a.observed.includes(target.dataset.observe)) a.observed.push(target.dataset.observe); save(); render(); return; }
+  if (action==='columbus-choose') { const a=ensureSourceActivity('columbus-letter'); a.choice=target.value; save(); render(); return; }
   if (action==='home') { progress.currentScreen='institute'; save(); render(); }
   if (action==='archive') { progress.currentScreen='archive'; save(); render(); }
   if (action==='return-archive') { progress.pendingUploadCaseId=null; progress.activeCaseId=null; progress.hubNotice='Field record received. The Archive has preserved your Codex transmission.'; instituteMovement={x:13,y:9,facing:'up',moving:false,step:false,queued:null}; progress.currentScreen='institute'; save(); render(); }
@@ -366,17 +550,35 @@ app.addEventListener('change', event=>{
 
 
 app.addEventListener('dragstart', event => {
+  const mapPiece = event.target.closest('[data-map-piece]');
+  if (mapPiece) {
+    event.dataTransfer.setData('text/map-piece', mapPiece.dataset.mapPiece);
+    event.dataTransfer.effectAllowed='move';
+    return;
+  }
   const card = event.target.closest('[data-empire-card]');
   if (!card) return;
   event.dataTransfer.setData('text/plain', card.dataset.empireCard);
   event.dataTransfer.effectAllowed='move';
 });
 app.addEventListener('dragover', event => {
+  const mapSlot = event.target.closest('[data-map-slot]');
   const zone = event.target.closest('[data-drop-index]');
-  if (zone) { event.preventDefault(); zone.classList.add('is-over'); }
+  if (mapSlot || zone) { event.preventDefault(); (mapSlot||zone).classList.add('is-over'); }
 });
-app.addEventListener('dragleave', event => event.target.closest('[data-drop-index]')?.classList.remove('is-over'));
+app.addEventListener('dragleave', event => { event.target.closest('[data-drop-index]')?.classList.remove('is-over'); event.target.closest('[data-map-slot]')?.classList.remove('is-over'); });
 app.addEventListener('drop', event => {
+  const mapSlot = event.target.closest('[data-map-slot]');
+  if (mapSlot) {
+    event.preventDefault();
+    const pieceId = event.dataTransfer.getData('text/map-piece');
+    if (!pieceId) return;
+    const a = ensureSourceActivity('waldseemuller-map');
+    a.placed ??= {};
+    Object.keys(a.placed).forEach(slot => { if (a.placed[slot] === pieceId) delete a.placed[slot]; });
+    a.placed[mapSlot.dataset.mapSlot] = pieceId;
+    save(); render(); return;
+  }
   const zone = event.target.closest('[data-drop-index]');
   if (!zone) return;
   event.preventDefault();
