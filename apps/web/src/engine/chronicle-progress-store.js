@@ -15,7 +15,8 @@ export const DEFAULT_PROGRESS = {
   empireOrder: [],
   pendingUploadCaseId: null,
   review: { answers: {}, saq: {} },
-  unitComplete: false
+  unitComplete: false,
+  hubNotice: ''
 };
 export function readProgress() {
   try {
