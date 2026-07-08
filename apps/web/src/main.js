@@ -1,126 +1,306 @@
 import './styles/global.css';
-import { CHRONICLE_CONTENT, CASE_001_SOURCES } from './content/chronicle-case-001.js';
+import { BRAND, UNIT_01, CASE_001_SOURCES, EXCHANGE_RECORDS, EMPIRE_EVIDENCE, EMPIRE_CONNECTIONS, REVIEW } from './content/unit-01-campaign.js';
 import { readProgress, saveProgress, resetProgress } from './engine/chronicle-progress-store.js';
 
 const app = document.querySelector('#app');
-const playerSprite = new URL('./assets/chronicle-sprites/field/chronicler-a-down-idle.png', import.meta.url).href;
-const mentorSprite = new URL('./assets/chronicle-sprites/field/field-mentor-idle.png', import.meta.url).href;
+const atlanticTable = new URL('./assets/maps/atlantic-navigation-table.png', import.meta.url).href;
+const waldseemuller = new URL('./assets/documents/source-waldseemuller-1507.jpg', import.meta.url).href;
+
+const fieldSpriteAssets = {
+  a: {
+    down: { idle: new URL('./assets/chronicle-sprites/field/chronicler-a-down-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-a-down-step.png', import.meta.url).href },
+    up: { idle: new URL('./assets/chronicle-sprites/field/chronicler-a-up-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-a-up-step.png', import.meta.url).href },
+    side: { idle: new URL('./assets/chronicle-sprites/field/chronicler-a-side-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-a-side-step.png', import.meta.url).href }
+  },
+  b: {
+    down: { idle: new URL('./assets/chronicle-sprites/field/chronicler-b-down-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-b-down-step.png', import.meta.url).href },
+    up: { idle: new URL('./assets/chronicle-sprites/field/chronicler-b-up-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-b-up-step.png', import.meta.url).href },
+    side: { idle: new URL('./assets/chronicle-sprites/field/chronicler-b-side-idle.png', import.meta.url).href, step: new URL('./assets/chronicle-sprites/field/chronicler-b-side-step.png', import.meta.url).href }
+  }
+};
+const fieldMentorSprite = new URL('./assets/chronicle-sprites/field/field-mentor-idle.png', import.meta.url).href;
+let fieldMovement = { x: 2, y: 5, facing: 'right', moving: false, step: false, queued: null };
+const FIELD_GRID = { columns: 14, rows: 9 };
+const FIELD_BLOCKS = new Set(['6,4', '7,4', '6,5', '7,5', '4,6', '11,5']);
 
 let progress = readProgress();
-let activeSourceId = null;
+let sourceOrigin = 'field';
+let openSourceId = null;
 let authorMode = false;
-let field = { x: 3, y: 6, moving: false, queued: null };
-let travelTimer = null;
+let activeTravelTimeout = null;
 
-const FIELD = [
-  'wwwwwwwwwwwwwwww',
-  'wwwwwwsssssswwww',
-  'wwwwwssgggggssww',
-  'wwwwssgggggggssw',
-  'wwwssggppppggssw',
-  'wwssgggppppgggsw',
-  'wwssgggppppgggsw',
-  'wwwssggppppggssw',
-  'wwwwssgggggggssw',
-  'wwwwwssssgggssww',
-  'wwwwwwwwsssswwww'
-];
-const W = FIELD[0].length;
-const H = FIELD.length;
-const MENTOR = { x: 10, y: 5 };
-const FIELD_SIGNALS = [
-  { sourceId: 'taino-context', x: 6, y: 3 },
-  { sourceId: 'columbus-letter', x: 8, y: 7 },
-  { sourceId: 'waldseemuller-map', x: 12, y: 4 }
-];
-const BLOCKED = new Set(['w']);
+const caseById = (id) => UNIT_01.cases.find((item) => item.id === id);
+const sourceById = (id) => CASE_001_SOURCES.find((item) => item.id === id);
+const isUnlocked = (id) => progress.unlocked.includes(id);
+const isComplete = (id) => progress.completedCases.includes(id);
+const evidenceFor = (id) => progress.caseEvidence[id] || [];
+const hasEvidence = (caseId, sourceId) => evidenceFor(caseId).includes(sourceId);
+const countEvidence = (caseId) => evidenceFor(caseId).length;
+const esc = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+const save = () => saveProgress(progress);
 
-function esc(v) { return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'", '&#039;'); }
-function sourceById(id) { return CASE_001_SOURCES.find((item) => item.id === id); }
-function hasEvidence(id) { return progress.evidence.includes(id); }
-function completeCount() { return progress.evidence.length; }
-function sourceVisual(source) {
-  if (source.visual === 'letter') return `<div class="source-paper source-paper--letter"><span>Letter fragment · 1493</span><p>${esc(source.excerpt)}</p><small>Read this as a report shaped by its writer, audience, and purpose.</small></div>`;
-  if (source.visual === 'context') return `<div class="source-paper source-paper--context"><span>Context record</span><p>${esc(source.excerpt)}</p><small>Secondary context · not a primary source</small></div>`;
-  return `<div class="source-map-card"><img src="${esc(source.imageUrl)}" alt="Historic 1507 world map by Martin Waldseemüller" onerror="this.closest('.source-map-card').classList.add('is-unavailable')" /><div class="source-map-fallback"><span>1507 map visual</span><b>Waldseemüller’s world map</b><p>Original visual linked in the source record.</p></div></div>`;
-}
 function chrome() {
-  const c = CHRONICLE_CONTENT.brand;
-  return `<header class="chrome"><div class="brand"><span class="brand-mark">✦</span><div><p>${esc(c.engine)}</p><strong>${esc(c.campaign)}</strong></div></div><div class="chrome-right"><span class="link-status"><i></i>${esc(c.status)}</span><button class="author-toggle ${authorMode ? 'active':''}" data-action="author">✦ ${authorMode ? 'Author Mode On':'Author Mode'}</button></div></header>`;
+  return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><small>${esc(BRAND.engine)}</small><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="author-toggle ${authorMode ? 'active' : ''}" data-action="author">✦ ${authorMode ? 'Author Mode On' : 'Author Mode'}</button></div></header>`;
 }
+
 function authorPanel() {
   if (!authorMode) return '';
-  return `<aside class="author-panel"><button class="close-author" data-action="author">×</button><p class="kicker">Development only</p><h2>Author Mode</h2><p>Text and content labels are editable; game structure and progression rules remain protected in code.</p><label>Institute title<input data-edit="institute.title" value="${esc(CHRONICLE_CONTENT.institute.title)}"></label><label>Current case title<input data-edit="institute.currentTitle" value="${esc(CHRONICLE_CONTENT.institute.currentTitle)}"></label><label>Case central question<textarea data-edit="case.centralQuestion">${esc(CHRONICLE_CONTENT.case.centralQuestion)}</textarea></label><label>Mentor note<textarea data-edit="case.mentorNote">${esc(CHRONICLE_CONTENT.case.mentorNote)}</textarea></label><p class="author-note">Draft changes save only in this browser during this session. The permanent source content remains in <code>src/content/chronicle-case-001.js</code>.</p></aside>`;
+  return `<aside class="author-panel"><button class="close-author" data-action="author">×</button><p class="kicker">Development-only controls</p><h2>Author Mode</h2><p>Adjust front-facing copy without touching route rules, answer keys, historical metadata, or progression.</p><label>Unit title<input data-copy="unit-title" value="${esc(UNIT_01.title)}"></label><label>Unit question<textarea data-copy="unit-question">${esc(UNIT_01.centralQuestion)}</textarea></label><label>Student name<input data-profile="name" value="${esc(progress.profile.name)}"></label><p class="author-note">Current version saves drafts locally. Exportable content management comes later; the permanent source records live in <code>src/content</code>.</p></aside>`;
 }
+
 function instituteScreen() {
-  const c = CHRONICLE_CONTENT.institute;
-  return `${chrome()}<main class="shell institute-screen"><section class="intro"><p class="kicker">Present day · Home Base</p><h1>${esc(c.title)}</h1><p class="subtitle">${esc(c.subtitle)}</p><p>${esc(c.body)}</p><div class="actions"><button class="btn btn-gold" data-action="enter-archive">${esc(c.enter)} <span>→</span></button><button class="btn btn-outline" data-action="reset-progress">Reset demo progress</button></div></section><section class="institute-visual" aria-label="Illustrated Chronicle Institute foyer"><div class="institute-lamps"></div><div class="institute-stairs"></div><div class="institute-door" data-action="enter-archive" role="button" tabindex="0"><span>Archive</span></div><div class="institute-globe"></div><div class="institute-card"><p>Current record</p><strong>${esc(c.currentTitle)}</strong><span>Map table online</span></div></section></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell institute-home"><section class="institute-copy"><p class="kicker">Present day · Home Base</p><h1>Chronicle Institute</h1><p class="subtitle">The Archive is your point of return.</p><p>Every completed field record returns to the Archive. Review a route, prepare your Codex, and enter history only when a teacher-unlocked case is ready.</p><div class="actions"><button class="btn btn-gold" data-action="archive">Enter the Archive <span>→</span></button><button class="btn btn-outline" data-action="reset">Reset Unit 1 demo</button></div></section><section class="institute-scene" aria-label="Chronicle Institute foyer"><div class="foyer-shelves"></div><div class="foyer-globe"></div><div class="foyer-door" data-action="archive" role="button" tabindex="0"><span>Archive</span></div><div class="foyer-card"><p>Current unit</p><strong>${esc(UNIT_01.title)}</strong><span>${esc(UNIT_01.period)} · ${progress.completedCases.length}/3 cases archived</span></div></section></main>${authorPanel()}`;
 }
+
+function caseMarker(c) {
+  const state = isComplete(c.id) ? 'complete' : (isUnlocked(c.id) ? 'available' : 'locked');
+  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? 'is-selected' : ''}" style="left:${c.mapPosition.left};top:${c.mapPosition.top}" data-action="select-case" data-case="${c.id}" ${state === 'locked' ? 'disabled' : ''} aria-label="${esc(c.title)}"><span>${state === 'complete' ? '✓' : '✦'}</span><b>${esc(c.shortTitle)}</b></button>`;
+}
+
 function archiveScreen() {
-  const c = CHRONICLE_CONTENT.institute;
-  return `${chrome()}<main class="shell archive-screen"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>${esc(c.mapTitle)}</h1><p>${esc(c.mapBody)}</p><div class="archive-legend"><span class="legend-active">● Active route</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="map-table" aria-label="Interactive Atlantic map table"><div class="map-grid"></div><div class="continent continent-na"></div><div class="continent continent-sa"></div><div class="continent continent-eu"></div><div class="route-line route-one"></div><div class="route-line route-two"></div><button class="map-node map-node-active" data-action="open-case"><span>1493</span><b>Caribbean</b><small>Case 1.01</small></button><button class="map-node map-node-locked" disabled><span>1607</span><b>Chesapeake</b><small>${esc(c.locked)}</small></button><button class="map-node map-node-locked map-node-lower" disabled><span>1776</span><b>Philadelphia</b><small>${esc(c.locked)}</small></button></section><aside class="case-card"><p class="kicker">Active route</p><h2>${esc(c.currentTitle)}</h2><p>${esc(c.currentDescription)}</p><div class="case-stats"><span>Period 1</span><span>1491–1607</span><span>${completeCount()}/${CASE_001_SOURCES.length} evidence secured</span></div><button class="btn btn-gold" data-action="open-case">${esc(c.travel)} <span>→</span></button></aside></main>${authorPanel()}`;
+  const selected = caseById(progress.selectedCaseId) || UNIT_01.cases[0];
+  const availability = isComplete(selected.id) ? 'Case archived' : (isUnlocked(selected.id) ? 'Teacher unlocked' : 'Teacher locked');
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the Atlantic world. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="Atlantic navigation map"><img src="${atlanticTable}" alt="Map of the Atlantic world showing eastern North America, Caribbean, Europe, Africa, and the Atlantic Ocean"><div class="atlas-label label-atlantic">ATLANTIC OCEAN</div>${UNIT_01.cases.map(caseMarker).join('')}<div class="route-thread ${progress.selectedCaseId === 'case-002' ? 'route-thread--atlantic' : ''}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? 'Archived' : 'In progress'}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? 'disabled' : ''}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${selected.id === 'case-001' ? `${countEvidence('case-001')}/3 evidence records secured` : selected.question}</p></aside></main>${authorPanel()}`;
 }
+
 function travelScreen() {
-  return `${chrome()}<main class="travel-screen"><div class="travel-map"><span class="travel-origin">Chronicle Institute</span><i></i><span class="travel-destination">Caribbean · 1493</span><div class="traveler"></div></div><section><p class="kicker">Chronotravel Sequence</p><h1>Route confirmed.</h1><p>The Archive is opening a field connection to the Caribbean. We observe; we do not interfere.</p><div class="travel-progress"><span></span></div><p class="travel-status">Synchronizing the Codex with this case record…</p></section></main>${authorPanel()}`;
+  const active = caseById(progress.activeCaseId);
+  const position = active.mapPosition;
+  return `${chrome()}<main class="chronotravel-screen"><section class="chronotravel-map"><div class="map-camera" style="--dest-left:${position.left};--dest-top:${position.top}"><img src="${atlanticTable}" alt="Atlantic map zooming toward destination"><div class="travel-route travel-route--${active.id}"></div><div class="travel-destination">${esc(active.shortTitle)}<small>${esc(active.date)}</small></div><div class="warp-rings"><i></i><i></i><i></i></div></div></section><section class="travel-copy"><p class="kicker">Chronotravel sequence</p><h1>Route in motion.</h1><p>The Archive is following the selected point across the navigation table. The map will resolve into its historical setting; the Codex will remain synchronized with this case.</p><div class="travel-progress"><span></span></div><p class="travel-status">Do not alter the moment. Follow the evidence.</p><button class="btn btn-outline" data-action="skip-travel">Skip transition</button></section></main>`;
 }
-function tileMarkup() {
-  return FIELD.flatMap((row,y) => row.split('').map((tile,x) => `<span class="field-tile field-tile-${tile}" style="grid-column:${x+1};grid-row:${y+1}"></span>`)).join('');
+
+function fieldPositionStyle() {
+  return `left:${(((fieldMovement.x + .5) / FIELD_GRID.columns) * 100).toFixed(3)}%;top:${(((fieldMovement.y + .52) / FIELD_GRID.rows) * 100).toFixed(3)}%;`;
 }
-function pos({x,y}) { return `left:${((x+.5)/W*100).toFixed(3)}%;top:${((y+.5)/H*100).toFixed(3)}%;`; }
-function near(a,b) { return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)<=1; }
-function signalMarkup() { return FIELD_SIGNALS.map(signal => `<button class="evidence-signal ${hasEvidence(signal.sourceId)?'is-secured':''}" data-action="open-source" data-source="${signal.sourceId}" style="${pos(signal)}" ${near(field,signal)?'data-near="true"':''}><i>${hasEvidence(signal.sourceId)?'✓':'✦'}</i><span>${esc(sourceById(signal.sourceId).signalLabel)}</span></button>`).join(''); }
-function fieldScreen() {
-  const c = CHRONICLE_CONTENT.case;
-  const all = completeCount() === CASE_001_SOURCES.length;
-  return `${chrome()}<main class="field-shell"><section class="field-top"><div><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(c.location)}</p><h1>${esc(c.title)}</h1><p class="field-question">${esc(c.centralQuestion)}</p></div><button class="codex-button" data-action="codex">Codex <b>${completeCount()}</b></button></section><section class="field-layout"><div class="historic-map" id="historicMap" style="--cols:${W};--rows:${H}">${tileMarkup()}<div class="field-tent"></div><div class="field-palm palm-a"></div><div class="field-palm palm-b"></div><div class="field-lantern"></div><div class="field-boat"></div>${signalMarkup()}<div class="mentor" style="${pos(MENTOR)}"><img src="${mentorSprite}" alt="Maren Vale" /><span>!</span></div><div class="player ${field.moving?'is-moving':''}" id="player" style="${pos(field)}"><img src="${playerSprite}" alt="Chronicler" /></div></div><aside class="field-channel"><p class="kicker">Field Channel</p><h2>${esc(c.mentor)}</h2><p class="role">${esc(c.mentorRole)}</p><p>${esc(c.mentorNote)}</p><div class="field-actions">${near(field,MENTOR)?'<button class="btn btn-gold" data-action="mentor">Speak →</button>':''}<button class="btn btn-outline" data-action="codex">Open Codex</button>${all?`<button class="btn btn-gold" data-action="submit">${esc(c.finish)} →</button>`:''}</div><p class="move-help">Movement: Arrow keys or WASD. Walk next to a signal, then click it or press E.</p></aside></section></main>${authorPanel()}`;
+function fieldSpriteUrl() {
+  const appearance = progress.profile.appearance === 'b' ? 'b' : 'a';
+  const direction = fieldMovement.facing === 'left' || fieldMovement.facing === 'right' ? 'side' : fieldMovement.facing;
+  return fieldSpriteAssets[appearance][direction][fieldMovement.moving ? 'step' : 'idle'];
 }
-function sourceReader(source) {
-  return `${chrome()}<main class="reader-shell"><header class="reader-head"><button class="back-link" data-action="field">← Back to field</button><button class="codex-button" data-action="codex">Codex <b>${completeCount()}</b></button></header><section class="source-reader"><div class="source-visual">${sourceVisual(source)}</div><article class="source-copy"><p class="kicker">${esc(source.sourceType)}</p><h1>${esc(source.title)}</h1><dl><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.provenance)}</dd></div></dl><section class="reader-context"><h2>Historical context</h2><p>${esc(source.context)}</p></section><section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.sourceQuestion)}</p></section><p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.sourceUrl)}" target="_blank" rel="noreferrer">View original source record ↗</a><button class="btn btn-gold" data-action="secure-source" data-source="${source.id}">${hasEvidence(source.id)?'Secured in Codex':'Secure in Codex'} <span>→</span></button></article></section></main>${authorPanel()}`;
+function isFieldBlocked(x, y) {
+  return x < 0 || y < 0 || x >= FIELD_GRID.columns || y >= FIELD_GRID.rows || FIELD_BLOCKS.has(`${x},${y}`);
 }
-function codexScreen() {
-  return `${chrome()}<main class="codex-shell"><header class="reader-head"><button class="back-link" data-action="field">← Back to field</button><span class="codex-label">Chronicle Codex · Current Case</span></header><section class="codex-main"><div><p class="kicker">Evidence Satchel</p><h1>${esc(CHRONICLE_CONTENT.case.title)}</h1><p>Evidence remains in this case until you submit the field record. Then the completed case moves into the permanent Archive.</p></div><div class="evidence-grid">${CASE_001_SOURCES.map(s => `<article class="evidence-entry ${hasEvidence(s.id)?'secured':'locked'}"><span>${hasEvidence(s.id)?'Secured':'Signal not secured'}</span><h2>${esc(s.title)}</h2><p>${hasEvidence(s.id)?esc(s.context):'Locate this record in the historical setting, then secure it in the Codex.'}</p>${hasEvidence(s.id)?`<button class="text-btn" data-action="open-source" data-source="${s.id}">Open source reader →</button>`:''}</article>`).join('')}</div>${completeCount()===CASE_001_SOURCES.length?'<button class="btn btn-gold" data-action="submit">Submit field record →</button>':''}</section></main>${authorPanel()}`;
+function updateFieldPlayer() {
+  const player = document.getElementById('caseFieldPlayer');
+  const sprite = document.getElementById('caseFieldPlayerSprite');
+  if (!player || !sprite) return;
+  player.style.cssText = fieldPositionStyle();
+  player.dataset.facing = fieldMovement.facing;
+  player.classList.toggle('is-walking', fieldMovement.moving);
+  sprite.src = fieldSpriteUrl();
 }
-function reportScreen() {
-  return `${chrome()}<main class="report-shell"><section><p class="kicker">Case 1.01 · Field Record</p><h1>Return what the evidence can support.</h1><p class="subtitle">Before you leave the Caribbean, state what each record shows and what it cannot prove alone.</p><div class="report-grid">${CASE_001_SOURCES.map((s,i)=>`<article><span>Record ${i+1}</span><h2>${esc(s.title)}</h2><p>${esc(s.sourceQuestion)}</p><textarea aria-label="Notes for ${esc(s.title)}" placeholder="Evidence notes (practice only)…"></textarea></article>`).join('')}</div><button class="btn btn-gold" data-action="submit-complete">Transmit to the Archive →</button></section></main>${authorPanel()}`;
-}
-function completionScreen() {
-  return `${chrome()}<main class="completion-shell"><section><p class="kicker">Archive transmission received</p><h1>The first field record is preserved.</h1><p class="subtitle">Your evidence has returned to the Chronicle Institute. Case 1.01 is now marked as complete in the permanent Archive.</p><div class="completion-stats"><span>✓ 3 sources secured</span><span>✓ Codex record transmitted</span><span>✓ Case archive updated</span></div><button class="btn btn-gold" data-action="home">Return to Chronicle Institute →</button></section></main>${authorPanel()}`;
-}
-function render() {
-  const screen = progress.currentScreen;
-  if (screen === 'institute') app.innerHTML = instituteScreen();
-  else if (screen === 'archive') app.innerHTML = archiveScreen();
-  else if (screen === 'travel') app.innerHTML = travelScreen();
-  else if (screen === 'field') app.innerHTML = fieldScreen();
-  else if (screen === 'reader') app.innerHTML = sourceReader(sourceById(activeSourceId));
-  else if (screen === 'codex') app.innerHTML = codexScreen();
-  else if (screen === 'report') app.innerHTML = reportScreen();
-  else app.innerHTML = completionScreen();
-  bind();
-}
-function to(screen) { progress.currentScreen = screen; saveProgress(progress); render(); }
-function startTravel() { to('travel'); clearTimeout(travelTimer); travelTimer = setTimeout(()=>to('field'), 1600); }
-function blocked(x,y) { return x<0||y<0||x>=W||y>=H||BLOCKED.has(FIELD[y][x])||(x===MENTOR.x&&y===MENTOR.y); }
-function move(dx,dy) {
+function moveFieldPlayer(dx, dy) {
   if (progress.currentScreen !== 'field') return;
-  if (field.moving) { field.queued = [dx,dy]; return; }
-  const next={x:field.x+dx,y:field.y+dy}; if (blocked(next.x,next.y)) return;
-  field.moving=true; field.x=next.x; field.y=next.y;
-  const el = app.querySelector('#player'); if (el) { el.style.cssText=pos(field); el.classList.add('is-moving'); }
-  setTimeout(()=>{ field.moving=false; app.querySelector('#player')?.classList.remove('is-moving'); if(field.queued){const q=field.queued;field.queued=null;move(...q);} }, 180);
+  if (fieldMovement.moving) { fieldMovement.queued = [dx, dy]; return; }
+  const nx = fieldMovement.x + dx;
+  const ny = fieldMovement.y + dy;
+  fieldMovement.facing = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down';
+  if (isFieldBlocked(nx, ny)) { updateFieldPlayer(); return; }
+  fieldMovement.x = nx; fieldMovement.y = ny; fieldMovement.moving = true; fieldMovement.step = !fieldMovement.step; updateFieldPlayer();
+  window.setTimeout(() => {
+    fieldMovement.moving = false; updateFieldPlayer();
+    if (fieldMovement.queued) { const next = fieldMovement.queued; fieldMovement.queued = null; moveFieldPlayer(...next); }
+  }, 190);
 }
-function bind() {
-  app.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click', ()=>{
-    const a=el.dataset.action; const source=el.dataset.source;
-    if(a==='author'){authorMode=!authorMode;render();}
-    else if(a==='home')to('institute'); else if(a==='enter-archive')to('archive'); else if(a==='archive')to('archive'); else if(a==='open-case')startTravel(); else if(a==='field')to('field'); else if(a==='codex')to('codex'); else if(a==='open-source'){activeSourceId=source;to('reader');} else if(a==='secure-source'){if(!hasEvidence(source)) progress.evidence=[...progress.evidence,source]; saveProgress(progress);to('field');} else if(a==='submit')to('report'); else if(a==='submit-complete'){progress.completedCases=[...new Set([...progress.completedCases,'case-001'])];progress.activeCase=null;saveProgress(progress);to('complete');} else if(a==='reset-progress'){progress=resetProgress();field={x:3,y:6,moving:false,queued:null};to('institute');}
-  }));
-  app.querySelectorAll('[data-edit]').forEach(el=>el.addEventListener('input',()=>{ const [section,key]=el.dataset.edit.split('.'); CHRONICLE_CONTENT[section][key]=el.value; }));
+
+function fieldScreen() {
+  const allSecured = countEvidence('case-001') === CASE_001_SOURCES.length;
+  return `${chrome()}<main class="shell case-field"><section class="field-intro"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Caribbean · 1493</p><h1>The Atlantic Crossroads</h1><p class="field-question">${esc(caseById('case-001').question)}</p><p>Move through the field with arrow keys or WASD. Open each record signal and submit your own reading before the Institute reveals added context.</p></section><section class="field-scene field-scene--interactive" id="caseFieldMap"><div class="shoreline"></div><div class="sandbank"></div><div class="grassland"></div><div class="pathing"></div><div class="field-building"><span>Field Archive</span></div><div class="field-prop prop-tree tree-one"></div><div class="field-prop prop-tree tree-two"></div><div class="field-prop prop-lantern"></div><div class="field-prop prop-boat"></div><div class="field-mentor field-mentor--png"><span>!</span><img src="${fieldMentorSprite}" alt="Maren Vale, Field Mentor"></div>${CASE_001_SOURCES.map((source, index) => `<button class="source-signal ${hasEvidence('case-001',source.id) ? 'is-secured' : ''} signal-${index+1}" data-action="open-source" data-source="${source.id}"><i>${hasEvidence('case-001',source.id) ? '✓' : '✦'}</i><b>${esc(source.type.split('·')[0])}</b><small>${esc(source.title)}</small></button>`).join('')}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || 'Chronicler')}"></div></section><aside class="field-channel"><p class="kicker">Field Channel</p><h2>Maren Vale</h2><p class="role">Senior Chronicler · Field Mentor</p><p>The record is made of different kinds of evidence. Do not let one account speak for everyone. Read each source for what it can establish—and what it cannot.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence('case-001')}</b></button>${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">Secure all three records to reconstruct the first-contact sequence.</p>`}</aside></main>`;
 }
-window.addEventListener('keydown',(event)=>{
-  const map={ArrowUp:[0,-1],w:[0,-1],W:[0,-1],ArrowDown:[0,1],s:[0,1],S:[0,1],ArrowLeft:[-1,0],a:[-1,0],A:[-1,0],ArrowRight:[1,0],d:[1,0],D:[1,0]};
-  if (progress.currentScreen!=='field') return;
-  const vector=map[event.key];
-  if(vector){event.preventDefault();move(...vector);} else if ((event.key==='e'||event.key==='E')) { const nearby=FIELD_SIGNALS.find(s=>near(field,s)); if(nearby){activeSourceId=nearby.sourceId;to('reader');} }
+
+function sourceVisual(source) {
+  if (source.visual === 'letter') return `<div class="document-paper"><span>Primary-source transcript · 1493</span><blockquote>${esc(source.excerpt)}</blockquote><small>Textual record. Read for perspective, audience, purpose, and language.</small></div>`;
+  if (source.visual === 'context') return `<div class="document-paper document-paper--context"><span>Secondary context record</span><p>${esc(source.excerpt)}</p><small>Background evidence, not a Taíno-authored primary source.</small></div>`;
+  return `<figure class="document-image"><img src="${waldseemuller}" alt="Local course copy of Martin Waldseemüller’s 1507 world map"><figcaption>Local course copy of a Library of Congress scan. Zoom is intentionally preserved in the reader; students do not need to leave Chronicle to view it.</figcaption></figure>`;
+}
+
+function sourceReader() {
+  const source = sourceById(openSourceId);
+  const response = progress.responses[source.id] || '';
+  const revealed = progress.revealedContexts.includes(source.id);
+  const secured = hasEvidence('case-001', source.id);
+  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === 'codex' ? 'Codex' : 'field'}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence('case-001')}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1><dl><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.record)}</dd></div></dl><section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label><button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.</p></div></section>`}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? 'btn-complete' : 'btn-outline'}" data-action="secure-source" data-source="${source.id}" ${!revealed ? 'disabled' : ''}>${secured ? 'Secured in Codex ✓' : 'Secure in Codex →'}</button></section></main>`;
+}
+
+function codexScreen() {
+  const entries = CASE_001_SOURCES.map((source) => {
+    const secured = hasEvidence('case-001',source.id);
+    return `<article class="codex-entry ${secured ? '' : 'locked'}"><span>${esc(source.type)}</span><h2>${esc(source.title)}</h2><p>${secured ? esc(progress.responses[source.id] || 'Evidence record secured.') : 'Secure this record in the field to add it to the Codex.'}</p>${secured ? `<button class="text-button" data-action="open-source" data-source="${source.id}" data-origin="codex">Open record →</button>` : ''}</article>`;
+  }).join('');
+  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>Evidence Satchel</h1><p>Temporary records for the current case. Your initial notes stay attached to the evidence you secured.</p></section><section class="codex-grid">${entries}</section></main>`;
+}
+
+function reconstructionScreen() {
+  const selections = progress.reconstruction;
+  const types = [ ['precontact','Before contact'], ['encounter','Early encounter'], ['knowledge','Changing geographic knowledge'] ];
+  return `${chrome()}<main class="shell puzzle-shell"><section class="puzzle-copy"><button class="back-link" data-action="field">← Return to field</button><p class="kicker">Case 1.01 signature activity</p><h1>Record Reconstruction</h1><p>Place each record where it most directly belongs in the emerging Atlantic story. The purpose is not to create one tidy narrative—it is to distinguish the different kinds of evidence.</p><div class="puzzle-lanes">${types.map(([key,label])=>`<div><b>${label}</b><span>${key==='precontact'?'Established societies and conditions before European arrival.':key==='encounter'?'A source created during or immediately after contact.':'A later record showing transformed European knowledge.'}</span></div>`).join('')}</div></section><section class="reconstruction-board">${CASE_001_SOURCES.map(source => `<article><span>${esc(source.type)}</span><h2>${esc(source.title)}</h2><p>${esc(source.excerpt)}</p><label>Place record<select data-reconstruction="${source.id}"><option value="">Choose a lane</option>${types.map(([key,label])=>`<option value="${key}" ${selections[source.id]===key?'selected':''}>${label}</option>`).join('')}</select></label></article>`).join('')}<button class="btn btn-gold board-submit" data-action="check-reconstruction">Test reconstruction →</button><p id="reconstructionFeedback" class="feedback"></p></section></main>`;
+}
+
+function exchangeLedgerScreen() {
+  const answers = progress.exchangeLedger.answers || {};
+  const allAnswered = EXCHANGE_RECORDS.every(record => answers[record.id] !== undefined);
+  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>The Exchange Ledger</h1><p>${esc(caseById('case-002').question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini"><img src="${atlanticTable}" alt="Atlantic map used for Exchange Ledger"><div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${EXCHANGE_RECORDS.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index+1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? 'checked' : ''}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join('')}</fieldset><small>${esc(record.citation)}</small></article>`).join('')}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? '' : ''}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
+}
+
+function empireScreen() {
+  const order = progress.empireOrder || [];
+  const byId = Object.fromEntries(EMPIRE_EVIDENCE.map(card => [card.id, card]));
+  const remaining = EMPIRE_EVIDENCE.filter(card => !order.includes(card.id));
+  const slots = Array.from({ length: EMPIRE_EVIDENCE.length }, (_, index) => {
+    const card = byId[order[index]];
+    return `<div class="system-slot ${card ? 'is-filled' : ''}" data-drop-index="${index}">${card ? `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>` : `<span>Drop a record here</span>`}</div>${index < EMPIRE_EVIDENCE.length - 1 ? '<i class="system-arrow">→</i>' : ''}`;
+  }).join('');
+  return `${chrome()}<main class="shell empire-shell empire-shell--drag"><section class="empire-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.03 · Spanish Caribbean</p><h1>Empire’s Foundations</h1><p>${esc(caseById('case-003').question)}</p><p>Move the evidence records into a defensible order. Each connection should show how conquest, labor, forced migration, hierarchy, resistance, and cultural interaction shaped colonial society.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="empireReflection" placeholder="Explain one connection using evidence from two records…">${esc(progress.responses['empire-reflection'] || '')}</textarea></div></section><section class="empire-board empire-board--drag"><div class="evidence-bank"><div class="bank-heading"><h2>Evidence records</h2><button class="text-button" data-action="clear-empire">Reset layout</button></div><div class="bank-cards">${remaining.map(card => `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>`).join('') || '<p class="bank-empty">All records are on the system table. Drag any card to a new position to revise it.</p>'}</div></div><section class="system-table"><div class="system-table__head"><h2>Build the colonial system</h2><p>Drag records into the sequence. The arrows represent a claim you can defend, not a claim that history was simple.</p></div><div class="system-track">${slots}</div><button class="btn btn-gold" data-action="check-empire">Submit system to Archive →</button><p class="feedback" id="empireFeedback"></p></section></section></main>`;
+}
+
+function uploadScreen() {
+  const active = caseById(progress.pendingUploadCaseId || progress.activeCaseId || 'case-001');
+  return `${chrome()}<main class="upload-shell"><section class="upload-core"><p class="kicker">Archive connection secure</p><h1>Field record transmitting.</h1><p>Your Codex is relaying the completed ${esc(active.shortTitle)} record to the Chronicle Institute. The Archive will preserve your evidence, notes, and completed investigation before the next route opens.</p><div class="upload-beam"><div class="upload-codex">✦</div><i></i><i></i><i></i><div class="upload-archive">⌁</div></div><div class="upload-status"><span>Codex encrypted</span><span>Evidence verified</span><span>Record archived</span></div><button class="btn btn-gold" data-action="return-archive">Case archived — Return to map →</button></section></main>`;
+}
+
+function reviewScreen() {
+  const answers = progress.review.answers || {};
+  const saq = progress.review.saq || {};
+  return `${chrome()}<main class="shell review-shell"><section class="review-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Unit 1 Archive Review</p><h1>${esc(UNIT_01.title)}</h1><p>Practice with AP-style historical thinking: source analysis, causation, and evidence-based explanation.</p><div class="rubric-note"><b>Structured SAQ practice · 3 points total</b><p>${esc(REVIEW.saq.rubric)}</p></div></section><section class="review-work"><div class="mcq-block"><h2>Multiple-choice checkpoint</h2>${REVIEW.mcq.map((q, qi)=>`<article><p><b>${qi+1}.</b> ${esc(q.prompt)}</p>${q.choices.map((choice, ci)=>`<label class="choice"><input type="radio" name="mcq-${qi}" data-mcq="${qi}" value="${ci}" ${String(answers[qi])===String(ci)?'checked':''}><span>${String.fromCharCode(65+ci)}</span>${esc(choice)}</label>`).join('')}</article>`).join('')}</div><div class="saq-block"><h2>Short Answer Question</h2><blockquote>${esc(REVIEW.saq.stimulus)}</blockquote>${REVIEW.saq.prompts.map((prompt,index)=>`<label>${esc(prompt)}<textarea data-saq="${index}" placeholder="Write an evidence-based response…">${esc(saq[index]||'')}</textarea></label>`).join('')}</div><button class="btn btn-gold" data-action="submit-review">Submit Unit 1 Archive Review →</button><p class="feedback" id="reviewFeedback"></p></section></main>`;
+}
+
+function completionScreen() {
+  const correct = REVIEW.mcq.filter((q,index)=>Number(progress.review.answers[index])===q.answer).length;
+  const saqCount = Object.values(progress.review.saq||{}).filter(v=>String(v).trim().length>0).length;
+  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">Unit record complete</p><h1>Unit 1 archived.</h1><p>Your Codex now preserves the Atlantic World investigation. The Institute has logged your sources, practice responses, and completed case records.</p><div class="completion-stats"><span>Cases archived: ${progress.completedCases.length}/3</span><span>MCQ checkpoint: ${correct}/6</span><span>SAQ responses drafted: ${saqCount}/3</span></div><div class="completion-actions"><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="review">Review Unit 1 work</button></div></section></main>`;
+}
+
+function render() {
+  clearTimeout(activeTravelTimeout);
+  let html = '';
+  switch (progress.currentScreen) {
+    case 'archive': html = archiveScreen(); break;
+    case 'travel': html = travelScreen(); activeTravelTimeout=setTimeout(()=>{ const c=caseById(progress.activeCaseId); progress.currentScreen=c.route; save(); render(); }, 2100); break;
+    case 'field': html = fieldScreen(); break;
+    case 'source': html = sourceReader(); break;
+    case 'codex': html = codexScreen(); break;
+    case 'reconstruction': html = reconstructionScreen(); break;
+    case 'ledger': html = exchangeLedgerScreen(); break;
+    case 'empire': html = empireScreen(); break;
+    case 'upload': html = uploadScreen(); break;
+    case 'review': html = reviewScreen(); break;
+    case 'completion': html = completionScreen(); break;
+    default: html = instituteScreen();
+  }
+  app.innerHTML = html;
+}
+
+function unlockNext(caseId) {
+  const index = UNIT_01.cases.findIndex(c=>c.id===caseId);
+  if (!progress.completedCases.includes(caseId)) progress.completedCases.push(caseId);
+  const next=UNIT_01.cases[index+1];
+  if (next && !progress.unlocked.includes(next.id)) progress.unlocked.push(next.id);
+  save();
+}
+
+function goToCase(caseId) {
+  progress.activeCaseId=caseId;
+  progress.currentScreen='travel';
+  save(); render();
+}
+
+function showFeedback(id, message, type='success') { const el=document.getElementById(id); if(el){el.textContent=message;el.className=`feedback ${type}`;} }
+
+app.addEventListener('click', (event)=>{
+  const target = event.target.closest('[data-action]');
+  if (!target) return;
+  const action=target.dataset.action;
+  if (action==='home') { progress.currentScreen='institute'; save(); render(); }
+  if (action==='archive') { progress.currentScreen='archive'; save(); render(); }
+  if (action==='return-archive') { progress.pendingUploadCaseId=null; progress.activeCaseId=null; progress.currentScreen='archive'; save(); render(); }
+  if (action==='clear-empire') { progress.empireOrder=[]; save(); render(); }
+  if (action==='reset') { progress=resetProgress(); render(); }
+  if (action==='author') { authorMode=!authorMode; render(); }
+  if (action==='select-case') { progress.selectedCaseId=target.dataset.case; save(); render(); }
+  if (action==='travel') { goToCase(target.dataset.case); }
+  if (action==='skip-travel') { const c=caseById(progress.activeCaseId); progress.currentScreen=c.route; save(); render(); }
+  if (action==='field') { progress.currentScreen='field'; save(); render(); }
+  if (action==='open-source') { openSourceId=target.dataset.source; sourceOrigin=target.dataset.origin||'field'; progress.currentScreen='source'; save(); render(); }
+  if (action==='return-source') { progress.currentScreen=sourceOrigin==='codex'?'codex':'field'; save(); render(); }
+  if (action==='codex') { sourceOrigin=target.dataset.origin||'field'; progress.currentScreen='codex'; save(); render(); }
+  if (action==='return-codex') { progress.currentScreen=sourceOrigin==='source'?'source':'field'; save(); render(); }
+  if (action==='submit-source') {
+    const source=sourceById(target.dataset.source); const value=document.getElementById('sourceResponse')?.value.trim()||'';
+    if(value.length<15) { alert('Write a brief evidence-based interpretation before opening Institute Context.'); return; }
+    progress.responses[source.id]=value; if(!progress.revealedContexts.includes(source.id)) progress.revealedContexts.push(source.id); save(); render();
+  }
+  if (action==='secure-source') {
+    const id=target.dataset.source; if(!progress.revealedContexts.includes(id)) return;
+    const list=progress.caseEvidence['case-001']||[]; if(!list.includes(id)) list.push(id); progress.caseEvidence['case-001']=list;
+    sourceOrigin='field'; progress.currentScreen='field'; save(); render();
+  }
+  if (action==='reconstruction') { progress.currentScreen='reconstruction'; save(); render(); }
+  if (action==='check-reconstruction') {
+    document.querySelectorAll('[data-reconstruction]').forEach(s=>{progress.reconstruction[s.dataset.reconstruction]=s.value;});
+    const correct=CASE_001_SOURCES.every(s=>progress.reconstruction[s.id]===s.reconstruction); save();
+    if(correct){unlockNext('case-001'); progress.pendingUploadCaseId='case-001'; progress.currentScreen='upload'; save(); render();}
+    else showFeedback('reconstructionFeedback','Revisit the source type and date. Each record belongs in a different evidentiary lane.','error');
+  }
+  if (action==='check-ledger') {
+    progress.exchangeLedger.answers ??= {};
+    document.querySelectorAll('[data-ledger-question]:checked').forEach(s=>{ progress.exchangeLedger.answers[s.dataset.ledgerQuestion]=Number(s.value); });
+    const unanswered=EXCHANGE_RECORDS.filter(r=>progress.exchangeLedger.answers[r.id] === undefined);
+    if(unanswered.length){ save(); showFeedback('ledgerFeedback','Read and answer every source record before validating the Ledger.','error'); return; }
+    const correct=EXCHANGE_RECORDS.every(r=>progress.exchangeLedger.answers[r.id]===r.answer); save();
+    if(correct){unlockNext('case-002'); progress.pendingUploadCaseId='case-002'; progress.currentScreen='upload'; save(); render();}
+    else showFeedback('ledgerFeedback','At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.','error');
+  }
+  if (action==='check-empire') {
+    const reflection=document.getElementById('empireReflection')?.value.trim()||''; progress.responses['empire-reflection']=reflection;
+    const expected=['claim','encomienda','slavery','hierarchy','resistance','exchange'];
+    const correct=JSON.stringify(progress.empireOrder||[])===JSON.stringify(expected);
+    save();
+    if(correct && reflection.length>=20){unlockNext('case-003'); progress.pendingUploadCaseId='case-003'; progress.currentScreen='upload'; save(); render();}
+    else showFeedback('empireFeedback','Arrange all six evidence records into a defensible sequence, then write a reflection using evidence from at least two cards.','error');
+  }
+  if(action==='review'){progress.currentScreen='review';save();render();}
+  if(action==='submit-review') {
+    document.querySelectorAll('[data-mcq]:checked').forEach(i=>{progress.review.answers[i.dataset.mcq]=Number(i.value);});
+    document.querySelectorAll('[data-saq]').forEach(t=>{progress.review.saq[t.dataset.saq]=t.value.trim();});
+    const filled=Object.values(progress.review.saq).filter(v=>v.length>0).length; save();
+    if(filled===3){progress.unitComplete=true;progress.currentScreen='completion';save();render();}
+    else showFeedback('reviewFeedback','Draft a response for all three SAQ parts before submitting the Unit 1 archive record.','error');
+  }
 });
+
+app.addEventListener('change', event=>{
+  const field=event.target;
+  if(field.matches('[data-profile]')){progress.profile[field.dataset.profile]=field.value;save();}
+});
+
+
+app.addEventListener('dragstart', event => {
+  const card = event.target.closest('[data-empire-card]');
+  if (!card) return;
+  event.dataTransfer.setData('text/plain', card.dataset.empireCard);
+  event.dataTransfer.effectAllowed='move';
+});
+app.addEventListener('dragover', event => {
+  const zone = event.target.closest('[data-drop-index]');
+  if (zone) { event.preventDefault(); zone.classList.add('is-over'); }
+});
+app.addEventListener('dragleave', event => event.target.closest('[data-drop-index]')?.classList.remove('is-over'));
+app.addEventListener('drop', event => {
+  const zone = event.target.closest('[data-drop-index]');
+  if (!zone) return;
+  event.preventDefault();
+  const cardId=event.dataTransfer.getData('text/plain');
+  if(!cardId) return;
+  const index=Number(zone.dataset.dropIndex);
+  const next=(progress.empireOrder||[]).filter(id=>id!==cardId);
+  next.splice(index,0,cardId);
+  progress.empireOrder=next.slice(0, EMPIRE_EVIDENCE.length); save(); render();
+});
+window.addEventListener('keydown', event => {
+  if (progress.currentScreen !== 'field') return;
+  const key=event.key.toLowerCase();
+  const moves={arrowup:[0,-1],w:[0,-1],arrowdown:[0,1],s:[0,1],arrowleft:[-1,0],a:[-1,0],arrowright:[1,0],d:[1,0]};
+  if(moves[key]) { event.preventDefault(); moveFieldPlayer(...moves[key]); }
+});
+
 render();
