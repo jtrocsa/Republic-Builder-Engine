@@ -224,10 +224,6 @@ const MAP_PIECES = [
 ];
 const MAP_TRAY_ORDER = ['p7','p2','p10','p4','p1','p9','p3','p6','p5','p8'];
 const HUB_GRID = { columns: 18, rows: 12 };
-const HUB_BLOCKS = new Set([
-  ...Array.from({ length: 18 }, (_, x) => [`${x},0`, `${x},11`]).flat(),
-  ...Array.from({ length: 12 }, (_, y) => [`0,${y}`, `17,${y}`]).flat()
-]);
 const HUB_BLOCK_RECTS = [
   // Collision is intentionally a little smaller than the art so the Archive feels walkable.
   // These rectangles protect furniture while leaving generous Pokémon-style aisles.
@@ -598,8 +594,8 @@ function updateHubProximityUi() {
   });
 }
 function isHubBlocked(x, y) {
-  const edge = x < 0 || y < 0 || x >= HUB_GRID.columns || y >= HUB_GRID.rows;
-  if (edge || HUB_BLOCKS.has(`${x},${y}`)) return true;
+  const edge = x < 0.6 || y < 0.8 || x > HUB_GRID.columns - 1.2 || y > HUB_GRID.rows - 1.2;
+  if (edge) return true;
   const foot = hubFootBoxFor(x, y);
   if (hubRectBlocked(foot)) return true;
   // NPCs should feel alive, but they should not make the Archive feel stuck or maze-like.
