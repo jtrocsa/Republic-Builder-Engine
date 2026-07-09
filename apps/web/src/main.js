@@ -62,7 +62,7 @@ const instituteNpcSprites = {
 let fieldMovement = { x: 20.0, y: 12.0, facing: 'down', moving: false, step: false, queued: null };
 let fieldCamera = { x: 0, y: 0 };
 const FIELD_GRID = { columns: 40, rows: 24, tile: 40 };
-const FIELD_STEP = 0.18;
+const FIELD_STEP = 0.32;
 const FIELD_BLOCKS = [
   // The field uses a Pokémon-style physics layer: feet collide with bases, not decorative overlap.
   { x1: 2.9, y1: 7.2, x2: 9.9, y2: 9.7, kind: 'ship hull' },
@@ -721,7 +721,7 @@ function moveFieldPlayer(dx, dy) {
   window.setTimeout(() => {
     fieldMovement.moving = false; updateFieldPlayer();
     if (fieldMovement.queued) { const next = fieldMovement.queued; fieldMovement.queued = null; moveFieldPlayer(...next); }
-  }, 42);
+  }, 86);
 }
 
 function ensureSourceActivity(sourceId) {
