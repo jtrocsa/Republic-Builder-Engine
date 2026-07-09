@@ -328,7 +328,7 @@ if (progress.activeFieldNpc) {
   saveProgress(progress);
 }
 const VOLATILE_SCREENS = new Set(['source']);
-const VALID_SCREENS = new Set(['institute','archive','travel','field','village-activity','columbus-activity','map-jigsaw','source','codex','reconstruction','ledger','empire','upload','review','completion']);
+const VALID_SCREENS = new Set(['institute','archive','travel','field','village-activity','columbus-activity','map-jigsaw','source','codex','reconstruction','ledger','ledger-success','empire','upload','return-warp','review','completion']);
 if (!VALID_SCREENS.has(progress.currentScreen) || VOLATILE_SCREENS.has(progress.currentScreen) || (progress.currentScreen === 'travel' && !progress.activeCaseId)) {
   progress.currentScreen = progress.activeCaseId ? 'field' : 'institute';
   saveProgress(progress);
@@ -407,6 +407,13 @@ function playSfx(name, sourceId = null) {
     audioNote(98, 0.78, 0.02, 'sine', 0.28);
     return;
   }
+  if (name === 'return-warp') {
+    [740, 659, 523, 392, 311, 247].forEach((freq, i) => audioNote(freq, 0.28, i * 0.08, i % 2 ? 'sine' : 'triangle', 0.40));
+    audioNoise(0.80, 0.04, 0.20, 1800);
+    audioNote(123, 1.35, 0.04, 'sine', 0.30);
+    audioChord([262, 392, 523], 0.62, 1.52, 'triangle', 0.30);
+    return;
+  }
   if (name === 'upload') {
     [330, 392, 494, 587, 740, 880].forEach((freq, i) => audioNote(freq, 0.18, i * 0.09, 'triangle', 0.46));
     audioNoise(0.34, 0.04, 0.12, 2100);
@@ -457,6 +464,7 @@ function sceneForMusic() {
   if (progress.currentScreen === 'field') return progress.activeFieldNpc ? 'dialogue' : 'island';
   if (progress.currentScreen === 'institute' || progress.currentScreen === 'archive' || progress.currentScreen === 'map-jigsaw') return 'archive';
   if (progress.currentScreen === 'upload') return 'upload';
+  if (progress.currentScreen === 'return-warp') return 'quiet';
   return 'quiet';
 }
 function scheduleLoop(scene) {
@@ -624,8 +632,7 @@ function archiveScreen() {
 
 function travelScreen() {
   const active = caseById(progress.activeCaseId);
-  const position = active.mapPosition;
-  return `${chrome()}<main class="chronotravel-screen"><section class="chronotravel-map"><div class="map-camera" style="--dest-left:${position.left};--dest-top:${position.top}"><img src="${atlanticTable}" alt="Atlantic map zooming toward destination"><div class="travel-route travel-route--${active.id}"></div><div class="travel-destination">${esc(active.shortTitle)}<small>${esc(active.date)}</small></div><div class="warp-rings"><i></i><i></i><i></i></div></div></section><section class="travel-copy"><p class="kicker">Chronotravel sequence</p><h1>Route in motion.</h1><p>The Archive is following the selected point across the navigation table. The map will resolve into its historical setting; the Codex will remain synchronized with this case.</p><div class="travel-progress"><span></span></div><p class="travel-status">Do not alter the moment. Follow the evidence.</p><button class="btn btn-outline" data-action="skip-travel">Skip transition</button></section></main>`;
+  return `${chrome()}<main class="chronotravel-screen chronotravel-screen--warp"><section class="return-warp-vortex chronotravel-vortex" aria-label="Chronotraveling to ${esc(active.shortTitle)}"><div class="return-warp-tunnel chronotravel-tunnel"><i></i><i></i><i></i><i></i><span>✦</span><b>${esc(active.shortTitle)}<small>${esc(active.date)}</small></b></div></section><section class="travel-copy"><p class="kicker">Chronotravel sequence</p><h1>Route in motion.</h1><p>The Archive is following the selected point through the recall tunnel. The signal will resolve into its historical setting; the Codex will remain synchronized with this case.</p><div class="travel-progress"><span></span></div><p class="travel-status">Do not alter the moment. Follow the evidence.</p><button class="btn btn-outline" data-action="skip-travel">Skip transition</button></section></main>`;
 }
 
 function fieldWorldStyle() {
@@ -881,6 +888,10 @@ function exchangeLedgerScreen() {
   return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>The Exchange Ledger</h1><p>${esc(caseById('case-002').question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini"><img src="${atlanticTable}" alt="Atlantic map used for Exchange Ledger"><div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${EXCHANGE_RECORDS.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index+1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? 'checked' : ''}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join('')}</fieldset><small>${esc(record.citation)}</small></article>`).join('')}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? '' : ''}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
 }
 
+function ledgerSuccessScreen() {
+  return `${chrome()}<main class="ledger-success-shell"><section class="ledger-success-core" aria-live="polite"><p class="kicker">Evidence ledger verified</p><div class="ledger-success-orbit" aria-hidden="true"><i></i><i></i><i></i><span>✓</span></div><h1>Correct record match.</h1><p>Your source interpretations held together. The Archive has confirmed the ledger and is opening a secure transmission channel.</p><div class="ledger-success-steps"><span>Sources read</span><span>Claims checked</span><span>Route verified</span></div></section></main>`;
+}
+
 function empireScreen() {
   const order = progress.empireOrder || [];
   const byId = Object.fromEntries(EMPIRE_EVIDENCE.map(card => [card.id, card]));
@@ -895,6 +906,10 @@ function empireScreen() {
 function uploadScreen() {
   const active = caseById(progress.pendingUploadCaseId || progress.activeCaseId || 'case-001');
   return `${chrome()}<main class="upload-shell"><section class="upload-core"><p class="kicker">Archive connection secure</p><h1>Field record transmitting.</h1><p>Your Codex is relaying the completed ${esc(active.shortTitle)} record to the Chronicle Institute. The Archive will preserve your evidence, notes, and completed investigation before the next route opens.</p><div class="upload-beam"><div class="upload-codex">✦</div><i></i><i></i><i></i><div class="upload-archive">⌁</div></div><div class="upload-status"><span>Codex encrypted</span><span>Evidence verified</span><span>Record archived</span></div><button class="btn btn-gold" data-action="return-archive">Case archived — Return to Institute →</button></section></main>`;
+}
+
+function returnWarpScreen() {
+  return `${chrome()}<main class="return-warp-shell"><section class="return-warp-vortex" aria-label="Returning to the Chronicle Institute"><div class="return-warp-tunnel"><i></i><i></i><i></i><i></i><span>✦</span></div></section><section class="return-warp-copy"><p class="kicker">Archive recall sequence</p><h1>Returning to Institute.</h1><p>The Codex has locked the archived case record. The recall beacon is pulling your signal back to the Institute floor.</p><div class="travel-progress"><span></span></div><p class="travel-status">Temporal return in progress.</p></section></main>`;
 }
 
 function reviewScreen() {
@@ -915,7 +930,7 @@ function render() {
   try {
     switch (progress.currentScreen) {
       case 'archive': html = archiveScreen(); break;
-      case 'travel': html = travelScreen(); activeTravelTimeout=setTimeout(()=>{ const c=caseById(progress.activeCaseId); progress.currentScreen=c?.route || 'archive'; save(); render(); }, 2100); break;
+      case 'travel': html = travelScreen(); activeTravelTimeout=setTimeout(()=>{ const c=caseById(progress.activeCaseId); progress.currentScreen=c?.route || 'archive'; save(); render(); }, 2500); break;
       case 'field': html = fieldScreen(); break;
       case 'village-activity': html = villageActivityScreen(); break;
       case 'columbus-activity': html = columbusActivityScreen(); break;
@@ -924,8 +939,10 @@ function render() {
       case 'codex': html = codexScreen(); break;
       case 'reconstruction': html = reconstructionScreen(); break;
       case 'ledger': html = exchangeLedgerScreen(); break;
+      case 'ledger-success': html = ledgerSuccessScreen(); activeTravelTimeout=setTimeout(()=>{ progress.currentScreen='upload'; save(); render(); }, 2300); break;
       case 'empire': html = empireScreen(); break;
       case 'upload': html = uploadScreen(); break;
+      case 'return-warp': html = returnWarpScreen(); activeTravelTimeout=setTimeout(()=>{ progress.currentScreen='institute'; save(); render(); }, 2500); break;
       case 'review': html = reviewScreen(); break;
       case 'completion': html = completionScreen(); break;
       default: html = instituteScreen();
@@ -1012,7 +1029,7 @@ app.addEventListener('click', (event)=>{
   if (action==='columbus-choose') { playQuestSfx('columbus-letter'); const a=ensureSourceActivity('columbus-letter'); a.choice=target.value; save(); render(); return; }
   if (action==='home') { progress.activeFieldNpc=null; safeInstituteSpawn(7,9,'up'); progress.currentScreen='institute'; save(); render(); return; }
   if (action==='archive') { progress.currentScreen='archive'; save(); render(); }
-  if (action==='return-archive') { playSfx('archive-receive'); progress.pendingUploadCaseId=null; progress.activeCaseId=null; progress.hubNotice='Field record received. The Archive has preserved your Codex transmission.'; safeInstituteSpawn(16,9,'left'); progress.currentScreen='institute'; save(); render(); return; }
+  if (action==='return-archive') { playSfx('return-warp'); progress.pendingUploadCaseId=null; progress.activeCaseId=null; progress.hubNotice='Field record received. The Archive has preserved your Codex transmission.'; safeInstituteSpawn(16,9,'left'); progress.currentScreen='return-warp'; save(); render(); return; }
   if (action==='clear-empire') { progress.empireOrder=[]; save(); render(); }
   if (action==='reset-case-001') { resetCaseOneDemo(); render(); return; }
   if (action==='reset') { progress=resetProgress(); resetFieldPosition(); render(); }
@@ -1049,7 +1066,7 @@ app.addEventListener('click', (event)=>{
     const unanswered=EXCHANGE_RECORDS.filter(r=>progress.exchangeLedger.answers[r.id] === undefined);
     if(unanswered.length){ save(); showFeedback('ledgerFeedback','Read and answer every source record before validating the Ledger.','error'); return; }
     const correct=EXCHANGE_RECORDS.every(r=>progress.exchangeLedger.answers[r.id]===r.answer); save();
-    if(correct){playSfx('upload'); unlockNext('case-002'); progress.pendingUploadCaseId='case-002'; progress.currentScreen='upload'; save(); render();}
+    if(correct){playSfx('secure'); unlockNext('case-002'); progress.pendingUploadCaseId='case-002'; progress.currentScreen='ledger-success'; save(); render();}
     else showFeedback('ledgerFeedback','At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.','error');
   }
   if (action==='check-empire') {
