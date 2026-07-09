@@ -701,7 +701,7 @@ button:hover,[data-action]:hover{filter:brightness(1.06);}
 }
 .caribbean-world{
   background:linear-gradient(180deg,#48a8bb 0%,#237b96 50%,#155a73 100%)!important;
-  transition:transform 118ms cubic-bezier(.18,.72,.18,1)!important;
+  transition:none!important;
 }
 .caribbean-world::before{
   content:'';position:absolute;inset:-120px;z-index:0;pointer-events:none;
@@ -718,12 +718,21 @@ button:hover,[data-action]:hover{filter:brightness(1.06);}
 }
 .ocean-layer{
   z-index:0!important;
+  overflow:hidden;
   background:
     radial-gradient(ellipse at 18% 28%,rgba(151,231,229,.24),transparent 24%),
     radial-gradient(ellipse at 80% 64%,rgba(255,255,255,.12),transparent 22%),
     linear-gradient(180deg,#4bb0c1,#237d98 54%,#145a73)!important;
   filter:saturate(1.1);
 }
+.ocean-layer::before,.ocean-layer::after{
+  content:'';position:absolute;inset:-90px;pointer-events:none;
+  background:
+    repeating-linear-gradient(165deg,transparent 0 34px,rgba(222,255,249,.22) 35px 37px,transparent 38px 82px),
+    repeating-linear-gradient(18deg,transparent 0 54px,rgba(128,218,226,.16) 55px 58px,transparent 59px 118px);
+  mix-blend-mode:screen;opacity:.65;animation:islandWaveSlide 9s linear infinite;
+}
+.ocean-layer::after{opacity:.38;animation-duration:13s;animation-direction:reverse;filter:blur(.5px)}
 .island-sand{
   z-index:2!important;overflow:hidden;
   background:
@@ -741,6 +750,15 @@ button:hover,[data-action]:hover{filter:brightness(1.06);}
   content:'';position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
   box-shadow:inset 0 0 0 8px rgba(245,225,159,.18),0 0 0 9px rgba(137,222,214,.18),0 0 34px rgba(137,222,214,.28);
 }
+.island-main{
+  clip-path:polygon(3% 45%,7% 33%,5% 25%,14% 20%,20% 12%,29% 10%,36% 4%,46% 11%,56% 5%,64% 12%,74% 9%,84% 17%,91% 18%,96% 31%,94% 41%,99% 52%,92% 62%,95% 73%,87% 79%,80% 90%,67% 88%,57% 96%,45% 91%,35% 96%,25% 88%,16% 91%,9% 78%,3% 71%,6% 58%)!important;
+}
+.island-west{
+  clip-path:polygon(2% 48%,9% 34%,8% 22%,25% 12%,36% 4%,48% 14%,59% 8%,74% 13%,85% 24%,97% 32%,91% 48%,96% 62%,87% 75%,90% 88%,70% 96%,58% 87%,43% 92%,29% 98%,16% 85%,5% 78%,9% 63%)!important;
+}
+.island-east{
+  clip-path:polygon(5% 34%,15% 22%,22% 9%,37% 15%,49% 8%,60% 4%,73% 15%,86% 17%,96% 31%,92% 45%,99% 56%,88% 67%,93% 84%,77% 91%,66% 98%,51% 89%,39% 94%,24% 91%,12% 78%,5% 67%,13% 51%)!important;
+}
 .island-grass{
   z-index:3!important;overflow:hidden;
   background:
@@ -757,6 +775,25 @@ button:hover,[data-action]:hover{filter:brightness(1.06);}
   background:radial-gradient(ellipse at 50% 92%,rgba(20,78,48,.26),transparent 42%),linear-gradient(120deg,rgba(255,255,255,.12),transparent 36% 70%,rgba(0,0,0,.10));
   mix-blend-mode:soft-light;
 }
+.grass-main{
+  clip-path:polygon(6% 44%,12% 30%,20% 18%,32% 15%,43% 9%,53% 15%,65% 10%,76% 18%,88% 27%,95% 42%,93% 55%,87% 67%,91% 80%,78% 88%,63% 91%,51% 86%,37% 96%,24% 86%,13% 78%,8% 64%)!important;
+}
+.shore-rock{
+  position:absolute;z-index:7;width:46px;height:28px;border-radius:44% 56% 48% 52%;
+  background:linear-gradient(145deg,#8d8d78,#545c55 66%,#2f3d3d);
+  box-shadow:inset 8px 6px 0 rgba(255,255,255,.10),inset -8px -8px 0 rgba(0,0,0,.20),0 7px 10px rgba(0,0,0,.20),0 0 0 8px rgba(156,231,225,.12);
+}
+.shore-rock::after{
+  content:'';position:absolute;left:-12px;right:-12px;top:58%;height:16px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(205,255,249,.28),transparent 67%);
+  animation:rockWash 2.8s ease-in-out infinite;
+}
+.shore-rock--one{left:238px;top:418px;transform:rotate(-18deg) scale(1.05)}
+.shore-rock--two{left:456px;top:186px;z-index:9;transform:rotate(12deg) scale(.75)}
+.shore-rock--three{left:1304px;top:364px;transform:rotate(-8deg) scale(.92)}
+.shore-rock--four{left:1190px;top:796px;transform:rotate(18deg) scale(1.15)}
+.shore-rock--five{left:84px;top:584px;transform:rotate(9deg) scale(.82)}
+.shore-rock--six{left:1442px;top:590px;transform:rotate(-22deg) scale(.72)}
 .village,.spanish-camp,.palm,.spanish-ship,.ship-shadow,.cartographer-table,.recall-beacon,.source-signal--world,.field-npc,.case-field-player{z-index:8}
 .bohio{
   background:linear-gradient(180deg,#d7bb76 0 20%,#b98645 58%,#82552f 100%)!important;
@@ -771,18 +808,78 @@ button:hover,[data-action]:hover{filter:brightness(1.06);}
 }
 .bohio span{background:linear-gradient(#6b4326,#3f281a)!important;box-shadow:inset -5px 0 0 rgba(0,0,0,.18)}
 .garden{
-  background:
-    repeating-linear-gradient(90deg,rgba(55,104,45,.86) 0 10px,rgba(138,169,80,.88) 10px 22px),
-    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.10))!important;
-  border-color:rgba(68,102,48,.72)!important;
-  box-shadow:inset 0 8px 12px rgba(255,239,167,.12),inset 0 -10px 14px rgba(35,74,39,.22),0 11px 16px rgba(0,0,0,.16);
+  z-index:1;width:150px!important;height:86px!important;border:0!important;border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
+.garden-one{left:-150px!important;top:-78px!important}
+.garden::before{
+  content:'';position:absolute;left:4px;right:8px;top:6px;height:70px;z-index:-1;border-radius:48% 44% 50% 42%;
+  background:radial-gradient(ellipse at 50% 50%,rgba(63,123,60,.26),rgba(63,123,60,.14) 58%,transparent 76%);
+  box-shadow:none;
+}
+.garden::after{
+  content:'Cassava  Maize  Squash';position:absolute;left:8px;top:75px;
+  color:rgba(255,234,168,.92);font:800 6px 'Cinzel',serif;letter-spacing:.04em;text-transform:uppercase;
+  text-shadow:0 1px 2px rgba(0,0,0,.45);
+}
+.crop-row{
+  position:absolute;left:8px;width:130px;height:18px;border-radius:999px;
+  background:linear-gradient(180deg,#a87b43,#6e4b2c);
+  box-shadow:inset 0 4px 0 rgba(203,157,88,.22),inset 0 -4px 0 rgba(48,31,19,.22),0 5px 7px rgba(0,0,0,.12);
+}
+.crop-row::before{
+  content:'';position:absolute;left:8px;right:8px;top:-7px;height:16px;
+  background:
+    radial-gradient(ellipse at 7% 55%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 19% 42%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 31% 55%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 43% 42%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 55% 55%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 67% 42%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 79% 55%,#75b75d 0 4px,transparent 5px),
+    radial-gradient(ellipse at 91% 42%,#75b75d 0 4px,transparent 5px);
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.24));
+}
+.crop-row--cassava{top:8px;transform:rotate(-5deg)}
+.crop-row--cassava::before{background:
+  radial-gradient(ellipse at 9% 58%,#6faf54 0 5px,transparent 6px),
+  radial-gradient(ellipse at 21% 42%,#85c565 0 5px,transparent 6px),
+  radial-gradient(ellipse at 34% 58%,#6faf54 0 5px,transparent 6px),
+  radial-gradient(ellipse at 47% 42%,#85c565 0 5px,transparent 6px),
+  radial-gradient(ellipse at 60% 58%,#6faf54 0 5px,transparent 6px),
+  radial-gradient(ellipse at 73% 42%,#85c565 0 5px,transparent 6px),
+  radial-gradient(ellipse at 86% 58%,#6faf54 0 5px,transparent 6px)}
+.crop-row--maize{top:32px;left:16px;width:118px;transform:rotate(3deg)}
+.crop-row--maize::before{background:
+  linear-gradient(90deg,transparent 0 7%,#d7c45b 7% 9%,transparent 9% 18%,#d7c45b 18% 20%,transparent 20% 31%,#d7c45b 31% 33%,transparent 33% 45%,#d7c45b 45% 47%,transparent 47% 59%,#d7c45b 59% 61%,transparent 61% 73%,#d7c45b 73% 75%,transparent 75% 87%,#d7c45b 87% 89%,transparent 89%),
+  radial-gradient(ellipse at 8% 65%,#4f9a46 0 5px,transparent 6px),
+  radial-gradient(ellipse at 20% 52%,#4f9a46 0 5px,transparent 6px),
+  radial-gradient(ellipse at 33% 65%,#4f9a46 0 5px,transparent 6px),
+  radial-gradient(ellipse at 47% 52%,#4f9a46 0 5px,transparent 6px),
+  radial-gradient(ellipse at 61% 65%,#4f9a46 0 5px,transparent 6px),
+  radial-gradient(ellipse at 75% 52%,#4f9a46 0 5px,transparent 6px),
+  radial-gradient(ellipse at 89% 65%,#4f9a46 0 5px,transparent 6px)}
+.crop-row--squash{top:56px;left:10px;width:128px;transform:rotate(-2deg)}
+.crop-row--squash::before{background:
+  radial-gradient(circle at 10% 58%,#d49b38 0 4px,transparent 5px),
+  radial-gradient(circle at 27% 48%,#d49b38 0 4px,transparent 5px),
+  radial-gradient(circle at 44% 60%,#d49b38 0 4px,transparent 5px),
+  radial-gradient(circle at 61% 50%,#d49b38 0 4px,transparent 5px),
+  radial-gradient(circle at 78% 58%,#d49b38 0 4px,transparent 5px),
+  radial-gradient(ellipse at 11% 43%,#5ba34e 0 6px,transparent 7px),
+  radial-gradient(ellipse at 28% 58%,#5ba34e 0 6px,transparent 7px),
+  radial-gradient(ellipse at 45% 43%,#5ba34e 0 6px,transparent 7px),
+  radial-gradient(ellipse at 62% 58%,#5ba34e 0 6px,transparent 7px),
+  radial-gradient(ellipse at 79% 43%,#5ba34e 0 6px,transparent 7px)}
 .canoe{
   background:linear-gradient(180deg,#8d542c 0%,#5b321d 70%,#2d1d14 100%)!important;
   border-color:#2f1d12!important;
   box-shadow:inset 0 7px 0 rgba(219,151,82,.22),inset 0 -8px 0 rgba(0,0,0,.24),0 9px 11px rgba(0,0,0,.20);
 }
 .palm{filter:drop-shadow(10px 18px 8px rgba(0,0,0,.18))}
+.p2{left:440px!important;top:550px!important;transform:scale(.82)!important}
+.p3{left:620px!important;top:340px!important;transform:scale(.78)!important}
 .palm::before{
   width:18px!important;border-radius:12px;
   background:repeating-linear-gradient(180deg,#8a5c34 0 12px,#6f4628 12px 22px)!important;
@@ -797,9 +894,22 @@ button:hover,[data-action]:hover{filter:brightness(1.06);}
   filter:drop-shadow(0 8px 0 rgba(8,59,41,.20)) drop-shadow(0 13px 8px rgba(0,0,0,.14))!important;
 }
 .campfire{box-shadow:0 0 26px rgba(237,122,49,.52),0 12px 14px rgba(0,0,0,.18)!important}
+.village-campfire{
+  position:absolute;left:134px;top:86px;width:38px;height:32px;border-radius:50%;z-index:6;
+  background:radial-gradient(circle,#ffe799 0 17%,#db7531 18% 38%,#5d3d27 39% 100%);
+  box-shadow:0 0 22px rgba(237,122,49,.42),0 10px 12px rgba(0,0,0,.16);
+}
+.village-campfire::before,.village-campfire::after{
+  content:'';position:absolute;left:5px;right:5px;top:20px;height:5px;border-radius:999px;background:#54301d;transform:rotate(18deg);
+}
+.village-campfire::after{transform:rotate(-18deg)}
 .crate{background:linear-gradient(145deg,#bf8b4d,#81552e)!important;box-shadow:inset 8px 0 0 rgba(255,212,138,.12),inset -7px -7px 0 rgba(61,36,21,.22),0 10px 14px rgba(0,0,0,.17)}
 .tent-small{background:linear-gradient(135deg,#ead797 0%,#bd9255 100%)!important;box-shadow:inset -16px -10px 0 rgba(98,64,35,.14),0 12px 16px rgba(0,0,0,.17)}
 .spanish-ship{box-shadow:inset 0 10px 0 rgba(203,134,67,.22),inset 0 -14px 0 rgba(51,30,17,.24),0 18px 0 rgba(0,0,0,.18),0 26px 22px rgba(0,0,0,.16)!important}
-.case-field-player{transition:left 112ms cubic-bezier(.18,.72,.18,1),top 112ms cubic-bezier(.18,.72,.18,1)!important}
+.case-field-player{transition:none!important;will-change:left,top}
 .case-field-player.is-walking{animation:fieldFootsteps .28s steps(2) infinite!important}
+.hub-player{transition:none!important;will-change:left,top}
+.hub-player.is-walking{animation:fieldFootsteps .28s steps(2) infinite!important}
 @keyframes islandWaterDrift{from{transform:translate3d(0,0,0)}to{transform:translate3d(44px,18px,0)}}
+@keyframes islandWaveSlide{from{transform:translate3d(-18px,-8px,0)}to{transform:translate3d(72px,24px,0)}}
+@keyframes rockWash{0%,100%{opacity:.22;transform:scaleX(.72)}50%{opacity:.62;transform:scaleX(1.18)}}

@@ -63,6 +63,14 @@ let fieldMovement = { x: 20.0, y: 12.0, facing: 'down', moving: false, step: fal
 let fieldCamera = { x: 0, y: 0 };
 const FIELD_GRID = { columns: 40, rows: 24, tile: 40 };
 const FIELD_STEP = 0.32;
+const FIELD_SPEED = 3.65;
+const HUB_SPEED = 3.65;
+const FIELD_MOVE_KEYS = {
+  arrowup: [0, -1], w: [0, -1],
+  arrowdown: [0, 1], s: [0, 1],
+  arrowleft: [-1, 0], a: [-1, 0],
+  arrowright: [1, 0], d: [1, 0]
+};
 const FIELD_BLOCKS = [
   // The field uses a Pokémon-style physics layer: feet collide with bases, not decorative overlap.
   { x1: 2.9, y1: 7.2, x2: 9.9, y2: 9.7, kind: 'ship hull' },
@@ -77,7 +85,7 @@ const FIELD_BLOCKS = [
   { x1: 31.6, y1: 16.5, x2: 35.4, y2: 19.2, kind: 'tent' },
   { x1: 12.7, y1: 16.4, x2: 15.4, y2: 20.3, kind: 'southwest palm' },
   { x1: 13.2, y1: 6.5, x2: 15.3, y2: 9.9, kind: 'north palm' },
-  { x1: 20.0, y1: 4.1, x2: 22.4, y2: 7.4, kind: 'garden palm' },
+  { x1: 15.1, y1: 7.1, x2: 17.5, y2: 10.4, kind: 'inland palm' },
   { x1: 34.0, y1: 10.8, x2: 36.0, y2: 14.5, kind: 'east palm' }
 ];
 const FIELD_NPCS = [
@@ -100,6 +108,9 @@ const fieldNpcRuntime = Object.fromEntries(FIELD_NPCS.map((npc, index) => {
   const path = FIELD_NPC_PATROLS[npc.id] || [{ x: npc.x, y: npc.y }];
   return [npc.id, { path, index: 0, x: path[0].x, y: path[0].y, nextTick: 900 + index * 260, speed: 0.012 + (index % 3) * 0.003, walking: false, facing: 'down' }];
 }));
+const fieldHeldKeys = new Set();
+let fieldMoveFrame = null;
+let lastFieldMoveAt = 0;
 function fieldNpcState(npc) { return fieldNpcRuntime[npc.id] || { x: npc.x, y: npc.y, walking: false, facing: 'down' }; }
 function fieldNpcFrameUrls(npc, facing = 'down') {
   const side = facing === 'left' || facing === 'right';
@@ -244,6 +255,8 @@ const HUB_TARGETS = {
 };
 let instituteMovement = { x: 7, y: 9, facing: 'up', moving: false, step: false, queued: null };
 function safeInstituteSpawn(x = 7, y = 9, facing = 'up') {
+  hubHeldKeys.clear();
+  stopHubMovementLoop();
   instituteMovement = { x, y, facing, moving: false, step: false, queued: null };
   hubDialogueId = null;
 }
@@ -254,6 +267,9 @@ const HUB_NPC_PATROLS = {
   julian: [{ x: 12.8, y: 6.0 }, { x: 13.6, y: 6.0 }, { x: 13.6, y: 6.35 }, { x: 12.8, y: 6.35 }]
 };
 const hubNpcRuntime = Object.fromEntries(Object.entries(HUB_NPC_PATROLS).map(([id, path], index) => [id, { path, index: 0, x: path[0].x, y: path[0].y, nextTick: 950 + index * 420, speed: 0.08, walking: false, facing: 'down' }]));
+const hubHeldKeys = new Set();
+let hubMoveFrame = null;
+let lastHubMoveAt = 0;
 function hubTargetState(id) {
   return hubNpcRuntime[id] || HUB_TARGETS[id];
 }
@@ -550,7 +566,7 @@ function instituteSpriteUrl() {
 }
 function targetDistance(target, id = null) {
   const state = id ? hubTargetState(id) : target;
-  return Math.abs(instituteMovement.x - state.x) + Math.abs(instituteMovement.y - state.y);
+  return Math.hypot(instituteMovement.x - state.x, instituteMovement.y - state.y);
 }
 function targetReach(id) {
   return id === 'table' ? 1.65 : 1.1;
@@ -572,6 +588,14 @@ function updateInstitutePlayer() {
     prompt.hidden = !nearby;
     prompt.textContent = nearby ? `Press E · ${nearby[1].name}` : '';
   }
+  updateHubProximityUi();
+}
+function updateHubProximityUi() {
+  Object.keys(HUB_TARGETS).forEach(id => {
+    const selector = id === 'trophy' ? '.hub-trophy' : id === 'table' ? '.hub-table' : `[data-hub-npc="${id}"]`;
+    const node = document.querySelector(selector);
+    if (node) node.classList.toggle('is-near', targetDistance(HUB_TARGETS[id], id) <= targetReach(id));
+  });
 }
 function isHubBlocked(x, y) {
   const edge = x < 0 || y < 0 || x >= HUB_GRID.columns || y >= HUB_GRID.rows;
@@ -580,6 +604,74 @@ function isHubBlocked(x, y) {
   if (hubRectBlocked(foot)) return true;
   // NPCs should feel alive, but they should not make the Archive feel stuck or maze-like.
   return false;
+}
+function hubHeldVector() {
+  let dx = 0;
+  let dy = 0;
+  hubHeldKeys.forEach(key => {
+    const move = FIELD_MOVE_KEYS[key];
+    if (!move) return;
+    dx += move[0];
+    dy += move[1];
+  });
+  if (dx && dy) {
+    const scale = Math.SQRT1_2;
+    dx *= scale;
+    dy *= scale;
+  }
+  return [dx, dy];
+}
+function startHubMovementLoop() {
+  if (hubMoveFrame) return;
+  lastHubMoveAt = performance.now();
+  hubMoveFrame = window.requestAnimationFrame(runHubMovementLoop);
+}
+function stopHubMovementLoop() {
+  if (hubMoveFrame) window.cancelAnimationFrame(hubMoveFrame);
+  hubMoveFrame = null;
+  lastHubMoveAt = 0;
+}
+function runHubMovementLoop(now) {
+  if (progress.currentScreen !== 'institute') {
+    hubHeldKeys.clear();
+    instituteMovement.moving = false;
+    stopHubMovementLoop();
+    return;
+  }
+  const [dx, dy] = hubHeldVector();
+  if (!dx && !dy) {
+    instituteMovement.moving = false;
+    updateInstitutePlayer();
+    stopHubMovementLoop();
+    return;
+  }
+  const elapsed = Math.min(48, Math.max(0, now - lastHubMoveAt || 16));
+  lastHubMoveAt = now;
+  const distance = HUB_SPEED * (elapsed / 1000);
+  instituteMovement.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+  const nextX = Number((instituteMovement.x + dx * distance).toFixed(3));
+  const nextY = Number((instituteMovement.y + dy * distance).toFixed(3));
+  let moved = false;
+  if (!isHubBlocked(nextX, nextY)) {
+    instituteMovement.x = nextX;
+    instituteMovement.y = nextY;
+    moved = true;
+  } else {
+    const slideX = Number((instituteMovement.x + dx * distance).toFixed(3));
+    const slideY = Number((instituteMovement.y + dy * distance).toFixed(3));
+    if (dx && !isHubBlocked(slideX, instituteMovement.y)) {
+      instituteMovement.x = slideX;
+      moved = true;
+    }
+    if (dy && !isHubBlocked(instituteMovement.x, slideY)) {
+      instituteMovement.y = slideY;
+      moved = true;
+    }
+  }
+  instituteMovement.moving = moved;
+  if (moved) instituteMovement.step = !instituteMovement.step;
+  updateInstitutePlayer();
+  hubMoveFrame = window.requestAnimationFrame(runHubMovementLoop);
 }
 function moveInstitutePlayer(dx, dy) {
   if (progress.currentScreen !== 'institute') return;
@@ -709,6 +801,86 @@ function updateFieldPlayer() {
     fieldCamera = { x: camX, y: camY };
     world.style.transform = `translate(${camX}px, ${camY}px)`;
   }
+  updateFieldProximityUi();
+}
+function updateFieldProximityUi() {
+  FIELD_NPCS.forEach(npc => {
+    const node = document.querySelector(`[data-npc="${npc.id}"]`);
+    if (node) node.classList.toggle('is-near', isNearFieldNpc(npc));
+  });
+  CASE_001_SOURCES.forEach((source, index) => {
+    const node = document.querySelector(`.source-signal--world.signal-${index + 1}`);
+    if (node) node.classList.toggle('is-near', isNearFieldSource(source.id));
+  });
+}
+function fieldHeldVector() {
+  let dx = 0;
+  let dy = 0;
+  fieldHeldKeys.forEach(key => {
+    const move = FIELD_MOVE_KEYS[key];
+    if (!move) return;
+    dx += move[0];
+    dy += move[1];
+  });
+  if (dx && dy) {
+    const scale = Math.SQRT1_2;
+    dx *= scale;
+    dy *= scale;
+  }
+  return [dx, dy];
+}
+function startFieldMovementLoop() {
+  if (fieldMoveFrame) return;
+  lastFieldMoveAt = performance.now();
+  fieldMoveFrame = window.requestAnimationFrame(runFieldMovementLoop);
+}
+function stopFieldMovementLoop() {
+  if (fieldMoveFrame) window.cancelAnimationFrame(fieldMoveFrame);
+  fieldMoveFrame = null;
+  lastFieldMoveAt = 0;
+}
+function runFieldMovementLoop(now) {
+  if (progress.currentScreen !== 'field') {
+    fieldHeldKeys.clear();
+    fieldMovement.moving = false;
+    stopFieldMovementLoop();
+    return;
+  }
+  const [dx, dy] = fieldHeldVector();
+  if (!dx && !dy) {
+    fieldMovement.moving = false;
+    updateFieldPlayer();
+    stopFieldMovementLoop();
+    return;
+  }
+  const elapsed = Math.min(48, Math.max(0, now - lastFieldMoveAt || 16));
+  lastFieldMoveAt = now;
+  const distance = FIELD_SPEED * (elapsed / 1000);
+  fieldMovement.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+  const nextX = Number((fieldMovement.x + dx * distance).toFixed(3));
+  const nextY = Number((fieldMovement.y + dy * distance).toFixed(3));
+  let moved = false;
+  if (!isFieldBlocked(nextX, nextY)) {
+    fieldMovement.x = nextX;
+    fieldMovement.y = nextY;
+    moved = true;
+  } else {
+    const slideX = Number((fieldMovement.x + dx * distance).toFixed(3));
+    const slideY = Number((fieldMovement.y + dy * distance).toFixed(3));
+    if (dx && !isFieldBlocked(slideX, fieldMovement.y)) {
+      fieldMovement.x = slideX;
+      moved = true;
+    }
+    if (dy && !isFieldBlocked(fieldMovement.x, slideY)) {
+      fieldMovement.y = slideY;
+      moved = true;
+    }
+  }
+  if (moved && progress.activeFieldNpc) progress.activeFieldNpc = null;
+  fieldMovement.moving = moved;
+  if (moved) fieldMovement.step = !fieldMovement.step;
+  updateFieldPlayer();
+  fieldMoveFrame = window.requestAnimationFrame(runFieldMovementLoop);
 }
 function moveFieldPlayer(dx, dy) {
   if (progress.currentScreen !== 'field') return;
@@ -795,7 +967,7 @@ function recallBeacon() {
 function fieldScreen() {
   const allSecured = countEvidence('case-001') === CASE_001_SOURCES.length;
   const fieldNotice = progress.fieldNotice || 'The Chronometer places you near the village first. Talk with people, observe the settlement, then compare what you learn with written records.';
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">Caribbean · 1493</p><h1>The Atlantic Crossroads</h1><p class="field-question">${esc(caseById('case-001').question)}</p><p>You are the only Chronicler in the field. Start in the village, gather observations, then follow the shoreline toward the Spanish camp and map fragments as the record opens.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world" id="caribbeanWorld" style="${fieldWorldStyle()}"><div class="ocean-layer"></div><div class="island-sand island-main"></div><div class="island-sand island-west"></div><div class="island-sand island-east"></div><div class="island-grass grass-main"></div>${recallBeacon()}<div class="cartographer-table"><span></span><b>Cartographer</b></div><div class="spanish-ship"><span class="mast"></span><span class="sail sail-one"></span><span class="sail sail-two"></span><b>✚</b></div><div class="ship-shadow"></div><div class="village"><div class="bohio hut-one"><span></span></div><div class="bohio hut-two"><span></span></div><div class="bohio hut-three"><span></span></div><div class="canoe canoe-one"></div><div class="garden garden-one"></div></div><div class="spanish-camp"><div class="campfire"></div><div class="crate crate-one"></div><div class="tent-small"></div></div><div class="palm p1"></div><div class="palm p2"></div><div class="palm p3"></div><div class="palm p4"></div>${FIELD_NPCS.map(fieldNpcButton).join('')}${CASE_001_SOURCES.map(fieldSourceSignal).join('')}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || 'Chronicler')}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence('case-001')}</b></button><button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">Complete the village investigation, Columbus source encounter, and map reconstruction.</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">Caribbean · 1493</p><h1>The Atlantic Crossroads</h1><p class="field-question">${esc(caseById('case-001').question)}</p><p>You are the only Chronicler in the field. Start in the village, gather observations, then follow the shoreline toward the Spanish camp and map fragments as the record opens.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world" id="caribbeanWorld" style="${fieldWorldStyle()}"><div class="ocean-layer"></div><div class="shore-rock shore-rock--one"></div><div class="shore-rock shore-rock--two"></div><div class="shore-rock shore-rock--three"></div><div class="shore-rock shore-rock--four"></div><div class="shore-rock shore-rock--five"></div><div class="shore-rock shore-rock--six"></div><div class="island-sand island-main"></div><div class="island-sand island-west"></div><div class="island-sand island-east"></div><div class="island-grass grass-main"></div>${recallBeacon()}<div class="cartographer-table"><span></span><b>Cartographer</b></div><div class="spanish-ship"><span class="mast"></span><span class="sail sail-one"></span><span class="sail sail-two"></span><b>✚</b></div><div class="ship-shadow"></div><div class="village"><div class="bohio hut-one"><span></span></div><div class="bohio hut-two"><span></span></div><div class="bohio hut-three"><span></span></div><div class="village-campfire"></div><div class="canoe canoe-one"></div><div class="garden garden-one" aria-label="Cultivated rows with cassava, maize, and squash"><span class="crop-row crop-row--cassava"></span><span class="crop-row crop-row--maize"></span><span class="crop-row crop-row--squash"></span></div></div><div class="spanish-camp"><div class="campfire"></div><div class="crate crate-one"></div><div class="tent-small"></div></div><div class="palm p1"></div><div class="palm p2"></div><div class="palm p3"></div><div class="palm p4"></div>${FIELD_NPCS.map(fieldNpcButton).join('')}${CASE_001_SOURCES.map(fieldSourceSignal).join('')}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || 'Chronicler')}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence('case-001')}</b></button><button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">Complete the village investigation, Columbus source encounter, and map reconstruction.</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -1138,7 +1310,11 @@ window.addEventListener('keydown', event => {
   const moves={arrowup:[0,-1],w:[0,-1],arrowdown:[0,1],s:[0,1],arrowleft:[-1,0],a:[-1,0],arrowright:[1,0],d:[1,0]};
   if (progress.currentScreen === 'institute') {
     if (key === 'e' || key === 'enter') { const nearby=nearestHubTarget(); if (nearby) { event.preventDefault(); interactWithHubTarget(nearby[0]); } return; }
-    if(moves[key]) { event.preventDefault(); moveInstitutePlayer(...moves[key]); }
+    if(FIELD_MOVE_KEYS[key]) {
+      event.preventDefault();
+      hubHeldKeys.add(key);
+      startHubMovementLoop();
+    }
     return;
   }
   if (progress.currentScreen === 'field') {
@@ -1151,8 +1327,28 @@ window.addEventListener('keydown', event => {
       }
       return;
     }
-    if (moves[key]) { event.preventDefault(); moveFieldPlayer(...moves[key]); }
+    if (FIELD_MOVE_KEYS[key]) {
+      event.preventDefault();
+      fieldHeldKeys.add(key);
+      startFieldMovementLoop();
+    }
   }
+});
+window.addEventListener('keyup', event => {
+  const key = event.key.toLowerCase();
+  if (!FIELD_MOVE_KEYS[key]) return;
+  fieldHeldKeys.delete(key);
+  hubHeldKeys.delete(key);
+});
+window.addEventListener('blur', () => {
+  fieldHeldKeys.clear();
+  hubHeldKeys.clear();
+  fieldMovement.moving = false;
+  instituteMovement.moving = false;
+  stopFieldMovementLoop();
+  stopHubMovementLoop();
+  updateFieldPlayer();
+  updateInstitutePlayer();
 });
 
 render();
