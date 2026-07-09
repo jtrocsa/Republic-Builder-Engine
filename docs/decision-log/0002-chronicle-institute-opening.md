@@ -14,7 +14,7 @@ Milestone 1 implements only the opening/orientation flow:
 2. Chronicle Institute premise
 3. Field protocol / Chronicler orientation
 4. Character-creation handoff placeholder
-5. First assignment preview: Unit 1, Case 1.01 — *The Atlantic Crossroads*
+5. First assignment preview: Unit 1, Case 1.01 — _The Atlantic Crossroads_
 
 ## Deliberate exclusions
 

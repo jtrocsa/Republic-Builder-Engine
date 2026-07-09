@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: 'apps/web',
+  root: "apps/web",
   server: {
     open: true,
   },

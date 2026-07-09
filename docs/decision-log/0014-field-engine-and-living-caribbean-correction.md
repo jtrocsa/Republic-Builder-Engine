@@ -3,6 +3,7 @@
 The previous 3.4.1 archive did not modify the implementation. This replacement pack changes the actual source code.
 
 ## Implemented corrections
+
 - Removes the field mentor from the historical Caribbean map.
 - Makes the Chronicle Institute the only Archive/Chronicler home base.
 - Expands Case 1.01 into a larger scrollable Caribbean world.

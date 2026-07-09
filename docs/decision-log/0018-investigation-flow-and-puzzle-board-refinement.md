@@ -3,6 +3,7 @@
 Milestone 3.4.4 focuses on the first Caribbean investigation loop.
 
 ## Decisions
+
 - The player now begins closer to the Taíno village so the investigation naturally starts with the inhabited community.
 - Spanish camp and map-fragment source interactions are hidden until the village context record is secured.
 - Village observations are shown as separate focused scenes rather than one combined scene.

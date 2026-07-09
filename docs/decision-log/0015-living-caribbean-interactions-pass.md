@@ -3,6 +3,7 @@
 Milestone 3.4.2 turns Case 1.01 from a simple source collection field into a mission with field interactions.
 
 ## Changes
+
 - NPCs are now human-readable sprites rather than marker-like CSS shapes.
 - Broad tan terrain overlays were removed so the field reads more cleanly.
 - The temporal arrival area is now a blue Chronicle recall beacon near the shore.
@@ -13,4 +14,5 @@ Milestone 3.4.2 turns Case 1.01 from a simple source collection field into a mis
   - Waldseemüller map jigsaw before the map source reader.
 
 ## Historical integrity rule
+
 Field dialogue is dramatized and clearly framed as a game interaction. Actual evidence remains in the source reader and Codex response flow.

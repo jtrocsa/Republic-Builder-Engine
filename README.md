@@ -29,18 +29,18 @@ The engine renders systems such as dialogue, evidence, maps, Codex entries, and 
 
 ## Canonical homes
 
-| Thing | Permanent home |
-|---|---|
-| Reusable JavaScript systems | `apps/web/src/engine/` |
-| Feature-level UI | `apps/web/src/features/` |
-| Campaign and unit content | `content/campaigns/` |
-| Primary-source records | `content/library/primary-sources/` |
-| Historical NPC records | `content/library/npcs/` |
-| Historical place records | `content/library/locations/` |
-| Images, maps, audio, icons | `assets/` |
-| JSON schemas | `data/schemas/` |
-| Project documentation | `docs/` |
-| Build/import/validation scripts | `scripts/` |
+| Thing                           | Permanent home                     |
+| ------------------------------- | ---------------------------------- |
+| Reusable JavaScript systems     | `apps/web/src/engine/`             |
+| Feature-level UI                | `apps/web/src/features/`           |
+| Campaign and unit content       | `content/campaigns/`               |
+| Primary-source records          | `content/library/primary-sources/` |
+| Historical NPC records          | `content/library/npcs/`            |
+| Historical place records        | `content/library/locations/`       |
+| Images, maps, audio, icons      | `assets/`                          |
+| JSON schemas                    | `data/schemas/`                    |
+| Project documentation           | `docs/`                            |
+| Build/import/validation scripts | `scripts/`                         |
 
 ## Important: stable, not frozen
 

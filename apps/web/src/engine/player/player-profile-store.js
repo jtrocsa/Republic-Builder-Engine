@@ -1,10 +1,10 @@
-const PLAYER_PROFILE_KEY = 'republic-builder.chronicle.player-profile.v1';
+const PLAYER_PROFILE_KEY = "republic-builder.chronicle.player-profile.v1";
 
 export const EMPTY_PLAYER_PROFILE = Object.freeze({
-  name: '',
-  appearance: 'a',
+  name: "",
+  appearance: "a",
   codexIssued: false,
-  fieldArrivalSeen: false
+  fieldArrivalSeen: false,
 });
 
 export function readPlayerProfile() {
@@ -15,8 +15,8 @@ export function readPlayerProfile() {
     return {
       ...EMPTY_PLAYER_PROFILE,
       ...parsed,
-      appearance: parsed?.appearance === 'b' ? 'b' : 'a',
-      name: typeof parsed?.name === 'string' ? parsed.name.slice(0, 14) : ''
+      appearance: parsed?.appearance === "b" ? "b" : "a",
+      name: typeof parsed?.name === "string" ? parsed.name.slice(0, 14) : "",
     };
   } catch {
     return { ...EMPTY_PLAYER_PROFILE };
@@ -27,8 +27,11 @@ export function writePlayerProfile(profile) {
   const next = {
     ...EMPTY_PLAYER_PROFILE,
     ...profile,
-    name: String(profile?.name ?? '').replace(/\s+/g, ' ').trim().slice(0, 14),
-    appearance: profile?.appearance === 'b' ? 'b' : 'a'
+    name: String(profile?.name ?? "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 14),
+    appearance: profile?.appearance === "b" ? "b" : "a",
   };
   window.localStorage.setItem(PLAYER_PROFILE_KEY, JSON.stringify(next));
   return next;

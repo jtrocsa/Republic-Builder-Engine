@@ -32,6 +32,7 @@ Despite the modular folder structure (`apps/web/src/engine/`, `apps/web/src/feat
 The files under `apps/web/src/features/*` (`chronicle-institute.js`, `chronicle-identity.js`, `atlantic-crossroads-preview.js`) and `apps/web/src/engine/content/author-content-store.js` / `apps/web/src/engine/player/player-profile-store.js` are **not imported by `main.js`** — they are earlier/parallel modularization attempts that are currently dead code. Before assuming feature logic lives in one of these files, check whether `main.js` actually imports it. When extending gameplay, the pragmatic move is usually to edit `main.js` directly rather than wire in an orphaned module, unless the user is deliberately doing the modularization work.
 
 `main.js` only imports:
+
 - `./styles/global.css`
 - named exports from `./content/unit-01-campaign.js` (`BRAND`, `UNIT_01`, `CASE_001_SOURCES`, `EXCHANGE_RECORDS`, `EMPIRE_EVIDENCE`, `EMPIRE_CONNECTIONS`, `REVIEW`)
 - `readProgress` / `saveProgress` / `resetProgress` from `./engine/chronicle-progress-store.js`
@@ -44,17 +45,17 @@ The files under `apps/web/src/features/*` (`chronicle-institute.js`, `chronicle-
 
 The repo's stated architecture rule (from `README.md` and the decision log): **engine code never contains APUSH-specific facts.** In practice today, `main.js` still mixes engine mechanics (movement, collision, screen transitions) with Chronicle/Unit-1-specific data (NPC dialogue text, field coordinates, quest names) inline — the clean separation described in the docs is aspirational for the current vertical slice, not yet fully realized. Canonical folder intent, per `README.md`:
 
-| Thing | Home |
-|---|---|
-| Reusable engine systems | `apps/web/src/engine/` |
-| Feature-level UI | `apps/web/src/features/` |
-| Campaign/unit content (JS, imported at build time) | `apps/web/src/content/` |
-| Campaign/unit content (JSON records) | `content/campaigns/` |
-| Primary sources, NPC records, location records | `content/library/` |
-| Images, maps, audio, icons | `assets/` (repo-root) vs. `apps/web/src/assets/` (currently used by the running app) |
-| JSON schemas | `data/schemas/` |
-| Docs | `docs/` |
-| Build/import/validation scripts | `scripts/` |
+| Thing                                              | Home                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Reusable engine systems                            | `apps/web/src/engine/`                                                               |
+| Feature-level UI                                   | `apps/web/src/features/`                                                             |
+| Campaign/unit content (JS, imported at build time) | `apps/web/src/content/`                                                              |
+| Campaign/unit content (JSON records)               | `content/campaigns/`                                                                 |
+| Primary sources, NPC records, location records     | `content/library/`                                                                   |
+| Images, maps, audio, icons                         | `assets/` (repo-root) vs. `apps/web/src/assets/` (currently used by the running app) |
+| JSON schemas                                       | `data/schemas/`                                                                      |
+| Docs                                               | `docs/`                                                                              |
+| Build/import/validation scripts                    | `scripts/`                                                                           |
 
 Note there are two parallel asset trees: `assets/` at the repo root (mostly `.gitkeep` placeholders, intended as the long-term canonical home) and `apps/web/src/assets/` (where the actual sprites/maps/documents used by `main.js` currently live, referenced via `new URL(..., import.meta.url)`).
 
@@ -66,7 +67,7 @@ A development-only in-app panel (toggled via the chrome button, rendered by `aut
 
 ### Documentation conventions
 
-- `docs/decision-log/000N-*.md` — numbered ADRs recording *why* a design choice was made (read the highest-numbered ones for the most current architectural context; earlier ones may describe superseded milestones).
+- `docs/decision-log/000N-*.md` — numbered ADRs recording _why_ a design choice was made (read the highest-numbered ones for the most current architectural context; earlier ones may describe superseded milestones).
 - `docs/architecture/*.md` and `docs/content-guide/*.md` — several of these (e.g. `repository-map.md`, `naming-and-placement.md`, decision `0001`) are currently placeholder stubs ("Recovered placeholder file restored...") rather than live documentation — don't treat their presence as meaning the content exists; check the file body before citing it.
 - `docs/milestone-*.md` at the top level of `docs/` duplicate/mirror some `decision-log` entries by milestone number.
 

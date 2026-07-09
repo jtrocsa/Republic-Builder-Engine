@@ -8,12 +8,14 @@ export function clone(value) {
 
 export function mergeDefaults(defaults, candidate) {
   if (Array.isArray(defaults)) {
-    return Array.isArray(candidate) ? candidate.map((item, index) => mergeDefaults(defaults[index] ?? item, item)) : clone(defaults);
+    return Array.isArray(candidate)
+      ? candidate.map((item, index) => mergeDefaults(defaults[index] ?? item, item))
+      : clone(defaults);
   }
 
-  if (defaults && typeof defaults === 'object') {
+  if (defaults && typeof defaults === "object") {
     const result = {};
-    const source = candidate && typeof candidate === 'object' ? candidate : {};
+    const source = candidate && typeof candidate === "object" ? candidate : {};
     for (const key of Object.keys(defaults)) {
       result[key] = mergeDefaults(defaults[key], source[key]);
     }
@@ -24,11 +26,11 @@ export function mergeDefaults(defaults, candidate) {
 }
 
 export function getAtPath(source, path) {
-  return path.split('.').reduce((current, key) => current?.[key], source);
+  return path.split(".").reduce((current, key) => current?.[key], source);
 }
 
 export function setAtPath(source, path, value) {
-  const keys = path.split('.');
+  const keys = path.split(".");
   let target = source;
   keys.slice(0, -1).forEach((key) => {
     target = target[key];
@@ -54,8 +56,8 @@ export function clearLocalContent(storageKey) {
 }
 
 export function downloadContent(filename, content) {
-  const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
+  const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = filename;
   document.body.append(link);
