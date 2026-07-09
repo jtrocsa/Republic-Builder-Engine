@@ -137,3 +137,520 @@
 .jigsaw-grid--ten .map-slot>span{font-size:.85rem;color:rgba(200,224,222,.7)}.map-slot.has-piece{background-image:none}.map-piece{background-size:500% 200%!important;min-height:110px!important;border-radius:10px!important;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
 .map-piece--p1{background-position:0% 0%;border-top-left-radius:12px!important}.map-piece--p2{background-position:25% 0%;clip-path:polygon(0 0,42% 0,48% 10%,57% 0,100% 0,100% 44%,92% 51%,100% 58%,100% 100%,0 100%,0 60%,8% 52%,0 44%)}.map-piece--p3{background-position:50% 0%;clip-path:polygon(0 0,100% 0,100% 100%,58% 100%,50% 90%,42% 100%,0 100%,0 55%,8% 50%,0 43%)}.map-piece--p4{background-position:75% 0%;clip-path:polygon(0 0,100% 0,100% 42%,91% 49%,100% 58%,100% 100%,0 100%,0 0)}.map-piece--p5{background-position:100% 0%;border-top-right-radius:12px!important}.map-piece--p6{background-position:0% 100%;border-bottom-left-radius:12px!important}.map-piece--p7{background-position:25% 100%;clip-path:polygon(0 0,45% 0,51% 10%,58% 0,100% 0,100% 100%,0 100%,0 0)}.map-piece--p8{background-position:50% 100%;clip-path:polygon(0 0,40% 0,50% 10%,60% 0,100% 0,100% 100%,0 100%,0 58%,8% 50%,0 42%)}.map-piece--p9{background-position:75% 100%;clip-path:polygon(0 0,100% 0,100% 100%,42% 100%,50% 90%,58% 100%,0 100%,0 0)}.map-piece--p10{background-position:100% 100%;border-bottom-right-radius:12px!important}.piece-tray--ten{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.piece-tray--ten .map-piece{min-height:92px!important}.map-piece span{font-size:.57rem!important;padding:4px 6px!important;background:rgba(4,27,38,.72)!important;}
 @media(max-width:1180px){.activity-shell--wide{grid-template-columns:1fr}.jigsaw-grid--ten{grid-template-columns:repeat(5,1fr);min-height:360px}.piece-tray--ten{grid-template-columns:repeat(2,1fr)}.piece-tray--ten .map-piece{min-height:120px!important}.case-field--living .field-intro h1{max-width:100%;font-size:3rem}.field-npc{width:42px!important;height:60px!important}.field-npc img{width:42px!important;height:60px!important}.field-npc span{top:56px!important}.source-signal--world{transform:translate(-50%,-50%) scale(.85)!important}}
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.4 · Investigation flow and puzzle board refinement
+   ------------------------------------------------------------------------- */
+.case-field--living{grid-template-columns:minmax(240px,.38fr) minmax(760px,1.42fr) minmax(220px,.34fr);}
+.case-field--living .field-intro h1{font-size:clamp(2.15rem,3vw,3.55rem);max-width:10ch;}
+.case-field--living .field-intro p{max-width:32ch;}
+.source-signal--world{min-width:86px!important;min-height:52px!important;padding:7px 8px!important;border-radius:18px!important;}
+.source-signal--world i{width:24px!important;height:24px!important;font-size:.85rem!important;}
+.source-signal--world b{font-size:8px!important;letter-spacing:.06em!important;}
+.source-signal--world small{font-size:10px!important;max-width:80px!important;}
+.field-npc{z-index:32;}
+.field-npc em{position:absolute;left:50%;bottom:calc(100% + 14px);width:230px;transform:translateX(-50%);padding:10px 12px;border:1px solid rgba(239,204,122,.45);border-radius:13px;background:rgba(4,31,43,.94);color:#f4fbf8;font-style:normal;font-size:11px;line-height:1.35;text-align:left;box-shadow:0 14px 24px rgba(0,0,0,.28);pointer-events:none;z-index:80;}
+.field-npc em::after{content:'';position:absolute;left:50%;bottom:-7px;width:12px;height:12px;transform:translateX(-50%) rotate(45deg);background:rgba(4,31,43,.94);border-right:1px solid rgba(239,204,122,.45);border-bottom:1px solid rgba(239,204,122,.45);}
+.field-npc--taino-gardener img{animation:npcPatrolVertical 4.2s ease-in-out infinite;}
+.field-npc--taino-fisher img{animation:npcPatrolSmall 5.1s ease-in-out infinite;}
+.field-npc--spanish-sailor img{animation:npcPatrolHorizontal 4.8s ease-in-out infinite;}
+@keyframes npcPatrolVertical{0%,100%{transform:translateY(-5px)}50%{transform:translateY(5px)}}
+@keyframes npcPatrolSmall{0%,100%{transform:translate(0,0)}25%{transform:translate(5px,0)}50%{transform:translate(5px,5px)}75%{transform:translate(0,5px)}}
+@keyframes npcPatrolHorizontal{0%,100%{transform:translateX(-7px)}50%{transform:translateX(7px)}}
+.field-viewport{min-height:640px;}
+.caribbean-world{will-change:transform;}
+.village-scene--focused{min-height:390px;border-color:rgba(113,222,215,.35);background:linear-gradient(160deg,#6b9f62,#4d815d);}
+.village-scene--focused::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 18% 22%,rgba(239,209,128,.24),transparent 18%),radial-gradient(circle at 72% 36%,rgba(239,209,128,.18),transparent 23%),radial-gradient(circle at 56% 100%,rgba(30,94,102,.24),transparent 28%);}
+.scene-sunpatch{position:absolute;left:7%;top:8%;width:35%;height:38%;border-radius:50%;background:rgba(236,201,121,.1);filter:blur(2px);}
+.scene-person{position:absolute;width:58px;height:86px;object-fit:contain;filter:drop-shadow(0 9px 5px rgba(0,0,0,.28));z-index:3;}
+.scene-person--elder{left:48%;top:28%;width:70px;height:100px;}
+.scene-person--left{left:33%;top:45%;}.scene-person--right{left:62%;top:46%;}.scene-person--family.scene-person--one{left:39%;top:50%;}.scene-person--family.scene-person--two{left:59%;top:52%;}.scene-person--worker{left:24%;top:42%;}.scene-person--canoe{right:24%;top:48%;}
+.scene-bohio{position:absolute;border:4px solid rgba(105,66,34,.72);border-radius:50% 50% 18px 18px;background:linear-gradient(#dfc27c 0 44%,#b6793d 45% 100%);box-shadow:0 11px 0 rgba(0,0,0,.12);z-index:2;}
+.scene-bohio span{position:absolute;left:50%;bottom:0;width:22px;height:34px;background:#5e351e;border-radius:14px 14px 0 0;transform:translateX(-50%);}
+.scene-bohio--large{left:34%;top:13%;width:190px;height:135px;}.scene-bohio--small{left:58%;top:26%;width:135px;height:96px;}
+.scene-garden-rows{position:absolute;left:7%;top:15%;width:260px;height:132px;border-radius:22px;background:repeating-linear-gradient(90deg,rgba(62,115,48,.85) 0 16px,rgba(136,170,86,.85) 16px 32px);border:3px solid rgba(55,92,48,.65);box-shadow:0 13px 0 rgba(0,0,0,.11);}
+.scene-canoe-close{position:absolute;right:10%;top:32%;width:250px;height:48px;border-radius:50%;background:#744220;border:6px solid #332013;transform:rotate(-10deg);box-shadow:0 11px 0 rgba(0,0,0,.12);}
+.village-scene--elder .scene-dialogue,.village-scene--bohio .scene-dialogue,.village-scene--garden .scene-dialogue{left:28px;right:28px;bottom:24px;}
+.village-investigation-shell .activity-copy p{max-width:34ch;}
+.investigation-card{min-height:158px;}
+.investigation-card span{font-size:.86rem;}
+/* Cleaner, non-ghosted jigsaw board */
+.activity-shell--wide{grid-template-columns:minmax(230px,.38fr) minmax(740px,1.62fr);}
+.activity-shell--wide .activity-copy h1{font-size:clamp(2.25rem,3.2vw,4.2rem);line-height:1.02;}
+.jigsaw-grid--ten{width:min(760px,100%);aspect-ratio:1.55/1;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(2,1fr);gap:8px;background:linear-gradient(150deg,rgba(8,43,58,.96),rgba(4,27,40,.96));}
+.jigsaw-grid--ten .map-slot{min-height:112px;background:rgba(255,255,255,.035)!important;border:1px dashed rgba(239,204,122,.52);}
+.jigsaw-grid--ten .map-slot>span{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(201,224,224,.56);}
+.map-slot.has-piece{background:transparent!important;}
+.map-piece{background-image:var(--map-piece-image)!important;box-shadow:0 12px 22px rgba(0,0,0,.24),inset 0 0 0 1px rgba(255,240,184,.2);}
+.jigsaw-grid--ten .map-piece{min-height:100%!important;}
+.piece-tray--ten{grid-template-columns:repeat(5,minmax(112px,1fr));align-items:stretch;}
+.piece-tray--ten .map-piece{min-height:82px!important;}
+.map-piece--p1{clip-path:polygon(0 0,84% 0,100% 16%,100% 100%,0 100%)}
+.map-piece--p2{clip-path:polygon(0 0,40% 0,49% 13%,58% 0,100% 0,100% 45%,88% 53%,100% 62%,100% 100%,0 100%,0 62%,10% 53%,0 45%)}
+.map-piece--p3{clip-path:polygon(0 0,100% 0,100% 100%,60% 100%,50% 87%,40% 100%,0 100%,0 58%,12% 50%,0 42%)}
+.map-piece--p4{clip-path:polygon(0 0,100% 0,100% 40%,89% 50%,100% 60%,100% 100%,0 100%,0 0)}
+.map-piece--p5{clip-path:polygon(0 0,100% 0,100% 100%,16% 100%,0 84%)}
+.map-piece--p6{clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+.map-piece--p7{clip-path:polygon(0 0,42% 0,50% 13%,58% 0,100% 0,100% 100%,0 100%)}
+.map-piece--p8{clip-path:polygon(0 0,38% 0,50% 13%,62% 0,100% 0,100% 58%,90% 50%,100% 42%,100% 100%,0 100%,0 58%,10% 50%,0 42%)}
+.map-piece--p9{clip-path:polygon(0 0,100% 0,100% 100%,40% 100%,50% 87%,60% 100%,0 100%)}
+.map-piece--p10{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 16%,16% 0)}
+.map-piece span{bottom:6px!important;left:7px!important;right:7px!important;}
+@media(max-width:1180px){.activity-shell--wide{grid-template-columns:1fr}.jigsaw-grid--ten{width:min(780px,100%);min-height:0;}.piece-tray--ten{grid-template-columns:repeat(2,1fr)}.piece-tray--ten .map-piece{min-height:110px!important}.village-scene--focused{min-height:330px}.case-field--living{grid-template-columns:1fr}.field-viewport{min-height:620px}}
+
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.5 · Field movement, reset controls, and archive display
+   ------------------------------------------------------------------------- */
+.case-field--living .field-intro h1{max-width:11ch;overflow:visible;}
+.field-reset-button{display:block;margin-top:14px;color:#9fe3de;}
+.hub-trophy{position:absolute;z-index:20;transform:translate(-50%,-50%);width:82px;height:54px;border:1px solid rgba(239,204,122,.58);border-radius:10px;background:linear-gradient(180deg,rgba(15,66,74,.92),rgba(4,30,43,.94));color:#f8e8ba;box-shadow:0 10px 18px rgba(0,0,0,.24),inset 0 0 0 3px rgba(239,204,122,.08);cursor:pointer;}
+.hub-trophy span{display:block;font-size:1.1rem;line-height:1;margin-bottom:1px;color:#f1cc78;}
+.hub-trophy b{display:block;font:700 .47rem 'Cinzel',serif;letter-spacing:.05em;line-height:1.05;}
+.hub-trophy i{position:absolute;right:-8px;top:-8px;width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:#f1cc78;color:#082c39;font-style:normal;font-weight:900;}
+.hub-trophy.is-near{box-shadow:0 0 0 6px rgba(126,221,214,.15),0 0 24px rgba(126,221,214,.35);}
+.archive-badges{margin:12px 0 2px;padding:12px;border:1px solid rgba(239,204,122,.24);border-radius:12px;background:rgba(3,26,38,.28);}
+.archive-badges b,.archive-badges span{display:block;}
+.archive-badges b{color:#f8d984;font:700 .62rem 'Cinzel',serif;letter-spacing:.08em;text-transform:uppercase;}
+.archive-badges span{margin-top:6px;color:#cfe2df;font-size:.78rem;}
+/* Avoid the waltz/floating look: patrol NPCs keep their body anchored and only show small foot movement. */
+.field-npc img{animation:none!important;}
+.field-npc::before,.field-npc::after{content:'';position:absolute;bottom:1px;width:8px;height:4px;border-radius:50%;background:rgba(10,20,24,.78);z-index:2;opacity:.85;}
+.field-npc::before{left:15px}.field-npc::after{right:15px}
+.field-npc--taino-gardener::before,.field-npc--taino-fisher::before,.field-npc--spanish-sailor::before{animation:npcFootLeft .52s steps(2,end) infinite;}
+.field-npc--taino-gardener::after,.field-npc--taino-fisher::after,.field-npc--spanish-sailor::after{animation:npcFootRight .52s steps(2,end) infinite;}
+@keyframes npcFootLeft{0%,100%{transform:translateX(-1px)}50%{transform:translateX(3px)}}
+@keyframes npcFootRight{0%,100%{transform:translateX(3px)}50%{transform:translateX(-1px)}}
+
+/* Milestone 3.4.6 — proximity interaction, smaller quest icons, animated NPC frames, polished puzzle sockets */
+.source-signal--world{
+  min-width:42px!important;
+  width:42px!important;
+  min-height:42px!important;
+  height:42px!important;
+  padding:3px!important;
+  border-radius:15px!important;
+  display:grid!important;
+  place-items:center!important;
+  gap:0!important;
+  box-shadow:0 0 0 4px rgba(118,230,238,.12),0 8px 14px rgba(0,0,0,.24)!important;
+}
+.source-signal--world i{width:26px!important;height:26px!important;font-size:.85rem!important;margin:0!important;}
+.source-signal--world b{position:absolute!important;top:calc(100% + 5px)!important;left:50%!important;transform:translateX(-50%)!important;font-size:7px!important;padding:3px 5px!important;border-radius:999px!important;background:rgba(6,35,48,.82)!important;white-space:nowrap!important;}
+.source-signal--world small{display:none!important;position:absolute!important;top:calc(100% + 22px)!important;left:50%!important;transform:translateX(-50%)!important;font-size:8px!important;white-space:nowrap!important;max-width:none!important;color:#cffcff!important;}
+.source-signal--world.is-near small{display:block!important;}
+.source-signal--world:not(.is-near){opacity:.9;}
+.field-npc{overflow:visible!important;}
+.field-npc .npc-frame{position:absolute;left:50%;top:0;transform:translateX(-50%);width:46px!important;height:66px!important;object-fit:contain!important;filter:drop-shadow(0 5px 3px rgba(0,0,0,.28));}
+.field-npc .npc-frame--step{opacity:0;}
+.field-npc--taino-gardener .npc-frame--idle,.field-npc--taino-fisher .npc-frame--idle,.field-npc--spanish-sailor .npc-frame--idle,.field-npc--taino-elder .npc-frame--idle,.field-npc--spanish-scribe .npc-frame--idle,.field-npc--columbus .npc-frame--idle{animation:npcIdleFrame .7s steps(1,end) infinite;}
+.field-npc--taino-gardener .npc-frame--step,.field-npc--taino-fisher .npc-frame--step,.field-npc--spanish-sailor .npc-frame--step,.field-npc--taino-elder .npc-frame--step,.field-npc--spanish-scribe .npc-frame--step,.field-npc--columbus .npc-frame--step{animation:npcStepFrame .7s steps(1,end) infinite;}
+.field-npc::before,.field-npc::after{display:none!important;}
+@keyframes npcIdleFrame{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes npcStepFrame{0%,49%{opacity:0}50%,100%{opacity:1}}
+.field-npc.is-near span{border-color:rgba(117,235,239,.75)!important;color:#e8ffff!important;box-shadow:0 0 0 3px rgba(117,235,239,.12);}
+.field-interact-prompt{position:absolute;z-index:60;transform:translate(-50%,-100%);padding:6px 8px;border:1px solid rgba(117,235,239,.55);border-radius:999px;background:rgba(4,31,43,.9);color:#e8ffff;font:700 9px 'Cinzel',serif;letter-spacing:.04em;white-space:nowrap;pointer-events:none;box-shadow:0 10px 20px rgba(0,0,0,.24);}
+.jigsaw-board--ten{align-content:start;}
+.jigsaw-grid--ten{gap:0!important;padding:18px!important;border-radius:24px!important;background:linear-gradient(145deg,#0a3342,#041e2b)!important;box-shadow:inset 0 0 0 1px rgba(239,204,122,.28),inset 0 0 40px rgba(0,0,0,.24)!important;}
+.jigsaw-grid--ten .map-slot{border:1px solid rgba(239,204,122,.18)!important;border-radius:0!important;background:rgba(255,255,255,.025)!important;overflow:visible!important;min-height:132px!important;}
+.jigsaw-grid--ten .map-slot::before{content:'';position:absolute;inset:5px;background-image:var(--map-piece-image);background-size:500% 200%;opacity:.12;filter:sepia(.35) contrast(1.08);clip-path:inherit;}
+.jigsaw-grid--ten .map-slot>span{font-size:0!important;}
+.map-piece{border:2px solid rgba(239,204,122,.64)!important;border-radius:0!important;box-shadow:0 10px 19px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.1)!important;filter:sepia(.2) contrast(1.05)!important;}
+.map-piece span{opacity:0!important;}
+.map-piece:hover span,.map-piece:focus-visible span{opacity:1!important;}
+.piece-tray--ten .map-piece{min-height:72px!important;}
+.map-piece--p1,.map-slot--p1::before{background-position:0% 0%;clip-path:polygon(0 0,100% 0,100% 42%,88% 50%,100% 60%,100% 100%,0 100%,0 0)!important;}
+.map-piece--p2,.map-slot--p2::before{background-position:25% 0%;clip-path:polygon(0 0,42% 0,50% 14%,60% 0,100% 0,100% 100%,62% 100%,50% 88%,39% 100%,0 100%,0 59%,11% 50%,0 41%)!important;}
+.map-piece--p3,.map-slot--p3::before{background-position:50% 0%;clip-path:polygon(0 0,38% 0,50% 13%,63% 0,100% 0,100% 43%,89% 50%,100% 60%,100% 100%,0 100%,0 0)!important;}
+.map-piece--p4,.map-slot--p4::before{background-position:75% 0%;clip-path:polygon(0 0,100% 0,100% 100%,62% 100%,50% 88%,38% 100%,0 100%,0 58%,12% 50%,0 41%)!important;}
+.map-piece--p5,.map-slot--p5::before{background-position:100% 0%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 58%,12% 50%,0 42%)!important;}
+.map-piece--p6,.map-slot--p6::before{background-position:0% 100%;clip-path:polygon(0 0,100% 0,100% 42%,88% 50%,100% 59%,100% 100%,0 100%,0 0)!important;}
+.map-piece--p7,.map-slot--p7::before{background-position:25% 100%;clip-path:polygon(0 0,39% 0,50% 12%,62% 0,100% 0,100% 100%,0 100%,0 58%,12% 50%,0 42%)!important;}
+.map-piece--p8,.map-slot--p8::before{background-position:50% 100%;clip-path:polygon(0 0,100% 0,100% 43%,88% 50%,100% 59%,100% 100%,61% 100%,50% 88%,39% 100%,0 100%,0 0)!important;}
+.map-piece--p9,.map-slot--p9::before{background-position:75% 100%;clip-path:polygon(0 0,38% 0,50% 13%,62% 0,100% 0,100% 100%,0 100%,0 58%,12% 50%,0 41%)!important;}
+.map-piece--p10,.map-slot--p10::before{background-position:100% 100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 0)!important;}
+
+
+/* Milestone 3.4.7 — clarity and puzzle corrections */
+.field-viewport,.caribbean-world,.field-npc,.source-signal--world,.field-interact-prompt,.field-dialogue-panel{
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+.field-npc{outline:none!important;}
+.field-npc:hover,.field-npc:focus-visible{transform:translate(-50%,-50%)!important;filter:brightness(1.08)!important;}
+.field-npc span,.source-signal--world b,.source-signal--world small,.field-interact-prompt{
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-weight:800!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  line-height:1.1!important;
+  text-shadow:0 1px 0 rgba(0,0,0,.45)!important;
+}
+.field-npc span{
+  top:64px!important;
+  font-size:11px!important;
+  padding:4px 7px!important;
+  max-width:128px!important;
+  overflow:visible!important;
+  color:#f6fffb!important;
+  border:1px solid rgba(239,204,122,.55)!important;
+  background:rgba(4,31,43,.96)!important;
+  box-shadow:0 6px 12px rgba(0,0,0,.25)!important;
+}
+.source-signal--world{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;border-radius:14px!important;transform:translate(-50%,-50%)!important;}
+.source-signal--world b{font-size:8.5px!important;top:calc(100% + 4px)!important;background:rgba(4,31,43,.96)!important;color:#ffe7a8!important;}
+.source-signal--world small{font-size:10px!important;top:calc(100% + 22px)!important;background:rgba(4,31,43,.92)!important;padding:2px 5px!important;border-radius:999px!important;}
+.field-interact-prompt{font-size:11px!important;padding:6px 9px!important;z-index:95!important;background:rgba(3,29,40,.96)!important;}
+.field-dialogue-panel{
+  position:absolute;
+  left:18px;
+  top:18px;
+  z-index:90;
+  width:min(390px,calc(100% - 36px));
+  padding:13px 15px;
+  border:1px solid rgba(239,204,122,.52);
+  border-radius:14px;
+  background:rgba(3,29,40,.96);
+  box-shadow:0 16px 28px rgba(0,0,0,.34);
+  color:#f5fbf7;
+  pointer-events:none;
+}
+.field-dialogue-panel b{display:block;margin-bottom:4px;color:#ffe19a;font:800 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+.field-dialogue-panel p{margin:0;font:700 14px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+.field-npc em{display:none!important;}
+.field-npc .npc-frame{image-rendering:auto!important;}
+.field-npc.is-walking-npc .npc-frame--idle{animation:npcIdleFrame .48s steps(1,end) infinite!important;}
+.field-npc.is-walking-npc .npc-frame--step{animation:npcStepFrame .48s steps(1,end) infinite!important;}
+.field-npc.is-walking-npc{animation:npcBodyWalk .48s steps(2,end) infinite!important;}
+@keyframes npcBodyWalk{0%,100%{margin-top:0}50%{margin-top:-2px}}
+
+/* Keep the map pieces upright and remove impossible holes from the center of the puzzle. */
+.activity-shell--wide{grid-template-columns:minmax(260px,.46fr) minmax(720px,1.54fr)!important;}
+.jigsaw-grid--ten{
+  position:relative!important;
+  width:min(820px,100%)!important;
+  aspect-ratio:1.55/1!important;
+  grid-template-columns:repeat(5,1fr)!important;
+  grid-template-rows:repeat(2,1fr)!important;
+  gap:0!important;
+  padding:16px!important;
+  overflow:hidden!important;
+}
+.jigsaw-grid--ten::after{
+  content:'';
+  position:absolute;
+  inset:16px;
+  z-index:8;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 200'%3E%3Cg fill='none' stroke='%23041f2d' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round' opacity='.92'%3E%3Cpath d='M100 0 C92 22 119 22 111 45 C105 63 82 58 88 82 C91 95 100 96 100 100 C100 104 91 105 88 118 C82 142 105 137 111 155 C119 178 92 178 100 200'/%3E%3Cpath d='M200 0 C191 20 218 22 210 44 C204 62 182 58 188 82 C191 95 200 96 200 100 C200 104 191 105 188 118 C182 142 204 138 210 156 C218 178 191 180 200 200'/%3E%3Cpath d='M300 0 C291 20 318 22 310 44 C304 62 282 58 288 82 C291 95 300 96 300 100 C300 104 291 105 288 118 C282 142 304 138 310 156 C318 178 291 180 300 200'/%3E%3Cpath d='M400 0 C391 20 418 22 410 44 C404 62 382 58 388 82 C391 95 400 96 400 100 C400 104 391 105 388 118 C382 142 404 138 410 156 C418 178 391 180 400 200'/%3E%3Cpath d='M0 100 C18 91 22 118 44 110 C62 104 58 82 82 88 C95 91 96 100 100 100 C104 100 105 91 118 88 C142 82 138 104 156 110 C178 118 182 91 200 100 C218 109 222 82 244 90 C262 96 258 118 282 112 C295 109 296 100 300 100 C304 100 305 109 318 112 C342 118 338 96 356 90 C378 82 382 109 400 100 C418 91 422 118 444 110 C462 104 458 82 482 88 C495 91 496 100 500 100'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:100% 100%;
+  background-repeat:no-repeat;
+  mix-blend-mode:multiply;
+}
+.jigsaw-grid--ten .map-slot{overflow:hidden!important;min-height:0!important;border:1px solid rgba(239,204,122,.35)!important;background:rgba(255,255,255,.025)!important;}
+.jigsaw-grid--ten .map-slot::before{clip-path:none!important;inset:0!important;opacity:.10!important;}
+.map-piece,.jigsaw-grid--ten .map-piece,.piece-tray--ten .map-piece{
+  clip-path:none!important;
+  border-radius:0!important;
+  min-height:0!important;
+  height:100%!important;
+  width:100%!important;
+  background-size:500% 200%!important;
+}
+.piece-tray--ten{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(92px,1fr))!important;
+  gap:10px!important;
+  align-items:start!important;
+  width:min(820px,100%)!important;
+  margin:0 auto!important;
+}
+.piece-tray--ten .map-piece{
+  aspect-ratio:.62/1!important;
+  height:auto!important;
+  min-height:150px!important;
+}
+.activity-feedback{font-size:16px!important;line-height:1.45!important;}
+@media(max-width:1180px){.piece-tray--ten{grid-template-columns:repeat(5,minmax(70px,1fr))!important}.piece-tray--ten .map-piece{min-height:118px!important}.activity-shell--wide{grid-template-columns:1fr!important}}
+
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.8 · camera stability, open Archive paths, badges, and cleaner map board
+   ------------------------------------------------------------------------- */
+html{scroll-behavior:auto!important;}
+.field-viewport{overscroll-behavior:contain;}
+.field-npc,.source-signal--world,.recall-beacon,.recall-cove{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.field-npc:focus,.source-signal--world:focus,.recall-beacon:focus,.recall-cove:focus{outline:none!important;}
+
+/* NPCs now actually patrol; only animate feet while each individual NPC is moving. */
+.field-npc:not(.is-walking-npc) .npc-frame--idle{animation:none!important;opacity:1!important;}
+.field-npc:not(.is-walking-npc) .npc-frame--step{animation:none!important;opacity:0!important;}
+.field-npc:not(.is-walking-npc){animation:none!important;}
+.field-npc.is-walking-npc{animation:npcPatrolBob .42s steps(2,end) infinite!important;}
+.field-npc[data-facing="left"] .npc-frame,.field-npc[data-facing="right"] .npc-frame{transform:translateX(-50%) scaleX(.95)!important;}
+.field-npc[data-facing="left"] .npc-frame{transform:translateX(-50%) scaleX(-.95)!important;}
+@keyframes npcPatrolBob{0%,100%{margin-top:0}50%{margin-top:-1px}}
+
+/* Keep the field labels readable and avoid text shimmer. */
+.field-npc span,.source-signal--world b,.source-signal--world small,.field-dialogue-panel,.field-interact-prompt{backface-visibility:hidden;transform-style:flat;will-change:auto;}
+.field-dialogue-panel{left:22px!important;top:22px!important;max-width:360px!important;}
+
+/* Archive room movement polish + badge shelf. */
+.institute-map{min-height:650px!important;}
+.hub-player{z-index:34!important;}
+.hub-npc{z-index:28!important;}
+.hub-table{z-index:22!important;}
+.hub-trophy{z-index:26!important;width:72px!important;height:48px!important;}
+.hub-trophy b{font-size:.42rem!important;}
+.unit-badge-shelf{position:absolute;right:5.2%;top:7.6%;z-index:24;display:flex;gap:6px;padding:7px 8px;border:1px solid rgba(239,204,122,.42);border-radius:10px;background:rgba(3,30,42,.82);box-shadow:0 8px 16px rgba(0,0,0,.22);}
+.unit-badge{width:48px;height:46px;display:grid;place-items:center;border:1px solid rgba(239,204,122,.22);border-radius:8px;background:rgba(255,255,255,.04);opacity:.62;}
+.unit-badge i{font-style:normal;color:#839ca0;font-size:15px;line-height:1;}
+.unit-badge b{font:800 7px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#c7d6d1;}
+.unit-badge.is-earned{opacity:1;background:radial-gradient(circle at 50% 35%,rgba(248,212,126,.26),rgba(6,44,53,.9));border-color:rgba(239,204,122,.72);box-shadow:0 0 14px rgba(239,204,122,.22);}
+.unit-badge.is-earned i{color:#ffe19a;}
+.unit-badge.is-earned b{color:#fff0bf;}
+.archive-badges span+span{margin-top:5px;}
+
+/* Remove the ugly black puzzle lines. Use simple connected rectangular sockets for now. */
+.jigsaw-grid--ten::after{display:none!important;content:none!important;}
+.jigsaw-grid--ten{padding:14px!important;background:linear-gradient(145deg,#0a3342,#041e2b)!important;border:1px solid rgba(239,204,122,.55)!important;}
+.jigsaw-grid--ten .map-slot{border:1px solid rgba(239,204,122,.42)!important;outline:0!important;}
+.map-piece,.jigsaw-grid--ten .map-piece,.piece-tray--ten .map-piece{clip-path:none!important;border:1px solid rgba(239,204,122,.78)!important;}
+.piece-tray--ten{grid-template-columns:repeat(5,minmax(90px,1fr))!important;}
+.piece-tray--ten .map-piece{aspect-ratio:.62/1!important;min-height:154px!important;background-size:500% 200%!important;}
+.jigsaw-grid--ten .map-piece{aspect-ratio:auto!important;}
+.map-piece:hover,.map-piece:focus-visible{filter:sepia(.12) contrast(1.08) brightness(1.08)!important;}
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.11 · dialogue anchoring, preservation case UI, and field map cleanup
+   ------------------------------------------------------------------------- */
+.case-field--living .field-viewport{position:relative!important;isolation:isolate!important;}
+.case-field--living .field-dialogue-panel{
+  position:absolute!important;
+  left:18px!important;
+  top:18px!important;
+  z-index:140!important;
+  width:min(410px,calc(100% - 36px))!important;
+  max-width:410px!important;
+  transform:none!important;
+  contain:paint!important;
+  pointer-events:none!important;
+  -webkit-font-smoothing:antialiased!important;
+  text-rendering:optimizeLegibility!important;
+}
+.case-field--living .field-dialogue-panel b{font-size:13px!important;line-height:1.15!important;}
+.case-field--living .field-dialogue-panel p{font-size:14px!important;line-height:1.38!important;font-weight:750!important;}
+.field-npc span{font-size:11.5px!important;line-height:1!important;transform:translateX(-50%) translateZ(0)!important;}
+.field-npc.is-near span{color:#f6fffb!important;border-color:rgba(239,204,122,.62)!important;box-shadow:0 6px 12px rgba(0,0,0,.26)!important;}
+.source-signal--world small{color:#e9ffff!important;}
+.field-interact-prompt{z-index:125!important;}
+
+/* One clean recall object: no extra blue cove ring. */
+.arrival-cove,.recall-cove{display:none!important;}
+.recall-beacon{width:82px!important;height:84px!important;}
+.recall-beacon img{filter:drop-shadow(0 0 14px rgba(244,214,128,.78))!important;}
+.recall-beacon span{top:60px!important;background:rgba(4,31,43,.96)!important;color:#f8e8ba!important;border-color:rgba(239,204,122,.68)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;font-weight:900!important;font-size:10px!important;letter-spacing:0!important;text-transform:none!important;}
+
+/* Move the puzzle interaction to a believable cartographer station by the ship. */
+.cartographer-table{position:absolute;left:238px;top:414px;width:96px;height:54px;z-index:6;transform:rotate(-5deg);border:3px solid #5d3b21;border-radius:8px;background:#a97945;box-shadow:0 11px 0 rgba(0,0,0,.14);}
+.cartographer-table span{position:absolute;inset:9px;border:2px solid rgba(238,218,163,.78);background:linear-gradient(135deg,transparent 47%,rgba(238,218,163,.75) 48% 52%,transparent 53%),linear-gradient(45deg,transparent 47%,rgba(238,218,163,.75) 48% 52%,transparent 53%),rgba(31,74,76,.76);}
+.cartographer-table b{position:absolute;left:50%;top:calc(100% + 5px);transform:translateX(-50%);padding:3px 6px;border:1px solid rgba(239,204,122,.46);border-radius:999px;background:rgba(4,31,43,.95);font:900 9px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f8e8ba;white-space:nowrap;}
+.source-signal--world.signal-3{z-index:13;}
+
+/* Preservation Case is no longer a tiny floating status strip. It is an opened badge case UI. */
+.unit-badge-shelf{display:none!important;}
+.hub-trophy{width:106px!important;height:42px!important;border-radius:9px!important;background:linear-gradient(180deg,rgba(54,93,85,.95),rgba(6,40,51,.96))!important;box-shadow:0 8px 16px rgba(0,0,0,.22),inset 0 0 0 2px rgba(239,204,122,.09)!important;}
+.hub-trophy span{display:inline-grid!important;place-items:center!important;width:20px!important;height:20px!important;margin:0 2px 1px 0!important;border-radius:5px!important;background:rgba(239,204,122,.16)!important;color:#ffe19a!important;font-size:.85rem!important;vertical-align:middle!important;}
+.hub-trophy b{display:inline-block!important;max-width:70px!important;font:900 8.5px/1.04 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;color:#fff2bf!important;text-align:left!important;vertical-align:middle!important;letter-spacing:0!important;text-transform:none!important;}
+.hub-trophy.is-near{box-shadow:0 0 0 6px rgba(126,221,214,.12),0 0 22px rgba(126,221,214,.33)!important;}
+.archive-badges--compact span{font-size:.82rem!important;line-height:1.45!important;}
+.preservation-case{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:28px;background:rgba(2,18,28,.58);backdrop-filter:blur(3px);}
+.preservation-case article{position:relative;width:min(780px,calc(100vw - 44px));padding:26px;border:1px solid rgba(239,204,122,.58);border-radius:24px;background:radial-gradient(circle at 50% 0%,rgba(239,204,122,.16),transparent 32%),linear-gradient(145deg,rgba(9,56,66,.98),rgba(3,28,42,.98));box-shadow:0 28px 70px rgba(0,0,0,.42),inset 0 0 0 8px rgba(239,204,122,.04);}
+.preservation-case h2{margin:0;color:#f9e8ba;font:800 clamp(2rem,4vw,3.4rem)/.96 'Spectral',serif;letter-spacing:-.035em;}
+.preservation-case__subtitle{max-width:58ch;margin:9px 0 20px;color:#d4e2dc;font-size:.95rem;line-height:1.55;}
+.badge-case-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.badge-card{min-height:230px;padding:16px;border:1px solid rgba(239,204,122,.34);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));display:grid;grid-template-rows:auto 1fr;gap:13px;}
+.badge-card.is-earned{background:radial-gradient(circle at 50% 20%,rgba(245,205,105,.24),rgba(6,43,54,.9) 64%);border-color:rgba(245,205,105,.72);box-shadow:0 0 24px rgba(245,205,105,.16),inset 0 0 0 1px rgba(255,239,185,.12);}
+.badge-medallion{width:98px;height:98px;margin:auto;display:grid;place-items:center;border:5px solid rgba(239,204,122,.42);border-radius:50%;background:linear-gradient(145deg,#0a4350,#021d2a);box-shadow:inset 0 0 0 8px rgba(239,204,122,.08),0 12px 26px rgba(0,0,0,.26);}
+.badge-card.is-earned .badge-medallion{border-color:#f1cb74;background:radial-gradient(circle,#ffe49a 0 18%,#c48235 19% 54%,#0d4952 55%);box-shadow:0 0 22px rgba(241,203,116,.28),inset 0 0 0 8px rgba(255,248,205,.16);}
+.badge-medallion span{font-size:2.3rem;color:#9db5b2;line-height:1;}
+.badge-card.is-earned .badge-medallion span{color:#fff6c9;text-shadow:0 2px 0 rgba(0,0,0,.24);}
+.badge-card b,.badge-card small,.badge-card p{display:block;text-align:center;}
+.badge-card b{color:#fff0bd;font:900 1rem/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.badge-card small{margin-top:5px;color:#f1cb74;font:900 .65rem/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-transform:uppercase;letter-spacing:.07em;}
+.badge-card p{margin:10px 0 0;color:#d4e2dc;font-size:.82rem;line-height:1.45;}
+.badge-card.is-locked{opacity:.68;filter:saturate(.65);}
+@media(max-width:760px){.badge-case-grid{grid-template-columns:1fr}.badge-card{min-height:190px}.preservation-case{place-items:start center;overflow:auto}.preservation-case article{margin-top:20px}}
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.12 · anchored dialogue, spaced field UI, living Archive NPCs
+   ------------------------------------------------------------------------- */
+.field-dialogue-panel,.field-interact-prompt{display:none!important;}
+.field-speech-bubble{
+  position:absolute;
+  z-index:145;
+  width:340px;
+  max-width:340px;
+  transform:translate(-50%,-100%);
+  padding:13px 38px 14px 15px;
+  border:2px solid rgba(239,204,122,.66);
+  border-radius:17px;
+  background:rgba(3,28,40,.98);
+  color:#f6fffb;
+  box-shadow:0 16px 26px rgba(0,0,0,.34),inset 0 0 0 1px rgba(255,255,255,.06);
+  pointer-events:auto;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.field-speech-bubble::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  bottom:-12px;
+  width:20px;
+  height:20px;
+  transform:translateX(-50%) rotate(45deg);
+  background:rgba(3,28,40,.98);
+  border-right:2px solid rgba(239,204,122,.66);
+  border-bottom:2px solid rgba(239,204,122,.66);
+}
+.field-speech-bubble--left-edge{transform:translate(-12%,-100%);}
+.field-speech-bubble--left-edge::after{left:16%;}
+.field-speech-bubble--right-edge{transform:translate(-88%,-100%);}
+.field-speech-bubble--right-edge::after{left:84%;}
+.field-speech-bubble b{display:block;margin:0 0 4px;color:#ffe19a;font:900 13px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+.field-speech-bubble p{margin:0;font:800 14px/1.38 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;letter-spacing:0!important;}
+.field-speech-bubble__close{position:absolute;right:9px;top:8px;width:22px;height:22px;border:1px solid rgba(239,204,122,.45);border-radius:50%;background:rgba(255,255,255,.07);color:#f8e8ba;font:900 16px/1 system-ui;cursor:pointer;}
+.field-npc.is-talking span{border-color:#f1cb74!important;color:#fff2bf!important;box-shadow:0 0 0 4px rgba(241,203,116,.13),0 6px 12px rgba(0,0,0,.27)!important;}
+.case-field-player{z-index:80!important;}
+.field-npc{z-index:70!important;}
+.source-signal--world{z-index:65!important;}
+.source-signal--world.signal-2{z-index:74!important;}
+.source-signal--world.signal-3{z-index:73!important;}
+.cartographer-table{left:300px!important;top:424px!important;width:102px!important;height:58px!important;z-index:8!important;}
+.recall-beacon{z-index:7!important;}
+.recall-beacon span{font-size:9.5px!important;}
+
+/* Move field labels away from one another now that dialogue is anchored to speakers. */
+.field-npc--taino-elder span{top:63px!important;}
+.field-npc--taino-fisher span{top:63px!important;}
+.field-npc--spanish-scribe span{top:63px!important;}
+.field-npc--spanish-sailor span{top:63px!important;}
+
+/* Archive staff now patrol like field NPCs, but gently. */
+.hub-npc{transition:left .12s linear,top .12s linear;}
+.hub-npc img{transform-origin:50% 90%;image-rendering:auto!important;}
+.hub-npc.is-walking-npc img{animation:hubNpcWalk .48s steps(2,end) infinite;}
+.hub-npc[data-facing="left"] img{transform:scaleX(-1);}
+.hub-npc[data-facing="right"] img{transform:scaleX(1);}
+@keyframes hubNpcWalk{0%,100%{translate:0 0}50%{translate:0 -2px}}
+.hub-npc.is-walking-npc::after{content:'';position:absolute;left:50%;bottom:4px;width:28px;height:8px;transform:translateX(-50%);border-radius:50%;background:rgba(0,0,0,.18);z-index:-1;}
+
+/* Preservation Case belongs to the shelf: label above the bookshelf, not covering people. */
+.hub-trophy{width:124px!important;height:34px!important;transform:translate(-50%,-110%)!important;border-radius:999px!important;padding:4px 9px!important;}
+.hub-trophy span{width:18px!important;height:18px!important;font-size:.75rem!important;}
+.hub-trophy b{max-width:88px!important;font-size:8.5px!important;white-space:normal!important;}
+.hub-trophy i{right:-7px!important;top:-8px!important;}
+.preservation-case article{border-radius:28px!important;}
+.preservation-case h2::before{content:'🏅 ';font-size:.8em;}
+.badge-case-grid{gap:18px!important;}
+.badge-card{box-shadow:inset 0 0 0 4px rgba(239,204,122,.035),0 12px 22px rgba(0,0,0,.18);}
+.badge-medallion{position:relative;}
+.badge-medallion::after{content:'';position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(255,250,210,.25);}
+
+@media(max-width:760px){.field-speech-bubble{width:280px;max-width:280px}.cartographer-table{left:292px!important}}
+
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.13 · NPC physics, stable dialogue camera, left status rail
+   ------------------------------------------------------------------------- */
+html, body { overflow-x: hidden; }
+.hub-shell--status-left{
+  grid-template-columns:minmax(260px,.56fr) minmax(720px,1.72fr)!important;
+  align-items:start!important;
+}
+.hub-shell--status-left .hub-intro{position:sticky;top:84px!important;align-self:start;}
+.hub-sidepanel--left{
+  position:static!important;
+  margin-top:18px!important;
+  padding:17px!important;
+  border-radius:16px!important;
+  background:linear-gradient(145deg,rgba(13,58,70,.72),rgba(4,27,39,.84))!important;
+  box-shadow:0 12px 26px rgba(0,0,0,.18)!important;
+}
+.hub-sidepanel--left h2{font-size:1.35rem!important;}
+.hub-sidepanel--left .hub-progress{margin:14px 0!important;}
+.hub-sidepanel--left .hub-actions .btn{width:100%;}
+.hub-shell--status-left .institute-map{grid-column:2!important;}
+
+/* The status rail no longer sits over the walkable room. The room remains the playable surface. */
+.hub-shell--status-left .hub-sidepanel{z-index:1;}
+.institute-map{z-index:2;}
+
+/* Field dialogue now opens without resetting the map camera; make the bubble feel like it comes from the speaker. */
+.caribbean-world{transition:transform 58ms linear!important;}
+.field-speech-bubble{
+  width:300px!important;
+  max-width:300px!important;
+  padding:11px 34px 12px 13px!important;
+  border-radius:15px!important;
+  transform:translate(-50%,-108%)!important;
+}
+.field-speech-bubble--left-edge{transform:translate(-14%,-108%)!important;}
+.field-speech-bubble--right-edge{transform:translate(-86%,-108%)!important;}
+.field-speech-bubble p{font-size:13px!important;line-height:1.34!important;}
+.field-speech-bubble b{font-size:12px!important;}
+.field-npc:focus,.source-signal--world:focus,.recall-beacon:focus{outline:none!important;}
+.field-npc:focus-visible,.source-signal--world:focus-visible,.recall-beacon:focus-visible{outline:2px solid rgba(126,221,214,.8)!important;outline-offset:4px!important;}
+
+/* NPCs can now show left/right facing instead of always appearing front-facing while sliding. */
+.field-npc[data-facing="left"] .npc-frame{transform:translateX(-50%) scaleX(-1)!important;}
+.field-npc[data-facing="right"] .npc-frame{transform:translateX(-50%) scaleX(1)!important;}
+.field-npc[data-facing="up"] .npc-frame{filter:drop-shadow(0 5px 3px rgba(0,0,0,.28)) brightness(.92) saturate(.95)!important;}
+.field-npc[data-facing="down"] .npc-frame{filter:drop-shadow(0 5px 3px rgba(0,0,0,.28)) brightness(1)!important;}
+.hub-npc[data-facing="left"] img{transform:scaleX(-1)!important;}
+.hub-npc[data-facing="right"] img{transform:scaleX(1)!important;}
+.hub-npc[data-facing="up"] img{filter:brightness(.92) saturate(.95)!important;}
+
+/* Collision-safe placements need less visual crowding. */
+.cartographer-table{left:300px!important;top:434px!important;}
+.source-signal--world.signal-2{transform:translate(-50%,-50%) scale(.92)!important;}
+.source-signal--world.signal-3{transform:translate(-50%,-50%) scale(.92)!important;}
+.recall-beacon{left:410px!important;top:545px!important;}
+.hub-trophy{top:12.8%!important;}
+
+@media(max-width:1220px){
+  .hub-shell--status-left{grid-template-columns:1fr!important;max-width:930px!important;}
+  .hub-shell--status-left .hub-intro{position:static!important;}
+  .hub-shell--status-left .institute-map{grid-column:1!important;}
+  .hub-sidepanel--left{display:block!important;}
+}
+@media(max-width:760px){
+  .field-speech-bubble{width:265px!important;max-width:265px!important;}
+}
+
+
+/* -------------------------------------------------------------------------
+   Milestone 3.4.14 · Archive pathing, side-facing sprites, cursor, music
+   ------------------------------------------------------------------------- */
+:root{--rb-cursor:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2732%27%20viewBox%3D%270%200%2032%2032%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20stop-color%3D%27%23f6df9b%27/%3E%3Cstop%20offset%3D%27.55%27%20stop-color%3D%27%23c78b36%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%2312384a%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%27M5%203%20L23%2017%20L15%2019%20L12%2028%20L8%2026%20L11%2018%20L5%2021%20Z%27%20fill%3D%27url%28%23g%29%27%20stroke%3D%27%23061d2b%27%20stroke-width%3D%272%27%20stroke-linejoin%3D%27round%27/%3E%3Cpath%20d%3D%27M8%208%20L18%2016%20L13%2017%20L11%2023%27%20fill%3D%27none%27%20stroke%3D%27%23fff1b9%27%20stroke-width%3D%271.2%27%20stroke-linecap%3D%27round%27/%3E%3Ccircle%20cx%3D%2721%27%20cy%3D%2718%27%20r%3D%273%27%20fill%3D%27%230b3143%27%20stroke%3D%27%23f2cf79%27%20stroke-width%3D%271.5%27/%3E%3C/svg%3E") 3 2, auto;}
+html,body,#app,button,a,input,textarea,select,[data-action],.source-signal--world,.field-npc,.hub-npc{cursor:var(--rb-cursor)!important;}
+button:hover,[data-action]:hover{filter:brightness(1.06);}
+.audio-toggle{border:1px solid rgba(239,204,122,.45);border-radius:999px;background:rgba(7,29,44,.72);color:#f6dda0;padding:8px 12px;font:800 .72rem/1 'DM Sans',sans-serif;letter-spacing:.04em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);}
+.audio-toggle.is-on{background:linear-gradient(135deg,rgba(30,93,97,.86),rgba(8,40,59,.92));box-shadow:0 0 18px rgba(239,204,122,.18),inset 0 0 0 1px rgba(255,255,255,.06);}
+/* No camera tween when dialogue opens. The bubble appears over the NPC without a visible snap. */
+.caribbean-world{transition:none!important;}
+.field-speech-bubble{z-index:95!important;}
+/* The Archive room is a little larger and the walkable aisles feel less cramped. */
+.hub-shell--status-left .institute-map{min-width:860px!important;}
+.hub-player{z-index:42!important;}
+.hub-table{width:134px!important;min-height:58px!important;}
+.hub-table b{font-size:.58rem!important;}
+.hub-npc{width:7.1%!important;}
+.hub-npc img{image-rendering:auto!important;}
+.hub-npc[data-facing="left"] img{transform:scaleX(-1)!important;}
+.hub-npc[data-facing="right"] img{transform:scaleX(1)!important;}
+.hub-npc[data-facing="up"] img{filter:brightness(.94) saturate(.96) drop-shadow(0 4px 3px rgba(0,0,0,.25))!important;}
+.hub-trophy{top:11.5%!important;}
+.hub-trophy b{font-size:9px!important;}
+@media(max-width:1220px){.hub-shell--status-left .institute-map{min-width:0!important;}}
