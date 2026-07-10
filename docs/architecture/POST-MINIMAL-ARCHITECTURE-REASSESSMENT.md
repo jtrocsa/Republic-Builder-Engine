@@ -80,6 +80,8 @@ Not installed; no code references it. The 15 documented hotfix milestones (3.4.1
 
 **No forcing function. Continue deferring** (remains optional/nonblocking, as already noted in the architecture docs).
 
+> **Update, 2026-07-10**: Forcing function found. While building the quest-type renderers (MCQ, evidence-organizing), no way existed to verify new UI actually renders or responds correctly — Vitest covers logic, not rendered output. Playwright + Chromium installed as a scoped agent-verification tool for confirming UI output during development, not as a full e2e suite and not as a CI gate. The broader "Playwright as a hard requirement" item remains deferred; only this narrow use is now active.
+
 ### inkjs
 
 Dialogue in `main.js` is entirely static strings (`FIELD_NPCS[].text`) or JS closures (`HUB_TARGETS[id].dialogue()`) — no branching, no variables, no conditions-as-data, confirmed by direct inspection of both content files and the tooling audit's own characterization. No approved quest design currently requires branching, conditional paths, or rejoining story branches.
@@ -110,7 +112,7 @@ No second subject is in active development, and no reusable activity-template or
 | --- | --- | --- |
 | Phaser | Continue deferring | No perf problem, no authoring bottleneck, second map is placeholder |
 | Tiled | Continue deferring | Same as Phaser — no real second map complexity yet |
-| Playwright | Continue deferring | Not blocking; manual verification has resolved regressions so far without it |
+| Playwright | Partially active — scoped to agent UI verification, full e2e still deferred | See 2026-07-10 update note in §5 |
 | inkjs | Continue deferring | Dialogue is static; no approved branching quest design exists |
 | Subject-pack extraction (`packs/<subject>/`) | Continue deferring | Only one real subject exists; Unit 2 is placeholder |
 | PlatformCore / accounts / classrooms | Continue deferring | Zero account/classroom code; no real second user |
