@@ -32,6 +32,8 @@ import {
 } from "./repositories/local-teacher-override-store.js";
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
+import { renderTiledMap } from "./engine/tiled-map-loader.js";
+import riverbendTmjRaw from "./content/maps/riverbend-field.tmj?raw";
 
 const app = document.querySelector("#app");
 const chroniclerPreviewA = new URL("./assets/chronicle-sprites/chronicler-a.png", import.meta.url)
@@ -39,7 +41,31 @@ const chroniclerPreviewA = new URL("./assets/chronicle-sprites/chronicler-a.png"
 const chroniclerPreviewB = new URL("./assets/chronicle-sprites/chronicler-b.png", import.meta.url)
   .href;
 const atlanticTable = new URL("./assets/maps/atlantic-navigation-table.png", import.meta.url).href;
-const riverbendFieldArt = new URL("./assets/maps/riverbend-field.png", import.meta.url).href;
+// Riverbend Tiled tileset proof of concept (see docs/architecture/POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md,
+// 2026-07-10 entry) — replaces the static placeholder PNG above with a composited .tmj map.
+// Scoped to this one map only; not a project-wide Tiled adoption.
+const riverbendTmj = JSON.parse(riverbendTmjRaw);
+const RIVERBEND_TILESET_IMAGES = {
+  "medieval-fishing-village-b04": new URL(
+    "./assets/tilesets/Medieval Fishing Village/tile-B-04.png",
+    import.meta.url
+  ).href,
+  "medieval-fantasy-town-1": new URL(
+    "./assets/tilesets/Medieval Fantasy Town/1.png",
+    import.meta.url
+  ).href,
+  "farm-3": new URL("./assets/tilesets/farm/3.png", import.meta.url).href,
+};
+function resolveRiverbendTilesetImage(tileset) {
+  return RIVERBEND_TILESET_IMAGES[tileset.name];
+}
+function renderRiverbendTiledMap() {
+  const canvas = document.getElementById("riverbendTiledCanvas");
+  if (!canvas || canvas.dataset.rendered === "true") return;
+  renderTiledMap(canvas, riverbendTmj, resolveRiverbendTilesetImage).then(() => {
+    canvas.dataset.rendered = "true";
+  });
+}
 const waldseemuller = new URL("./assets/documents/source-waldseemuller-1507.jpg", import.meta.url)
   .href;
 
@@ -1819,7 +1845,7 @@ function caribbeanWorldMarkup() {
   return `<div class="ocean-layer"></div><div class="shore-rock shore-rock--one"></div><div class="shore-rock shore-rock--two"></div><div class="shore-rock shore-rock--three"></div><div class="shore-rock shore-rock--four"></div><div class="shore-rock shore-rock--five"></div><div class="shore-rock shore-rock--six"></div><div class="island-sand island-main"></div><div class="island-sand island-west"></div><div class="island-sand island-east"></div><div class="island-grass grass-main"></div><div class="cartographer-table"><span></span><b>Cartographer</b></div><div class="spanish-ship"><span class="mast"></span><span class="sail sail-one"></span><span class="sail sail-two"></span><b>✚</b></div><div class="ship-shadow"></div><div class="village"><div class="bohio hut-one"><span></span></div><div class="bohio hut-two"><span></span></div><div class="bohio hut-three"><span></span></div><div class="village-campfire"></div><div class="canoe canoe-one"></div><div class="garden garden-one" aria-label="Cultivated rows with cassava, maize, and squash"><span class="crop-row crop-row--cassava"></span><span class="crop-row crop-row--maize"></span><span class="crop-row crop-row--squash"></span></div></div><div class="spanish-camp"><div class="campfire"></div><div class="crate crate-one"></div><div class="tent-small"></div></div><div class="palm p1"></div><div class="palm p2"></div><div class="palm p3"></div><div class="palm p4"></div>`;
 }
 function riverbendWorldMarkup() {
-  return `<img class="field-world-art" src="${riverbendFieldArt}" alt="Top-down colonial river settlement with a meetinghouse, dwellings, tobacco field, and a bridge across the river (placeholder art)">`;
+  return `<canvas class="field-world-art" id="riverbendTiledCanvas" role="img" aria-label="Top-down colonial river settlement with a meetinghouse, dwellings, tobacco field, and a bridge across the river (Tiled tileset proof of concept)"></canvas>`;
 }
 const FIELD_COPY = {
   "unit-01": {
@@ -2195,6 +2221,7 @@ function render() {
     window.requestAnimationFrame(() => {
       updateFieldPlayer();
       updateFieldNpcs();
+      if (activeFieldMap().id === "unit-02") renderRiverbendTiledMap();
     });
   if (progress.currentScreen === "institute")
     window.requestAnimationFrame(() => {
