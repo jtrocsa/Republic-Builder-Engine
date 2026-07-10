@@ -42,6 +42,15 @@ export default [
     },
   },
   {
+    // scripts/ runs under plain Node (npm run validate:content), not the browser
+    files: ["scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+  {
     // Don't lint build output, vendor code, or asset folders
     ignores: ["**/dist/**", "node_modules/**", "vendor/**", "**/*.min.js"],
   },

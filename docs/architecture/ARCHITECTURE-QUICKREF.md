@@ -24,18 +24,21 @@
 
 - Repository audit, third-party tooling audit, platform architecture proposal, and a skeptical simplification review — all four documents exist under `docs/architecture/`.
 - This housekeeping pass: corrected `CLAUDE.md`'s stale claims, repaired 4 confirmed placeholder-stub docs (see §11), repaired decision-log numbering (duplicate `0006` → `0006`/`0006a`; missing `0020` backfilled from an existing milestone doc), and created this file.
+- Phase 2: added Vitest (+ jsdom for `main.js`'s DOM-dependent module scope), `export`ed six existing `main.js` functions/state (`ellipse`, `isCaribbeanLand`, `rectsOverlap`, `footBoxFor`, `badgeRecordsForUnit`, `unlockNext`, `progress`) in place, added a narrow `if (app)` boot guard so importing `main.js` no longer boots the live app as a side effect, and added 24 tests across 3 files under `tests/unit/`. Full writeup: `docs/development/UNIT-TESTING.md`.
+- Phase 3: added Zod, wrote 6 schema files under `apps/web/src/content/schemas/` validating `unit-01-campaign.js`/`unit-02-campaign.js` in place (ids, titles, unit/case/source/mcq/saq structure, answer-index bounds, and cross-references like empire connections → evidence ids, triangle cargo → leg ids, region evidence → region ids), created `apps/web/src/repositories/local-content-repository.js` (one real caller: the validation script), and made `scripts/validate-content.js` a real Zod-backed validator with a global case/source id-uniqueness check across both units. All 17 content groups pass against real content today — no corrections were needed. Added 28 tests across 2 new files under `tests/unit/`. Full writeup: `docs/content/CONTENT-VALIDATION.md`.
+- Phase 4: created `apps/web/src/repositories/local-progress-repository.js`, a thin wrapper around `chronicle-progress-store.js` (untouched, not moved or rewritten). Actual direct call-site count in `main.js` was **8**, not the ~4 originally estimated (`readProgress` ×1, `saveProgress` ×2 direct + ×1 via the `save()` wrapper ~60+ sites use, `resetProgress` ×3, `hasSavedProgress` ×1) — corrected and documented. Only the import statement and the one `readProgress()`→`loadProgress()` call site needed edits; `saveProgress`/`resetProgress`/`hasSavedProgress` kept identical names so every other call site (including all ~60+ indirect `save()` calls) needed no changes. Added a minimal additive `schemaVersion` field + `migrateProgress()` guard at the repository layer (store's data shape unaffected); verified old saves without `schemaVersion` still load correctly with nothing dropped. Added 10 tests in a new file under `tests/unit/`. Full writeup: `docs/architecture/LOCAL-PROGRESS-REPOSITORY.md`.
 
 ## 5. Current active phase
 
-**Phase 1 — Documentation housekeeping.** (Matches `ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` §11, step 1.) Status: **complete** as of this document's creation.
+**Verified dead-code removal** — deleting the confirmed zero-risk orphaned code (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` and `CURRENT-REPOSITORY-AUDIT.md`): the orphaned `apps/web/src/features/*` island (six files: `chronicle-institute.js`, `chronicle-identity.js`, `atlantic-crossroads-preview.js`, `author-content-store.js`, `player-profile-store.js`, and related empty `.gitkeep` folders), the dead `chronicle-case-001.js` content file, and any other import-graph-confirmed-unreachable code named in the audit. Status: **not started**.
 
 ## 6. Exact next phase
 
-**Phase 2 — Add Vitest; export and test a handful of pure `main.js` functions in place** (collision math, badge-earned logic, save-merge logic). No code moves. Not started. Zod schema work (Phase 3 in the review) may proceed in parallel since it's independent.
+Same as §5 above — verified dead-code removal. Re-confirm each candidate's zero-risk status against the current import graph before deleting (don't trust the audit's file list without re-checking, since the tree has changed across Phases 2–4); delete nothing that has gained a real caller since the audit was written.
 
 ## 7. Approved immediate dependencies
 
-- **Vitest** and **Zod** — the only two adopt-now major dependencies. No POC required for either.
+- **Vitest** and **Zod** — the only two adopt-now major dependencies. No POC required for either. **Both are now installed**: Vitest (plus `jsdom` as its DOM-environment dependency) from Phase 2, Zod from Phase 3.
 - ESLint + Prettier are already installed and working (`npm run lint`, `npm run format`) — not new, just confirm they stay enforced.
 
 ## 8. Deferred systems and tools
@@ -54,8 +57,8 @@
 - `npm run dev` / `npm run build` / `npm run preview` — real, working (Vite).
 - `npm run lint` — real, working (ESLint flat config).
 - `npm run format` / `npm run format:check` — real, working (Prettier).
-- `npm run validate:content` — **stub only**, logs a message, does not validate anything yet.
-- No `npm test` exists yet. `tests/` is empty aside from `.gitkeep`. Vitest lands in Phase 2.
+- `npm run validate:content` — real, working, added in Phase 3. Runs `scripts/validate-content.js` under plain Node (not Vite), validating `unit-01-campaign.js`/`unit-02-campaign.js` with Zod schemas from `apps/web/src/content/schemas/` plus two cross-file id-uniqueness checks. See `docs/content/CONTENT-VALIDATION.md`.
+- `npm run test` (Vitest, non-watch, CI-compatible) and `npm run test:watch` — real, working, added in Phase 2. Config: `vitest.config.js` (repo root, deliberately separate from `vite.config.js`). Tests live in `tests/unit/`. See `docs/development/UNIT-TESTING.md`, `docs/content/CONTENT-VALIDATION.md`, and `docs/architecture/LOCAL-PROGRESS-REPOSITORY.md`.
 - Manual browser verification via `npm run dev` remains required for any player-visible change — lint/build passing is not sufficient, per `CLAUDE.md`'s development-workflow expectations.
 
 ## 11. Placeholder documents repaired in this pass
@@ -68,3 +71,6 @@ Four confirmed placeholder-stub documents (verbatim "Recovered placeholder file 
 - `docs/architecture/THIRD-PARTY-TOOLING-AUDIT.md` — dependency research and verdicts.
 - `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` — the long-term multi-subject-platform design.
 - `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — the binding near-term scope cut; when it disagrees with the proposal on what to build *now*, follow this document.
+- `docs/development/UNIT-TESTING.md` — Phase 2 writeup: what's tested, why, the `main.js` import-safety guard, and what's deliberately untested.
+- `docs/content/CONTENT-VALIDATION.md` — Phase 3 writeup: schemas added, the `local-content-repository.js` wrapper, the validation command, cross-reference checks, and known limitations (notably: `main.js`'s own embedded NPC/coordinate/badge dictionaries aren't reachable by a plain-Node validator script).
+- `docs/architecture/LOCAL-PROGRESS-REPOSITORY.md` — Phase 4 writeup: why it's the only repository added, the actual (corrected) call-site count, save versioning, and save-compatibility verification.

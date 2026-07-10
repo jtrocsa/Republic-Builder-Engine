@@ -19,11 +19,11 @@ import {
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
 import {
-  readProgress,
+  loadProgress,
   saveProgress,
   resetProgress,
   hasSavedProgress,
-} from "./engine/chronicle-progress-store.js";
+} from "./repositories/local-progress-repository.js";
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
 
@@ -467,7 +467,7 @@ function updateFieldNpcs() {
   });
   updateFieldPlayer();
 }
-setInterval(updateFieldNpcs, 80);
+if (app) setInterval(updateFieldNpcs, 80);
 
 const FIELD_SOURCE_POINTS = {
   "taino-context": { x: 22.6, y: 10.2, label: "Village investigation", kind: "Observe" },
@@ -849,9 +849,9 @@ function updateInstituteNpcs() {
   });
   updateInstitutePlayer();
 }
-setInterval(updateInstituteNpcs, 120);
+if (app) setInterval(updateInstituteNpcs, 120);
 
-let progress = readProgress();
+export let progress = loadProgress();
 // Field dialogue is moment-to-moment UI, not save-state. Clear stale bubbles after reloads.
 if (progress.activeFieldNpc) {
   progress.activeFieldNpc = null;
@@ -1234,7 +1234,7 @@ const UNIT_BADGES = {
     },
   ],
 };
-function badgeRecordsForUnit(unit) {
+export function badgeRecordsForUnit(unit) {
   return (UNIT_BADGES[unit.id] || []).map((badge) => ({
     ...badge,
     earned:
@@ -1506,10 +1506,10 @@ function fieldSpriteUrl() {
       : fieldMovement.facing;
   return fieldSpriteAssets[appearance][direction][fieldMovement.moving ? "step" : "idle"];
 }
-function ellipse(x, y, cx, cy, rx, ry) {
+export function ellipse(x, y, cx, cy, rx, ry) {
   return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
 }
-function isCaribbeanLand(x, y) {
+export function isCaribbeanLand(x, y) {
   const mainBeach = ellipse(x, y, 20, 12.5, 17.5, 9.4);
   const westCove = ellipse(x, y, 8.2, 12.8, 6.2, 5.9);
   const eastPoint = ellipse(x, y, 31.7, 13.1, 7.4, 6.8);
@@ -1527,10 +1527,10 @@ function isNpcStandingOnLand(x, y) {
   ];
   return checks.every(([px, py]) => activeFieldMap().isLand(px, py));
 }
-function rectsOverlap(a, b) {
+export function rectsOverlap(a, b) {
   return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
 }
-function footBoxFor(x, y) {
+export function footBoxFor(x, y) {
   const footY = y + 0.58;
   return { x1: x - 0.34, x2: x + 0.34, y1: footY - 0.18, y2: footY + 0.2 };
 }
@@ -2180,7 +2180,7 @@ function render() {
   updateMusicForScreen();
 }
 
-function unlockNext(caseId) {
+export function unlockNext(caseId) {
   const unit = unitForCase(caseId) || UNIT_01;
   const index = unit.cases.findIndex((c) => c.id === caseId);
   if (!progress.completedCases.includes(caseId)) progress.completedCases.push(caseId);
@@ -2245,747 +2245,751 @@ function showFeedback(id, message, type = "success") {
   }
 }
 
-app.addEventListener("mousedown", (event) => {
-  if (
-    progress.currentScreen === "field" &&
-    event.target.closest(".field-npc,.source-signal--world,.recall-beacon,.recall-cove")
-  )
-    event.preventDefault();
-});
+// Event listeners and the initial render() are gated on `app` existing so importing
+// this module for unit tests (no #app element in the test DOM) does not boot the game.
+if (app) {
+  app.addEventListener("mousedown", (event) => {
+    if (
+      progress.currentScreen === "field" &&
+      event.target.closest(".field-npc,.source-signal--world,.recall-beacon,.recall-cove")
+    )
+      event.preventDefault();
+  });
 
-app.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-action]");
-  if (!target) {
-    if (progress.currentScreen === "field" && progress.activeFieldNpc) {
+  app.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-action]");
+    if (!target) {
+      if (progress.currentScreen === "field" && progress.activeFieldNpc) {
+        progress.activeFieldNpc = null;
+        save();
+        render();
+      }
+      return;
+    }
+    event.preventDefault();
+    target.blur?.();
+    document.activeElement?.blur?.();
+    const action = target.dataset.action;
+    if (action === "toggle-audio") {
+      toggleAudio();
+      render();
+      return;
+    }
+    if (action === "open-main-menu") {
+      showMainMenu = true;
+      render();
+      return;
+    }
+    if (action === "start-new-game") {
+      progress = resetProgress();
+      resetFieldPosition();
+      progress.currentScreen = "intro-welcome";
+      briefingStep = 0;
+      save();
+      showMainMenu = false;
+      render();
+      return;
+    }
+    if (action === "continue-game") {
+      if (!hasSavedProgress()) return;
+      showMainMenu = false;
+      render();
+      return;
+    }
+    if (action === "intro-advance") {
+      const next = target.dataset.next;
+      if (next === "intro-briefing") briefingStep = 0;
+      if (next === "institute") safeInstituteSpawn(7, 9, "up");
+      progress.currentScreen = next;
+      save();
+      render();
+      return;
+    }
+    if (action === "briefing-next") {
+      const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
+      if (briefingStep < entries.length - 1) {
+        briefingStep += 1;
+        render();
+      } else {
+        progress.currentScreen = "intro-protocol";
+        save();
+        render();
+      }
+      return;
+    }
+    if (action === "briefing-back") {
+      if (briefingStep > 0) {
+        briefingStep -= 1;
+        render();
+      } else {
+        progress.currentScreen = "intro-welcome";
+        save();
+        render();
+      }
+      return;
+    }
+    if (action === "set-appearance") {
+      progress.profile.appearance = target.dataset.value === "b" ? "b" : "a";
+      save();
+      render();
+      return;
+    }
+    if (action === "confirm-identity") {
+      if (!(progress.profile.name || "").trim()) {
+        showFeedback(
+          "identityFeedback",
+          "Enter the name the Archive should use before confirming your identity.",
+          "error"
+        );
+        return;
+      }
+      progress.currentScreen = "intro-registration";
+      save();
+      render();
+      return;
+    }
+    if (action === "hub-open-table") {
+      playSfx("secure");
+      progress.hubNotice = "Navigation Table opened. Select a teacher-unlocked route.";
+      progress.currentScreen = "archive";
+      save();
+      render();
+      return;
+    }
+    if (action === "hub-interact") {
+      interactWithHubTarget(target.dataset.target);
+      return;
+    }
+    if (action === "hub-dialogue-close") {
+      hubDialogueId = null;
+      render();
+      return;
+    }
+    if (action === "field-dialogue-close") {
       progress.activeFieldNpc = null;
       save();
       render();
-    }
-    return;
-  }
-  event.preventDefault();
-  target.blur?.();
-  document.activeElement?.blur?.();
-  const action = target.dataset.action;
-  if (action === "toggle-audio") {
-    toggleAudio();
-    render();
-    return;
-  }
-  if (action === "open-main-menu") {
-    showMainMenu = true;
-    render();
-    return;
-  }
-  if (action === "start-new-game") {
-    progress = resetProgress();
-    resetFieldPosition();
-    progress.currentScreen = "intro-welcome";
-    briefingStep = 0;
-    save();
-    showMainMenu = false;
-    render();
-    return;
-  }
-  if (action === "continue-game") {
-    if (!hasSavedProgress()) return;
-    showMainMenu = false;
-    render();
-    return;
-  }
-  if (action === "intro-advance") {
-    const next = target.dataset.next;
-    if (next === "intro-briefing") briefingStep = 0;
-    if (next === "institute") safeInstituteSpawn(7, 9, "up");
-    progress.currentScreen = next;
-    save();
-    render();
-    return;
-  }
-  if (action === "briefing-next") {
-    const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
-    if (briefingStep < entries.length - 1) {
-      briefingStep += 1;
-      render();
-    } else {
-      progress.currentScreen = "intro-protocol";
-      save();
-      render();
-    }
-    return;
-  }
-  if (action === "briefing-back") {
-    if (briefingStep > 0) {
-      briefingStep -= 1;
-      render();
-    } else {
-      progress.currentScreen = "intro-welcome";
-      save();
-      render();
-    }
-    return;
-  }
-  if (action === "set-appearance") {
-    progress.profile.appearance = target.dataset.value === "b" ? "b" : "a";
-    save();
-    render();
-    return;
-  }
-  if (action === "confirm-identity") {
-    if (!(progress.profile.name || "").trim()) {
-      showFeedback(
-        "identityFeedback",
-        "Enter the name the Archive should use before confirming your identity.",
-        "error"
-      );
       return;
     }
-    progress.currentScreen = "intro-registration";
-    save();
-    render();
-    return;
-  }
-  if (action === "hub-open-table") {
-    playSfx("secure");
-    progress.hubNotice = "Navigation Table opened. Select a teacher-unlocked route.";
-    progress.currentScreen = "archive";
-    save();
-    render();
-    return;
-  }
-  if (action === "hub-interact") {
-    interactWithHubTarget(target.dataset.target);
-    return;
-  }
-  if (action === "hub-dialogue-close") {
-    hubDialogueId = null;
-    render();
-    return;
-  }
-  if (action === "field-dialogue-close") {
-    progress.activeFieldNpc = null;
-    save();
-    render();
-    return;
-  }
-  if (action === "field-talk") {
-    const npc = activeFieldMap().npcs.find((item) => item.id === target.dataset.npc);
-    if (npc) {
-      if (!isNearFieldNpc(npc)) {
-        fieldTooFarNotice(npc.name);
+    if (action === "field-talk") {
+      const npc = activeFieldMap().npcs.find((item) => item.id === target.dataset.npc);
+      if (npc) {
+        if (!isNearFieldNpc(npc)) {
+          fieldTooFarNotice(npc.name);
+          return;
+        }
+        progress.activeFieldNpc = progress.activeFieldNpc === npc.id ? null : npc.id;
+        if (progress.activeFieldNpc) playSfx("dialogue");
+        save();
+        render();
+      }
+      return;
+    }
+    if (action === "field-recall") {
+      progress.activeFieldNpc = null;
+      progress.hubNotice = "Temporal recall complete. You returned through the Archive room beacon.";
+      safeInstituteSpawn(16, 9, "left");
+      progress.currentScreen = "institute";
+      save();
+      render();
+      return;
+    }
+    if (action === "start-source-activity") {
+      progress.activeFieldNpc = null;
+      openSourceId = target.dataset.source;
+      if (!isNearFieldSource(openSourceId)) {
+        fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
         return;
       }
-      progress.activeFieldNpc = progress.activeFieldNpc === npc.id ? null : npc.id;
-      if (progress.activeFieldNpc) playSfx("dialogue");
-      save();
-      render();
-    }
-    return;
-  }
-  if (action === "field-recall") {
-    progress.activeFieldNpc = null;
-    progress.hubNotice = "Temporal recall complete. You returned through the Archive room beacon.";
-    safeInstituteSpawn(16, 9, "left");
-    progress.currentScreen = "institute";
-    save();
-    render();
-    return;
-  }
-  if (action === "start-source-activity") {
-    progress.activeFieldNpc = null;
-    openSourceId = target.dataset.source;
-    if (!isNearFieldSource(openSourceId)) {
-      fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
-      return;
-    }
-    if (
-      activeFieldCaseId() === "case-001" &&
-      openSourceId !== "taino-context" &&
-      !hasEvidence("case-001", "taino-context")
-    ) {
-      progress.fieldNotice =
-        "The Spanish camp and map fragments will make more sense after the village record is stabilized.";
+      if (
+        activeFieldCaseId() === "case-001" &&
+        openSourceId !== "taino-context" &&
+        !hasEvidence("case-001", "taino-context")
+      ) {
+        progress.fieldNotice =
+          "The Spanish camp and map fragments will make more sense after the village record is stabilized.";
+        save();
+        render();
+        return;
+      }
+      sourceOrigin = "field";
+      ensureSourceActivity(openSourceId);
+      playQuestSfx(openSourceId);
+      progress.currentScreen = sourceActivityRoute(openSourceId);
       save();
       render();
       return;
     }
-    sourceOrigin = "field";
-    ensureSourceActivity(openSourceId);
-    playQuestSfx(openSourceId);
-    progress.currentScreen = sourceActivityRoute(openSourceId);
-    save();
-    render();
-    return;
-  }
-  if (action === "open-activity-source") {
-    playQuestSfx(target.dataset.source);
-    openSourceId = target.dataset.source;
-    sourceOrigin = "field";
-    ensureSourceActivity(openSourceId).completed = true;
-    progress.currentScreen = "source";
-    save();
-    render();
-    return;
-  }
-  if (action === "observe-village") {
-    playQuestSfx("taino-context");
-    const a = ensureSourceActivity("taino-context");
-    a.observed ??= [];
-    a.activeObservation = target.dataset.observe;
-    if (!a.observed.includes(target.dataset.observe)) a.observed.push(target.dataset.observe);
-    save();
-    render();
-    return;
-  }
-  if (action === "columbus-choose") {
-    playQuestSfx("columbus-letter");
-    const a = ensureSourceActivity("columbus-letter");
-    a.choice = target.value;
-    save();
-    render();
-    return;
-  }
-  if (action === "home") {
-    progress.activeFieldNpc = null;
-    safeInstituteSpawn(7, 9, "up");
-    progress.currentScreen = "institute";
-    save();
-    render();
-    return;
-  }
-  if (action === "archive") {
-    progress.currentScreen = "archive";
-    save();
-    render();
-  }
-  if (action === "return-archive") {
-    playSfx("return-warp");
-    progress.pendingUploadCaseId = null;
-    progress.activeCaseId = null;
-    progress.hubNotice =
-      "Field record received. The Archive has preserved your Codex transmission.";
-    safeInstituteSpawn(16, 9, "left");
-    progress.currentScreen = "return-warp";
-    save();
-    render();
-    return;
-  }
-  if (action === "clear-empire") {
-    progress.empireOrder = [];
-    save();
-    render();
-  }
-  if (action === "reset-case-001") {
-    resetCaseOneDemo();
-    render();
-    return;
-  }
-  if (action === "reset") {
-    progress = resetProgress();
-    resetFieldPosition();
-    render();
-  }
-  if (action === "close-author-panel") {
-    authorPanelOpen = false;
-    render();
-    return;
-  }
-  if (action === "author") {
-    if (!authorMode) {
-      authorMode = true;
-      authorPanelOpen = true;
-    } else if (!authorPanelOpen) {
-      authorPanelOpen = true;
-    } else {
-      authorMode = false;
+    if (action === "open-activity-source") {
+      playQuestSfx(target.dataset.source);
+      openSourceId = target.dataset.source;
+      sourceOrigin = "field";
+      ensureSourceActivity(openSourceId).completed = true;
+      progress.currentScreen = "source";
+      save();
+      render();
+      return;
+    }
+    if (action === "observe-village") {
+      playQuestSfx("taino-context");
+      const a = ensureSourceActivity("taino-context");
+      a.observed ??= [];
+      a.activeObservation = target.dataset.observe;
+      if (!a.observed.includes(target.dataset.observe)) a.observed.push(target.dataset.observe);
+      save();
+      render();
+      return;
+    }
+    if (action === "columbus-choose") {
+      playQuestSfx("columbus-letter");
+      const a = ensureSourceActivity("columbus-letter");
+      a.choice = target.value;
+      save();
+      render();
+      return;
+    }
+    if (action === "home") {
+      progress.activeFieldNpc = null;
+      safeInstituteSpawn(7, 9, "up");
+      progress.currentScreen = "institute";
+      save();
+      render();
+      return;
+    }
+    if (action === "archive") {
+      progress.currentScreen = "archive";
+      save();
+      render();
+    }
+    if (action === "return-archive") {
+      playSfx("return-warp");
+      progress.pendingUploadCaseId = null;
+      progress.activeCaseId = null;
+      progress.hubNotice =
+        "Field record received. The Archive has preserved your Codex transmission.";
+      safeInstituteSpawn(16, 9, "left");
+      progress.currentScreen = "return-warp";
+      save();
+      render();
+      return;
+    }
+    if (action === "clear-empire") {
+      progress.empireOrder = [];
+      save();
+      render();
+    }
+    if (action === "reset-case-001") {
+      resetCaseOneDemo();
+      render();
+      return;
+    }
+    if (action === "reset") {
+      progress = resetProgress();
+      resetFieldPosition();
+      render();
+    }
+    if (action === "close-author-panel") {
       authorPanelOpen = false;
-    }
-    render();
-  }
-  if (action === "select-case") {
-    progress.selectedCaseId = target.dataset.case;
-    save();
-    render();
-  }
-  if (action === "select-unit") {
-    const unit = unitById(target.dataset.unit);
-    if (!unit) return;
-    progress.selectedUnitId = unit.id;
-    if (unitForCase(progress.selectedCaseId)?.id !== unit.id)
-      progress.selectedCaseId = unit.cases[0].id;
-    save();
-    render();
-    return;
-  }
-  if (action === "travel") {
-    goToCase(target.dataset.case);
-  }
-  if (action === "skip-travel") {
-    const c = caseById(progress.activeCaseId);
-    progress.currentScreen = c.route;
-    save();
-    render();
-  }
-  if (action === "field") {
-    progress.currentScreen = "field";
-    save();
-    render();
-  }
-  if (action === "open-source") {
-    progress.activeFieldNpc = null;
-    openSourceId = target.dataset.source;
-    if ((target.dataset.origin || "field") === "field" && !isNearFieldSource(openSourceId)) {
-      fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
+      render();
       return;
     }
-    sourceOrigin = target.dataset.origin || "field";
-    progress.currentScreen = "source";
-    save();
-    render();
-  }
-  if (action === "return-source") {
-    progress.currentScreen = sourceOrigin === "codex" ? "codex" : "field";
-    save();
-    render();
-  }
-  if (action === "codex") {
-    progress.activeFieldNpc = null;
-    sourceOrigin = target.dataset.origin || "field";
-    progress.currentScreen = "codex";
-    save();
-    render();
-  }
-  if (action === "return-codex") {
-    progress.currentScreen =
-      sourceOrigin === "source" ? "source" : sourceOrigin === "hub" ? "institute" : "field";
-    save();
-    render();
-  }
-  if (action === "submit-source") {
-    const source = sourceById(target.dataset.source);
-    const value = document.getElementById("sourceResponse")?.value.trim() || "";
-    if (value.length < 15) {
-      alert("Write a brief evidence-based interpretation before opening Institute Context.");
-      return;
+    if (action === "author") {
+      if (!authorMode) {
+        authorMode = true;
+        authorPanelOpen = true;
+      } else if (!authorPanelOpen) {
+        authorPanelOpen = true;
+      } else {
+        authorMode = false;
+        authorPanelOpen = false;
+      }
+      render();
     }
-    progress.responses[source.id] = value;
-    if (!progress.revealedContexts.includes(source.id)) progress.revealedContexts.push(source.id);
-    save();
-    render();
-  }
-  if (action === "secure-source") {
-    const id = target.dataset.source;
-    const caseId = activeFieldCaseId();
-    playSfx("secure");
-    if (!progress.revealedContexts.includes(id)) return;
-    const list = progress.caseEvidence[caseId] || [];
-    if (!list.includes(id)) list.push(id);
-    progress.caseEvidence[caseId] = list;
-    if (id === "taino-context")
-      progress.fieldNotice =
-        "Village record secured. The shoreline records are now readable: follow the coast toward the Spanish camp and map fragments.";
-    sourceOrigin = "field";
-    progress.currentScreen = "field";
-    save();
-    render();
-  }
-  if (action === "reconstruction") {
-    progress.currentScreen = "reconstruction";
-    save();
-    render();
-  }
-  if (action === "check-reconstruction") {
-    document.querySelectorAll("[data-reconstruction]").forEach((s) => {
-      progress.reconstruction[s.dataset.reconstruction] = s.value;
-    });
-    const reconstructionCaseId = activeFieldCaseId();
-    const correct = sourcesForCase(reconstructionCaseId).every(
-      (s) => progress.reconstruction[s.id] === s.reconstruction
-    );
-    save();
-    if (correct) {
-      playSfx("upload");
-      unlockNext(reconstructionCaseId);
-      progress.pendingUploadCaseId = reconstructionCaseId;
-      progress.currentScreen = "upload";
+    if (action === "select-case") {
+      progress.selectedCaseId = target.dataset.case;
       save();
       render();
-    } else
-      showFeedback(
-        "reconstructionFeedback",
-        "Revisit the source type and date. Each record belongs in a different evidentiary lane.",
-        "error"
-      );
-  }
-  if (action === "check-ledger") {
-    progress.exchangeLedger.answers ??= {};
-    document.querySelectorAll("[data-ledger-question]:checked").forEach((s) => {
-      progress.exchangeLedger.answers[s.dataset.ledgerQuestion] = Number(s.value);
-    });
-    const unanswered = EXCHANGE_RECORDS.filter(
-      (r) => progress.exchangeLedger.answers[r.id] === undefined
-    );
-    if (unanswered.length) {
+    }
+    if (action === "select-unit") {
+      const unit = unitById(target.dataset.unit);
+      if (!unit) return;
+      progress.selectedUnitId = unit.id;
+      if (unitForCase(progress.selectedCaseId)?.id !== unit.id)
+        progress.selectedCaseId = unit.cases[0].id;
       save();
-      showFeedback(
-        "ledgerFeedback",
-        "Read and answer every source record before validating the Ledger.",
-        "error"
-      );
+      render();
       return;
     }
-    const correct = EXCHANGE_RECORDS.every(
-      (r) => progress.exchangeLedger.answers[r.id] === r.answer
-    );
-    save();
-    if (correct) {
+    if (action === "travel") {
+      goToCase(target.dataset.case);
+    }
+    if (action === "skip-travel") {
+      const c = caseById(progress.activeCaseId);
+      progress.currentScreen = c.route;
+      save();
+      render();
+    }
+    if (action === "field") {
+      progress.currentScreen = "field";
+      save();
+      render();
+    }
+    if (action === "open-source") {
+      progress.activeFieldNpc = null;
+      openSourceId = target.dataset.source;
+      if ((target.dataset.origin || "field") === "field" && !isNearFieldSource(openSourceId)) {
+        fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
+        return;
+      }
+      sourceOrigin = target.dataset.origin || "field";
+      progress.currentScreen = "source";
+      save();
+      render();
+    }
+    if (action === "return-source") {
+      progress.currentScreen = sourceOrigin === "codex" ? "codex" : "field";
+      save();
+      render();
+    }
+    if (action === "codex") {
+      progress.activeFieldNpc = null;
+      sourceOrigin = target.dataset.origin || "field";
+      progress.currentScreen = "codex";
+      save();
+      render();
+    }
+    if (action === "return-codex") {
+      progress.currentScreen =
+        sourceOrigin === "source" ? "source" : sourceOrigin === "hub" ? "institute" : "field";
+      save();
+      render();
+    }
+    if (action === "submit-source") {
+      const source = sourceById(target.dataset.source);
+      const value = document.getElementById("sourceResponse")?.value.trim() || "";
+      if (value.length < 15) {
+        alert("Write a brief evidence-based interpretation before opening Institute Context.");
+        return;
+      }
+      progress.responses[source.id] = value;
+      if (!progress.revealedContexts.includes(source.id)) progress.revealedContexts.push(source.id);
+      save();
+      render();
+    }
+    if (action === "secure-source") {
+      const id = target.dataset.source;
+      const caseId = activeFieldCaseId();
       playSfx("secure");
-      unlockNext("case-002");
-      progress.pendingUploadCaseId = "case-002";
-      progress.currentScreen = "ledger-success";
+      if (!progress.revealedContexts.includes(id)) return;
+      const list = progress.caseEvidence[caseId] || [];
+      if (!list.includes(id)) list.push(id);
+      progress.caseEvidence[caseId] = list;
+      if (id === "taino-context")
+        progress.fieldNotice =
+          "Village record secured. The shoreline records are now readable: follow the coast toward the Spanish camp and map fragments.";
+      sourceOrigin = "field";
+      progress.currentScreen = "field";
       save();
       render();
-    } else
-      showFeedback(
-        "ledgerFeedback",
-        "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
-        "error"
+    }
+    if (action === "reconstruction") {
+      progress.currentScreen = "reconstruction";
+      save();
+      render();
+    }
+    if (action === "check-reconstruction") {
+      document.querySelectorAll("[data-reconstruction]").forEach((s) => {
+        progress.reconstruction[s.dataset.reconstruction] = s.value;
+      });
+      const reconstructionCaseId = activeFieldCaseId();
+      const correct = sourcesForCase(reconstructionCaseId).every(
+        (s) => progress.reconstruction[s.id] === s.reconstruction
       );
-  }
-  if (action === "clear-triangle") {
-    progress.activityState["case-005"] = { placements: {}, answers: {}, charted: false };
-    save();
-    render();
-    return;
-  }
-  if (action === "check-triangle") {
-    const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-    const allPlaced = TRIANGLE_CARGO.every((cargo) => state.placements[cargo.id]);
-    if (!allPlaced) {
-      showFeedback(
-        "triangleFeedback",
-        "Every cargo record needs a leg before the circuit can be charted.",
-        "error"
+      save();
+      if (correct) {
+        playSfx("upload");
+        unlockNext(reconstructionCaseId);
+        progress.pendingUploadCaseId = reconstructionCaseId;
+        progress.currentScreen = "upload";
+        save();
+        render();
+      } else
+        showFeedback(
+          "reconstructionFeedback",
+          "Revisit the source type and date. Each record belongs in a different evidentiary lane.",
+          "error"
+        );
+    }
+    if (action === "check-ledger") {
+      progress.exchangeLedger.answers ??= {};
+      document.querySelectorAll("[data-ledger-question]:checked").forEach((s) => {
+        progress.exchangeLedger.answers[s.dataset.ledgerQuestion] = Number(s.value);
+      });
+      const unanswered = EXCHANGE_RECORDS.filter(
+        (r) => progress.exchangeLedger.answers[r.id] === undefined
       );
+      if (unanswered.length) {
+        save();
+        showFeedback(
+          "ledgerFeedback",
+          "Read and answer every source record before validating the Ledger.",
+          "error"
+        );
+        return;
+      }
+      const correct = EXCHANGE_RECORDS.every(
+        (r) => progress.exchangeLedger.answers[r.id] === r.answer
+      );
+      save();
+      if (correct) {
+        playSfx("secure");
+        unlockNext("case-002");
+        progress.pendingUploadCaseId = "case-002";
+        progress.currentScreen = "ledger-success";
+        save();
+        render();
+      } else
+        showFeedback(
+          "ledgerFeedback",
+          "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
+          "error"
+        );
+    }
+    if (action === "clear-triangle") {
+      progress.activityState["case-005"] = { placements: {}, answers: {}, charted: false };
+      save();
+      render();
       return;
     }
-    const correct = TRIANGLE_CARGO.every((cargo) => state.placements[cargo.id] === cargo.leg);
-    if (correct) {
-      playSfx("secure");
-      state.charted = true;
-      save();
-      render();
-    } else
-      showFeedback(
-        "triangleFeedback",
-        "At least one record sits on the wrong leg. Re-read what each record actually carried and where that leg began.",
-        "error"
-      );
-    return;
-  }
-  if (action === "check-triangle-mcq") {
-    const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-    document.querySelectorAll("[data-triangle-question]:checked").forEach((input) => {
-      state.answers[input.dataset.triangleQuestion] = Number(input.value);
-    });
-    const unanswered = TRIANGLE_CARGO.filter((cargo) => state.answers[cargo.id] === undefined);
-    if (unanswered.length) {
-      save();
-      showFeedback(
-        "triangleMcqFeedback",
-        "Answer the evidence question attached to every record before validating.",
-        "error"
-      );
+    if (action === "check-triangle") {
+      const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
+      const allPlaced = TRIANGLE_CARGO.every((cargo) => state.placements[cargo.id]);
+      if (!allPlaced) {
+        showFeedback(
+          "triangleFeedback",
+          "Every cargo record needs a leg before the circuit can be charted.",
+          "error"
+        );
+        return;
+      }
+      const correct = TRIANGLE_CARGO.every((cargo) => state.placements[cargo.id] === cargo.leg);
+      if (correct) {
+        playSfx("secure");
+        state.charted = true;
+        save();
+        render();
+      } else
+        showFeedback(
+          "triangleFeedback",
+          "At least one record sits on the wrong leg. Re-read what each record actually carried and where that leg began.",
+          "error"
+        );
       return;
     }
-    const correct = TRIANGLE_CARGO.every((cargo) => state.answers[cargo.id] === cargo.answer);
-    save();
-    if (correct) {
-      playSfx("upload");
-      unlockNext("case-005");
-      progress.pendingUploadCaseId = "case-005";
-      progress.currentScreen = "upload";
+    if (action === "check-triangle-mcq") {
+      const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
+      document.querySelectorAll("[data-triangle-question]:checked").forEach((input) => {
+        state.answers[input.dataset.triangleQuestion] = Number(input.value);
+      });
+      const unanswered = TRIANGLE_CARGO.filter((cargo) => state.answers[cargo.id] === undefined);
+      if (unanswered.length) {
+        save();
+        showFeedback(
+          "triangleMcqFeedback",
+          "Answer the evidence question attached to every record before validating.",
+          "error"
+        );
+        return;
+      }
+      const correct = TRIANGLE_CARGO.every((cargo) => state.answers[cargo.id] === cargo.answer);
+      save();
+      if (correct) {
+        playSfx("upload");
+        unlockNext("case-005");
+        progress.pendingUploadCaseId = "case-005";
+        progress.currentScreen = "upload";
+        save();
+        render();
+      } else
+        showFeedback(
+          "triangleMcqFeedback",
+          "At least one interpretation needs revision. Re-read the record before answering again.",
+          "error"
+        );
+      return;
+    }
+    if (action === "clear-regions") {
+      progress.activityState["case-006"] = { placements: {}, reflection: "" };
       save();
       render();
-    } else
-      showFeedback(
-        "triangleMcqFeedback",
-        "At least one interpretation needs revision. Re-read the record before answering again.",
-        "error"
-      );
-    return;
-  }
-  if (action === "clear-regions") {
-    progress.activityState["case-006"] = { placements: {}, reflection: "" };
-    save();
-    render();
-    return;
-  }
-  if (action === "check-regions") {
-    const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
-    state.reflection = document.getElementById("regionsReflection")?.value.trim() || "";
-    const allPlaced = REGION_EVIDENCE.every((card) => state.placements[card.id]);
-    const correct =
-      allPlaced && REGION_EVIDENCE.every((card) => state.placements[card.id] === card.region);
-    save();
-    if (correct && state.reflection.length >= 20) {
-      playSfx("upload");
-      unlockNext("case-006");
-      progress.pendingUploadCaseId = "case-006";
-      progress.currentScreen = "upload";
+      return;
+    }
+    if (action === "check-regions") {
+      const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
+      state.reflection = document.getElementById("regionsReflection")?.value.trim() || "";
+      const allPlaced = REGION_EVIDENCE.every((card) => state.placements[card.id]);
+      const correct =
+        allPlaced && REGION_EVIDENCE.every((card) => state.placements[card.id] === card.region);
+      save();
+      if (correct && state.reflection.length >= 20) {
+        playSfx("upload");
+        unlockNext("case-006");
+        progress.pendingUploadCaseId = "case-006";
+        progress.currentScreen = "upload";
+        save();
+        render();
+      } else
+        showFeedback(
+          "regionsFeedback",
+          "Place every founding record in the region it built, then defend one comparison in your reflection (at least a sentence).",
+          "error"
+        );
+      return;
+    }
+    if (action === "check-empire") {
+      const reflection = document.getElementById("empireReflection")?.value.trim() || "";
+      progress.responses["empire-reflection"] = reflection;
+      const expected = ["claim", "encomienda", "slavery", "hierarchy", "resistance", "exchange"];
+      const correct = JSON.stringify(progress.empireOrder || []) === JSON.stringify(expected);
+      save();
+      if (correct && reflection.length >= 20) {
+        playSfx("upload");
+        unlockNext("case-003");
+        progress.pendingUploadCaseId = "case-003";
+        progress.currentScreen = "upload";
+        save();
+        render();
+      } else
+        showFeedback(
+          "empireFeedback",
+          "Arrange all six evidence records into a defensible sequence, then write a reflection using evidence from at least two cards.",
+          "error"
+        );
+    }
+    if (action === "review") {
+      progress.currentScreen = "review";
       save();
       render();
-    } else
-      showFeedback(
-        "regionsFeedback",
-        "Place every founding record in the region it built, then defend one comparison in your reflection (at least a sentence).",
-        "error"
-      );
-    return;
-  }
-  if (action === "check-empire") {
-    const reflection = document.getElementById("empireReflection")?.value.trim() || "";
-    progress.responses["empire-reflection"] = reflection;
-    const expected = ["claim", "encomienda", "slavery", "hierarchy", "resistance", "exchange"];
-    const correct = JSON.stringify(progress.empireOrder || []) === JSON.stringify(expected);
-    save();
-    if (correct && reflection.length >= 20) {
-      playSfx("upload");
-      unlockNext("case-003");
-      progress.pendingUploadCaseId = "case-003";
-      progress.currentScreen = "upload";
+    }
+    if (action === "submit-review") {
+      const reviewUnitId = progress.selectedUnitId || "unit-01";
+      const reviewData = UNIT_REVIEWS[reviewUnitId] || REVIEW;
+      const reviewState = reviewStateFor(reviewUnitId);
+      document.querySelectorAll("[data-mcq]:checked").forEach((i) => {
+        reviewState.answers[i.dataset.mcq] = Number(i.value);
+      });
+      document.querySelectorAll("[data-saq]").forEach((t) => {
+        reviewState.saq[t.dataset.saq] = t.value.trim();
+      });
+      const filled = Object.values(reviewState.saq).filter((v) => v.length > 0).length;
       save();
-      render();
-    } else
-      showFeedback(
-        "empireFeedback",
-        "Arrange all six evidence records into a defensible sequence, then write a reflection using evidence from at least two cards.",
-        "error"
-      );
-  }
-  if (action === "review") {
-    progress.currentScreen = "review";
-    save();
-    render();
-  }
-  if (action === "submit-review") {
-    const reviewUnitId = progress.selectedUnitId || "unit-01";
-    const reviewData = UNIT_REVIEWS[reviewUnitId] || REVIEW;
-    const reviewState = reviewStateFor(reviewUnitId);
-    document.querySelectorAll("[data-mcq]:checked").forEach((i) => {
-      reviewState.answers[i.dataset.mcq] = Number(i.value);
-    });
-    document.querySelectorAll("[data-saq]").forEach((t) => {
-      reviewState.saq[t.dataset.saq] = t.value.trim();
-    });
-    const filled = Object.values(reviewState.saq).filter((v) => v.length > 0).length;
-    save();
-    if (filled === reviewData.saq.prompts.length) {
-      if (reviewUnitId === "unit-01") progress.unitComplete = true;
-      if (!progress.completedUnits.includes(reviewUnitId))
-        progress.completedUnits.push(reviewUnitId);
-      unlockNextUnit(reviewUnitId);
-      progress.currentScreen = "completion";
-      save();
-      render();
-    } else
-      showFeedback(
-        "reviewFeedback",
-        "Draft a response for every SAQ part before submitting the archive record.",
-        "error"
-      );
-  }
-});
+      if (filled === reviewData.saq.prompts.length) {
+        if (reviewUnitId === "unit-01") progress.unitComplete = true;
+        if (!progress.completedUnits.includes(reviewUnitId))
+          progress.completedUnits.push(reviewUnitId);
+        unlockNextUnit(reviewUnitId);
+        progress.currentScreen = "completion";
+        save();
+        render();
+      } else
+        showFeedback(
+          "reviewFeedback",
+          "Draft a response for every SAQ part before submitting the archive record.",
+          "error"
+        );
+    }
+  });
 
-app.addEventListener("change", (event) => {
-  const field = event.target;
-  if (field.matches("[data-profile]")) {
-    progress.profile[field.dataset.profile] = field.value;
-    save();
-  }
-});
+  app.addEventListener("change", (event) => {
+    const field = event.target;
+    if (field.matches("[data-profile]")) {
+      progress.profile[field.dataset.profile] = field.value;
+      save();
+    }
+  });
 
-app.addEventListener("dragstart", (event) => {
-  const mapPiece = event.target.closest("[data-map-piece]");
-  if (mapPiece) {
-    event.dataTransfer.setData("text/map-piece", mapPiece.dataset.mapPiece);
+  app.addEventListener("dragstart", (event) => {
+    const mapPiece = event.target.closest("[data-map-piece]");
+    if (mapPiece) {
+      event.dataTransfer.setData("text/map-piece", mapPiece.dataset.mapPiece);
+      event.dataTransfer.effectAllowed = "move";
+      return;
+    }
+    const cargo = event.target.closest("[data-cargo-card]");
+    if (cargo) {
+      event.dataTransfer.setData("text/cargo-card", cargo.dataset.cargoCard);
+      event.dataTransfer.effectAllowed = "move";
+      return;
+    }
+    const regionCard = event.target.closest("[data-region-card]");
+    if (regionCard) {
+      event.dataTransfer.setData("text/region-card", regionCard.dataset.regionCard);
+      event.dataTransfer.effectAllowed = "move";
+      return;
+    }
+    const card = event.target.closest("[data-empire-card]");
+    if (!card) return;
+    event.dataTransfer.setData("text/plain", card.dataset.empireCard);
     event.dataTransfer.effectAllowed = "move";
-    return;
-  }
-  const cargo = event.target.closest("[data-cargo-card]");
-  if (cargo) {
-    event.dataTransfer.setData("text/cargo-card", cargo.dataset.cargoCard);
-    event.dataTransfer.effectAllowed = "move";
-    return;
-  }
-  const regionCard = event.target.closest("[data-region-card]");
-  if (regionCard) {
-    event.dataTransfer.setData("text/region-card", regionCard.dataset.regionCard);
-    event.dataTransfer.effectAllowed = "move";
-    return;
-  }
-  const card = event.target.closest("[data-empire-card]");
-  if (!card) return;
-  event.dataTransfer.setData("text/plain", card.dataset.empireCard);
-  event.dataTransfer.effectAllowed = "move";
-});
-app.addEventListener("dragover", (event) => {
-  const mapSlot = event.target.closest("[data-map-slot]");
-  const zone = event.target.closest("[data-drop-index]");
-  const legDrop = event.target.closest("[data-leg-drop]");
-  const regionDrop = event.target.closest("[data-region-drop]");
-  const dropTarget = mapSlot || zone || legDrop || regionDrop;
-  if (dropTarget) {
+  });
+  app.addEventListener("dragover", (event) => {
+    const mapSlot = event.target.closest("[data-map-slot]");
+    const zone = event.target.closest("[data-drop-index]");
+    const legDrop = event.target.closest("[data-leg-drop]");
+    const regionDrop = event.target.closest("[data-region-drop]");
+    const dropTarget = mapSlot || zone || legDrop || regionDrop;
+    if (dropTarget) {
+      event.preventDefault();
+      dropTarget.classList.add("is-over");
+    }
+  });
+  app.addEventListener("dragleave", (event) => {
+    event.target.closest("[data-drop-index]")?.classList.remove("is-over");
+    event.target.closest("[data-map-slot]")?.classList.remove("is-over");
+    event.target.closest("[data-leg-drop]")?.classList.remove("is-over");
+    event.target.closest("[data-region-drop]")?.classList.remove("is-over");
+  });
+  app.addEventListener("drop", (event) => {
+    const mapSlot = event.target.closest("[data-map-slot]");
+    if (mapSlot) {
+      event.preventDefault();
+      const pieceId = event.dataTransfer.getData("text/map-piece");
+      if (!pieceId) return;
+      const a = ensureSourceActivity("waldseemuller-map");
+      a.placed ??= {};
+      Object.keys(a.placed).forEach((slot) => {
+        if (a.placed[slot] === pieceId) delete a.placed[slot];
+      });
+      a.placed[mapSlot.dataset.mapSlot] = pieceId;
+      save();
+      render();
+      return;
+    }
+    const legDrop = event.target.closest("[data-leg-drop]");
+    if (legDrop) {
+      event.preventDefault();
+      legDrop.classList.remove("is-over");
+      const cargoId = event.dataTransfer.getData("text/cargo-card");
+      if (!cargoId) return;
+      const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
+      state.placements[cargoId] = legDrop.dataset.legDrop;
+      save();
+      render();
+      return;
+    }
+    const regionDrop = event.target.closest("[data-region-drop]");
+    if (regionDrop) {
+      event.preventDefault();
+      regionDrop.classList.remove("is-over");
+      const cardId = event.dataTransfer.getData("text/region-card");
+      if (!cardId) return;
+      const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
+      state.placements[cardId] = regionDrop.dataset.regionDrop;
+      save();
+      render();
+      return;
+    }
+    const zone = event.target.closest("[data-drop-index]");
+    if (!zone) return;
     event.preventDefault();
-    dropTarget.classList.add("is-over");
-  }
-});
-app.addEventListener("dragleave", (event) => {
-  event.target.closest("[data-drop-index]")?.classList.remove("is-over");
-  event.target.closest("[data-map-slot]")?.classList.remove("is-over");
-  event.target.closest("[data-leg-drop]")?.classList.remove("is-over");
-  event.target.closest("[data-region-drop]")?.classList.remove("is-over");
-});
-app.addEventListener("drop", (event) => {
-  const mapSlot = event.target.closest("[data-map-slot]");
-  if (mapSlot) {
-    event.preventDefault();
-    const pieceId = event.dataTransfer.getData("text/map-piece");
-    if (!pieceId) return;
-    const a = ensureSourceActivity("waldseemuller-map");
-    a.placed ??= {};
-    Object.keys(a.placed).forEach((slot) => {
-      if (a.placed[slot] === pieceId) delete a.placed[slot];
-    });
-    a.placed[mapSlot.dataset.mapSlot] = pieceId;
-    save();
-    render();
-    return;
-  }
-  const legDrop = event.target.closest("[data-leg-drop]");
-  if (legDrop) {
-    event.preventDefault();
-    legDrop.classList.remove("is-over");
-    const cargoId = event.dataTransfer.getData("text/cargo-card");
-    if (!cargoId) return;
-    const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-    state.placements[cargoId] = legDrop.dataset.legDrop;
-    save();
-    render();
-    return;
-  }
-  const regionDrop = event.target.closest("[data-region-drop]");
-  if (regionDrop) {
-    event.preventDefault();
-    regionDrop.classList.remove("is-over");
-    const cardId = event.dataTransfer.getData("text/region-card");
+    const cardId = event.dataTransfer.getData("text/plain");
     if (!cardId) return;
-    const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
-    state.placements[cardId] = regionDrop.dataset.regionDrop;
+    const index = Number(zone.dataset.dropIndex);
+    const next = (progress.empireOrder || []).filter((id) => id !== cardId);
+    next.splice(index, 0, cardId);
+    progress.empireOrder = next.slice(0, EMPIRE_EVIDENCE.length);
     save();
     render();
-    return;
-  }
-  const zone = event.target.closest("[data-drop-index]");
-  if (!zone) return;
-  event.preventDefault();
-  const cardId = event.dataTransfer.getData("text/plain");
-  if (!cardId) return;
-  const index = Number(zone.dataset.dropIndex);
-  const next = (progress.empireOrder || []).filter((id) => id !== cardId);
-  next.splice(index, 0, cardId);
-  progress.empireOrder = next.slice(0, EMPIRE_EVIDENCE.length);
-  save();
-  render();
-});
-window.addEventListener("keydown", (event) => {
-  const key = event.key.toLowerCase();
-  const moves = {
-    arrowup: [0, -1],
-    w: [0, -1],
-    arrowdown: [0, 1],
-    s: [0, 1],
-    arrowleft: [-1, 0],
-    a: [-1, 0],
-    arrowright: [1, 0],
-    d: [1, 0],
-  };
-  if (progress.currentScreen === "institute") {
-    if (key === "e" || key === "enter") {
-      const nearby = nearestHubTarget();
-      if (nearby) {
+  });
+  window.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    const moves = {
+      arrowup: [0, -1],
+      w: [0, -1],
+      arrowdown: [0, 1],
+      s: [0, 1],
+      arrowleft: [-1, 0],
+      a: [-1, 0],
+      arrowright: [1, 0],
+      d: [1, 0],
+    };
+    if (progress.currentScreen === "institute") {
+      if (key === "e" || key === "enter") {
+        const nearby = nearestHubTarget();
+        if (nearby) {
+          event.preventDefault();
+          interactWithHubTarget(nearby[0]);
+        }
+        return;
+      }
+      if (FIELD_MOVE_KEYS[key]) {
         event.preventDefault();
-        interactWithHubTarget(nearby[0]);
+        hubHeldKeys.add(key);
+        startHubMovementLoop();
       }
       return;
     }
-    if (FIELD_MOVE_KEYS[key]) {
-      event.preventDefault();
-      hubHeldKeys.add(key);
-      startHubMovementLoop();
-    }
-    return;
-  }
-  if (progress.currentScreen === "field") {
-    if (key === "e" || key === "enter") {
-      const nearby = nearestFieldInteraction();
-      if (nearby) {
-        event.preventDefault();
-        if (nearby.type === "npc") {
-          const npc = activeFieldMap().npcs.find((item) => item.id === nearby.id);
-          progress.activeFieldNpc = progress.activeFieldNpc === npc.id ? null : npc.id;
-          if (progress.activeFieldNpc) playSfx("dialogue");
-          save();
-          render();
-        }
-        if (nearby.type === "source") {
-          progress.activeFieldNpc = null;
-          openSourceId = nearby.id;
-          if (
-            activeFieldCaseId() === "case-001" &&
-            openSourceId !== "taino-context" &&
-            !hasEvidence("case-001", "taino-context")
-          ) {
-            progress.fieldNotice =
-              "The Spanish camp and map fragments will make more sense after the village record is stabilized.";
+    if (progress.currentScreen === "field") {
+      if (key === "e" || key === "enter") {
+        const nearby = nearestFieldInteraction();
+        if (nearby) {
+          event.preventDefault();
+          if (nearby.type === "npc") {
+            const npc = activeFieldMap().npcs.find((item) => item.id === nearby.id);
+            progress.activeFieldNpc = progress.activeFieldNpc === npc.id ? null : npc.id;
+            if (progress.activeFieldNpc) playSfx("dialogue");
             save();
             render();
-            return;
           }
-          sourceOrigin = "field";
-          ensureSourceActivity(openSourceId);
-          playQuestSfx(openSourceId);
-          progress.currentScreen = hasEvidence(activeFieldCaseId(), openSourceId)
-            ? "source"
-            : sourceActivityRoute(openSourceId);
-          save();
-          render();
+          if (nearby.type === "source") {
+            progress.activeFieldNpc = null;
+            openSourceId = nearby.id;
+            if (
+              activeFieldCaseId() === "case-001" &&
+              openSourceId !== "taino-context" &&
+              !hasEvidence("case-001", "taino-context")
+            ) {
+              progress.fieldNotice =
+                "The Spanish camp and map fragments will make more sense after the village record is stabilized.";
+              save();
+              render();
+              return;
+            }
+            sourceOrigin = "field";
+            ensureSourceActivity(openSourceId);
+            playQuestSfx(openSourceId);
+            progress.currentScreen = hasEvidence(activeFieldCaseId(), openSourceId)
+              ? "source"
+              : sourceActivityRoute(openSourceId);
+            save();
+            render();
+          }
         }
+        return;
       }
-      return;
+      if (FIELD_MOVE_KEYS[key]) {
+        event.preventDefault();
+        fieldHeldKeys.add(key);
+        startFieldMovementLoop();
+      }
     }
-    if (FIELD_MOVE_KEYS[key]) {
-      event.preventDefault();
-      fieldHeldKeys.add(key);
-      startFieldMovementLoop();
-    }
-  }
-});
-window.addEventListener("keyup", (event) => {
-  const key = event.key.toLowerCase();
-  if (!FIELD_MOVE_KEYS[key]) return;
-  fieldHeldKeys.delete(key);
-  hubHeldKeys.delete(key);
-});
-window.addEventListener("blur", () => {
-  fieldHeldKeys.clear();
-  hubHeldKeys.clear();
-  fieldMovement.moving = false;
-  instituteMovement.moving = false;
-  stopFieldMovementLoop();
-  stopHubMovementLoop();
-  updateFieldPlayer();
-  updateInstitutePlayer();
-});
+  });
+  window.addEventListener("keyup", (event) => {
+    const key = event.key.toLowerCase();
+    if (!FIELD_MOVE_KEYS[key]) return;
+    fieldHeldKeys.delete(key);
+    hubHeldKeys.delete(key);
+  });
+  window.addEventListener("blur", () => {
+    fieldHeldKeys.clear();
+    hubHeldKeys.clear();
+    fieldMovement.moving = false;
+    instituteMovement.moving = false;
+    stopFieldMovementLoop();
+    stopHubMovementLoop();
+    updateFieldPlayer();
+    updateInstitutePlayer();
+  });
 
-render();
+  render();
+}
