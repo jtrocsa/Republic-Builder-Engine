@@ -9,10 +9,10 @@ Chronicle has (per `docs/architecture/CURRENT-REPOSITORY-AUDIT.md`) up to four i
 - `apps/web/src/content/unit-01-campaign.js` — real Unit 1 content: `BRAND`, `UNIT_01`, `CASE_001_SOURCES`, `EXCHANGE_RECORDS`, `EMPIRE_EVIDENCE`, `EMPIRE_CONNECTIONS`, `REVIEW`.
 - `apps/web/src/content/unit-02-campaign.js` — live but placeholder Unit 2 content, same shapes: `UNIT_02`, `CASE_004_SOURCES`, `CASE_004_LANES`, `TRIANGLE_LEGS`, `TRIANGLE_CARGO`, `REGION_RECORDS`, `REGION_EVIDENCE`, `UNIT_02_REVIEW`.
 
-Not validated, and not touched, because they're dead/dormant (per the repository audit, confirmed via import-graph trace — nothing in `main.js` reads them):
+Not validated at the time this phase was written, because they were dead/dormant (per the repository audit, confirmed via import-graph trace — nothing in `main.js` read them). Both have since been deleted in the dead-code-removal pass (`docs/migrations/DEAD-CODE-REMOVAL.md`), so this is now historical context, not a current scope note:
 
-- `apps/web/src/content/chronicle-case-001.js` — orphaned, incompatible field names for the same three Case 1.01 sources.
-- `content/campaigns/chronicle/` + `content/library/` — a dormant JSON content pipeline, a fourth schema for the same content.
+- `apps/web/src/content/chronicle-case-001.js` — orphaned, incompatible field names for the same three Case 1.01 sources. **Deleted.**
+- `content/campaigns/chronicle/` + `content/library/` — a dormant JSON content pipeline, a fourth schema for the same content. **Deleted.**
 
 Also out of scope, deliberately: `apps/web/src/content/chronicle-opening.defaults.js` and `chronicle-identity.defaults.js`. These are freeform onboarding/UI copy (nested strings for briefing screens, identity-creation labels, etc.) with no ids, answer indexes, cross-references, or quest structure — none of the required-validation categories in this phase's scope apply to them, and writing a rigid schema around prose copy would be exactly the kind of forced, low-value validation the task asked to avoid.
 

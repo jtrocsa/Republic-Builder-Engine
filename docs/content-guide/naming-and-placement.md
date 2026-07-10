@@ -20,16 +20,18 @@ Per `docs/content-guide/source-asset-contract.md`:
 
 Interpretive visuals must be labeled as interpretive, never presented as primary sources. Secondary context is labeled and revealed after a student's initial response when used as feedback (see `docs/content-guide/unit-01-source-and-activity-records.md`).
 
-## Folders that exist but are not where new content should go
+## Folders that no longer exist — do not recreate them
 
-- `content/campaigns/` and `content/library/` at the repo root — a dormant, unread JSON-native schema. `main.js` never imports this tree. Do not add new content here expecting it to appear in the game; it currently reaches no runtime.
-- `apps/web/src/content/chronicle-case-001.js` — a dead, third schema for the same three Case 1.01 sources, with incompatible field names from the live file. Do not extend this file.
-- `apps/web/src/features/` — an orphaned, unreachable second implementation of onboarding/field/case-player content, with its own (also dead) content shapes. Do not add content here.
-- Root `assets/` — placeholder-only (`.gitkeep` files). Real assets go under `apps/web/src/assets/`, not here.
+As of the dead-code-removal pass (`docs/migrations/DEAD-CODE-REMOVAL.md`), the following were confirmed dead (zero imports, zero real callers) and deleted. They're listed here only so a future session doesn't waste time looking for them or reintroduce them:
 
-## Multiple incompatible schemas exist — know which one you're in
+- `content/campaigns/` and `content/library/` at the repo root — a dormant, unread JSON-native schema. `main.js` never imported this tree.
+- `apps/web/src/content/chronicle-case-001.js` — a dead, third schema for the same three Case 1.01 sources, with incompatible field names from the live file.
+- `apps/web/src/features/` — an orphaned, unreachable second implementation of onboarding/field/case-player content, with its own (also dead) content shapes.
+- Root `assets/` — was placeholder-only (`.gitkeep` files). Real assets live under `apps/web/src/assets/`.
 
-The repository audit found **up to four different field-name vocabularies** describing the same three Case 1.01 primary sources (live `unit-01-campaign.js`, dead `chronicle-case-001.js`, the dormant JSON tree, and the `content/library/*.template.json` skeletons). Reconciling these into one canonical, validated schema is documented future work (`ContentRegistry` + Zod, see `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` §10 and `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) — not a current task. When authoring new content, match the live `unit-01-campaign.js`/`unit-02-campaign.js` shape; don't invent a fifth.
+## One schema is canonical now
+
+The repository audit previously found up to four different field-name vocabularies describing the same three Case 1.01 primary sources; three of those four (the dead `chronicle-case-001.js`, the dormant JSON tree, and the `content/library/*.template.json` skeletons) have since been deleted (see above). The live `unit-01-campaign.js`/`unit-02-campaign.js` shape is the only one left — match it when authoring new content.
 
 ## Stability note
 
