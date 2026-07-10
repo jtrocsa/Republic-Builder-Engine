@@ -26,6 +26,8 @@ import {
   runSchema,
   checkUniqueGlobalIds,
 } from "../apps/web/src/content/schemas/cross-reference.js";
+import { McqQuestListSchema } from "../apps/web/src/quest-types/generic/mcq-quest.js";
+import { EvidenceOrganizingQuestListSchema } from "../apps/web/src/quest-types/history/evidence-organizing-quest.js";
 
 function main() {
   const content = loadChronicleContent();
@@ -62,6 +64,20 @@ function main() {
     )
   );
   results.push(runSchema("unit-01-campaign.js: REVIEW", ReviewSchema, content.unit01.review));
+  results.push(
+    runSchema(
+      "unit-01-quests.js: UNIT_01_MCQ_QUESTS",
+      McqQuestListSchema,
+      content.unit01.mcqQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-01-quests.js: UNIT_01_EVIDENCE_ORGANIZING_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit01.evidenceOrganizingQuests
+    )
+  );
 
   results.push(runSchema("unit-02-campaign.js: UNIT_02", UnitSchema, content.unit02.unit));
   results.push(

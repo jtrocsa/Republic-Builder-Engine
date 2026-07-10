@@ -10,6 +10,7 @@
  */
 import * as unit01Campaign from "../content/unit-01-campaign.js";
 import * as unit02Campaign from "../content/unit-02-campaign.js";
+import * as unit01Quests from "../content/quests/unit-01-quests.js";
 
 export function loadChronicleContent() {
   return {
@@ -21,6 +22,8 @@ export function loadChronicleContent() {
       empireEvidence: unit01Campaign.EMPIRE_EVIDENCE,
       empireConnections: unit01Campaign.EMPIRE_CONNECTIONS,
       review: unit01Campaign.REVIEW,
+      mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
+      evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
     },
     unit02: {
       unit: unit02Campaign.UNIT_02,

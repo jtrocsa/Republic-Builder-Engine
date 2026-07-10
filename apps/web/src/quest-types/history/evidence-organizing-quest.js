@@ -1,0 +1,172 @@
+// History-coupled evidence-organizing quest type (DBQ-style): sources with
+// attribution, matched to slots keyed to historical-thinking-skill
+// categories, plus an optional free-text reflection gate. Deliberately not
+// forced generic — it assumes historical source attribution and
+// skill-category rubric structure, the way EMPIRE_EVIDENCE/TRIANGLE_CARGO/
+// REGION_EVIDENCE already do in apps/web/src/content/unit-01-campaign.js and
+// unit-02-campaign.js. This generalizes that recurring pattern (see
+// apps/web/src/content/schemas/unit02-activities.schema.js for the existing
+// buildTriangleCargoSchema/buildRegionEvidenceSchema factory precedent this
+// follows) rather than inventing a new shape from scratch.
+import { z } from "zod";
+import { escapeHtml } from "../shared/html.js";
+
+function assertUniqueIds(items, ctx, label) {
+  const firstSeenAt = new Map();
+  items.forEach((item, index) => {
+    if (firstSeenAt.has(item.id)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [index, "id"],
+        message: `Duplicate ${label} id "${item.id}" (first seen at index ${firstSeenAt.get(item.id)}).`,
+      });
+    } else {
+      firstSeenAt.set(item.id, index);
+    }
+  });
+}
+
+export const EvidenceSlotSchema = z.object({
+  id: z.string().min(1, "slot.id is required"),
+  label: z.string().min(1, "slot.label is required"),
+});
+
+export const EvidenceSlotsSchema = z
+  .array(EvidenceSlotSchema)
+  .min(1, "slots must contain at least one slot")
+  .superRefine((slots, ctx) => assertUniqueIds(slots, ctx, "slot"));
+
+export function buildEvidenceSourceSchema(slotIds) {
+  const correctSlotId =
+    slotIds && slotIds.length
+      ? z.enum(slotIds, {
+          message: `source.correctSlotId must be one of: ${slotIds.join(", ")}`,
+        })
+      : z.string().min(1, "source.correctSlotId is required");
+
+  return z.object({
+    id: z.string().min(1, "source.id is required"),
+    label: z.string().min(1, "source.label is required"),
+    attribution: z.string().min(1, "source.attribution is required"),
+    excerpt: z.string().min(1, "source.excerpt is required"),
+    skillCategory: z.string().min(1, "source.skillCategory is required"),
+    correctSlotId,
+  });
+}
+
+export function buildEvidenceSourcesSchema(slotIds) {
+  return z
+    .array(buildEvidenceSourceSchema(slotIds))
+    .min(1, "sources must contain at least one source")
+    .superRefine((sources, ctx) => assertUniqueIds(sources, ctx, "source"));
+}
+
+export const EvidenceRubricSchema = z.object({
+  skillCategories: z
+    .array(z.string().min(1))
+    .min(1, "rubric.skillCategories must contain at least one category"),
+  pointsTotal: z.number().int().positive("rubric.pointsTotal must be a positive integer"),
+  description: z.string().min(1, "rubric.description is required"),
+});
+
+// The `sources` field is validated up-front as `z.any()` here and re-checked
+// against the quest's own `slots` inside superRefine, since `correctSlotId`
+// can only be enum-constrained once the sibling `slots` array is known —
+// the same cross-field dependency `buildTriangleCargoSchema(legIds)` and
+// `buildRegionEvidenceSchema(regionIds)` solve with an external factory
+// argument; this schema takes no external argument since slots live on the
+// same object.
+export const EvidenceOrganizingQuestSchema = z
+  .object({
+    id: z.string().min(1, "evidence-organizing quest id is required"),
+    prompt: z.string().min(1, "prompt is required"),
+    slots: EvidenceSlotsSchema,
+    sources: z.array(z.any()),
+    reflectionPrompt: z.string().min(1).optional(),
+    rubric: EvidenceRubricSchema,
+  })
+  .superRefine((quest, ctx) => {
+    const slotIds = quest.slots.map((slot) => slot.id);
+    const result = buildEvidenceSourcesSchema(slotIds).safeParse(quest.sources);
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        ctx.addIssue({ code: "custom", path: ["sources", ...issue.path], message: issue.message });
+      });
+    }
+  });
+
+export const EvidenceOrganizingQuestListSchema = z
+  .array(EvidenceOrganizingQuestSchema)
+  .superRefine((items, ctx) => assertUniqueIds(items, ctx, "evidence-organizing quest"));
+
+const REFLECTION_MIN_LENGTH = 20;
+
+/**
+ * @param {import("zod").infer<typeof EvidenceOrganizingQuestSchema>} quest
+ * @param {{ placements?: Record<string,string>, reflection?: string }} [state]
+ */
+export function renderEvidenceOrganizingQuest(quest, state = {}) {
+  const placements = state.placements || {};
+  const placedBySlot = new Map();
+  quest.sources.forEach((source) => {
+    const slotId = placements[source.id];
+    if (slotId) placedBySlot.set(slotId, source);
+  });
+
+  return `<section class="quest quest-evidence-organizing" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="evidence-organizing">
+  <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
+  <div class="quest-evidence-sources">
+    ${quest.sources
+      .map(
+        (source) => `<article class="evidence-card" draggable="true" data-evidence-source="${escapeHtml(source.id)}">
+      <h3>${escapeHtml(source.label)}</h3>
+      <p class="evidence-attribution">${escapeHtml(source.attribution)}</p>
+      <p class="evidence-excerpt">${escapeHtml(source.excerpt)}</p>
+    </article>`,
+      )
+      .join("")}
+  </div>
+  <div class="quest-evidence-slots">
+    ${quest.slots
+      .map((slot) => {
+        const placed = placedBySlot.get(slot.id);
+        return `<div class="evidence-slot" data-evidence-slot="${escapeHtml(slot.id)}">
+      <h4>${escapeHtml(slot.label)}</h4>
+      ${
+        placed
+          ? `<p class="evidence-slot-filled" data-evidence-slot-filled="${escapeHtml(placed.id)}">${escapeHtml(placed.label)}</p>`
+          : `<p class="evidence-slot-empty">Drop evidence here</p>`
+      }
+    </div>`;
+      })
+      .join("")}
+  </div>
+  ${
+    quest.reflectionPrompt
+      ? `<label class="quest-reflection">${escapeHtml(quest.reflectionPrompt)}
+    <textarea data-evidence-reflection="${escapeHtml(quest.id)}">${escapeHtml(state.reflection || "")}</textarea>
+  </label>`
+      : ""
+  }
+</section>`;
+}
+
+/**
+ * @param {import("zod").infer<typeof EvidenceOrganizingQuestSchema>} quest
+ * @param {{ placements?: Record<string,string>, reflection?: string }} [state]
+ */
+export function gradeEvidenceOrganizingQuest(quest, state = {}) {
+  const placements = state.placements || {};
+  const allPlacedCorrectly = quest.sources.every(
+    (source) => placements[source.id] === source.correctSlotId,
+  );
+  const reflectionRequired = Boolean(quest.reflectionPrompt);
+  const reflectionOk =
+    !reflectionRequired ||
+    (typeof state.reflection === "string" && state.reflection.trim().length >= REFLECTION_MIN_LENGTH);
+  return {
+    allPlacedCorrectly,
+    reflectionOk,
+    complete: allPlacedCorrectly && reflectionOk,
+  };
+}

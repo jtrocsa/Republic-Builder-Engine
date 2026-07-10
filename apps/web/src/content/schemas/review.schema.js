@@ -1,8 +1,11 @@
 import { z } from "zod";
 
 // A single Archive Review multiple-choice question (`reviewScreen()` in
-// main.js, rendered from REVIEW.mcq / UNIT_02_REVIEW.mcq).
-const McqQuestionSchema = z
+// main.js, rendered from REVIEW.mcq / UNIT_02_REVIEW.mcq). Exported because
+// apps/web/src/quest-types/generic/mcq-quest.js reuses this exact shape
+// (plus an `id` field) as the generic MCQ quest-type content contract,
+// rather than duplicating an equivalent schema.
+export const McqQuestionSchema = z
   .object({
     prompt: z.string().min(1, "mcq.prompt is required"),
     choices: z.array(z.string().min(1)).min(2, "mcq.choices needs at least 2 options"),
