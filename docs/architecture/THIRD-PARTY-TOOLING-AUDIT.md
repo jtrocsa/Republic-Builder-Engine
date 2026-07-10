@@ -1,0 +1,281 @@
+# Third-Party Tooling Audit — Chronicle / Future Platform
+
+Status: research and planning only. No dependencies installed, no application code modified. Based on `docs/architecture/CURRENT-REPOSITORY-AUDIT.md` (read in full) plus direct repository verification and current (July 2026) web research on fast-moving tools. Every recommendation states what current Chronicle code it would replace, supplement, wrap, leave unchanged, or make unnecessary — this document intentionally does not include a generic "here are some popular tools" list.
+
+## 1. Executive summary
+
+Chronicle today is a 2,927-line hand-rolled game engine, hand-rolled content format (four incompatible variants of it, per the repo audit), zero test coverage, and zero content validation. Nearly every category in this audit maps to something Chronicle is currently doing by hand that a mature tool already does better — but the repository audit also found the project has already tried and abandoned a full second implementation of its own game loop once (`features/`), so the bar for adopting a *new* rebuild-everything tool is deliberately high. The recommendations below favor **incremental, isolable adoption that can be proven in a sandbox before touching `main.js`**, over any tool that requires committing to a full rewrite up front.
+
+Two facts materially changed this audit's conclusions relative to what a purely historical read of "Phaser" and "Tiled" would suggest: **Phaser 4.0/4.1 ("Caladan"/"Salusa") shipped in April 2026** and is now the actively developed primary line (Phaser 3 is in maintenance mode), and **Phaser Editor v5 shipped in April 2026 with full Phaser 4 support, an in-editor AI chat, and an MCP server exposing 40+ tools that integrates directly with Claude Desktop/Cursor/Copilot**. This is directly relevant to a Claude-Code-driven solo-developer workflow and is treated as a first-class finding, not a footnote.
+
+**Adopt now** (near-zero risk, directly fixes a documented gap): ESLint/Prettier (already present — formalize, don't reinvent), Vitest, Zod, JSON Schema.
+**Prototype before adoption** (real fit, but must be proven against actual Chronicle content/maps before committing): Phaser 4 + Tiled (isolated proof-of-concept only, per the existing plan for a later prompt), Playwright, inkjs.
+**Consider later** (real value, wrong sequencing for now): Storybook, Phaser Editor v5, Sentry, GitHub Actions, axe-core/Lighthouse CI.
+**Rejected for now**: Yarn Spinner (JS/web runtime is not yet a shipped, stable NPM package as of this audit — see §11), H5P as a platform core, Spine (no skeletal-animation need exists in the current asset set), LDtk (Tiled is the better fit given Phaser's native Tiled-format loader).
+
+## 2. Repository findings relevant to tooling
+
+Pulled from `docs/architecture/CURRENT-REPOSITORY-AUDIT.md`, restated here as the tooling-relevant subset:
+
+- **No framework at all** — `main.js` (2,927 lines) does routing, rendering, movement, collision, dialogue, audio, and mini-games via template-literal strings and direct DOM manipulation. No React exists anywhere in this repository (the "existing React structure" the task prompt asks to evaluate against does not exist — see §3 note).
+- **Vite 7** is the only build tool, minimally configured (`vite.config.js` is 5 lines).
+- **No TypeScript** anywhere in source; no `tsconfig.json`.
+- **Two bespoke, hand-coded terrain functions** (`isCaribbeanLand`, `isRiverbendLand`) using hard-coded ellipse/rectangle math, one per campaign, no shared map data format.
+- **A hand-rolled dialogue system**: one static string per NPC (field) or a JS closure returning dynamic text (hub) — no branching, no conditions-as-data, no reusable dialogue-node format.
+- **Four incompatible schemas** for the same primary-source content (live `unit-01-campaign.js`, dead `chronicle-case-001.js`, dormant `content/campaigns` JSON tree, plus the `content/library/*.template.json` skeletons).
+- **Zero automated tests**, zero content validation (`scripts/validate-content.js` is a 3-line stub).
+- **No CI configured** — no `.github/workflows/`.
+- **A working ESLint flat config and Prettier** already installed and scripted (`npm run lint`/`format`/`format:check`) — contrary to `CLAUDE.md`'s stale claim of "no linter."
+- **62 hand-placed PNG/JPG sprite assets**, no texture atlas, no sprite-sheet packing pipeline — each sprite frame is a separate file loaded via `new URL(...)`.
+- **A fully-built, unwired AI-grading backend** (`api/evaluate.js` + `api/_lib/rubrics.js`) already uses `@anthropic-ai/sdk` with structured JSON-schema output for HIPP/SAQ/LEQ/DBQ grading — i.e., "structured AI output" (task category 27) isn't hypothetical for this project, it already has a working reference implementation sitting dormant.
+- **No accessibility, performance, or error-tracking tooling** of any kind.
+
+## 3. Problems currently being reinvented
+
+| Problem | Current Chronicle approach | Where |
+|---|---|---|
+| Tile-based terrain/collision | Hand-coded ellipse math, one bespoke function per map | `main.js:1509-1518`, `:629-636` |
+| Sprite-set/animation state machine | Manual `-side`/`-step` filename lookup tables | `main.js:370-387` |
+| Camera-follow | Hand-rolled, correctly, but reinvented rather than using an engine primitive | `main.js:1556-1579` |
+| Branching dialogue | Static string / closure per NPC, no data model | `main.js:243` etc., `HUB_TARGETS[...].dialogue` |
+| Content schema validation | None — 4 incompatible schemas coexist silently | throughout `content/` |
+| Save-schema versioning/merge | Working but hand-rolled deep-merge | `chronicle-progress-store.js:27-62` |
+| Regression testing for movement/camera/dialogue | None — 15 documented hotfix milestones (3.4.1–3.4.15) for exactly these systems | `docs/decision-log/0014`–`0027` |
+| Structured AI grading output | Already solved once, then abandoned/unwired | `api/evaluate.js`, `api/_lib/rubrics.js` |
+| Asset atlas/packing | None — 62 individual PNG files | `apps/web/src/assets/` |
+| Accessibility/performance auditing | None | n/a |
+
+## 4. Adopt-now tools
+
+| Tool | Problem solved | Chronicle system it touches | Verdict |
+|---|---|---|---|
+| **Vitest** | Zero unit-test coverage | Pure-logic functions extractable from `main.js` (collision math, badge-earned logic, save-merge logic) | Adopt — zero build-config friction with Vite 7 (same team, same config format), free/OSS/MIT |
+| **Zod** | Runtime shape validation for the 4 incompatible content schemas | `content/*.js`, eventually `chronicle-progress-store.js`'s `DEFAULT_PROGRESS` merge | Adopt — TypeScript-optional (works in plain JS via JSDoc if TS is never adopted), tiny, MIT, directly replaces `scripts/validate-content.js`'s stub |
+| **JSON Schema** (as a format, not a specific library) | A portable, tool-agnostic contract for the dormant `content/campaigns`/`content/library` JSON tree, if that pipeline is ever revived | `data/schemas/case.schema.example.json` (currently just an example instance, not a real schema) | Adopt as the target format for §10; author the actual schema, don't just leave an example |
+| **ESLint + Prettier** | Already solved | n/a | Already adopted — formalize by fixing the 1 existing lint error and adding a pre-commit or CI gate (see §16), do not reinvent or replace |
+
+## 5. Prototype-before-adoption tools
+
+| Tool | Why prototype-first, not adopt-now |
+|---|---|
+| **Phaser 4** | Real fit for terrain/movement/animation (see §8), but the project has already built and abandoned one full rewrite (`features/`); a second full commitment without proof is the same mistake repeated. A scoped, isolated POC (a later, separate task) is the correct gate. |
+| **Tiled** | Solves the real "one bespoke terrain function per map" problem, but needs a defined validation step (Claude-editable JSON, stable-ID conventions) proven before any production map migrates — see §9. |
+| **Playwright** | Directly addresses the zero-test-coverage gap for the *interactive* behavior (movement, dialogue, camera) that Vitest cannot reach since it's DOM/canvas-driven — needs a small smoke-test proof against the current `main.js` before expanding, since `main.js`'s full-`innerHTML`-replace render pattern is somewhat unusual and worth confirming Playwright's selectors survive it cleanly. |
+| **inkjs** | Directly replaces the static-string dialogue system with a real branching-narrative data model (MIT, zero dependencies, browser-native) — but needs a POC showing it can read quest/progress state as conditions before wiring into `main.js`'s existing `progress` object (see §11). |
+
+## 6. Consider-later tools
+
+| Tool | Why later, not now |
+|---|---|
+| **Storybook** | Valuable once there are real, reusable UI components to isolate — Chronicle currently has *zero* componentized UI (everything is inline template-literal strings inside one file), so Storybook has nothing to catalog yet. Becomes relevant only after/if a component-based runtime (React, or Phaser scenes) is adopted. |
+| **Phaser Editor v5** | Genuinely interesting given its MCP server (see §10), but adopting a visual scene editor before there's a single production Phaser scene to edit is backwards — sequence after the Phaser POC, not before. |
+| **Sentry** | Real value once there are actual users/deployments generating errors worth tracking; today there's no deployed backend and no user base — premature for a single-developer local-first prototype. Revisit once a hosted backend (per `CLAUDE.md`'s stated future-backend intent) exists. |
+| **GitHub Actions (CI)** | High value, low cost, but sequence it *after* Vitest/Playwright exist — a CI pipeline with nothing to run is just a green checkmark with no content. |
+| **axe-core / Lighthouse CI** | Real gap (zero accessibility/performance tooling exists), but lower urgency than test coverage given the current single-developer, pre-classroom-deployment stage. Worth a one-time manual Lighthouse pass now; automate once CI exists. |
+| **Localization (i18n) tooling** | No current multi-language requirement stated anywhere in CLAUDE.md or the audit; premature. |
+| **Analytics** | No hosted deployment exists yet to instrument. |
+
+## 7. Rejected tools
+
+| Tool | Why rejected |
+|---|---|
+| **Yarn Spinner** | As of this audit (July 2026), Yarn Spinner's official JavaScript/web runtime is still explicitly described by the Yarn Spinner team as in-progress ("working on a Yarn Spinner runtime package for JavaScript... will be available on NPM") with its standalone web editor "still a few months from public release." Community JS ports exist but are unofficial and thin. For a Vite/browser-only project with no Unity/Godot/C# runtime already in play, betting on a not-yet-shipped official web runtime is the wrong sequencing risk. **inkjs** (MIT, zero-dependency, browser-native, shipped and stable for years) covers the same problem today. Revisit Yarn Spinner only if its official JS runtime ships and the visual node-graph editor becomes a strong requirement for non-technical dialogue authoring. |
+| **H5P as platform core** | H5P's content-type architecture (see §14) has real lessons worth borrowing, but making H5P itself the activity runtime would mean Chronicle's quest/activity state (which already lives correctly in `progress`) would need to interoperate with H5P's own xAPI-based state model — a second, parallel state system, which is exactly the kind of duplicate-state-ownership problem the repository audit already flags as a current risk (multiple systems owning the same state). Embedding *individual* H5P content types later, as one of several activity renderers, remains viable — see §14. |
+| **Spine (skeletal animation)** | No skeletal-rig need exists — every current sprite is frame-based (idle/step, down/up/side), and Chronicle's art direction (small pixel/flat-illustration NPCs) doesn't call for bone-based deformation. Would add licensing cost ($) and an entirely new asset pipeline for a problem the project doesn't have. |
+| **LDtk (as primary tile editor)** | A reasonable tool on its own merits, but Phaser has a first-class, actively maintained Tiled-format loader (`Tilemaps.Parsers.Tiled`) with no equivalent first-class LDtk loader in Phaser 4. Given Phaser is the leading runtime candidate (§8), Tiled's tighter Phaser integration wins; LDtk's nicer UI isn't worth a custom-loader maintenance burden. |
+| **TexturePacker** | Real tool for a real problem (sprite atlasing), but Chronicle's current 62-file, non-atlased asset set has not been identified as a performance problem in the repository audit — no measured load-time or draw-call issue exists yet. Revisit only if/when a Phaser POC surfaces an actual atlas need. |
+| **Aseprite** | An asset-authoring tool, not a code-integration tool — out of scope for a *repository tooling* audit; it's an art-production choice for whoever creates future sprites, not something this codebase adopts as a dependency. Noted, not evaluated further. |
+
+## 8. Phaser recommendation
+
+**Should Chronicle use Phaser?** Conditionally yes, but only after an isolated proof of concept (a separate, later task) — not a direct swap-in to `main.js` today.
+
+**Which current map or movement code could Phaser replace?** `FIELD_BLOCKS`/`isCaribbeanLand`/`isRiverbendLand` (hand-coded terrain), `footBoxFor`/`isFieldBlocked` (collision), the rAF player-movement loop and `runFieldMovementLoop`/`runHubMovementLoop`, the `setInterval`-based NPC patrol system, `fieldNpcFrameUrls`/`hubNpcSpriteUrl` (manual sprite-set lookup), and the camera-follow math in `updateFieldPlayer`. This is a coherent, extractable subsystem — roughly `main.js:200-470` + `:1500-1690` + `:1257-1450` (hub movement) — that Phaser's `Arcade`/`Matter` physics, `Tilemap`, `AnimationManager`, and `Camera.startFollow()` primitives directly replace.
+
+**Which current systems should remain outside Phaser?** Everything in the repository audit's "platform-core candidates" (§16 of the repo audit) and "Chronicle-specific candidates" that isn't rendering: `progress` and all save-state (stays in `chronicle-progress-store.js`), quest/case state machine (`activeCaseId`/`completedCases`/`unlocked`/etc.), dialogue *content* (should live in a data format like inkjs, not Phaser scene code), Author Mode, the mini-game check/submit logic (ledger, reconstruction, triangle, regions, empire), and screen routing outside the field/hub scenes (menu, archive, source reader, codex, review, completion — none of these are spatial/tile-based and gain nothing from Phaser).
+
+**Should Phaser be a universal platform runtime?** No — the task's own product-direction section is explicit that "the architecture must not assume that every future subject uses maps, characters, or Phaser," and this audit agrees: Phaser should be **one pluggable runtime among several** (see the forthcoming platform-architecture proposal), scoped specifically to spatial/exploration gameplay, not a mandatory dependency for every subject pack.
+
+**How should React and Phaser communicate?** Not applicable today — there is no React in this repository (see §3's correction of the task's assumption). If a component framework is adopted later for platform-core UI (dashboards, teacher tools, forms), the React↔Phaser boundary should be an event-emitter/adapter pattern (Phaser emits domain events like `quest:interact`, `npc:reached`; the host UI layer subscribes and owns all non-spatial state), never direct DOM manipulation from inside Phaser scene code and never Phaser reaching into React state directly. This mirrors the "Phaser must not directly own accounts/classrooms/quest content/rubrics" constraint already specified for the later proof-of-concept prompt.
+
+**Should quest content live inside Phaser scenes?** No — quest/activity data must stay in content modules (or their eventual schema-validated successor), referenced from Tiled/Phaser objects only via stable IDs (`questSlot`, `npcSlot`), exactly as the later POC prompt specifies. This avoids repeating the `main.js` mistake of case-ID literals baked into interaction code (repo audit §8/§19) inside a *second* runtime.
+
+**Should save data live inside Phaser?** No — `chronicle-progress-store.js`'s pattern (versioned key, deep-merge, explicit reset) should remain the single save layer regardless of which runtime is rendering; Phaser should read a snapshot on scene init and emit position/interaction events outward, not own `localStorage` access itself.
+
+**What architecture would prevent Phaser lock-in?** Keep all educational content (source text, rubrics, quest prerequisites, dialogue) in plain JSON/JS data structures that Phaser merely *renders*, never *defines*. Keep the quest-state machine and save layer entirely outside any Phaser scene file. This means a future subject pack that doesn't use Phaser at all can reuse 100% of the platform-core/content-schema work with zero Phaser-shaped debt.
+
+**Is Phaser 4 appropriate now, or should another version be considered?** **Phaser 4.1.0 "Salusa"** (shipped April 30, 2026) is appropriate to prototype against — it's now the actively developed primary line with Phaser 3 in maintenance mode, so starting a new POC on 3.x would be adopting a maintenance-only branch on day one. The new Render Node architecture and `SpriteGPULayer` (up to 100x faster sprite rendering) are strict upgrades with no known Phaser-4-specific regression relevant to Chronicle's simple 2D top-down use case. Recommendation: prototype directly on 4.1.x, pin the exact version (see §19).
+
+## 9. Tiled recommendation
+
+**Should Chronicle use Tiled?** Yes, conditionally — it directly solves the "one bespoke hand-coded terrain function per campaign" problem identified in the repo audit (`isCaribbeanLand` vs. `isRiverbendLand`), replacing ad hoc ellipse/rectangle math with a real, visual, versionable map format. Free/open-source (GPL for the app itself, BSD/MIT for the `libtiled` library used by loaders), voluntary-payment model, no licensing risk for a commercial education product.
+
+**Which current map problems would it solve?** No shared terrain data format across campaigns; collision rects (`FIELD_BLOCKS`, `HUB_BLOCK_RECTS`) hard-coded as JS object literals with no visual editing; NPC spawn points and patrol paths hard-coded as coordinate arrays (`FIELD_NPC_PATROLS`) with no visual placement tool; no way for a non-programmer (or Claude, working from a visual reference) to adjust map layout without editing `main.js` directly.
+
+**What physical information should live in Tiled?** Terrain/walkability layers, collision boundaries, building/prop placement, door/transition markers, spawn points, and — critically — **anchor objects carrying only stable IDs** (`locationId`, `npcSlot`, `questSlot`, `transitionId`, `interactionAnchor`), matching exactly the pattern the later POC prompt specifies.
+
+**What educational information must remain outside Tiled?** Quest prompts, source excerpts/citations, rubrics, standards, vocabulary, assessment logic, student progress, grading, teacher instructions, and full dialogue text — all of this stays in the content-schema layer (§4/§10), referenced from Tiled only by the stable IDs above. This is the same boundary the repo audit already flags as violated today (case-ID literals in `main.js` movement code) — Tiled adoption must not reintroduce that mistake in a new format.
+
+**Can Claude safely generate or edit Tiled JSON?** Yes, with caveats. Tiled's `.tmj`/`.json` export format is plain, well-documented JSON — Claude can read and hand-edit it directly with the existing Read/Edit tools, no special tooling required for small changes (moving an object, adding a collision rect). For anything beyond small edits (new tilesets, complex multi-layer terrain), Claude-authored raw JSON risks producing structurally invalid files (wrong `gid` references, misaligned tileset firstgid offsets) that only surface as visual bugs in Tiled itself or at runtime — this is exactly the class of "visual/interactive" bug this project's own `/verify` workflow exists to catch. Treat Claude-edited Tiled JSON as requiring the same "run it and look at it" verification CLAUDE.md already mandates for all Chronicle changes, not schema-checking alone.
+
+**What validation would be required?** A JSON Schema (or a small Zod schema) validating that every Tiled object of type `npc-anchor`/`quest-anchor`/`transition` carries a required, non-empty stable-ID property, run as part of `npm run validate:content` (finally giving that script real content) — this is the mechanism that prevents a renamed/deleted anchor from silently breaking a quest reference.
+
+**Should teachers ever edit Tiled maps directly?** No, not in the initial platform. Tiled requires installing a desktop application and understanding tile/layer/object concepts — squarely outside the "Teacher Customization" scope the platform-architecture prompt defines as initial (text/prompts/instructions/sources/vocabulary/rubrics/due-dates/unlock-timing/visibility/rewards, explicitly *not* free-form map editing). Map templates should be a small, curated, official set; teacher-facing customization stays at the content layer above the map, not inside it.
+
+**How should map anchors reference quests and NPCs?** Via the stable-ID convention above — a Tiled object's custom property (e.g. `npcSlot: "columbus"`) is looked up against the content-layer NPC/quest registry at scene-load time. Never store display names, dialogue text, or numeric array indices as the reference — exactly the "IDs are unstable or based on display names" and "unit content relies on implicit array ordering" risks the repo audit already flags as existing anti-patterns in `main.js` (`RECONSTRUCTION_LANES`, `UNIT_SOURCES` keyed dictionaries) that a Tiled migration must not repeat.
+
+## 10. Phaser Editor recommendation
+
+**Would Phaser Editor v5 improve the current workflow?** Potentially significant, once there's an actual Phaser scene to edit — its MCP server (40+ tools, direct Claude Desktop/Cursor/Copilot integration, confirmed shipped April 2026) is a genuinely novel fit for a Claude-Code-driven solo workflow: it would let Claude manipulate real Phaser scenes/prefabs through MCP tool calls rather than hand-writing scene-graph JS or raw Tiled JSON blind.
+
+**Would it add unnecessary complexity?** Yes, if adopted before the Phaser POC — it's a full IDE with its own project format, licensing, and learning curve. Introducing it before a single production Phaser scene exists would be solving a workflow problem for code that doesn't exist yet.
+
+**Are its generated files maintainable?** Phaser Editor v5 targets Phaser 4 scene/prefab JSON that is meant to be checked into source control and hand-edited when needed (it's explicitly built to interoperate with code-first workflows, not lock content in a proprietary binary format) — low lock-in risk on this specific point, pending direct verification in the POC.
+
+**Could its MCP tools help Claude work with real assets and scenes?** Yes — this is the strongest specific reason to revisit it, but only *after* the Phaser 4 POC establishes there's a real scene-authoring workload worth accelerating.
+
+**Should it be adopted, prototyped, or rejected?** Consider-later (§6) — not rejected, not adopt-now. Gate: revisit immediately after a successful Phaser 4 POC, specifically to evaluate its MCP server against Claude Code's existing Edit/Read tools for scene work.
+
+## 11. Dialogue-system recommendation
+
+**Should Chronicle use Ink, Yarn Spinner, a custom format, or another system?** **inkjs** (Ink's official JavaScript port) — MIT-licensed, zero dependencies, browser-native, stable and shipped (unlike Yarn Spinner's in-progress web runtime, see §7). Ink's markup is designed to be readable/writable by non-programmers (a real fit for a future "teacher-editable dialogue" requirement), while still supporting conditions, variables, and branching that can read Chronicle's existing `progress` fields.
+
+**Which current dialogue code could be replaced?** The static per-NPC `text` strings in `FIELD_NPCS` (`main.js:243` etc.) and the `HUB_TARGETS[id].dialogue()` closures (`main.js:684-730`) — both are one-line/single-branch today specifically *because* there's no data model for branching; inkjs would let dialogue depend on `completedCases`/`caseEvidence` state declaratively instead of via hand-written JS closures duplicated per NPC.
+
+**Should dialogue and quests share one data model?** Not the same model, but the same *reference convention* — dialogue nodes should be able to read quest/progress state as Ink "external functions" bound to `progress` accessors (mirroring the read-only `isUnlocked`/`evidenceFor` helpers that already exist in `main.js`), without dialogue content owning or mutating quest state directly. This avoids the "multiple systems own the same state" risk the repo audit flags.
+
+**How should branching narrative interact with quest state?** Read-only from Ink's perspective — Ink conditions gate *what dialogue is shown*, but quest-state *mutation* (securing evidence, completing a case) stays in the existing click-action handlers, which can then advance the Ink story pointer as a side effect. This keeps the single quest-state owner intact.
+
+**How should teacher-editable dialogue be handled?** Deferred — per the platform-architecture prompt's own scoping, teacher customization of dialogue text is a reasonable *future* extension (Ink's plain-text format is teacher-readable), but not part of this tooling audit's adopt-now/prototype-now recommendations; flagged for the platform-architecture proposal to place in its phased plan.
+
+## 12. Animation-pipeline recommendation
+
+Chronicle's current animation need is narrow: frame-based idle/step sprites in 3 facing directions, no skeletal rigs, no complex tweening beyond what CSS/Phaser's built-in tweens already provide. **No new animation tool is recommended at this time.** If a Phaser POC proceeds, Phaser's built-in `AnimationManager` (frame-based, JSON-configurable) directly replaces the current manual `fieldNpcFrameUrls`/`hubNpcSpriteUrl` lookup tables — no external animation tool (Spine, DragonBones) is needed for this art style. TexturePacker (§7) remains a "revisit only if a real perf problem surfaces" item, not a pipeline requirement today.
+
+## 13. Content-validation recommendation
+
+Adopt **Zod** (§4) as the validation library, targeting all of: (a) the live `unit-01-campaign.js`/`unit-02-campaign.js` export shapes, (b) `chronicle-progress-store.js`'s `DEFAULT_PROGRESS` shape (currently validated only by ad hoc field-by-field merge logic), and (c) — if/when Tiled is adopted — the stable-ID-anchor convention described in §9. Wire validation into `scripts/validate-content.js`, replacing its current stub with real schema checks, and surface it as a real, non-placeholder `npm run validate:content`. This single change directly resolves the repo audit's §10/§22 finding of four incompatible, un-validated content schemas coexisting silently.
+
+## 14. Testing recommendation
+
+**What should Vitest test in the current repository?** Pure-logic functions that don't depend on the DOM: `isFieldBlocked`/`isCaribbeanLand`/`isRiverbendLand` (collision math — directly testable with coordinate fixtures), `badgeRecordsForUnit`/badge-earned logic, the deep-merge logic in `readProgress()`, the `check-*` answer-validation handlers if extracted into pure functions (currently inline in event handlers — extracting them is itself a testability improvement worth doing regardless of Vitest adoption), and any future Zod schemas.
+
+**What should Playwright test?** The actual interactive regressions the decision log documents repeatedly: field movement + collision (walking into `FIELD_BLOCKS` shouldn't clip through), camera staying within viewport bounds during movement, dialogue opening/closing on NPC proximity (not teleport-and-interact — a named invariant in `CLAUDE.md`), the "one interaction prompt at a time" invariant, save/reload round-tripping `progress.currentScreen`, and the map-jigsaw drag/drop completion check.
+
+**What should Storybook cover?** Nothing yet (§6) — no componentized UI exists to catalog. Revisit if/when a component framework is adopted for platform-core (non-Phaser) UI.
+
+**What visual-regression approach fits this project?** Defer full visual-regression tooling (e.g., Percy/Chromatic) until Storybook or a component framework exists to anchor it to; in the interim, Playwright's built-in screenshot-comparison (`toHaveScreenshot()`) is sufficient for the handful of screen states worth locking down (field view, hub view, dialogue open) without adding a new vendor dependency.
+
+**Which past Chronicle failures would these tools have caught?** Per the decision log's own hotfix milestones (3.4.1 Field Engine correction, 3.4.3 Interaction depth/puzzle/physics, 3.4.6 proximity/patrol, 3.4.9 shoreline/archive-return, 3.4.11 dialogue/cartographer, 3.4.12 dialogue spacing/patrol, 3.4.13 NPC physics/dialogue camera) — nearly every one of these regressions falls squarely into "camera drift," "collision incorrectness," "dialogue not anchoring/clearing correctly," or "NPC patrol breaking" — exactly the categories a Playwright interaction-smoke-test suite targets.
+
+**Which tests must exist before major file moves?** At minimum: a Playwright smoke test confirming the full menu→institute→archive→travel→field→dialogue→case-complete happy path still works, plus Vitest coverage of the collision/badge/merge logic — both should exist *before* any of the later architecture-migration phases move `main.js` code into new files, so regressions are caught mechanically rather than only by manual re-testing.
+
+## 15. VS Code extension recommendation
+
+| Extension | Fit |
+|---|---|
+| **Error Lens** | Low-risk, immediate value — surfaces the existing ESLint findings (1 error, 11 warnings per the checkpoint report) inline during editing. Adopt. |
+| **GitLens** | Useful for a solo developer navigating 27 decision-log-tied commits/milestones, no downside. Adopt (developer-preference tier, not a repo dependency). |
+| **Playwright Test for VS Code** | Adopt alongside Playwright itself (§5) — no reason to defer separately from the library adoption. |
+| **Code Spell Checker** | Genuinely useful given the volume of hand-authored historical/pedagogical prose in content files (source excerpts, rubric text) — low cost, catches typos in student-facing copy. Adopt. |
+
+These are developer-environment preferences, not repository dependencies — no `package.json` changes needed for any of them.
+
+## 16. Claude Code infrastructure recommendation
+
+- **Root `CLAUDE.md`**: already exists and is substantive; needs the corrections this audit surfaced (main.js line count, linter claim, asset-location table, Unit 2/features/api existence) folded in as a follow-up edit, not part of this task.
+- **Folder-level `CLAUDE.md` files**: not yet warranted — the codebase is still single-file-dominant; introduce one for `apps/web/src/features/` (marking it explicitly dead/orphaned so future agents don't assume it's live) and one for `api/` (documenting what it is and that it's unwired) as the highest-value additions, since both are exactly the kind of "surprising, not derivable from a quick read" context this audit had to spend real research effort rediscovering.
+- **Repository-explorer agent**: the existing `Explore` subagent type already covers this need well (used for this very audit) — no new custom agent required.
+- **Architecture-reviewer agent**: worth defining once the platform-architecture proposal (next task) exists, to re-check future migrations against it — premature to build before that document exists.
+- **Phaser specialist**: worth defining *if* the Phaser POC proceeds and produces enough Phaser-specific convention (scene structure, event-naming) to be worth encoding into a skill — premature today.
+- **Content validator**: once Zod schemas exist (§4/§13), a lightweight skill or hook that runs `npm run validate:content` before commits is high-value and cheap to build.
+- **Assessment reviewer / Accessibility reviewer**: real future value (the dormant `api/_lib/rubrics.js` already encodes real APUSH rubric knowledge that an "assessment reviewer" agent could draw on) but out of scope until the assessment/activity architecture from the platform proposal exists.
+- **Migration verifier**: directly relevant to the upcoming migration-phase work — a skill/checklist that runs lint + (future) Vitest + (future) Playwright smoke test + manual dev-server spot-check before any migration phase is marked done, mirroring this project's existing `/verify` skill expectations.
+- **Reusable skills**: the existing `chronicle-institute-conventions` skill should be updated (separately from this task) with this audit's corrections; a new skill for "content schema conventions" becomes worth authoring once Zod schemas land.
+- **Hooks**: a pre-commit or pre-push hook running `npm run lint` and (once it exists) `npm run validate:content` would enforce the adopt-now tools without relying on developer memory — low-cost, high-value, can be added immediately.
+- **Verification gates**: formalize "build succeeds + lint passes + (future) tests pass + manual browser check" as the standard gate for any `main.js`-touching change, consistent with CLAUDE.md's existing workflow-expectations section.
+- **Trusted MCP tools**: Phaser Editor v5's MCP server (§10) is the one concrete, currently-shipped MCP integration directly relevant to this project — worth trusting/enabling specifically in the context of a future Phaser POC, not broadly today.
+- **Permissions**: no change needed for this audit's adopt-now tools (all are local dev dependencies, no network/credential access required beyond what's already granted for npm).
+- **Context management**: this audit itself demonstrates the pattern worth repeating — three parallel Explore agents gathered exhaustive, file:line-cited findings once, written to a durable document (`CURRENT-REPOSITORY-AUDIT.md`), so future tasks read the document instead of re-scanning the repository from scratch.
+- **Lower-credit workflows / avoiding repeated repository scans**: the two audit documents produced in this task sequence (current-state + this tooling audit) are the durable artifacts that let the next task (platform-architecture proposal) start from a document read instead of a fresh multi-agent repository scan — this is the single biggest lower-credit lever available given the task sequence already in progress.
+
+## 17. Licensing and commercial-use concerns
+
+| Tool | License | Commercial-education-platform concern |
+|---|---|---|
+| Phaser 4 | MIT | None |
+| Phaser Editor v5 | Commercial (paid license/subscription — verify current pricing before purchase) | Acceptable for a commercial product; not free — factor into cost planning, don't install speculatively |
+| Tiled | GPL (app) / BSD-2-Clause (`libtiled` used by loaders) | The *editor app* is GPL but that governs the desktop tool, not the JSON maps it exports, which carry no license restriction — safe to use exported `.tmj`/`.json` in a commercial product |
+| inkjs / Ink | MIT | None |
+| Zod | MIT | None |
+| Vitest | MIT | None |
+| Playwright | Apache 2.0 | None |
+| H5P core libraries | Mostly MIT; some third-party PHP purification code is GPL (server-side only, not relevant to a client-only embed) | Safe for commercial use if embedding client-side H5P content types only |
+| Sentry | Free tier + usage-based paid tiers (self-hosted OSS option also exists under BSL-ish license — verify current terms before committing) | Defer per §6; re-verify licensing terms at adoption time given Sentry's license has changed historically |
+| Yarn Spinner | MIT (core) | Not being adopted now (§7), but no licensing blocker if revisited later |
+
+## 18. Dependency-adoption policy
+
+1. New dependencies land as **devDependencies** unless they ship code to the browser bundle (Zod, inkjs would be runtime deps; Vitest/Playwright/ESLint/Prettier stay dev).
+2. Every new dependency gets a one-line justification comment in `package.json` is not standard practice — instead, justification lives in this document and is updated when the dependency set changes, keeping `package.json` itself clean per this project's stated preference for minimal config-file churn.
+3. No dependency is adopted "speculatively" for a future architecture phase — each one lands in the same commit/PR that actually uses it (Vitest lands with its first real test file, not standalone).
+4. Any tool requiring a paid license (Phaser Editor v5, potentially Sentry) requires explicit user sign-off before purchase — this audit recommends, it does not authorize spend.
+
+## 19. Version-pinning policy
+
+- **Phaser**: pin to the exact `4.1.0` (or later patch, re-verified) rather than a caret range for the initial POC, given how new the 4.x line is (shipped April 2026) — avoid an automatic minor-version bump silently changing renderer behavior mid-prototype. Revisit caret-range pinning once the POC is stable.
+- **Tiled** (the desktop app, not a package dependency): no pin needed — it's a local authoring tool, not a build dependency; document the minimum version tested against the loader in use.
+- **Everything else** (Vitest, Zod, Playwright, ESLint, Prettier): follow the existing project convention already visible in `package.json` (caret ranges, e.g. `"vite": "^7.0.0"`) — no reason to deviate from the established pattern for mature, stable tools.
+
+## 20. Proof-of-concept plan
+
+This audit does not implement any POC (out of scope per the task constraints) but names what each prototype-tier tool's POC must demonstrate before graduating to "adopt":
+
+- **Phaser 4 + Tiled**: isolated route/page, one small Tiled map, collision, one NPC anchor, one quest anchor, React-free (or React-optional) event communication out to the host page, save/restore of player position — this matches the scope already defined for the later, separate proof-of-concept task in this project's task sequence.
+- **Playwright**: a single smoke test covering the menu→field→dialogue happy path against the *current, unmodified* `main.js`, proving selectors/timing work against the full-innerHTML-replace render pattern before expanding coverage.
+- **inkjs**: a standalone script (no `main.js` integration) loading one converted NPC dialogue as an `.ink` file, demonstrating a condition read from a mock `progress`-shaped object, before wiring into any live NPC.
+- **Zod**: validate the real `unit-01-campaign.js` export shapes against a hand-written schema, confirming zero false-positive validation failures against existing content, before wiring into `scripts/validate-content.js`.
+
+## 21. Risks and mitigations
+
+| Risk | Mitigation |
+|---|---|
+| Repeating the `features/` mistake — building a second full parallel implementation that gets abandoned | Every prototype-tier tool POC is scoped, isolated, and explicitly time-boxed/reviewed before any production code migrates — no tool touches `main.js` directly until its POC is judged successful |
+| Phaser 4 being very new (April 2026) — undiscovered bugs/breaking patch releases | Pin exact version (§19), do the POC before any commitment, monitor Phaser's own release notes during the POC window |
+| Adding dependencies that increase bundle size for a low-bandwidth classroom deployment target | Prefer MIT/zero-dependency libraries (Zod, inkjs) over heavier alternatives; measure bundle-size impact as part of each POC's acceptance criteria |
+| Paid tools (Phaser Editor v5) creating ongoing cost for a pre-revenue prototype | Explicit sign-off required (§18) before any purchase; the free Phaser 4 + Tiled + inkjs core stack requires zero new spend |
+| Content-schema validation (Zod) surfacing that existing live content doesn't actually match the shape `main.js` assumes | Treat any such finding as a real bug caught early, not a validation-tool problem — this is exactly the class of risk the repo audit's §22 risk register already flags as currently invisible |
+
+## 22. Final recommended initial stack
+
+```
+Adopt now (no POC needed):
+  - Vitest              (unit tests for pure logic)
+  - Zod                 (content + save-shape validation)
+  - ESLint + Prettier    (already present — fix existing findings, add a pre-commit hook)
+
+Prototype next (scoped, isolated, separate task):
+  - Phaser 4.1.x + Tiled  (exploration/movement runtime — per the already-planned POC task)
+  - Playwright            (interaction smoke tests)
+  - inkjs                 (branching dialogue, standalone POC first)
+
+Explicitly deferred (real value, wrong sequencing):
+  - Storybook, Phaser Editor v5, Sentry, GitHub Actions CI, axe-core/Lighthouse CI
+
+Rejected for now:
+  - Yarn Spinner (web runtime not yet stable/shipped)
+  - H5P as platform core (state-ownership conflict)
+  - Spine, LDtk, TexturePacker (no current problem they solve)
+```
+
+## 23. Exact current code each recommended tool could replace or supplement
+
+| Tool | Replaces | Supplements | Leaves unchanged |
+|---|---|---|---|
+| Vitest | Nothing (net-new coverage) | — | All existing logic; tests are added around it, not instead of it |
+| Zod | `scripts/validate-content.js`'s stub | `chronicle-progress-store.js`'s hand-written merge validation (Zod validates shape; the merge logic itself can stay) | The content files themselves — Zod validates, doesn't rewrite, existing `unit-01-campaign.js` shapes |
+| Phaser 4 | `main.js:200-470` (field constants/NPC runtime), `:629-667` (terrain/FIELD_MAPS), `:1257-1450` (hub movement), `:1500-1690` (field movement/camera/collision) — **only inside the isolated POC route, not `main.js` itself yet** | — | Everything outside the field/hub scenes: menu, archive, source reader, codex, ledger, empire, review, completion screens; all of `chronicle-progress-store.js`; all quest-state logic |
+| Tiled | `FIELD_BLOCKS`/`HUB_BLOCK_RECTS` hard-coded rects, `FIELD_NPC_PATROLS` hard-coded coordinate arrays, `isCaribbeanLand`/`isRiverbendLand` ellipse math — **within the Phaser POC scope only** | `caribbeanWorldMarkup()`'s decorative-only markup could remain as-is or migrate to Tiled decoration layers depending on POC findings | Content data referenced by anchors (quest prompts, source text, dialogue) |
+| inkjs | `FIELD_NPCS[].text` static strings, `HUB_TARGETS[id].dialogue()` closures | `fieldDialogueBubble()`'s rendering/anchoring logic (stays — it's presentation, not content) | `progress.activeFieldNpc`/`hubDialogueId` open/close state ownership |
+| Playwright | Nothing existing (net-new) | Manual browser verification currently required by CLAUDE.md's workflow expectations — automates the smoke-test portion, doesn't replace exploratory manual testing | — |
+| ESLint/Prettier | Nothing (already adopted) | — | — |

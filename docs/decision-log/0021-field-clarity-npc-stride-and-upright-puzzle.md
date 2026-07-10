@@ -1,6 +1,6 @@
 # 0021 — Field Clarity, NPC Stride, and Upright Puzzle
 
-Milestone 3.4.7 corrects the first 3.4.6 playtest issues without changing Vite or repository setup files.
+Milestone 3.4.7 corrects the first 3.4.6 (see [`0020`](0020-proximity-interaction-puzzle-polish.md)) playtest issues without changing Vite or repository setup files.
 
 ## Field readability
 

@@ -1,4 +1,6 @@
-# Decision 0006 — Field Definition Pass
+# Decision 0006a — Field Definition Pass
+
+> **Numbering note (repaired by the Prompt 5 documentation-housekeeping pass):** this decision (Milestone 2.2) was originally filed as `0006-field-definition-pass.md`, sharing the number `0006` with [`0006-field-movement-and-art-polish.md`](0006-field-movement-and-art-polish.md) (Milestone 2.1, chronologically earlier). It has been renumbered to `0006a` — immediately after `0006` and before `0007` — so no other decision number shifts. No substance was changed.
 
 Milestone 2.2 improves the presentation layer of the first playable field scene without changing the underlying game architecture.
 
