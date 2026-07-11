@@ -27,13 +27,13 @@ Run from the repo root (npm scripts shell out to Vite, which is rooted at `apps/
 - `npm run lint` — real, working ESLint flat config (`eslint.config.js`)
 - `npm run format` / `npm run format:check` — real, working Prettier
 
-There is no test runner or type checker configured yet (`tests/` exists but is empty aside from `.gitkeep`). Do not assume `npm test` exists. ESLint and Prettier **are** configured and working — don't claim otherwise.
+A test runner **is** configured: `npm run test` (Vitest, non-watch, CI-compatible) runs tests from `tests/unit/` — see `docs/development/UNIT-TESTING.md`. There is no type checker configured yet. ESLint and Prettier **are** configured and working — don't claim otherwise.
 
 ## Architecture
 
 ### The app is currently one file
 
-The entire running game is implemented in **`apps/web/src/main.js`** (~2,930 lines — this file has grown substantially across hotfix milestones; re-check the line count with a quick `Measure-Object` before citing it, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
+The entire running game is implemented in **`apps/web/src/main.js`** (~2,991 lines — this file has grown substantially across hotfix milestones; re-check the line count with a quick `Measure-Object` before citing it, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
 
 An orphaned second implementation of the onboarding→field→case-player loop (`apps/web/src/features/*`, plus its two supporting dead stores `engine/content/author-content-store.js` / `engine/player/player-profile-store.js`) used to exist alongside `main.js` — six files total, never imported by it, containing two more dead Author Mode implementations on top of `main.js`'s own broken one. It was confirmed zero-risk (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't recreate it; when extending gameplay, edit `main.js` directly unless deliberately doing modularization work.
 

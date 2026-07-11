@@ -1,6 +1,8 @@
-# Quest-Type Architecture (Phase 8)
+# Quest-Type Architecture (Phase 8, extended by the Phase 9 pass below)
 
-Status: content/test/validation layer complete; **not yet wired into the running game**. This is a deliberate scope boundary, not an oversight — see §5.
+Status: content/test/validation layer complete for four quest types; **not yet wired into the running game**. This is a deliberate scope boundary, not an oversight — see §5.
+
+> **2026-07-11 update**: This document originally covered Phase 8's two quest types (MCQ, Evidence Organizing). A same-day follow-up pass ("Phase 9" — see `docs/architecture/session-reports/2026-07-11-overnight-quest-types-and-minigames.md` for the full writeup) added two more quest types (Sequencing, Source Analysis/HIPP) plus a separate, non-rubric-scored `apps/web/src/mini-games/` layer. §2–§4 below are updated in place to describe all four quest types; §5–§6 (the "not yet wired" flag) still apply to all four, unchanged in substance.
 
 ## 1. What this is and why it exists now
 
@@ -20,16 +22,19 @@ This is explicitly **not** a reopening of the deferred `PlatformCore`/`WorldComp
 ### Folder split
 
 - **`apps/web/src/quest-types/generic/mcq-quest.js`** — subject-agnostic. Field names (`prompt`, `choices`, `answer`, `explanation`, `id`) carry no history-specific assumption; this file would work unchanged for a hypothetical future non-history subject. Content schema (`McqQuestSchema`) **extends** `McqQuestionSchema`, newly exported from `apps/web/src/content/schemas/review.schema.js`, rather than duplicating an equivalent shape — the same shape `REVIEW.mcq` already validates against.
+- **`apps/web/src/quest-types/generic/sequencing-quest.js`** (added 2026-07-11) — subject-agnostic. Field names (`id`, `label`, `position`) carry no history-specific assumption. Chronological reasoning in the real AP rubrics is about causal/developmental logic, not date recall — content authors are responsible for choosing item sets with a genuine cause-and-effect relationship (not machine-checkable, so this is authoring guidance in the schema's own header comment, not a schema field). Scoring is all-or-nothing per item set (`gradeSequencingQuest` requires every item's position to match, no partial credit for a near-miss order), matching the rubric's per-point-independent-but-binary logic.
 - **`apps/web/src/quest-types/history/evidence-organizing-quest.js`** — deliberately subject-coupled: sources carry historical `attribution` and a `skillCategory` (historical-thinking-skill category, e.g. Contextualization/Sourcing and Situation/Continuity and Change), matched against typed `slots`, with an optional free-text `reflectionPrompt` gated at a minimum length. This generalizes the existing `TRIANGLE_CARGO`/`REGION_EVIDENCE` pattern (parameterized-by-valid-slot-ids Zod factory functions, following the precedent in `apps/web/src/content/schemas/unit02-activities.schema.js`) rather than the more hard-coded `EMPIRE_EVIDENCE`/`EMPIRE_CONNECTIONS` shape.
-- **`apps/web/src/quest-types/shared/html.js`** — a small `escapeHtml()` helper shared by both renderers. Deliberately does not import from `main.js` (whose own `esc()` is module-private) and is not imported by `main.js` — `quest-types/` is self-contained.
-- **`apps/web/src/quest-types/index.js`** — the minimal lookup: a plain object literal, `QUEST_TYPES = { mcq: {...}, "evidence-organizing": {...} }`, each entry holding `{ schema, listSchema, render, grade }`. `renderQuest(questType, quest, state)` / `gradeQuest(questType, quest, state)` throw on an unknown key. Adding a third quest type later is one more object entry — nothing else in this file changes shape.
+- **`apps/web/src/quest-types/history/source-analysis-quest.js`** (added 2026-07-11, the HIPP quest type) — deliberately subject-coupled: a `document` (text + attribution) plus 1-2 `hippPrompts[]`, each tagging one HIPP dimension (Historical situation / Intended audience / Point of view / Purpose) with an `argument` context and `options[]`. The real DBQ sourcing point only rewards explaining *how or why* a HIPP element matters to an argument, not merely identifying it — the schema encodes this directly: exactly one `correct` (explanation-linked) option is required per prompt, at least one `identificationOnly && !correct` distractor is required (an option that names the HIPP element correctly but doesn't connect it to an argument — this must score zero), and an option can never be both `correct` and `identificationOnly` (all enforced by Zod `superRefine`, not just described in a comment). Scoring is binary per dimension per document — no invented partial-credit scale.
+- **`apps/web/src/quest-types/shared/html.js`** — a small `escapeHtml()` helper shared by all four renderers. Deliberately does not import from `main.js` (whose own `esc()` is module-private) and is not imported by `main.js` — `quest-types/` is self-contained.
+- **`apps/web/src/quest-types/index.js`** — the minimal lookup: a plain object literal, `QUEST_TYPES = { mcq: {...}, sequencing: {...}, "evidence-organizing": {...}, hipp: {...} }`, each entry holding `{ schema, listSchema, render, grade }`. `renderQuest(questType, quest, state)` / `gradeQuest(questType, quest, state)` throw on an unknown key. The evidence-organizing entry keeps its original Phase 8 key name (`"evidence-organizing"`, not a shorter `"evidence"`) since renaming a shipped, already-wired key for no functional reason isn't worth the churn. Adding a fifth quest type later is one more object entry — nothing else in this file changes shape.
 
 ### Schema decision (step 1 of the source prompt)
 
-Confirmed the existing Phase 3 Zod schemas already cover ~80% of both shapes and were extended, not replaced:
+Confirmed the existing Phase 3 Zod schemas already cover ~80% of the original two shapes and were extended, not replaced:
 
 - MCQ: reused `McqQuestionSchema` (now exported) verbatim via `.extend({ id })`.
 - Evidence-organizing: no existing schema covered "sources with historical-thinking-skill attribution matched to typed slots with a length-gated reflection" as one contract — `unit02-activities.schema.js`'s `buildTriangleCargoSchema`/`buildRegionEvidenceSchema` factory pattern was the closest precedent and was followed directly (same `assertUniqueIds` cross-field-uniqueness idiom, same "factory takes valid slot ids, enum-constrains the reference field" idiom), rather than inventing a new pattern.
+- Sequencing and Source Analysis (HIPP) (2026-07-11 addition) had no existing precedent in the Phase 3 schemas — both were built fresh, following the same local-per-file duplicate-id-check idiom already used by `mcq-quest.js`/`evidence-organizing-quest.js` rather than factoring out a shared cross-folder helper (each quest-type file stays self-contained by design).
 
 ### First real content
 
@@ -37,38 +42,55 @@ Confirmed the existing Phase 3 Zod schemas already cover ~80% of both shapes and
 
 - `UNIT_01_MCQ_QUESTS` — 3 new MCQ items grounded in Case 1.01's real `CASE_001_SOURCES` (the Taíno context record, the Columbus letter, the Waldseemüller map), each testing HIPP-style sourcing reasoning rather than recall. This **supplements** the existing `REVIEW.mcq` end-of-unit review; it does not replace or duplicate it — the two serve different moments (mid-case practice vs. end-of-unit review).
 - `UNIT_01_EVIDENCE_ORGANIZING_QUESTS` — one quest reusing the same three Case 1.01 sources (by the same ids as `CASE_001_SOURCES`, intentionally, for consistency), asking the player to match each record to the historical-thinking skill it best demonstrates (Contextualization / Sourcing and Situation / Continuity and Change), plus a length-gated reflection prompt.
+- `UNIT_01_SEQUENCING_QUESTS` (added 2026-07-11) — one quest, a 5-item causal chain grounded in Case 1.01's real sources and `EXCHANGE_RECORDS` (pre-contact Taíno society → Columbus's 1492 contact/1493 letter → the 1507 Waldseemüller map reflecting changed geographic knowledge → the 1520 smallpox epidemic → horses reshaping later societies), explicitly asking the player to sequence by cause-and-effect, not date recall.
+- `UNIT_01_SOURCE_ANALYSIS_QUESTS` (added 2026-07-11) — one quest using the real Columbus 1493 letter to Rafael Sánchez, tagging exactly 2 HIPP dimensions (Intended audience, Purpose) that are genuinely arguable for this document. Both dimensions have a real, considered identification-only distractor (not a placeholder) — see the session report for the full authoring-cost discussion the source prompt asked to be flagged.
 
 ### Validation wiring
 
-- `apps/web/src/repositories/local-content-repository.js` — added `mcqQuests`/`evidenceOrganizingQuests` to the `unit01` group.
-- `scripts/validate-content.js` — added two `runSchema(...)` calls against the new list schemas. `npm run validate:content` now checks **19** groups (was 17), 0 errors.
+- `apps/web/src/repositories/local-content-repository.js` — added `mcqQuests`/`evidenceOrganizingQuests` to the `unit01` group in Phase 8; added `sequencingQuests`/`sourceAnalysisQuests` in the 2026-07-11 pass.
+- `scripts/validate-content.js` — Phase 8 added two `runSchema(...)` calls; the 2026-07-11 pass added two more. `npm run validate:content` now checks **21** groups (was 19 after Phase 8, 17 before it), 0 errors.
 
 ### Tests
 
-Two new files, following the repo's existing conventions exactly (`(normal case)`/`(boundary case)`/`(invalid/missing data)`/`(duplicate ID)` suffixes, `safeParse` + issue-message-substring assertions for schema tests):
+Following the repo's existing conventions exactly (`(normal case)`/`(boundary case)`/`(invalid/missing data)`/`(duplicate ID)` suffixes, `safeParse` + issue-message-substring assertions for schema tests):
 
 - `tests/unit/quest-type-mcq.test.js` — schema (normal/boundary/invalid/duplicate), render (content, selected-state, HTML escaping), grade (correct/incorrect/unanswered), plus a sanity check that the real `UNIT_01_MCQ_QUESTS` content parses.
 - `tests/unit/quest-type-evidence-organizing.test.js` — schema (normal/boundary/invalid cross-slot reference/duplicate source id/duplicate slot id/duplicate quest id), render (sources, slots, placed-source display, reflection field presence, HTML escaping), grade (complete/wrong-placement/reflection-too-short/no-reflection-required), plus a sanity check on the real `UNIT_01_EVIDENCE_ORGANIZING_QUESTS` content.
+- `tests/unit/quest-type-sequencing.test.js` (added 2026-07-11) — schema (normal/boundary/permutation-gap-or-repeat-invalid/duplicate item id/duplicate quest id), render (item labels, authored-order fallback, custom `state.order`, HTML escaping), grade (all-or-nothing correct/incorrect — explicitly including a last-two-items-swapped near-miss that still grades incorrect).
+- `tests/unit/quest-type-source-analysis.test.js` (added 2026-07-11) — schema (the `correct`+`identificationOnly` contradiction rejected, exactly-one-correct enforced, identification-only-distractor-required enforced, options-count/duplicate-option-id/max-2-dimensions/duplicate-dimension all enforced), render (document text/attribution, per-dimension options, selected-state, HTML escaping), grade (**the specific test the source prompt asked for**: selecting the real shipped `identificationOnly` distractor for `columbus-audience` scores that dimension `false`/0 points, while selecting the explanation-linked option scores it `true`/1 point; `complete` only once every dimension is earned).
+- `tests/unit/mini-game-cargo-sorting.test.js` / `tests/unit/mini-game-storm-navigation.test.js` (added 2026-07-11) — pure game-state logic for the two mini-games (see §7 below); no Zod schema exists for these since they're deliberately not content-validated.
 
 ## 3. Verification status
 
-Run live from the repo root at the end of this phase:
+Run live from the repo root:
 
-- **`npm run validate:content`** — 19/19 groups pass, 0 errors (was 17/17 before this phase).
-- **`npm run test`** — 108/108 passing, 10 test files (was 81/81 across 8 files before this phase — the 27 new tests are exactly the two new files above).
-- **`npm run lint`** — same baseline as before this phase: 1 pre-existing error + 7 pre-existing warnings, all in `main.js`, none introduced by this phase. The new quest-type/content/test files introduce zero new lint findings.
-- **`npm run build`** — succeeds, 90 modules transformed (unchanged from before this phase — expected, see §5: nothing new is imported by `main.js` yet, so nothing new enters the bundle).
-- Manual browser verification was **not** performed for this phase, because nothing player-visible changed — see §5.
+- **`npm run validate:content`** — 21/21 groups pass, 0 errors (17 before Phase 8, 19 after Phase 8, 21 after the 2026-07-11 pass).
+- **`npm run test`** — 179/179 passing, 15 test files (81 before Phase 8; 108/10 files after Phase 8; the 2026-07-11 pass added 4 more quest-type/mini-game test files, +71 tests).
+- **`npm run lint`** — same baseline as before Phase 8: 1 pre-existing error + 7 pre-existing warnings, all in `main.js`, none introduced by any quest-type/mini-game pass.
+- **`npm run build`** — succeeds (module count unchanged from before Phase 8 — expected, see §5: nothing new is imported by `main.js` yet, so nothing new enters the bundle).
+- **Browser verification (2026-07-11 addition)**: Phase 8 performed none, since nothing player-visible changed. The 2026-07-11 pass built two dev-only preview harnesses — `apps/web/quest-type-preview.html` (all four quest types) and `apps/web/mini-games-preview.html` (both mini-games) — matching the existing `apps/web/tiled-preview.html` precedent (not linked from the game, not part of `npm run build`), and ran a scripted Playwright pass against both confirming real rendering and click-driven interaction/grading for all four quest types and both mini-games. See the session report for the full pass/fail list.
 
 ## 4. Deliberately not built in this phase
 
-Per the source prompt's explicit scope:
+Per the source prompts' explicit scope (Phase 8's original two-type scope, plus the 2026-07-11 pass's explicit exclusions):
 
-- Any quest type beyond MCQ and evidence-organizing (SAQ, puzzle, timeline, matching, etc.).
-- Any new map for Atlantic Crossroads — this phase is activity-quest infrastructure only.
-- A registry, plugin-discovery, or dynamic-registration mechanism — `QUEST_TYPES` is a two-entry object literal, nothing more.
+- Any quest type beyond the four now built (Thesis/argument-building, Causation-as-node-graph, role-play/simulation, SAQ/LEQ-as-quest-format were all explicitly named and explicitly deferred in the 2026-07-11 pass — see the session report).
+- Any new map for Atlantic Crossroads — quest-type/mini-game work is activity infrastructure only.
+- A registry, plugin-discovery, or dynamic-registration mechanism — `QUEST_TYPES` is a four-entry object literal, nothing more.
 - Teacher-facing UI for picking a quest type or source count (a natural future extension of `local-teacher-override-store.js`, not built now).
-- Anything from the standing deferred-systems list (Phaser, Tiled, Playwright, inkjs, subject-pack extraction, `PlatformCore`, `WorldComposition`, `WorldRuntime`, the remaining 5 repositories, accounts, classrooms, database work, AI content generation).
+- A shared abstraction layer between the two mini-games, or a third mini-game, or any currency/wallet/economy/leaderboard/multiplayer mechanic for the mini-games layer — see §7.
+- Anything from the standing deferred-systems list (Phaser, Tiled, Playwright's full e2e-suite/CI-gate role — the narrow agent-verification use is unchanged, `PlatformCore`, `WorldComposition`, `WorldRuntime`, the remaining 5 repositories, accounts, classrooms, database work, AI content generation).
+
+## 7. Mini-games layer (2026-07-11, new — not part of Phase 8)
+
+`apps/web/src/mini-games/` is a sibling folder to `quest-types/`, explicitly **not** quest-type infrastructure: no Zod schema, no historical-thinking-skill coupling, no gating behind correct/incorrect answers. It exists purely as a pacing/reward break between earnest quest content.
+
+- `cargo-sorting.js` — Caribbean/Unit 1 flavor timed sorting game (goods into ship holds), reusing the drag-into-slot interaction pattern from Sequencing/the map-jigsaw puzzle with a different skin. Default goods are Columbian-Exchange-era Caribbean trade goods (maize, cassava, cacao, cotton, gold ore, tobacco) — deliberately not Unit 2's triangular-trade goods, to keep the framing on period-appropriate trade logistics for Case 1.01's actual setting rather than risk trivializing forced labor via a sorting-puzzle skin. Flagged explicitly for the project owner in the session report.
+- `storm-navigation.js` — Atlantic-crossing flavor timing/reflex game (dodge hazards across 3 lanes). Purely an arcade break, not meant to teach anything.
+
+Both files stay flat (no `generic/`/`history/`-style split, no shared helper module) since two mini-games isn't enough data to know what's actually reusable — each has its own trivial local `escapeHtml`. Neither introduces a currency, wallet, leaderboard, or persistent economy; neither has any multiplayer/opponent-AI mechanic. A third mini-game (a tower-defense-style concept) was discussed and explicitly deferred, not built.
+
+Verified via `apps/web/mini-games-preview.html` (dev-only, same non-build-entry pattern as `tiled-preview.html`) and a scripted Playwright pass confirming both games render and respond to click-driven interaction (cargo placement, lane movement/clamping) correctly.
 
 ## 5. Deliberately not built in this phase — and the one thing worth flagging
 

@@ -34,7 +34,9 @@ As of the dead-code-removal pass (`docs/migrations/DEAD-CODE-REMOVAL.md`), this 
 | Thing                            | Permanent home                                                         |
 | --------------------------------- | ----------------------------------------------------------------------- |
 | Reusable JavaScript systems      | `apps/web/src/engine/`                                                 |
-| Campaign and unit content        | `apps/web/src/content/` (`unit-01-campaign.js`, `unit-02-campaign.js`) |
+| Campaign and unit content        | `apps/web/src/content/` (`unit-01-campaign.js`, `unit-02-campaign.js`), quest content under `apps/web/src/content/quests/` |
+| Reusable quest-type renderers (rubric-scored: MCQ, Sequencing, Evidence Organizing, Source Analysis/HIPP) | `apps/web/src/quest-types/generic/`, `apps/web/src/quest-types/history/` — see `docs/architecture/QUEST-TYPE-ARCHITECTURE.md` |
+| Mini-games (pacing/reward only, NOT rubric-scored) | `apps/web/src/mini-games/` (flat, no subfolders) |
 | Images, maps, audio, icons       | `apps/web/src/assets/`                                                 |
 | JSON schemas                     | `data/schemas/`, `apps/web/src/content/schemas/`                      |
 | Project documentation            | `docs/`                                                                 |

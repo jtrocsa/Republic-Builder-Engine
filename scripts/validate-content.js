@@ -27,7 +27,9 @@ import {
   checkUniqueGlobalIds,
 } from "../apps/web/src/content/schemas/cross-reference.js";
 import { McqQuestListSchema } from "../apps/web/src/quest-types/generic/mcq-quest.js";
+import { SequencingQuestListSchema } from "../apps/web/src/quest-types/generic/sequencing-quest.js";
 import { EvidenceOrganizingQuestListSchema } from "../apps/web/src/quest-types/history/evidence-organizing-quest.js";
+import { SourceAnalysisQuestListSchema } from "../apps/web/src/quest-types/history/source-analysis-quest.js";
 
 function main() {
   const content = loadChronicleContent();
@@ -76,6 +78,20 @@ function main() {
       "unit-01-quests.js: UNIT_01_EVIDENCE_ORGANIZING_QUESTS",
       EvidenceOrganizingQuestListSchema,
       content.unit01.evidenceOrganizingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-01-quests.js: UNIT_01_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit01.sequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-01-quests.js: UNIT_01_SOURCE_ANALYSIS_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit01.sourceAnalysisQuests
     )
   );
 

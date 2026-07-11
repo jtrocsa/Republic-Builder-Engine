@@ -24,6 +24,8 @@ export function loadChronicleContent() {
       review: unit01Campaign.REVIEW,
       mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
       evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
+      sequencingQuests: unit01Quests.UNIT_01_SEQUENCING_QUESTS,
+      sourceAnalysisQuests: unit01Quests.UNIT_01_SOURCE_ANALYSIS_QUESTS,
     },
     unit02: {
       unit: unit02Campaign.UNIT_02,

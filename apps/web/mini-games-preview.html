@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mini-games preview (dev only, not part of the built game)</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0d1b2a;
+        color: #eee;
+        font-family: sans-serif;
+        padding: 1rem 2rem 4rem;
+      }
+      header p {
+        max-width: 60rem;
+      }
+      section.preview-block {
+        border: 1px solid #445;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        background: #14263b;
+      }
+      h2 {
+        margin-top: 0;
+      }
+      .cargo-good {
+        cursor: pointer;
+        display: inline-block;
+        border: 1px solid #667;
+        border-radius: 4px;
+        padding: 0.4rem 0.6rem;
+        margin: 0.25rem;
+      }
+      .cargo-good.selected {
+        outline: 2px solid gold;
+      }
+      .cargo-hold {
+        display: inline-block;
+        cursor: pointer;
+        border: 1px dashed #667;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        vertical-align: top;
+      }
+      .storm-lanes {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .storm-lane {
+        position: relative;
+        width: 6rem;
+        height: 10rem;
+        border: 1px solid #445;
+        overflow: hidden;
+      }
+      .storm-lane--player {
+        border-color: gold;
+      }
+      .storm-ship {
+        position: absolute;
+        bottom: 0.25rem;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 1.5rem;
+      }
+      .storm-hazard {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 1.25rem;
+      }
+      pre.result {
+        background: #05101d;
+        padding: 0.75rem;
+        border-radius: 6px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p>
+        Dev-only preview harness for the two mini-games under
+        <code>apps/web/src/mini-games/</code> (reward/pacing layer, explicitly NOT rubric-scored —
+        see each module's own header comment). Not linked from the game, not part of
+        <code>npm run build</code> — reachable only by visiting this file directly under
+        <code>npm run dev</code>, matching the existing <code>tiled-preview.html</code>/
+        <code>quest-type-preview.html</code> precedent. Click-to-select/click-to-place (Cargo
+        Sorting) and button-based lane movement (Storm Navigation) are test-harness affordances
+        only, not new game UI — the render functions' own markup (<code>draggable="true"</code>
+        cargo cards, etc.) is unchanged from what <code>renderCargoSortingGame()</code>/
+        <code>renderStormNavigationGame()</code> actually produce.
+      </p>
+    </header>
+
+    <section class="preview-block">
+      <h2>Cargo Sorting (click a good, then click a hold to place it)</h2>
+      <div id="cargo-container"></div>
+      <pre class="result" id="cargo-result"></pre>
+    </section>
+
+    <section class="preview-block">
+      <h2>Storm Navigation (Port/Starboard buttons move the ship between lanes)</h2>
+      <div id="storm-container"></div>
+      <pre class="result" id="storm-result"></pre>
+    </section>
+
+    <script type="module">
+      import {
+        createCargoSortingGame,
+        tickCargoSortingGame,
+        placeCargo,
+        isCargoSortingComplete,
+        renderCargoSortingGame,
+      } from "./src/mini-games/cargo-sorting.js";
+      import {
+        createStormNavigationGame,
+        tickStormNavigationGame,
+        moveShip,
+        renderStormNavigationGame,
+      } from "./src/mini-games/storm-navigation.js";
+
+      // -- Cargo Sorting --
+      let cargoState = createCargoSortingGame();
+      let cargoSelectedGoodId = null;
+      const cargoContainer = document.getElementById("cargo-container");
+      const cargoResultEl = document.getElementById("cargo-result");
+
+      function renderCargo() {
+        cargoContainer.innerHTML = renderCargoSortingGame(cargoState);
+        cargoContainer.querySelectorAll("[data-cargo-good]").forEach((el) => {
+          el.addEventListener("click", () => {
+            cargoSelectedGoodId = el.dataset.cargoGood;
+            cargoContainer
+              .querySelectorAll("[data-cargo-good]")
+              .forEach((card) => card.classList.remove("selected"));
+            el.classList.add("selected");
+          });
+        });
+        cargoContainer.querySelectorAll("[data-cargo-hold]").forEach((el) => {
+          el.addEventListener("click", () => {
+            if (!cargoSelectedGoodId) return;
+            cargoState = placeCargo(cargoState, cargoSelectedGoodId, el.dataset.cargoHold);
+            cargoSelectedGoodId = null;
+            renderCargo();
+          });
+        });
+        cargoResultEl.textContent = JSON.stringify(
+          { sortedCount: cargoState.sortedCount, complete: isCargoSortingComplete(cargoState) },
+          null,
+          2,
+        );
+      }
+      renderCargo();
+
+      // -- Storm Navigation --
+      let stormState = createStormNavigationGame();
+      const stormContainer = document.getElementById("storm-container");
+      const stormResultEl = document.getElementById("storm-result");
+
+      function renderStorm() {
+        stormContainer.innerHTML = renderStormNavigationGame(stormState);
+        stormContainer.querySelectorAll("[data-storm-move]").forEach((el) => {
+          el.addEventListener("click", () => {
+            stormState = moveShip(stormState, Number(el.dataset.stormMove));
+            renderStorm();
+          });
+        });
+        stormResultEl.textContent = JSON.stringify(
+          {
+            playerLane: stormState.playerLane,
+            running: stormState.running,
+            hazardsDodged: stormState.hazardsDodged,
+            hazardsHit: stormState.hazardsHit,
+          },
+          null,
+          2,
+        );
+      }
+      renderStorm();
+
+      let lastTick = performance.now();
+      function loop(now) {
+        const deltaMs = now - lastTick;
+        lastTick = now;
+        cargoState = tickCargoSortingGame(cargoState, deltaMs);
+        stormState = tickStormNavigationGame(stormState, deltaMs);
+        renderCargo();
+        renderStorm();
+        if (cargoState.running || stormState.running) requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

@@ -24,7 +24,7 @@ Test files import `describe`/`it`/`expect`/`beforeEach` explicitly from `"vitest
 
 ## What's covered, and why
 
-All tests live under `tests/unit/`. Three files, 24 tests total — deliberately not comprehensive; see "What remains untested" below.
+All tests live under `tests/unit/`. 179 tests across 15 files (as of Phase 9, 2026-07-11) — deliberately targeted at pure logic rather than comprehensive DOM coverage; see "What remains untested" below.
 
 ### `tests/unit/chronicle-progress-store.test.js`
 
