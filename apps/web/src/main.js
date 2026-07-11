@@ -32,7 +32,7 @@ import {
 } from "./repositories/local-teacher-override-store.js";
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
-import { renderTiledMap } from "./engine/tiled-map-loader.js";
+import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import riverbendTmjRaw from "./content/maps/riverbend-field.tmj?raw";
 
 const app = document.querySelector("#app");
@@ -45,20 +45,20 @@ const atlanticTable = new URL("./assets/maps/atlantic-navigation-table.png", imp
 // 2026-07-10 entry) — replaces the static placeholder PNG above with a composited .tmj map.
 // Scoped to this one map only; not a project-wide Tiled adoption.
 const riverbendTmj = JSON.parse(riverbendTmjRaw);
-const RIVERBEND_TILESET_IMAGES = {
-  "medieval-fishing-village-b04": new URL(
-    "./assets/tilesets/Medieval Fishing Village/tile-B-04.png",
-    import.meta.url
-  ).href,
-  "medieval-fantasy-town-1": new URL(
-    "./assets/tilesets/Medieval Fantasy Town/1.png",
-    import.meta.url
-  ).href,
-  "farm-3": new URL("./assets/tilesets/farm/3.png", import.meta.url).href,
-};
-function resolveRiverbendTilesetImage(tileset) {
-  return RIVERBEND_TILESET_IMAGES[tileset.name];
-}
+// Globbed per pack folder (not the whole assets/tilesets/ tree) so unrelated downloaded packs
+// don't get bundled into the production build — see tiled-map-loader.js and
+// docs/architecture/tiled-map-import-checklist.md.
+const resolveRiverbendTilesetImage = createTilesetImageResolver(
+  import.meta.glob("./assets/tilesets/Medieval Fishing Village/**", {
+    eager: true,
+    import: "default",
+  }),
+  import.meta.glob("./assets/tilesets/Medieval Fantasy Town/**", {
+    eager: true,
+    import: "default",
+  }),
+  import.meta.glob("./assets/tilesets/farm/**", { eager: true, import: "default" })
+);
 function renderRiverbendTiledMap() {
   const canvas = document.getElementById("riverbendTiledCanvas");
   if (!canvas || canvas.dataset.rendered === "true") return;

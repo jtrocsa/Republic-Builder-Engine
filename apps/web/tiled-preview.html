@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tiled map preview (dev only, not part of the built game)</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0d1b2a;
+        color: #eee;
+        font-family: sans-serif;
+      }
+      header {
+        padding: 0.5rem 1rem;
+      }
+      #stage {
+        width: 1920px;
+        height: 1152px;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p>
+        Dev-only preview of <code>caribbean-field.tmj</code> (data point #3, see
+        POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md). Not linked from the game, not part of
+        <code>npm run build</code> — reachable only by visiting this file directly under
+        <code>npm run dev</code>.
+      </p>
+    </header>
+    <canvas id="stage"></canvas>
+    <script type="module">
+      import { renderTiledMap, createTilesetImageResolver } from "./src/engine/tiled-map-loader.js";
+      import tmjRaw from "./src/content/maps/caribbean-field.tmj?raw";
+
+      const tmj = JSON.parse(tmjRaw);
+      const resolve = createTilesetImageResolver(
+        import.meta.glob("./src/assets/tilesets/Medieval harbor/**", {
+          eager: true,
+          import: "default",
+        }),
+        import.meta.glob("./src/assets/tilesets/Medieval Fantasy Town/**", {
+          eager: true,
+          import: "default",
+        }),
+        import.meta.glob("./src/assets/tilesets/farm/**", { eager: true, import: "default" })
+      );
+      renderTiledMap(document.getElementById("stage"), tmj, resolve);
+    </script>
+  </body>
+</html>

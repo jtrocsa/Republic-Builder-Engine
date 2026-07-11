@@ -163,3 +163,105 @@ Owner-directed scoped POC (explicit override of §6/§9's continued-deferral ver
 - *Friction worth recording:* (1) no Tiled GUI available to actually test the authoring workflow this POC exists to evaluate; (2) these packs are RPG-Maker-autotile-convention sheets meant for a terrain-brush tool, and hand-placing individual GIDs to fake flat fills produces visible seams; (3) the 48px/96px tile-size mismatch required a non-obvious Tiled convention (bottom-left-anchored oversized tiles) that had to be derived and debugged rather than looked up; (4) zero license documentation for any pack is a real ship-blocking gap, independent of the Tiled question; (5) on the positive side, the runtime side worked cleanly — the compositor is small and generic, and because Unit 2's field was already "one full-bleed background image inside a camera-transformed container," swapping the `<img>` for a `<canvas>` touched nothing else in `main.js`, confirming the engine-integration risk is low regardless of how maps get authored.
 
 **Recommendation: inconclusive, need a second data point — specifically, one where an actual Tiled GUI is used.** This pass validates that the `.tmj` *runtime format and engine integration* are low-risk and reusable (worth keeping in mind next time a real second map is needed), but it does not validate or refute Tiled's *authoring* value, because the authoring here was done blind, by hand, without the tool this POC was supposed to be testing. §6/§9's continued-deferral verdict for Tiled stands; this addendum doesn't overturn it. If Tiled adoption is revisited, the next test should be a human (or an agent with actual GUI/MCP access to Tiled) doing the authoring, not another blind-JSON pass like this one.
+
+### 2026-07-10, later same day: loader hardening + data points #2 and #3
+
+Owner is hand-building a second map in the real Tiled desktop app (not by an agent) to produce
+the "actual GUI" data point §11 called for. While that's in progress, the loader was hardened and
+a third data point was produced for comparison.
+
+**Loader hardening (`apps/web/src/engine/tiled-map-loader.js`):** audited against four cases the
+owner already anticipated needing for a hand-built map:
+
+- Empty/transparent cells (GID `0`) — already handled correctly (skipped, no placeholder drawn);
+  no change needed, a regression test was added to lock it in.
+- Animated tiles (`tileset.tiles[].animation`) — **was not read at all**; added generically (any
+  tile with animation data animates, keyed by local tile id, no per-tile special-casing). A map
+  with zero animated tiles takes the same single-static-draw path as before — no added
+  per-frame redraw cost for Riverbend or any future non-animated map.
+- External tileset image path resolution — **was not generic**: the previous implementation
+  matched on a hardcoded `tileset.name → import` lookup table requiring a hand-written entry per
+  image, and ignored the `.tmj`'s own `image` path entirely. Replaced with a path-tail matcher
+  (matches on the portion of the path after `assets/tilesets/`, tolerant of any `../` nesting or
+  authoring-machine path shape) fed by `import.meta.glob`, scoped per pack folder rather than one
+  global glob (see next point for why).
+- Multiple tilesets on one map — already handled correctly (GID-range lookup already worked for
+  any tileset count); confirmed via a new test with two synthetic tilesets, no change needed.
+
+**A real regression caught before it shipped:** the first version of the generic image resolver
+used one unscoped `import.meta.glob("../assets/tilesets/**/*.png", { eager: true })` inside the
+loader, so *any* map's tileset would resolve with zero code changes anywhere. Building confirmed
+this bundled **every** file under `assets/tilesets/` into every production build — 117MB across
+85 PNGs, most belonging to packs not referenced by any real map — versus ~22MB for only the packs
+Riverbend actually uses. Fixed by scoping the glob to specific pack folders at the call site
+(`createTilesetImageResolver(...)` takes one or more glob results); a genuinely new pack folder
+now needs one glob line added in `main.js`, but an already-referenced folder, or a new image
+inside one, needs none. This is documented as the tradeoff it is in
+`docs/architecture/tiled-map-import-checklist.md` §2, not silently accepted.
+
+New export: `docs/architecture/tiled-map-import-checklist.md` — map settings (orthogonal, CSV
+tile layers, 40×24 @ 48px, no flip flags), the tileset-image folder convention above, and what to
+report back after an export.
+
+**Data point #2 — pending, owner hand-authoring in Tiled GUI.** No new folder was needed:
+`apps/web/src/content/maps/` (where `riverbend-field.tmj` already lives) is the existing,
+documented drop location. Nothing to add here until the file arrives.
+
+**Data point #3 — machine-authored rebuild of the Unit 1 Caribbean map.** Built
+`apps/web/src/content/maps/caribbean-field.tmj` (40×24 @ 48px, matching `FIELD_GRID`), replicating
+the layout of the existing hand-coded `FIELD_BLOCKS`/`isCaribbeanLand`/`FIELD_NPCS` (ship + cove
+west, garden + three "bohios" north, canoe + camp east, water margin south, all at the same
+world-grid coordinates) using the Medieval Harbor pack (`tile-B-03.png` for
+water/coastline/dock/boats/props, `tile-B-05.png` for buildings), plus the already-bundled
+Fantasy Town grass tile and farm-pack corn tile reused from Riverbend. Rendered via the same
+`renderTiledMap`/`createTilesetImageResolver` used for Riverbend, behind a standalone, unwired dev
+page (`apps/web/tiled-preview.html`) — not linked from the game, not part of `npm run build`
+(confirmed absent from `dist/` after a build). The live Unit 1 renderer (`caribbeanWorldMarkup()`,
+`FIELD_BLOCKS`, `isCaribbeanLand`) was **not touched**.
+
+**A real regression this pass caught before shipping (documented above too, repeated here for the
+data-point record):** the first version of the generic tileset-image resolver used one unscoped,
+eager `import.meta.glob` over the whole `assets/tilesets/` tree — building confirmed this bundled
+117MB across 85 PNGs (every downloaded pack, used or not) into every production build. Fixed by
+scoping the glob per pack folder at the call site; production build size returned to ~22-26MB.
+This was caught by actually running `npm run build` and inspecting `dist/`, not by reading the
+code — the same "render/build it and look" discipline the POC's own report named as the fix for
+its one authoring mistake.
+
+**Two more mistakes this pass caught the same way — by rendering and zooming in, not by reading
+the labeled sheet:** (1) the tile picked for the "canoe" was actually a dock-plank tile; the real
+round top-down boat hull was one row up in the same sheet. (2) The tile picked for a garden
+crop-row, copied from `riverbend-field.tmj`'s own declared farm-pack tile size (96px, 8 columns),
+turned out to be wrong — pixel inspection showed `farm/3.png` is actually a regular 48px/16-column
+grid, and the specific cell Riverbend uses straddles two unrelated sprites (corn and a scarecrow)
+at that assumed boundary. Riverbend's own tile happens to render tolerably by luck; this rebuild
+uses the corrected 48px grid instead of propagating the same imprecision into new content. Neither
+mistake was visible from the labeled contact-sheet screenshots alone — both only showed up once
+the actual composited frame was rendered and inspected at zoom, reinforcing that verifying Tiled
+work means looking at the rendered result, not just the source sheet.
+
+**Composition fidelity and honest pack-fit gaps:**
+
+- Ship, cove, dock, coastline, crates, and the market-awning-as-tent all read reasonably close to
+  the original's relative placement and scale.
+- **Medieval Harbor has no vegetation of any kind** (no palm, tree, or shrub tile) — the four palm
+  clusters in the original map have no equivalent art here and are left as bare grass. This is a
+  real gap for a tropical scene, not a rendering limitation.
+- **No hut/tropical-architecture tiles exist in this pack** — the three "bohio" Taino homes are
+  stood in with small European stone/timber cottages from `tile-B-05.png`. Thematically wrong, not
+  a subtle judgment call; flagged so it isn't mistaken for a real option if this ever gets wired
+  in.
+- **No campfire/fire-pit tile exists** — left unrepresented (bare grass) rather than faked.
+- **No flat grass/sand base-terrain tile exists anywhere in the Harbor pack** — it's an
+  overlay/prop pack meant to sit on a separate base-terrain sheet, which wasn't part of the six
+  inventoried packs. Interior land fill reuses the already-bundled Fantasy Town grass tile instead.
+- **Coastline only has one edge orientation** (sand-above/water-below within a single tile) — with
+  no tile flip/rotate support in the loader (an explicit, documented scope boundary, not an
+  oversight), only the map's south edge got a proper sand/wave transition; other edges are a hard
+  grass/water cut. Rotation support wasn't in scope for this pass.
+
+Net: this data point shows the `.tmj` pipeline itself (loader, resolver, animation support,
+multi-tileset handling) is solid and reusable — the friction was entirely in picking correct tile
+coordinates from a real-world, imperfectly-gridded asset pack, which is exactly the kind of
+mistake a human using Tiled's live-preview GUI (data point #2) would likely not make, since they'd
+see the tile land in the wrong place immediately rather than only in a rendered screenshot.
