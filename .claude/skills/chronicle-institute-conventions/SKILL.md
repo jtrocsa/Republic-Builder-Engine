@@ -18,15 +18,15 @@ Project-specific conventions for Republic Builder Engine / the Chronicle campaig
 ## The one-file reality
 
 - `apps/web/src/main.js` (~1,350 lines) is where almost everything actually runs: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, and all HTML rendering via template-literal strings.
-- `apps/web/src/engine/` and `apps/web/src/features/` look like a modular architecture but most files there — `chronicle-institute.js`, `chronicle-identity.js`, `atlantic-crossroads-preview.js`, `author-content-store.js`, `player-profile-store.js` — are **not imported by `main.js`**. They're earlier/parallel modularization attempts and currently dead code. Before assuming feature logic lives in one of these, grep `main.js`'s imports to confirm.
+- `apps/web/src/features/` and its supporting dead stores (`chronicle-institute.js`, `chronicle-identity.js`, `atlantic-crossroads-preview.js`, `author-content-store.js`, `player-profile-store.js`) were an earlier/parallel modularization attempt that was never imported by `main.js` — confirmed dead via import-graph trace and deleted in the dead-code-removal pass (`docs/migrations/DEAD-CODE-REMOVAL.md`). Don't recreate this island; if new feature logic is needed, edit `main.js` directly unless the user is deliberately doing modularization work.
 - The one exception: `apps/web/src/engine/chronicle-progress-store.js` (`readProgress`/`saveProgress`/`resetProgress`) is real and is the single source of runtime save state, under the `localStorage` key `republic-builder.chronicle.unit-01.v2`.
 - Default move when extending gameplay: edit `main.js` directly rather than wire in an orphaned module — unless the user is deliberately doing the modularization work.
 
 ## Core systems, in this codebase's actual terms
 
-- **Avatar / identity** — the player is a "Chronicler." Identity today is just `profile.name` / `profile.appearance` (`'a'` or `'b'`, selecting sprite sets) inside `DEFAULT_PROGRESS` in `chronicle-progress-store.js`. `chronicle-identity.js`/`chronicle-identity.defaults.js` sketch a richer identity system but aren't wired in — treat them as design reference, not live code.
+- **Avatar / identity** — the player is a "Chronicler." Identity today is just `profile.name` / `profile.appearance` (`'a'` or `'b'`, selecting sprite sets) inside `DEFAULT_PROGRESS` in `chronicle-progress-store.js`. `chronicle-identity.defaults.js` (still live, imported by `main.js`) sketches a richer identity system in copy only; the code implementation that once lived in `features/chronicle-identity/chronicle-identity.js` was dead and has been deleted (`docs/migrations/DEAD-CODE-REMOVAL.md`).
 - **Progression** — badge/case unlocks tracked in the progress store: `unlocked`, `completedCases`, `caseEvidence`, `exchangeLedger`, `empireConnections`, `empireOrder`. Rendered via the **Preservation Case** UI (`unitOneBadgeCaseMarkup()` in `main.js`), styled like a Pokémon badge case. Badge areas: **Caribbean** (playable, `case-001`), **Atlantic**, **Hispaniola** (defined but locked/future).
-- **Case framework** — a "Case" is one historical scenario (e.g. `case-001`, "The Atlantic Crossroads"). Canonical shape lives in `apps/web/src/content/unit-01-campaign.js`, which exports `BRAND`, `UNIT_01`, `CASE_001_SOURCES`, `EXCHANGE_RECORDS`, `EMPIRE_EVIDENCE`, `EMPIRE_CONNECTIONS`, `REVIEW`. Sources are meant for HIPP-style primary-source analysis; `REVIEW` carries SAQ/LEQ-style prompts tied to actual College Board rubrics. There is also a dormant parallel JSON pipeline under `content/campaigns/chronicle/units/unit-01/` — `main.js` does not read from it; treat it as the intended future data format, not current source of truth.
+- **Case framework** — a "Case" is one historical scenario (e.g. `case-001`, "The Atlantic Crossroads"). Canonical shape lives in `apps/web/src/content/unit-01-campaign.js`, which exports `BRAND`, `UNIT_01`, `CASE_001_SOURCES`, `EXCHANGE_RECORDS`, `EMPIRE_EVIDENCE`, `EMPIRE_CONNECTIONS`, `REVIEW`. Sources are meant for HIPP-style primary-source analysis; `REVIEW` carries SAQ/LEQ-style prompts tied to actual College Board rubrics. (A dormant parallel JSON pipeline under `content/campaigns/chronicle/units/unit-01/` used to exist as a fourth incompatible schema for this same content — it was never read by `main.js` and was deleted in the dead-code-removal pass, `docs/migrations/DEAD-CODE-REMOVAL.md`.)
 - **Narrative framework** — dialogue text is authored inline in `main.js`, rendered anchored to the speaking NPC. Historical figures may take dramatic liberties but must stay in-voice: no fourth-wall commentary, no "this is dramatized" disclaimers mid-conversation, no modern educational narration coming out of a historical figure's mouth.
 - **Onboarding** — the **Institute Archive** hub (`institute` screen) is the first-time loop: Director Rowan Hale, Dr. Amani Soto ("archive researcher"), and Professor Julian Park ("route historian") brief the player before **Chronotravel**.
 - **Author Mode** — real and implemented (`authorPanel()` in `main.js`, per decision log `0003`). Dev-only panel that edits **content only**: titles, questions, names, dates, prompts, source metadata, alt text. It does **not** expose layout/CSS, navigation rules, scoring, progression rules, or data architecture. Saves drafts to `localStorage`, can export/import JSON, and reset to repo defaults. A future auth/role system is meant to gate its availability in published builds — not built yet.
@@ -51,23 +51,22 @@ Project-specific conventions for Republic Builder Engine / the Chronicle campaig
 
 ## Repository structure (actual, current)
 
+Confirmed-dead code (the `features/` island, `chronicle-case-001.js`, `player-profile-store.js`, `author-content-store.js`, the dormant `content/campaigns/`+`content/library/` JSON pipeline, and the placeholder root `assets/` tree) was removed in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't expect to find those paths; don't recreate them speculatively.
+
 ```
 apps/web/src/
   main.js                       # the real app — screens, movement, dialogue, audio, Author Mode
   content/
     unit-01-campaign.js          # imported by main.js — canonical Case 1.01 content
-    chronicle-case-001.js
+    unit-02-campaign.js          # imported by main.js — placeholder Unit 2 content
     chronicle-identity.defaults.js
     chronicle-opening.defaults.js
-    cases/case-atlantic-crossroads.preview.js
+    schemas/                     # Zod schemas validating the above, in place
   engine/
-    chronicle-progress-store.js  # imported — the real persistence layer
-    content/author-content-store.js   # NOT imported — dead code
-    player/player-profile-store.js    # NOT imported — dead code
-  features/
-    chronicle-institute/chronicle-institute.js   # NOT imported — dead code
-    chronicle-identity/chronicle-identity.js     # NOT imported — dead code
-    case-player/atlantic-crossroads-preview.js    # NOT imported — dead code
+    chronicle-progress-store.js  # the real persistence layer
+  repositories/
+    local-progress-repository.js # thin wrapper main.js imports around chronicle-progress-store.js
+    local-content-repository.js  # thin wrapper scripts/validate-content.js imports
   assets/
     chronicle-sprites/   (PNG — Chroniclers, field NPCs, props)
     institute/           (PNG — hub NPCs)
@@ -75,8 +74,6 @@ apps/web/src/
     documents/           (JPG — primary source scans)
   styles/global.css       # palette, cursor SVG data URI
 
-content/campaigns/chronicle/units/unit-01/   # dormant JSON content pipeline, not read by main.js
-content/library/                              # primary source / NPC / location record templates
 docs/decision-log/000N-*.md                   # numbered ADRs — read the highest-numbered for current context
 ```
 

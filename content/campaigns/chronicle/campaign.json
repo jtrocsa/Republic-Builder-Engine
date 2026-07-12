@@ -1,8 +1,0 @@
-{
-  "id": "chronicle",
-  "title": "Chronicle",
-  "engine": "republic-builder",
-  "description": "An AP U.S. History campaign built around historical investigations.",
-  "unitIds": ["unit-01"],
-  "status": "vertical-slice"
-}

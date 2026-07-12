@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quest-type preview (dev only, not part of the built game)</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0d1b2a;
+        color: #eee;
+        font-family: sans-serif;
+        padding: 1rem 2rem 4rem;
+      }
+      header p {
+        max-width: 60rem;
+      }
+      section.preview-block {
+        border: 1px solid #445;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        background: #14263b;
+      }
+      h2 {
+        margin-top: 0;
+      }
+      .evidence-card,
+      .sequence-item {
+        cursor: pointer;
+        border: 1px solid #667;
+        border-radius: 4px;
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+      }
+      .evidence-card.selected {
+        outline: 2px solid gold;
+      }
+      .evidence-slot {
+        border: 1px dashed #667;
+        border-radius: 4px;
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+      }
+      pre.result {
+        background: #05101d;
+        padding: 0.75rem;
+        border-radius: 6px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p>
+        Dev-only preview harness for the four quest-type renderers under
+        <code>apps/web/src/quest-types/</code> (Phase 8 + this pass). Not linked from the game, not
+        part of <code>npm run build</code> — reachable only by visiting this file directly under
+        <code>npm run dev</code>. Interactions here (click-to-reorder for Sequencing,
+        click-to-select then click-to-place for Evidence Organizing) are test-harness affordances
+        only, not new game UI — the renderer markup itself (<code>draggable="true"</code>, radio
+        inputs, etc.) is unchanged from what <code>renderQuest()</code> actually produces.
+      </p>
+    </header>
+
+    <section class="preview-block">
+      <h2>MCQ</h2>
+      <div id="mcq-container"></div>
+      <pre class="result" id="mcq-result"></pre>
+    </section>
+
+    <section class="preview-block">
+      <h2>Sequencing (click an item to swap it with the next one)</h2>
+      <div id="sequencing-container"></div>
+      <pre class="result" id="sequencing-result"></pre>
+    </section>
+
+    <section class="preview-block">
+      <h2>Evidence Organizing (click a source card, then click a slot to place it)</h2>
+      <div id="evidence-container"></div>
+      <pre class="result" id="evidence-result"></pre>
+    </section>
+
+    <section class="preview-block">
+      <h2>Source Analysis (HIPP)</h2>
+      <div id="hipp-container"></div>
+      <pre class="result" id="hipp-result"></pre>
+    </section>
+
+    <script type="module">
+      import { renderQuest, gradeQuest } from "./src/quest-types/index.js";
+      import {
+        UNIT_01_MCQ_QUESTS,
+        UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
+        UNIT_01_SEQUENCING_QUESTS,
+        UNIT_01_SOURCE_ANALYSIS_QUESTS,
+      } from "./src/content/quests/unit-01-quests.js";
+
+      const state = {
+        mcq: {},
+        sequencing: { order: UNIT_01_SEQUENCING_QUESTS[0].items.map((item) => item.id) },
+        "evidence-organizing": { placements: {}, reflection: "" },
+        hipp: { selected: {} },
+      };
+
+      let evidenceSelectedSourceId = null;
+
+      function mount(questType, quest, containerId, resultId) {
+        const container = document.getElementById(containerId);
+        const resultEl = document.getElementById(resultId);
+
+        function updateResult() {
+          resultEl.textContent = JSON.stringify(gradeQuest(questType, quest, state[questType]), null, 2);
+        }
+
+        function wireEvents() {
+          if (questType === "mcq") {
+            container.querySelectorAll("input[type=radio]").forEach((el) => {
+              el.addEventListener("change", (event) => {
+                state.mcq.selected = event.target.value;
+                updateResult();
+              });
+            });
+          }
+
+          if (questType === "hipp") {
+            container.querySelectorAll("input[type=radio]").forEach((el) => {
+              el.addEventListener("change", (event) => {
+                const fieldset = event.target.closest("[data-hipp-prompt]");
+                state.hipp.selected[fieldset.dataset.hippPrompt] = event.target.value;
+                updateResult();
+              });
+            });
+          }
+
+          if (questType === "sequencing") {
+            container.querySelectorAll("[data-sequence-item]").forEach((el, index) => {
+              el.addEventListener("click", () => {
+                const order = state.sequencing.order.slice();
+                if (index < order.length - 1) {
+                  [order[index], order[index + 1]] = [order[index + 1], order[index]];
+                }
+                state.sequencing.order = order;
+                rerender();
+              });
+            });
+          }
+
+          if (questType === "evidence-organizing") {
+            container.querySelectorAll("[data-evidence-source]").forEach((el) => {
+              el.addEventListener("click", () => {
+                evidenceSelectedSourceId = el.dataset.evidenceSource;
+                container
+                  .querySelectorAll("[data-evidence-source]")
+                  .forEach((card) => card.classList.remove("selected"));
+                el.classList.add("selected");
+              });
+            });
+            container.querySelectorAll("[data-evidence-slot]").forEach((el) => {
+              el.addEventListener("click", () => {
+                if (!evidenceSelectedSourceId) return;
+                state["evidence-organizing"].placements[evidenceSelectedSourceId] =
+                  el.dataset.evidenceSlot;
+                evidenceSelectedSourceId = null;
+                rerender();
+              });
+            });
+            const textarea = container.querySelector("[data-evidence-reflection]");
+            if (textarea) {
+              textarea.addEventListener("input", (event) => {
+                state["evidence-organizing"].reflection = event.target.value;
+                updateResult();
+              });
+            }
+          }
+        }
+
+        function rerender() {
+          container.innerHTML = renderQuest(questType, quest, state[questType]);
+          wireEvents();
+          updateResult();
+        }
+
+        rerender();
+      }
+
+      mount("mcq", UNIT_01_MCQ_QUESTS[0], "mcq-container", "mcq-result");
+      mount("sequencing", UNIT_01_SEQUENCING_QUESTS[0], "sequencing-container", "sequencing-result");
+      mount(
+        "evidence-organizing",
+        UNIT_01_EVIDENCE_ORGANIZING_QUESTS[0],
+        "evidence-container",
+        "evidence-result",
+      );
+      mount("hipp", UNIT_01_SOURCE_ANALYSIS_QUESTS[0], "hipp-container", "hipp-result");
+    </script>
+  </body>
+</html>

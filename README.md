@@ -29,18 +29,18 @@ The engine renders systems such as dialogue, evidence, maps, Codex entries, and 
 
 ## Canonical homes
 
-| Thing                           | Permanent home                     |
-| ------------------------------- | ---------------------------------- |
-| Reusable JavaScript systems     | `apps/web/src/engine/`             |
-| Feature-level UI                | `apps/web/src/features/`           |
-| Campaign and unit content       | `content/campaigns/`               |
-| Primary-source records          | `content/library/primary-sources/` |
-| Historical NPC records          | `content/library/npcs/`            |
-| Historical place records        | `content/library/locations/`       |
-| Images, maps, audio, icons      | `assets/`                          |
-| JSON schemas                    | `data/schemas/`                    |
-| Project documentation           | `docs/`                            |
-| Build/import/validation scripts | `scripts/`                         |
+As of the dead-code-removal pass (`docs/migrations/DEAD-CODE-REMOVAL.md`), this table reflects what's actually live — the old table listed several paths (`content/campaigns/`, `content/library/`, root `assets/`, `apps/web/src/features/`) that were dormant/orphaned scaffolding and have since been deleted.
+
+| Thing                            | Permanent home                                                         |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| Reusable JavaScript systems      | `apps/web/src/engine/`                                                 |
+| Campaign and unit content        | `apps/web/src/content/` (`unit-01-campaign.js`, `unit-02-campaign.js`), quest content under `apps/web/src/content/quests/` |
+| Reusable quest-type renderers (rubric-scored: MCQ, Sequencing, Evidence Organizing, Source Analysis/HIPP) | `apps/web/src/quest-types/generic/`, `apps/web/src/quest-types/history/` — see `docs/architecture/QUEST-TYPE-ARCHITECTURE.md` |
+| Mini-games (pacing/reward only, NOT rubric-scored) | `apps/web/src/mini-games/` (flat, no subfolders) |
+| Images, maps, audio, icons       | `apps/web/src/assets/`                                                 |
+| JSON schemas                     | `data/schemas/`, `apps/web/src/content/schemas/`                      |
+| Project documentation            | `docs/`                                                                 |
+| Build/import/validation scripts  | `scripts/`                                                              |
 
 ## Important: stable, not frozen
 

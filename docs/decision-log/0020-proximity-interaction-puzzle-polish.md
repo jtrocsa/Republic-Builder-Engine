@@ -1,0 +1,48 @@
+# Decision 0020 — Proximity Interaction & Puzzle Polish
+
+> **Numbering note (backfilled by the Prompt 5 documentation-housekeeping pass):** `0020` was a missing decision-log number — the sequence previously jumped from `0019` straight to `0021`, and `0021`'s own text ("corrects the first 3.4.6 playtest issues") confirms a Milestone 3.4.6 decision belongs here. No decision-log entry for Milestone 3.4.6 was ever filed; only a top-level milestone doc, [`docs/milestone-03-4-6-proximity-interaction-puzzle-polish.md`](../milestone-03-4-6-proximity-interaction-puzzle-polish.md), existed. This entry recovers that existing, already-documented content into its correct decision-log slot — nothing here is newly invented.
+
+Milestone 3.4.6, installed after Milestone 3.4.5 (`0019`). This pack only includes `apps/` and `docs/`.
+
+## Changes
+
+### Field interactions
+
+- NPCs and field source markers can no longer be opened from across the map.
+- Clicking works only when the player is close enough.
+- `E` / `Enter` interacts with the nearest valid NPC or source point.
+- A small proximity prompt appears only when the player is close.
+
+### Quest/source markers
+
+- Field quest markers are now small icon-sized buttons, smaller than the player sprite.
+- The marker is mostly the star/check icon with a small blue background.
+- The "Press E" hint appears only when close.
+
+### NPC animation
+
+- NPCs now render with idle and step frames.
+- New step-frame PNGs were added for the Taíno elder, gardener, canoe worker, Spanish sailor, Columbus, and scribe.
+- Foot-shadow/under-sprite movement was removed so characters no longer look like they are floating on top of fake feet.
+
+### Dialogue standard
+
+- Field dialogue no longer breaks the fourth wall.
+- NPCs speak in historically grounded, in-character language.
+- Meta-disclaimer language should stay in opening/instructional copy, not in every NPC interaction.
+
+### Archive map puzzle
+
+- The map activity now reads as a jigsaw puzzle rather than rectangular cards.
+- Empty slots use faint ghosted sockets instead of "EMPTY PLACE" labels.
+- Piece labels are visually hidden unless hovered/focused.
+- Interior edges use interlocking/jagged puzzle silhouettes while the board still preserves outside-boundary logic.
+
+## Acceptance checks
+
+- From far away, clicking an NPC or source marker gives a "move closer" notice and does not open interaction content.
+- Near an NPC/source marker, pressing `E` opens the interaction.
+- Quest markers are visibly smaller than the player sprite.
+- NPC bodies visibly alternate between idle and step frames.
+- Taíno elder dialogue no longer says "This dramatized field dialogue…"
+- The map puzzle board no longer displays large "EMPTY PLACE" labels.

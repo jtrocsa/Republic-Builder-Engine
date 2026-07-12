@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Republic Builder Engine — a reusable historical RPG engine. The first campaign is **Chronicle**, an AP U.S. History experience. The current playable vertical slice is Unit 1 / Case 1.01 ("The Atlantic Crossroads"): a browser-based, top-down field/dialogue game about the Columbian Exchange. Latest delivered build per the decision log is Milestone 3.4.15 ("Side Sprite and Audio SFX Polish").
+The current game is **Chronicle**, an AP U.S. History RPG. The current playable vertical slice is Unit 1 / Case 1.01 ("The Atlantic Crossroads"): a browser-based, top-down field/dialogue game about the Columbian Exchange. Latest delivered build per the decision log is Milestone 3.4.15 ("Side Sprite and Audio SFX Polish").
+
+**"Republic Builder Engine" is retired as the project's identity.** The repository was originally framed as a reusable engine of that name; that framing is no longer current. The eventual multi-subject platform this codebase may grow into **does not yet have a final name** — don't invent one or reintroduce "Republic Builder" branding in new code, docs, or copy. (The string still appears in a few live/dead source locations — e.g. `package.json`'s package name, `BRAND.engine` in content, the browser tab title — as a known, not-yet-actioned cleanup item; leave those alone unless a task specifically asks you to touch product branding.)
+
+**Removed systems — do not restore:** Founder Paths, professions, Historian Skills, and clothing/wardrobe-slot systems have been removed from the design and must not be reintroduced. The player identity model is intentionally minimal (display name + one of two appearance choices only — see `docs/decision-log/0005-chronicle-identity-and-first-field-entry.md`); pronouns, wardrobes, professions, cosmetics, and inventory remain deliberately out of scope, not merely deferred to a later milestone.
 
 ### Product intent
 
@@ -20,21 +24,26 @@ Run from the repo root (npm scripts shell out to Vite, which is rooted at `apps/
 - `npm run build` — production build (output in `apps/web/dist/`)
 - `npm run preview` — preview a production build
 - `npm run validate:content` — placeholder only; not yet implemented (just logs a message)
+- `npm run lint` — real, working ESLint flat config (`eslint.config.js`)
+- `npm run format` / `npm run format:check` — real, working Prettier
 
-There is no test runner, linter, or type checker configured (`tests/` exists but is empty aside from `.gitkeep`). Do not assume `npm test` or lint scripts exist.
+A test runner **is** configured: `npm run test` (Vitest, non-watch, CI-compatible) runs tests from `tests/unit/` — see `docs/development/UNIT-TESTING.md`. There is no type checker configured yet. ESLint and Prettier **are** configured and working — don't claim otherwise.
 
 ## Architecture
 
 ### The app is currently one file
 
-Despite the modular folder structure (`apps/web/src/engine/`, `apps/web/src/features/`), the entire running game is implemented in **`apps/web/src/main.js`** (~1,350 lines). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
+The entire running game is implemented in **`apps/web/src/main.js`** (~2,991 lines — this file has grown substantially across hotfix milestones; re-check the line count with a quick `Measure-Object` before citing it, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
 
-The files under `apps/web/src/features/*` (`chronicle-institute.js`, `chronicle-identity.js`, `atlantic-crossroads-preview.js`) and `apps/web/src/engine/content/author-content-store.js` / `apps/web/src/engine/player/player-profile-store.js` are **not imported by `main.js`** — they are earlier/parallel modularization attempts that are currently dead code. Before assuming feature logic lives in one of these files, check whether `main.js` actually imports it. When extending gameplay, the pragmatic move is usually to edit `main.js` directly rather than wire in an orphaned module, unless the user is deliberately doing the modularization work.
+An orphaned second implementation of the onboarding→field→case-player loop (`apps/web/src/features/*`, plus its two supporting dead stores `engine/content/author-content-store.js` / `engine/player/player-profile-store.js`) used to exist alongside `main.js` — six files total, never imported by it, containing two more dead Author Mode implementations on top of `main.js`'s own broken one. It was confirmed zero-risk (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't recreate it; when extending gameplay, edit `main.js` directly unless deliberately doing modularization work.
+
+There is also a live-but-placeholder **Unit 2 campaign** (`content/unit-02-campaign.js`, "Riverbend Settlement") reachable in the running app, and an **undocumented, unwired serverless AI-grading backend** at `api/evaluate.js` + `api/_lib/rubrics.js` (a real Claude-Haiku HIPP/SAQ/LEQ/DBQ evaluator — it's why `@anthropic-ai/sdk` is a production dependency even though the frontend never calls it). Neither is exercised by normal gameplay in Unit 1 / Case 1.01, but both are real and current — don't be surprised by them.
 
 `main.js` only imports:
 
 - `./styles/global.css`
-- named exports from `./content/unit-01-campaign.js` (`BRAND`, `UNIT_01`, `CASE_001_SOURCES`, `EXCHANGE_RECORDS`, `EMPIRE_EVIDENCE`, `EMPIRE_CONNECTIONS`, `REVIEW`)
+- named exports from `./content/unit-01-campaign.js` and `./content/unit-02-campaign.js` (content shapes, one live-real, one live-placeholder)
+- `./content/chronicle-opening.defaults.js` and `./content/chronicle-identity.defaults.js`
 - `readProgress` / `saveProgress` / `resetProgress` from `./engine/chronicle-progress-store.js`
 
 ### State and persistence
@@ -43,33 +52,49 @@ The files under `apps/web/src/features/*` (`chronicle-institute.js`, `chronicle-
 
 ### Engine vs. content boundary
 
-The repo's stated architecture rule (from `README.md` and the decision log): **engine code never contains APUSH-specific facts.** In practice today, `main.js` still mixes engine mechanics (movement, collision, screen transitions) with Chronicle/Unit-1-specific data (NPC dialogue text, field coordinates, quest names) inline — the clean separation described in the docs is aspirational for the current vertical slice, not yet fully realized. Canonical folder intent, per `README.md`:
+The repo's stated architecture rule (from the decision log): **engine code never contains APUSH-specific facts.** In practice today this is violated in at least three confirmed places — case-ID literals (`"case-001"`) are hard-coded directly into movement/interaction-gating code in `main.js`, not merely into content files. Treat the clean separation described in older docs as aspirational for the current vertical slice, not yet fully realized. Canonical folder intent (corrected against the actual repository — the old table here previously had the asset-tree row backwards):
 
-| Thing                                              | Home                                                                                 |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Reusable engine systems                            | `apps/web/src/engine/`                                                               |
-| Feature-level UI                                   | `apps/web/src/features/`                                                             |
-| Campaign/unit content (JS, imported at build time) | `apps/web/src/content/`                                                              |
-| Campaign/unit content (JSON records)               | `content/campaigns/`                                                                 |
-| Primary sources, NPC records, location records     | `content/library/`                                                                   |
-| Images, maps, audio, icons                         | `assets/` (repo-root) vs. `apps/web/src/assets/` (currently used by the running app) |
-| JSON schemas                                       | `data/schemas/`                                                                      |
-| Docs                                               | `docs/`                                                                              |
-| Build/import/validation scripts                    | `scripts/`                                                                           |
+| Thing                                              | Home                                                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Reusable engine systems                            | `apps/web/src/engine/`                                                                    |
+| Campaign/unit content actually used at runtime     | `apps/web/src/content/` (`unit-01-campaign.js` real, `unit-02-campaign.js` placeholder)   |
+| Images, maps, audio, icons                         | `apps/web/src/assets/` — 62 real files, referenced via `new URL(..., import.meta.url)`    |
+| JSON schemas                                       | `data/schemas/` (currently one example instance, not a real JSON Schema)                  |
+| Docs                                               | `docs/`                                                                                    |
+| Build/import/validation scripts                    | `scripts/`                                                                                 |
 
-Note there are two parallel asset trees: `assets/` at the repo root (mostly `.gitkeep` placeholders, intended as the long-term canonical home) and `apps/web/src/assets/` (where the actual sprites/maps/documents used by `main.js` currently live, referenced via `new URL(..., import.meta.url)`).
+The placeholder-scaffold root `assets/` tree and the orphaned `apps/web/src/features/` island named in older revisions of this table were deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`.
 
-There is also a parallel, currently-unused JSON content pipeline under `content/campaigns/chronicle/units/unit-01/` (`campaign.json`, `unit.json`, `case.json`, `activities/*.json`, `assessments/*.json`) plus record templates in `content/library/`. `main.js` does not read from these — it reads from the hand-authored JS in `apps/web/src/content/`. Treat the JSON tree as the intended future data-driven format, not the current runtime source of truth.
+There is also a **dormant, unread** JSON content pipeline under `content/campaigns/chronicle/units/unit-01/` (`campaign.json`, `unit.json`, `case.json`, `activities/*.json`, `assessments/*.json`) plus record templates in `content/library/`. `main.js` never imports from this tree (confirmed by import-graph trace). It represents a *fourth* incompatible schema for the same Case 1.01 source content (alongside the live `unit-01-campaign.js` shape and two dead ones) — don't treat its presence as meaning it's wired up, and don't reconcile the schemas speculatively; that's tracked as future `ContentRegistry`/Zod work in `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md`, not a current task.
 
-### Author Mode
+### Author Mode (the only "teacher tool" that exists, and it's broken)
 
-A development-only in-app panel (toggled via the chrome button, rendered by `authorPanel()` in `main.js`) lets non-engineers edit front-facing copy (titles, questions, names) without touching layout, scoring, or progression logic. Edits currently persist to `localStorage` only, scoped to a small set of fields — see `docs/decision-log/0003-author-mode-and-content-overrides.md`.
+A development-only in-app panel (toggled via the chrome button, rendered by `authorPanel()` in `main.js`) is meant to let non-engineers edit front-facing copy (titles, questions, names) without touching layout, scoring, or progression logic — see `docs/decision-log/0003-author-mode-and-content-overrides.md` for the original intent. **The live implementation is currently non-functional**: its two content-edit inputs render with live values but no event listener in `main.js` matches them, so editing does nothing; edits do not persist anywhere despite panel copy implying they do. There are also two additional, independent, more fully-built Author Mode implementations inside the dead `apps/web/src/features/` island — three implementations total, none fully working, only one reachable. There is no other teacher-facing tooling anywhere in the app (no classroom, enrollment, assignment, or grading UI) — the only thing resembling grading tooling is the disconnected `api/evaluate.js` backend mentioned above. Fixing Author Mode is documented future work (see `ARCHITECTURE-QUICKREF.md`), not assumed-working current behavior.
+
+### Current architecture direction — read `ARCHITECTURE-QUICKREF.md` first
+
+**Read `docs/architecture/ARCHITECTURE-QUICKREF.md` before any other architecture document.** It's short by design and states the current phase, what's approved, and what's explicitly deferred. Only open the longer documents below when you need the deeper rationale behind a QUICKREF line:
+
+- `docs/architecture/CURRENT-REPOSITORY-AUDIT.md` — what actually exists in the repo today (line counts, dead code, schema conflicts), verified against source, not against prior doc claims.
+- `docs/architecture/THIRD-PARTY-TOOLING-AUDIT.md` — which dependencies are approved now, prototype-gated, or rejected, and why.
+- `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` — the long-term multi-subject-platform design (domains, data models, migration phases). Describes **future direction, not current implementation** — `PlatformCore`, `WorldComposition`, `QuestEngine`'s renderer/evaluation registries, `WorldRuntime`, the full 7-repository persistence layer, and `packs/<subject>/` extraction are all documented here as where the architecture is headed, not code that exists or should be scaffolded yet.
+- `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — a skeptical pass that cuts the proposal above down to what a solo developer should actually build near-term. **This is the binding scope document, not the proposal** — when the two disagree on what to build *now*, follow the review, not the proposal.
+
+**Near-term architecture is deliberately minimal**, per the review: keep working code where it already lives (`main.js`, `content/*.js`) and add thin wrappers/tests/schemas around it rather than moving it. Concretely:
+
+- **Vitest and Zod are the only approved immediate major dependencies.** Both are adopt-now, zero-POC-required.
+- **Playwright, Phaser, Tiled, and inkjs are deferred** — real candidates for later, not currently being adopted, no POC scheduled unless a task explicitly says otherwise.
+- **`PlatformCore`, `WorldComposition`, runtime registries, activity-renderer registries, full subject-pack extraction (`packs/<subject>/`), accounts, classrooms, publishing, and any database** are documented future directions in the proposal above — not current implementation tasks. Don't scaffold them because the proposal describes them.
+- **Do not create empty future-architecture folders** (`platform-core/`, `world-composition/`, `quest-engine/`, `runtime/`, `packs/`, etc.) "for structure." The repo already has a cautionary example of this exact mistake: `apps/web/src/features/{assessment,codex,character-creation}/` are empty `.gitkeep` folders from an earlier modularization attempt that a future reader has to investigate and discover are nothing. Don't add more.
+- **Do not physically extract working movement, collision, camera, or NPC logic out of `main.js` merely for architectural neatness.** It works, it has no test coverage either way, and moving it is pure code-motion risk with no near-term payoff — per the review, add `export` to specific functions worth unit-testing and test them in place instead. Only physically extract this code if/when a proven Phaser adapter is actually replacing it, which is not scheduled.
+- **Preserve the working game.** Every change should leave `npm run dev` producing identical player-visible behavior unless the task's explicit goal is new behavior — verify in the browser, not just via lint/build.
 
 ### Documentation conventions
 
-- `docs/decision-log/000N-*.md` — numbered ADRs recording _why_ a design choice was made (read the highest-numbered ones for the most current architectural context; earlier ones may describe superseded milestones).
-- `docs/architecture/*.md` and `docs/content-guide/*.md` — several of these (e.g. `repository-map.md`, `naming-and-placement.md`, decision `0001`) are currently placeholder stubs ("Recovered placeholder file restored...") rather than live documentation — don't treat their presence as meaning the content exists; check the file body before citing it.
+- `docs/decision-log/NNNN-*.md` — numbered ADRs recording _why_ a design choice was made (read the highest-numbered ones for the most current architectural context; earlier ones may describe superseded milestones). Numbering was repaired to resolve a duplicate `0006` and backfill a missing `0020` — see the note at the top of `docs/decision-log/0006-field-movement-and-art-polish.md` and `docs/decision-log/0006a-field-definition-pass.md` if you need the history of that fix.
+- `docs/architecture/*.md` and `docs/content-guide/*.md` — most are real, substantive documents. A small number were previously verbatim placeholder stubs ("Recovered placeholder file restored...") and have since been repaired with real content; if you find a file whose entire body is still that sentence, it's genuinely empty — don't cite it as evidence a described system exists, and consider it a candidate for the same repair pass documented in `ARCHITECTURE-QUICKREF.md`.
 - `docs/milestone-*.md` at the top level of `docs/` duplicate/mirror some `decision-log` entries by milestone number.
+- **After every architecture or migration phase, update `docs/architecture/ARCHITECTURE-QUICKREF.md`**: mark the completed phase, record the next approved phase, note any important decisions made, and record newly approved or newly deferred dependencies. Do not let it go stale — a stale quickref is worse than no quickref, because future sessions will trust it.
 
 ## Terminology
 

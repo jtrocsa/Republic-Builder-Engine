@@ -1701,6 +1701,24 @@ dd {
 .author-note code {
   color: #f0cf77;
 }
+.author-override-flag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(239, 204, 122, 0.22);
+  color: #f7e5b6;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+}
+.author-panel .text-button {
+  display: block;
+  margin-top: 14px;
+}
+.archive-central-question {
+  color: var(--gold-soft);
+  font-style: italic;
+}
 @keyframes markerPulse {
   0%,
   100% {

@@ -21,3 +21,5 @@ The first movement scene is a small Caribbean arrival zone with keyboard movemen
 ## Consequences
 
 Future changes to player identity or cloud persistence should preserve the public contract of `player-profile-store.js` or provide a documented migration.
+
+**Historical note (dead-code-removal pass, see `docs/migrations/DEAD-CODE-REMOVAL.md`):** `player-profile-store.js` was never actually wired into the live app — `main.js` always used `chronicle-progress-store.js`'s `profile` field instead — and was confirmed dead and deleted. The guidance above describes the intent at the time of this decision, not a live file; the real identity persistence contract to preserve is `chronicle-progress-store.js`'s `profile.name`/`profile.appearance` fields.
