@@ -23,6 +23,7 @@ export const DEFAULT_PROGRESS = {
   submissions: {},
   activityState: {},
   completedUnits: [],
+  questResponses: {},
 };
 export function readProgress() {
   try {
@@ -38,6 +39,7 @@ export function readProgress() {
       sourceActivities: { ...DEFAULT_PROGRESS.sourceActivities, ...(saved.sourceActivities || {}) },
       submissions: { ...DEFAULT_PROGRESS.submissions, ...(saved.submissions || {}) },
       activityState: { ...DEFAULT_PROGRESS.activityState, ...(saved.activityState || {}) },
+      questResponses: { ...DEFAULT_PROGRESS.questResponses, ...(saved.questResponses || {}) },
       completedUnits: Array.isArray(saved.completedUnits) ? saved.completedUnits : [],
       selectedUnitId: saved.selectedUnitId || "unit-01",
       empireConnections: {

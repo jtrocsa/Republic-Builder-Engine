@@ -32,6 +32,13 @@ import {
 } from "./repositories/local-teacher-override-store.js";
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
+import { renderQuest, gradeQuest } from "./quest-types/index.js";
+import {
+  UNIT_01_MCQ_QUESTS,
+  UNIT_01_SEQUENCING_QUESTS,
+  UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_01_SOURCE_ANALYSIS_QUESTS,
+} from "./content/quests/unit-01-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import riverbendTmjRaw from "./content/maps/riverbend-field.tmj?raw";
 
@@ -898,6 +905,7 @@ const VALID_SCREENS = new Set([
   "village-activity",
   "columbus-activity",
   "map-jigsaw",
+  "practice-check",
   "source",
   "codex",
   "reconstruction",
@@ -1873,7 +1881,7 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${caseId === "case-001" ? `<button class="btn btn-outline" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -1940,6 +1948,59 @@ function mapJigsawScreen() {
     )
     .join("");
   return `${chrome()}<main class="shell activity-shell activity-shell--wide"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Map Puzzle</h1><p>Rebuild the Waldseemüller world map. The outside stays straight, while the inner seam lines show how the pieces connect.</p><div class="activity-rule"><b>Goal:</b> reconstruct the map, then decide what kind of historical evidence this visual source can and cannot provide.</div></section><section class="activity-board jigsaw-board jigsaw-board--ten"><div class="jigsaw-grid jigsaw-grid--ten">${slots}</div><div class="piece-tray piece-tray--ten">${tray || "<p>All fragments placed.</p>"}</div>${complete ? `<p class="activity-feedback success">Map reconstructed. This source is useful for changing European geographic knowledge, not for direct evidence of Taíno daily life.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open map source →</button>` : `<p class="activity-feedback">Drag the upright map pieces into the board. Match the image, straight outer border, and inner puzzle seams.</p>`}</section></main>`;
+}
+
+function practiceCheckScreen() {
+  const mcqQuests = UNIT_01_MCQ_QUESTS;
+  const answeredCount = mcqQuests.filter(
+    (quest) => progress.questResponses[quest.id]?.selected !== undefined,
+  ).length;
+  const mcqCards = mcqQuests
+    .map((quest) => {
+      const state = progress.questResponses[quest.id] || {};
+      const result = gradeQuest("mcq", quest, state);
+      const feedback = result.answered
+        ? `<p class="activity-feedback ${result.correct ? "success" : "error"}">${
+            result.correct ? "Correct." : "Not quite."
+          } ${esc(quest.explanation || "")}</p>`
+        : "";
+      return `<div class="quest-practice-item">${renderQuest("mcq", quest, state)}${feedback}</div>`;
+    })
+    .join("");
+
+  const sequencingCards = UNIT_01_SEQUENCING_QUESTS.map((quest) => {
+    const state = progress.questResponses[quest.id] || {};
+    const result = gradeQuest("sequencing", quest, state);
+    const feedback = result.answered
+      ? `<p class="activity-feedback ${result.correct ? "success" : "error"}">${
+          result.correct ? "Correct order." : "Not quite the strongest order yet."
+        } ${esc(quest.explanation || "")}</p>`
+      : `<p class="activity-feedback">Drag the entries into order, then drop to check your sequence.</p>`;
+    return `<div class="quest-practice-item">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
+  }).join("");
+
+  const evidenceCards = UNIT_01_EVIDENCE_ORGANIZING_QUESTS.map((quest) => {
+    const state = progress.questResponses[quest.id] || {};
+    const result = gradeQuest("evidence-organizing", quest, state);
+    const feedback = result.allPlacedCorrectly
+      ? `<p class="activity-feedback success">All records matched to the right skill.${
+          result.reflectionOk ? "" : " Add a reflection of at least a sentence to complete this practice."
+        }</p>`
+      : `<p class="activity-feedback">Drag each record into the historical-thinking skill it best demonstrates.</p>`;
+    return `<div class="quest-practice-item">${renderQuest("evidence-organizing", quest, state)}${feedback}</div>`;
+  }).join("");
+
+  const hippCards = UNIT_01_SOURCE_ANALYSIS_QUESTS.map((quest) => {
+    const state = progress.questResponses[quest.id] || {};
+    const result = gradeQuest("hipp", quest, state);
+    const answeredAny = Object.keys(state.selected || {}).length > 0;
+    const feedback = answeredAny
+      ? `<p class="activity-feedback ${result.complete ? "success" : "error"}">${result.pointsEarned}/${result.pointsPossible} HIPP points earned.</p>`
+      : `<p class="activity-feedback">Choose the option that explains how or why this HIPP element shapes the source's argument — not just names it.</p>`;
+    return `<div class="quest-practice-item">${renderQuest("hipp", quest, state)}${feedback}</div>`;
+  }).join("");
+
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in Case 1.01's own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 function sourceVisual(source) {
@@ -2157,6 +2218,9 @@ function render() {
         break;
       case "map-jigsaw":
         html = mapJigsawScreen();
+        break;
+      case "practice-check":
+        html = practiceCheckScreen();
         break;
       case "source":
         html = sourceReader();
@@ -2511,6 +2575,12 @@ if (app) {
       progress.currentScreen = "archive";
       save();
       render();
+    }
+    if (action === "practice-check") {
+      progress.currentScreen = "practice-check";
+      save();
+      render();
+      return;
     }
     if (action === "return-archive") {
       playSfx("return-warp");
@@ -2867,6 +2937,30 @@ if (app) {
         setTeacherOverride(mapping.contentId, mapping.fieldName, field.value);
         render();
       }
+    } else if (field.matches("[data-mcq-quest]")) {
+      const questId = field.dataset.mcqQuest;
+      progress.questResponses[questId] = { selected: field.value };
+      playQuestSfx(questId);
+      save();
+      render();
+    } else if (field.matches("[data-hipp-option]")) {
+      const promptId = field.closest("[data-hipp-prompt]")?.dataset.hippPrompt;
+      const questId = field.closest("[data-quest-id]")?.dataset.questId;
+      if (!questId || !promptId) return;
+      const state = progress.questResponses[questId] || {};
+      progress.questResponses[questId] = {
+        ...state,
+        selected: { ...(state.selected || {}), [promptId]: field.value },
+      };
+      playQuestSfx(questId);
+      save();
+      render();
+    } else if (field.matches("[data-evidence-reflection]")) {
+      const questId = field.dataset.evidenceReflection;
+      const state = progress.questResponses[questId] || {};
+      progress.questResponses[questId] = { ...state, reflection: field.value };
+      save();
+      render();
     }
   });
 
@@ -2890,16 +2984,31 @@ if (app) {
       return;
     }
     const card = event.target.closest("[data-empire-card]");
-    if (!card) return;
-    event.dataTransfer.setData("text/plain", card.dataset.empireCard);
-    event.dataTransfer.effectAllowed = "move";
+    if (card) {
+      event.dataTransfer.setData("text/plain", card.dataset.empireCard);
+      event.dataTransfer.effectAllowed = "move";
+      return;
+    }
+    const sequenceItem = event.target.closest("[data-sequence-item]");
+    if (sequenceItem) {
+      event.dataTransfer.setData("text/sequence-item", sequenceItem.dataset.sequenceItem);
+      event.dataTransfer.effectAllowed = "move";
+      return;
+    }
+    const evidenceSource = event.target.closest("[data-evidence-source]");
+    if (evidenceSource) {
+      event.dataTransfer.setData("text/evidence-source", evidenceSource.dataset.evidenceSource);
+      event.dataTransfer.effectAllowed = "move";
+    }
   });
   app.addEventListener("dragover", (event) => {
     const mapSlot = event.target.closest("[data-map-slot]");
     const zone = event.target.closest("[data-drop-index]");
     const legDrop = event.target.closest("[data-leg-drop]");
     const regionDrop = event.target.closest("[data-region-drop]");
-    const dropTarget = mapSlot || zone || legDrop || regionDrop;
+    const sequenceItem = event.target.closest("[data-sequence-item]");
+    const evidenceSlot = event.target.closest("[data-evidence-slot]");
+    const dropTarget = mapSlot || zone || legDrop || regionDrop || sequenceItem || evidenceSlot;
     if (dropTarget) {
       event.preventDefault();
       dropTarget.classList.add("is-over");
@@ -2910,8 +3019,48 @@ if (app) {
     event.target.closest("[data-map-slot]")?.classList.remove("is-over");
     event.target.closest("[data-leg-drop]")?.classList.remove("is-over");
     event.target.closest("[data-region-drop]")?.classList.remove("is-over");
+    event.target.closest("[data-sequence-item]")?.classList.remove("is-over");
+    event.target.closest("[data-evidence-slot]")?.classList.remove("is-over");
   });
   app.addEventListener("drop", (event) => {
+    const sequenceItem = event.target.closest("[data-sequence-item]");
+    if (sequenceItem) {
+      event.preventDefault();
+      sequenceItem.classList.remove("is-over");
+      const sourceItemId = event.dataTransfer.getData("text/sequence-item");
+      const targetItemId = sequenceItem.dataset.sequenceItem;
+      const questId = sequenceItem.closest("[data-quest-id]")?.dataset.questId;
+      const list = sequenceItem.closest(".quest-sequence-list");
+      if (!sourceItemId || sourceItemId === targetItemId || !questId || !list) return;
+      const currentOrder = Array.from(list.querySelectorAll("[data-sequence-item]")).map(
+        (el) => el.dataset.sequenceItem,
+      );
+      const withoutSource = currentOrder.filter((id) => id !== sourceItemId);
+      const targetIndex = withoutSource.indexOf(targetItemId);
+      withoutSource.splice(targetIndex, 0, sourceItemId);
+      progress.questResponses[questId] = { ...progress.questResponses[questId], order: withoutSource };
+      save();
+      render();
+      return;
+    }
+    const evidenceSlot = event.target.closest("[data-evidence-slot]");
+    if (evidenceSlot) {
+      event.preventDefault();
+      evidenceSlot.classList.remove("is-over");
+      const sourceId = event.dataTransfer.getData("text/evidence-source");
+      const questId = evidenceSlot.closest("[data-quest-id]")?.dataset.questId;
+      if (!sourceId || !questId) return;
+      const state = progress.questResponses[questId] || {};
+      const placements = { ...(state.placements || {}) };
+      Object.keys(placements).forEach((id) => {
+        if (placements[id] === evidenceSlot.dataset.evidenceSlot) delete placements[id];
+      });
+      placements[sourceId] = evidenceSlot.dataset.evidenceSlot;
+      progress.questResponses[questId] = { ...state, placements };
+      save();
+      render();
+      return;
+    }
     const mapSlot = event.target.closest("[data-map-slot]");
     if (mapSlot) {
       event.preventDefault();

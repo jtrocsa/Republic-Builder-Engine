@@ -4299,6 +4299,44 @@ dd {
   background: rgba(255, 255, 255, 0.05);
   line-height: 1.45;
 }
+.quest-practice-item {
+  margin-bottom: 26px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(239, 204, 122, 0.15);
+}
+.quest-practice-item:last-of-type {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.quest-prompt {
+  font-family: "Cinzel", serif;
+  color: #ffdf91;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+.quest-choices {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.quest-choices .choice {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  line-height: 1.45;
+  color: #dff1ef;
+  cursor: pointer;
+}
+.quest-choices .choice input {
+  accent-color: #e0b45b;
+  margin-top: 3px;
+}
 .activity-feedback {
   margin-top: 16px;
   padding: 14px 16px;
@@ -4316,6 +4354,172 @@ dd {
   background: rgba(178, 75, 75, 0.16);
   border: 1px solid rgba(232, 124, 124, 0.42);
   color: #ffe3de;
+}
+.quest-section-heading {
+  font-family: "Cinzel", serif;
+  color: var(--gold-soft);
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  margin: 32px 0 16px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(239, 204, 122, 0.18);
+}
+.quest-section-heading:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.quest-sequence-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sequence-item {
+  padding: 14px 16px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #dff1ef;
+  line-height: 1.45;
+  cursor: grab;
+}
+.sequence-item.is-over {
+  border-color: var(--gold);
+  background: rgba(225, 182, 93, 0.14);
+}
+.quest-evidence-sources {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 16px;
+}
+.evidence-card {
+  padding: 14px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: grab;
+}
+.evidence-card h3 {
+  font-family: "Cinzel", serif;
+  color: #ffdf91;
+  font-size: 0.95rem;
+  margin: 0 0 6px;
+}
+.evidence-attribution {
+  color: #bbcfca;
+  font-size: 0.78rem;
+  margin: 0 0 8px;
+}
+.evidence-excerpt {
+  color: #dceff0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+.quest-evidence-slots {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.evidence-slot {
+  min-height: 90px;
+  padding: 12px 14px;
+  border: 1px dashed rgba(229, 190, 102, 0.4);
+  border-radius: 14px;
+  background: rgba(5, 39, 55, 0.55);
+}
+.evidence-slot.is-over {
+  border-color: var(--gold);
+  background: rgba(225, 182, 93, 0.12);
+}
+.evidence-slot h4 {
+  font-family: "Cinzel", serif;
+  color: var(--gold-soft);
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+.evidence-slot-empty {
+  color: rgba(196, 208, 207, 0.6);
+  font-size: 0.8rem;
+  margin: 0;
+}
+.evidence-slot-filled {
+  color: #dfffee;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.quest-reflection {
+  display: block;
+  margin-top: 16px;
+  color: #dceff0;
+  font-size: 0.88rem;
+}
+.quest-reflection textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 70px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dff1ef;
+  font-family: inherit;
+  resize: vertical;
+}
+.quest-document {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 14px;
+  background: rgba(5, 39, 55, 0.4);
+}
+.quest-document-text {
+  color: #dceff0;
+  line-height: 1.55;
+  margin: 0 0 8px;
+}
+.quest-document-attribution {
+  color: #bbcfca;
+  font-size: 0.8rem;
+  font-style: normal;
+}
+.quest-hipp-prompts {
+  display: grid;
+  gap: 18px;
+}
+.hipp-prompt {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.hipp-prompt legend {
+  color: #ffdf91;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  padding: 0;
+}
+.hipp-option {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #dff1ef;
+  line-height: 1.4;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.hipp-option input {
+  accent-color: #e0b45b;
+  margin-top: 3px;
 }
 .jigsaw-board {
   display: grid;
