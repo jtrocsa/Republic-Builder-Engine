@@ -1693,6 +1693,30 @@ dd {
   min-height: 70px;
   resize: vertical;
 }
+.author-panel-toggle {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid rgba(239, 204, 122, 0.35);
+  border-radius: 9px;
+  background: rgba(239, 204, 122, 0.08);
+  cursor: pointer;
+}
+.author-panel-toggle input {
+  width: auto;
+  margin: 0;
+  accent-color: #f0cf77;
+}
+.author-panel-toggle span {
+  color: #f0cf77;
+  font:
+    700 0.62rem "Cinzel",
+    serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .author-note {
   padding-top: 12px;
   border-top: 1px solid rgba(239, 204, 122, 0.18);
