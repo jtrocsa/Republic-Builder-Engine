@@ -26,6 +26,22 @@ function assertUniqueIds(items, ctx, label) {
   });
 }
 
+// The four College Board reasoning-process skills ("the four Cs") plus
+// Sourcing — a distinct, fifth historical-thinking skill (source
+// attribution/situation), not one of the four Cs, but the other category
+// this quest type's sources have needed in practice. See
+// docs/content-guide/skill-taxonomy.md for the full rationale, including why
+// this stays separate from HIPP_DIMENSIONS in source-analysis-quest.js
+// (that enum tags one argument-component within a single document; this one
+// tags a whole source's dominant historical-thinking skill across a set).
+export const SKILL_CATEGORIES = [
+  "Comparison",
+  "Causation",
+  "Continuity and Change",
+  "Contextualization",
+  "Sourcing",
+];
+
 export const EvidenceSlotSchema = z.object({
   id: z.string().min(1, "slot.id is required"),
   label: z.string().min(1, "slot.label is required"),
@@ -49,7 +65,9 @@ export function buildEvidenceSourceSchema(slotIds) {
     label: z.string().min(1, "source.label is required"),
     attribution: z.string().min(1, "source.attribution is required"),
     excerpt: z.string().min(1, "source.excerpt is required"),
-    skillCategory: z.string().min(1, "source.skillCategory is required"),
+    skillCategory: z.enum(SKILL_CATEGORIES, {
+      message: `source.skillCategory must be one of: ${SKILL_CATEGORIES.join(", ")}`,
+    }),
     correctSlotId,
   });
 }
@@ -63,7 +81,7 @@ export function buildEvidenceSourcesSchema(slotIds) {
 
 export const EvidenceRubricSchema = z.object({
   skillCategories: z
-    .array(z.string().min(1))
+    .array(z.enum(SKILL_CATEGORIES))
     .min(1, "rubric.skillCategories must contain at least one category"),
   pointsTotal: z.number().int().positive("rubric.pointsTotal must be a positive integer"),
   description: z.string().min(1, "rubric.description is required"),

@@ -53,7 +53,7 @@ export const UNIT_01_EVIDENCE_ORGANIZING_QUESTS = [
       "Match each Case 1.01 record to the historical-thinking skill it best demonstrates, then explain why using more than one kind of record strengthens a historical argument.",
     slots: [
       { id: "contextualization", label: "Contextualization" },
-      { id: "sourcing-situation", label: "Sourcing and Situation" },
+      { id: "sourcing-situation", label: "Sourcing" },
       { id: "continuity-and-change", label: "Continuity and Change" },
     ],
     sources: [
@@ -72,7 +72,7 @@ export const UNIT_01_EVIDENCE_ORGANIZING_QUESTS = [
         attribution: "Christopher Columbus, 1493",
         excerpt:
           "“They are so ingenuous and free with all they have, that no one would believe it without seeing it.”",
-        skillCategory: "Sourcing and Situation",
+        skillCategory: "Sourcing",
         correctSlotId: "sourcing-situation",
       },
       {
@@ -88,7 +88,7 @@ export const UNIT_01_EVIDENCE_ORGANIZING_QUESTS = [
     reflectionPrompt:
       "In 2–3 sentences, explain how using context, a primary letter, and a map together builds a stronger historical argument than any one record alone.",
     rubric: {
-      skillCategories: ["Contextualization", "Sourcing and Situation", "Continuity and Change"],
+      skillCategories: ["Contextualization", "Sourcing", "Continuity and Change"],
       pointsTotal: 3,
       description:
         "Earn 1 point per record correctly matched to the historical-thinking skill it best demonstrates.",

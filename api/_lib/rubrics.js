@@ -137,18 +137,27 @@ Use one rubric-row entry per SAQ part, named "part-a", "part-b", "part-c".
 # LEQ (task_type: "leq") — College Board 6-point structure
 
 Diagnose against each rubric row, privately. Row names to use: "thesis", "contextualization",
-"evidence", "evidence-use", "reasoning", "complexity".
+"evidence", "evidence-use", "reasoning-comparison", "reasoning-causation", "reasoning-ccot",
+"complexity".
 - Thesis/claim (1): historically defensible, responds to the prompt, establishes a line of
   reasoning — not a restatement of the prompt.
 - Contextualization (1): broader relevant context, more than a phrase, connected to the argument.
 - Evidence (2): 1 pt for specific relevant evidence; 2nd pt only if evidence is USED to support
   the argument, not just listed.
-- Analysis & reasoning (2): 1 pt for reasoning (causation, comparison, continuity/change)
-  structuring the argument; 2nd pt for complexity — corroborating, qualifying, or modifying the
-  argument (multiple variables, counter-evidence, change AND continuity, connections across periods).
+- Analysis & reasoning (2): the response's line of reasoning is structured by one or more of the
+  three College Board reasoning processes — Comparison ("reasoning-comparison": similarities and
+  differences drive the argument), Causation ("reasoning-causation": causes and/or effects drive
+  the argument), and Continuity and Change Over Time ("reasoning-ccot": what changed and what
+  stayed the same drives the argument). These three rows are diagnostic sub-signals for a SINGLE
+  1-point rubric criterion — meeting any ONE of them satisfies that point. Do not imply the
+  student must satisfy all three, and do not add their "met" values together. The 2nd analysis
+  point is "complexity" — corroborating, qualifying, or modifying the argument (multiple
+  variables, counter-evidence, change AND continuity, connections across periods).
 - COMMON GAPS: thesis lists topics without an argument; context dropped after the intro;
-  evidence-as-list ("laundry list") without linkage; complexity attempted as a throwaway
-  sentence rather than developed.
+  evidence-as-list ("laundry list") without linkage; an essay that gestures at causation,
+  comparison, and CCOT all at once but develops none of them (diagnose each row on its own merits
+  rather than crediting a vague blend); complexity attempted as a throwaway sentence rather than
+  developed.
 
 # DBQ (task_type: "dbq") — College Board 7-point structure
 
@@ -221,33 +230,52 @@ const HIPP_OUTPUT_SCHEMA = {
   additionalProperties: false,
 };
 
-const WRITTEN_OUTPUT_SCHEMA = {
-  type: "object",
-  properties: {
-    rows: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          row: { type: "string" },
-          met: { type: "string", enum: ["yes", "partial", "not_yet"] },
-          mirror: { type: "string" },
-          gap: { type: "string" },
+const SAQ_ROWS = ["part-a", "part-b", "part-c"];
+const LEQ_ROWS = [
+  "thesis",
+  "contextualization",
+  "evidence",
+  "evidence-use",
+  "reasoning-comparison",
+  "reasoning-causation",
+  "reasoning-ccot",
+  "complexity",
+];
+const DBQ_ROWS = [...LEQ_ROWS, "document-evidence", "outside-evidence", "sourcing"];
+
+function buildWrittenOutputSchema(rowNames) {
+  return {
+    type: "object",
+    properties: {
+      rows: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            row: { type: "string", enum: rowNames },
+            met: { type: "string", enum: ["yes", "partial", "not_yet"] },
+            mirror: { type: "string" },
+            gap: { type: "string" },
+          },
+          required: ["row", "met", "mirror", "gap"],
+          additionalProperties: false,
         },
-        required: ["row", "met", "mirror", "gap"],
-        additionalProperties: false,
       },
+      forward: { type: "string" },
+      readiness: READINESS,
     },
-    forward: { type: "string" },
-    readiness: READINESS,
-  },
-  required: ["rows", "forward", "readiness"],
-  additionalProperties: false,
-};
+    required: ["rows", "forward", "readiness"],
+    additionalProperties: false,
+  };
+}
+
+const SAQ_OUTPUT_SCHEMA = buildWrittenOutputSchema(SAQ_ROWS);
+const LEQ_OUTPUT_SCHEMA = buildWrittenOutputSchema(LEQ_ROWS);
+const DBQ_OUTPUT_SCHEMA = buildWrittenOutputSchema(DBQ_ROWS);
 
 export const RUBRICS = {
   "hipp-sourcing": { systemPrompt: HIPP_SYSTEM_PROMPT, outputSchema: HIPP_OUTPUT_SCHEMA },
-  saq: { systemPrompt: APUSH_WRITTEN_SYSTEM_PROMPT, outputSchema: WRITTEN_OUTPUT_SCHEMA },
-  leq: { systemPrompt: APUSH_WRITTEN_SYSTEM_PROMPT, outputSchema: WRITTEN_OUTPUT_SCHEMA },
-  dbq: { systemPrompt: APUSH_WRITTEN_SYSTEM_PROMPT, outputSchema: WRITTEN_OUTPUT_SCHEMA },
+  saq: { systemPrompt: APUSH_WRITTEN_SYSTEM_PROMPT, outputSchema: SAQ_OUTPUT_SCHEMA },
+  leq: { systemPrompt: APUSH_WRITTEN_SYSTEM_PROMPT, outputSchema: LEQ_OUTPUT_SCHEMA },
+  dbq: { systemPrompt: APUSH_WRITTEN_SYSTEM_PROMPT, outputSchema: DBQ_OUTPUT_SCHEMA },
 };
