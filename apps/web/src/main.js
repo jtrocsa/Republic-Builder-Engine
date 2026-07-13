@@ -33,6 +33,7 @@ import {
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
 import { renderQuest, gradeQuest } from "./quest-types/index.js";
+import { REFLECTION_MIN_LENGTH } from "./quest-types/history/evidence-organizing-quest.js";
 import {
   UNIT_01_MCQ_QUESTS,
   UNIT_01_SEQUENCING_QUESTS,
@@ -1071,6 +1072,47 @@ function playQuestSfx(sourceId) {
   playSfx("quest", sourceId);
 }
 
+// Shared by the drag/drop handlers and their keyboard-operable equivalents
+// (move-up/down buttons, a "place in" <select>) so both input paths write
+// identical state.
+function applySequenceOrder(questId, order) {
+  progress.questResponses[questId] = { ...progress.questResponses[questId], order };
+  playQuestSfx(questId);
+  save();
+  render();
+}
+
+function applySequenceMove(questId, itemId, direction) {
+  const list = UNIT_01_SEQUENCING_QUESTS.find((quest) => quest.id === questId)?.items || [];
+  const currentOrder =
+    progress.questResponses[questId]?.order && progress.questResponses[questId].order.length === list.length
+      ? progress.questResponses[questId].order
+      : list.map((item) => item.id);
+  const index = currentOrder.indexOf(itemId);
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (index === -1 || targetIndex < 0 || targetIndex >= currentOrder.length) return;
+  const reordered = [...currentOrder];
+  [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+  applySequenceOrder(questId, reordered);
+}
+
+function applyEvidencePlacement(questId, sourceId, slotId) {
+  const state = progress.questResponses[questId] || {};
+  const placements = { ...(state.placements || {}) };
+  Object.keys(placements).forEach((id) => {
+    if (placements[id] === slotId) delete placements[id];
+  });
+  if (slotId) {
+    placements[sourceId] = slotId;
+  } else {
+    delete placements[sourceId];
+  }
+  progress.questResponses[questId] = { ...state, placements };
+  playQuestSfx(questId);
+  save();
+  render();
+}
+
 function stopMusic() {
   audioTimers.forEach(clearInterval);
   audioTimers = [];
@@ -1881,7 +1923,7 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${caseId === "case-001" && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${caseId === "case-001" && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -1951,6 +1993,9 @@ function mapJigsawScreen() {
 }
 
 function practiceCheckScreen() {
+  let overallTotal = 0;
+  let overallComplete = 0;
+
   const mcqQuests = UNIT_01_MCQ_QUESTS;
   const answeredCount = mcqQuests.filter(
     (quest) => progress.questResponses[quest.id]?.selected !== undefined,
@@ -1959,48 +2004,68 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("mcq", quest, state);
+      overallTotal += 1;
+      if (result.answered) overallComplete += 1;
+      const status = !result.answered ? "unanswered" : result.correct ? "correct" : "incorrect";
       const feedback = result.answered
-        ? `<p class="activity-feedback ${result.correct ? "success" : "error"}">${
+        ? `<p class="activity-feedback ${result.correct ? "success" : "error"}" role="status" aria-live="polite">${
             result.correct ? "Correct." : "Not quite."
           } ${esc(quest.explanation || "")}</p>`
         : "";
-      return `<div class="quest-practice-item">${renderQuest("mcq", quest, state)}${feedback}</div>`;
+      return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("mcq", quest, state)}${feedback}</div>`;
     })
     .join("");
 
   const sequencingCards = UNIT_01_SEQUENCING_QUESTS.map((quest) => {
     const state = progress.questResponses[quest.id] || {};
     const result = gradeQuest("sequencing", quest, state);
+    overallTotal += 1;
+    if (result.answered) overallComplete += 1;
+    const status = !result.answered ? "unanswered" : result.correct ? "correct" : "incorrect";
     const feedback = result.answered
-      ? `<p class="activity-feedback ${result.correct ? "success" : "error"}">${
+      ? `<p class="activity-feedback ${result.correct ? "success" : "error"}" role="status" aria-live="polite">${
           result.correct ? "Correct order." : "Not quite the strongest order yet."
         } ${esc(quest.explanation || "")}</p>`
-      : `<p class="activity-feedback">Drag the entries into order, then drop to check your sequence.</p>`;
-    return `<div class="quest-practice-item">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
+      : `<p class="activity-feedback" role="status" aria-live="polite">Drag the entries into order (or use the ↑/↓ buttons), then check your sequence.</p>`;
+    return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
   }).join("");
 
   const evidenceCards = UNIT_01_EVIDENCE_ORGANIZING_QUESTS.map((quest) => {
     const state = progress.questResponses[quest.id] || {};
     const result = gradeQuest("evidence-organizing", quest, state);
+    overallTotal += 1;
+    if (result.complete) overallComplete += 1;
+    const anyPlaced = Object.keys(state.placements || {}).length > 0;
+    const status = result.complete ? "correct" : anyPlaced ? "in-progress" : "unanswered";
     const feedback = result.allPlacedCorrectly
-      ? `<p class="activity-feedback success">All records matched to the right skill.${
+      ? `<p class="activity-feedback success" role="status" aria-live="polite">All records matched to the right skill.${
           result.reflectionOk ? "" : " Add a reflection of at least a sentence to complete this practice."
         }</p>`
-      : `<p class="activity-feedback">Drag each record into the historical-thinking skill it best demonstrates.</p>`;
-    return `<div class="quest-practice-item">${renderQuest("evidence-organizing", quest, state)}${feedback}</div>`;
+      : `<p class="activity-feedback" role="status" aria-live="polite">Drag each record into the historical-thinking skill it best demonstrates (or use the "Place in" menu on each card).</p>`;
+    return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("evidence-organizing", quest, state)}${feedback}</div>`;
   }).join("");
 
   const hippCards = UNIT_01_SOURCE_ANALYSIS_QUESTS.map((quest) => {
     const state = progress.questResponses[quest.id] || {};
     const result = gradeQuest("hipp", quest, state);
+    overallTotal += 1;
+    if (result.complete) overallComplete += 1;
     const answeredAny = Object.keys(state.selected || {}).length > 0;
+    const status = !answeredAny
+      ? "unanswered"
+      : result.complete
+        ? "correct"
+        : result.pointsEarned > 0
+          ? "partial"
+          : "incorrect";
+    const feedbackClass = status === "correct" ? "success" : status === "partial" ? "partial" : "error";
     const feedback = answeredAny
-      ? `<p class="activity-feedback ${result.complete ? "success" : "error"}">${result.pointsEarned}/${result.pointsPossible} HIPP points earned.</p>`
-      : `<p class="activity-feedback">Choose the option that explains how or why this HIPP element shapes the source's argument — not just names it.</p>`;
-    return `<div class="quest-practice-item">${renderQuest("hipp", quest, state)}${feedback}</div>`;
+      ? `<p class="activity-feedback ${feedbackClass}" role="status" aria-live="polite">${result.pointsEarned}/${result.pointsPossible} HIPP points earned.</p>`
+      : `<p class="activity-feedback" role="status" aria-live="polite">Choose the option that explains how or why this HIPP element shapes the source's argument — not just names it.</p>`;
+    return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("hipp", quest, state)}${feedback}</div>`;
   }).join("");
 
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in Case 1.01's own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in Case 1.01's own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 function sourceVisual(source) {
@@ -2588,6 +2653,10 @@ if (app) {
       render();
       return;
     }
+    if (action === "sequence-move") {
+      applySequenceMove(target.dataset.sequenceQuest, target.dataset.sequenceItem, target.dataset.direction);
+      return;
+    }
     if (action === "return-archive") {
       playSfx("return-warp");
       progress.pendingUploadCaseId = null;
@@ -2973,6 +3042,24 @@ if (app) {
       progress.questResponses[questId] = { ...state, reflection: field.value };
       save();
       render();
+    } else if (field.matches("[data-evidence-select]")) {
+      const sourceId = field.dataset.evidenceSelect;
+      const questId = field.dataset.questId;
+      if (!questId) return;
+      applyEvidencePlacement(questId, sourceId, field.value || null);
+    }
+  });
+
+  app.addEventListener("input", (event) => {
+    const field = event.target;
+    if (field.matches("[data-evidence-reflection]")) {
+      const questId = field.dataset.evidenceReflection;
+      const counter = app.querySelector(
+        `[data-evidence-reflection-counter="${CSS.escape(questId)}"]`,
+      );
+      if (counter) {
+        counter.textContent = `${field.value.trim().length}/${REFLECTION_MIN_LENGTH} characters`;
+      }
     }
   });
 
@@ -3050,9 +3137,7 @@ if (app) {
       const withoutSource = currentOrder.filter((id) => id !== sourceItemId);
       const targetIndex = withoutSource.indexOf(targetItemId);
       withoutSource.splice(targetIndex, 0, sourceItemId);
-      progress.questResponses[questId] = { ...progress.questResponses[questId], order: withoutSource };
-      save();
-      render();
+      applySequenceOrder(questId, withoutSource);
       return;
     }
     const evidenceSlot = event.target.closest("[data-evidence-slot]");
@@ -3062,15 +3147,7 @@ if (app) {
       const sourceId = event.dataTransfer.getData("text/evidence-source");
       const questId = evidenceSlot.closest("[data-quest-id]")?.dataset.questId;
       if (!sourceId || !questId) return;
-      const state = progress.questResponses[questId] || {};
-      const placements = { ...(state.placements || {}) };
-      Object.keys(placements).forEach((id) => {
-        if (placements[id] === evidenceSlot.dataset.evidenceSlot) delete placements[id];
-      });
-      placements[sourceId] = evidenceSlot.dataset.evidenceSlot;
-      progress.questResponses[questId] = { ...state, placements };
-      save();
-      render();
+      applyEvidencePlacement(questId, sourceId, evidenceSlot.dataset.evidenceSlot);
       return;
     }
     const mapSlot = event.target.closest("[data-map-slot]");

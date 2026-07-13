@@ -88,7 +88,13 @@ export function renderSequencingQuest(quest, state = {}) {
     ${order
       .map((itemId, index) => {
         const item = byId.get(itemId);
-        return `<li class="sequence-item" draggable="true" data-sequence-item="${escapeHtml(itemId)}" data-sequence-index="${index}">${escapeHtml(item.label)}</li>`;
+        return `<li class="sequence-item" draggable="true" data-sequence-item="${escapeHtml(itemId)}" data-sequence-index="${index}">
+      <span class="sequence-item-label">${escapeHtml(item.label)}</span>
+      <span class="sequence-item-controls">
+        <button type="button" class="sequence-move-btn" data-action="sequence-move" data-sequence-quest="${escapeHtml(quest.id)}" data-sequence-item="${escapeHtml(itemId)}" data-direction="up" ${index === 0 ? "disabled" : ""} aria-label="Move &quot;${escapeHtml(item.label)}&quot; earlier in the sequence">↑</button>
+        <button type="button" class="sequence-move-btn" data-action="sequence-move" data-sequence-quest="${escapeHtml(quest.id)}" data-sequence-item="${escapeHtml(itemId)}" data-direction="down" ${index === order.length - 1 ? "disabled" : ""} aria-label="Move &quot;${escapeHtml(item.label)}&quot; later in the sequence">↓</button>
+      </span>
+    </li>`;
       })
       .join("")}
   </ol>

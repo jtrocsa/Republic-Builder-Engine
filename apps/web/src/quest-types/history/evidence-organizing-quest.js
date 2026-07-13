@@ -99,7 +99,7 @@ export const EvidenceOrganizingQuestListSchema = z
   .array(EvidenceOrganizingQuestSchema)
   .superRefine((items, ctx) => assertUniqueIds(items, ctx, "evidence-organizing quest"));
 
-const REFLECTION_MIN_LENGTH = 20;
+export const REFLECTION_MIN_LENGTH = 20;
 
 /**
  * @param {import("zod").infer<typeof EvidenceOrganizingQuestSchema>} quest
@@ -113,17 +113,32 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
     if (slotId) placedBySlot.set(slotId, source);
   });
 
+  const reflectionLength = (state.reflection || "").trim().length;
+
   return `<section class="quest quest-evidence-organizing" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="evidence-organizing">
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
   <div class="quest-evidence-sources">
     ${quest.sources
-      .map(
-        (source) => `<article class="evidence-card" draggable="true" data-evidence-source="${escapeHtml(source.id)}">
-      <h3>${escapeHtml(source.label)}</h3>
+      .map((source) => {
+        const placedSlotId = placements[source.id];
+        const isPlaced = Boolean(placedSlotId);
+        return `<article class="evidence-card${isPlaced ? " evidence-card--placed" : ""}" draggable="true" data-evidence-source="${escapeHtml(source.id)}" ${isPlaced ? `data-evidence-placed="true"` : ""}>
+      <h3>${escapeHtml(source.label)}${isPlaced ? `<span class="evidence-placed-badge" aria-hidden="true">✓</span>` : ""}</h3>
       <p class="evidence-attribution">${escapeHtml(source.attribution)}</p>
       <p class="evidence-excerpt">${escapeHtml(source.excerpt)}</p>
-    </article>`,
-      )
+      <label class="evidence-select-label">Place in
+        <select data-evidence-select="${escapeHtml(source.id)}" data-quest-id="${escapeHtml(quest.id)}">
+          <option value="">— place —</option>
+          ${quest.slots
+            .map(
+              (slot) =>
+                `<option value="${escapeHtml(slot.id)}" ${placedSlotId === slot.id ? "selected" : ""}>${escapeHtml(slot.label)}</option>`,
+            )
+            .join("")}
+        </select>
+      </label>
+    </article>`;
+      })
       .join("")}
   </div>
   <div class="quest-evidence-slots">
@@ -145,7 +160,8 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
     quest.reflectionPrompt
       ? `<label class="quest-reflection">${escapeHtml(quest.reflectionPrompt)}
     <textarea data-evidence-reflection="${escapeHtml(quest.id)}">${escapeHtml(state.reflection || "")}</textarea>
-  </label>`
+  </label>
+  <p class="quest-reflection-counter" data-evidence-reflection-counter="${escapeHtml(quest.id)}">${reflectionLength}/${REFLECTION_MIN_LENGTH} characters</p>`
       : ""
   }
 </section>`;
