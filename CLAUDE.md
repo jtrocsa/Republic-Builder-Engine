@@ -33,7 +33,7 @@ A test runner **is** configured: `npm run test` (Vitest, non-watch, CI-compatibl
 
 ### The app is currently one file
 
-The entire running game is implemented in **`apps/web/src/main.js`** (~2,991 lines — this file has grown substantially across hotfix milestones; re-check the line count with a quick `Measure-Object` before citing it, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
+The entire running game is implemented in **`apps/web/src/main.js`** (3,328 lines — this file has grown substantially across hotfix milestones; re-check the line count with a quick `wc -l` before citing it if much time has passed, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, quest rendering/grading, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
 
 An orphaned second implementation of the onboarding→field→case-player loop (`apps/web/src/features/*`, plus its two supporting dead stores `engine/content/author-content-store.js` / `engine/player/player-profile-store.js`) used to exist alongside `main.js` — six files total, never imported by it, containing two more dead Author Mode implementations on top of `main.js`'s own broken one. It was confirmed zero-risk (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't recreate it; when extending gameplay, edit `main.js` directly unless deliberately doing modularization work.
 
@@ -44,11 +44,17 @@ There is also a live-but-placeholder **Unit 2 campaign** (`content/unit-02-campa
 - `./styles/global.css`
 - named exports from `./content/unit-01-campaign.js` and `./content/unit-02-campaign.js` (content shapes, one live-real, one live-placeholder)
 - `./content/chronicle-opening.defaults.js` and `./content/chronicle-identity.defaults.js`
-- `readProgress` / `saveProgress` / `resetProgress` from `./engine/chronicle-progress-store.js`
+- `readProgress` / `saveProgress` / `resetProgress` from `./repositories/local-progress-repository.js` (a thin wrapper around `chronicle-progress-store.js`)
+- named exports from `./repositories/local-teacher-override-store.js`
+- `renderQuest` / `gradeQuest` from `./quest-types/index.js`
+- `REFLECTION_MIN_LENGTH` from `./quest-types/history/evidence-organizing-quest.js`
+- named exports from `./content/quests/unit-01-quests.js`
+- `renderTiledMap` / `createTilesetImageResolver` from `./engine/tiled-map-loader.js`
+- two `.tmj` raw map imports from `./content/maps/`
 
 ### State and persistence
 
-`apps/web/src/engine/chronicle-progress-store.js` defines `DEFAULT_PROGRESS` (current screen, unlocked/completed cases, per-case evidence, dialogue responses, exchange ledger, empire connections, review answers, etc.) and reads/writes it to `localStorage` under the key `republic-builder.chronicle.unit-01.v2`. This is the single source of runtime save state — there is no backend. `progress.currentScreen` plus `VALID_SCREENS` in `main.js` drive the screen-routing state machine (`institute`, `field`, `archive`, `map-jigsaw`, `source`, `ledger`, `review`, `completion`, etc.).
+`apps/web/src/engine/chronicle-progress-store.js` defines `DEFAULT_PROGRESS` (current screen, unlocked/completed cases, per-case evidence, dialogue responses, exchange ledger, empire connections, review answers, quest responses, etc.) and reads/writes it to `localStorage` under the key `republic-builder.chronicle.unit-01.v2`. This is the single source of runtime save state — there is no backend. `main.js` accesses it via the `readProgress` / `saveProgress` / `resetProgress` functions exported from `apps/web/src/repositories/local-progress-repository.js`, a thin wrapper that handles save versioning and merging. `progress.currentScreen` plus `VALID_SCREENS` in `main.js` drive the screen-routing state machine — examples include `institute`, `field`, `archive`, `practice-check`, and many others (25+ screens total).
 
 ### Engine vs. content boundary
 
@@ -58,7 +64,7 @@ The repo's stated architecture rule (from the decision log): **engine code never
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Reusable engine systems                            | `apps/web/src/engine/`                                                                    |
 | Campaign/unit content actually used at runtime     | `apps/web/src/content/` (`unit-01-campaign.js` real, `unit-02-campaign.js` placeholder)   |
-| Images, maps, audio, icons                         | `apps/web/src/assets/` — 62 real files, referenced via `new URL(..., import.meta.url)`    |
+| Images, maps, audio, icons                         | `apps/web/src/assets/` — 148 real files, referenced via `new URL(..., import.meta.url)`   |
 | JSON schemas                                       | `data/schemas/` (currently one example instance, not a real JSON Schema)                  |
 | Docs                                               | `docs/`                                                                                    |
 | Build/import/validation scripts                    | `scripts/`                                                                                 |

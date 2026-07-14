@@ -6,7 +6,7 @@
 
 - The game is **Chronicle**, an AP U.S. History RPG. "Republic Builder Engine" is retired as the project's identity; the eventual multi-subject platform has no final name yet.
 - The playable vertical slice is Unit 1 / Case 1.01 ("The Atlantic Crossroads"), fully playable end-to-end; Unit 2 ("Riverbend Settlement") is live but placeholder content.
-- The entire running game is one file, `apps/web/src/main.js` (~2,991 lines) — no framework, no React/Vue/Phaser.
+- The entire running game is one file, `apps/web/src/main.js` (3,328 lines) — no framework, no React/Vue/Phaser.
 
 ## 2. Current branch / migration context
 
