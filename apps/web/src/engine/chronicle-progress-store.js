@@ -25,6 +25,7 @@ export const DEFAULT_PROGRESS = {
   completedUnits: [],
   questResponses: {},
   settings: { miniGamesEnabled: true },
+  miniGameScores: { stormNavigationBest: 0 },
 };
 export function readProgress() {
   try {
@@ -42,6 +43,10 @@ export function readProgress() {
       activityState: { ...DEFAULT_PROGRESS.activityState, ...(saved.activityState || {}) },
       questResponses: { ...DEFAULT_PROGRESS.questResponses, ...(saved.questResponses || {}) },
       settings: { ...DEFAULT_PROGRESS.settings, ...(saved.settings || {}) },
+      miniGameScores: {
+        ...DEFAULT_PROGRESS.miniGameScores,
+        ...(saved.miniGameScores || {}),
+      },
       completedUnits: Array.isArray(saved.completedUnits) ? saved.completedUnits : [],
       selectedUnitId: saved.selectedUnitId || "unit-01",
       empireConnections: {

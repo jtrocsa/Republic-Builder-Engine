@@ -93,7 +93,7 @@ export const CASE_001_SOURCES = [
     feedback:
       "Columbus wrote as the leader of a Spanish expedition reporting to a royal official. His word choices and claims can reveal his goals, assumptions, and effort to justify further support.",
     citation:
-      "Christopher Columbus, Letter to Rafael Sánchez, 1493; Library of Congress digital collections.",
+      "Christopher Columbus, Letter to Rafael Sánchez, 1493; Library of Congress digital collections; public-domain English translation, wording varies by translation.",
     externalUrl: "https://www.loc.gov/item/18018461/",
     reconstruction: "encounter",
   },

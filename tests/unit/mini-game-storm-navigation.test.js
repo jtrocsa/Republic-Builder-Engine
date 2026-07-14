@@ -14,85 +14,94 @@ describe("createStormNavigationGame", () => {
     expect(state.hazards).toEqual([]);
     expect(state.hazardsDodged).toBe(0);
     expect(state.hazardsHit).toBe(0);
-    expect(state.remainingMs).toBe(30000);
+    expect(state.elapsedMs).toBe(0);
+    expect(state.msSinceLastHazard).toBe(0);
     expect(state.hazardIntervalMs).toBe(1200);
+    expect(state.nextHazardId).toBe(1);
   });
 
-  it("accepts custom durationMs/hazardIntervalMs overrides (boundary case)", () => {
-    const state = createStormNavigationGame({ durationMs: 8000, hazardIntervalMs: 2000 });
-    expect(state.remainingMs).toBe(8000);
-    expect(state.durationMs).toBe(8000);
+  it("accepts a custom hazardIntervalMs override for the initial stored value (boundary case)", () => {
+    const state = createStormNavigationGame({ hazardIntervalMs: 2000 });
     expect(state.hazardIntervalMs).toBe(2000);
   });
 });
 
 describe("tickStormNavigationGame", () => {
-  it("does not spawn a hazard on a tick smaller than hazardIntervalMs (normal case)", () => {
-    const state = createStormNavigationGame({ hazardIntervalMs: 1200 });
+  it("does not spawn a hazard on a tick smaller than the current hazard interval (normal case)", () => {
+    const state = createStormNavigationGame();
     const ticked = tickStormNavigationGame(state, 500, () => 0);
     expect(ticked.hazards).toHaveLength(0);
     expect(ticked.msSinceLastHazard).toBe(500);
   });
 
-  it("spawns exactly one hazard once the tick reaches/exceeds hazardIntervalMs, in the lane implied by the injected random (normal case)", () => {
-    const stateLow = createStormNavigationGame({ hazardIntervalMs: 1000 });
-    const tickedLow = tickStormNavigationGame(stateLow, 1000, () => 0);
+  it("spawns exactly one hazard once the tick reaches/exceeds the current hazard interval, in the lane implied by the injected random (normal case)", () => {
+    const stateLow = createStormNavigationGame();
+    const tickedLow = tickStormNavigationGame(stateLow, 1200, () => 0);
     expect(tickedLow.hazards).toHaveLength(1);
     expect(tickedLow.hazards[0].lane).toBe(0);
     expect(tickedLow.hazards[0].progress).toBe(0);
     expect(tickedLow.msSinceLastHazard).toBe(0);
 
-    const stateHigh = createStormNavigationGame({ hazardIntervalMs: 1000 });
-    const tickedHigh = tickStormNavigationGame(stateHigh, 1000, () => 0.99);
+    const stateHigh = createStormNavigationGame();
+    const tickedHigh = tickStormNavigationGame(stateHigh, 1200, () => 0.99);
     expect(tickedHigh.hazards).toHaveLength(1);
     expect(tickedHigh.hazards[0].lane).toBe(2);
   });
 
-  it("advances hazard progress and removes it once complete, counting a dodge when the lane differs from the player (normal case)", () => {
-    const state = createStormNavigationGame({ hazardIntervalMs: 1000 });
-    // Spawn a hazard in lane 0, while the player stays in the default middle lane (1).
-    const spawned = tickStormNavigationGame(state, 1000, () => 0);
+  it("advances hazard progress without resolving it before progress reaches 1 (normal case)", () => {
+    const spawned = tickStormNavigationGame(createStormNavigationGame(), 1200, () => 0);
     expect(spawned.hazards).toHaveLength(1);
-    expect(spawned.hazards[0].lane).toBe(0);
-    expect(spawned.playerLane).toBe(1);
 
-    // Prevent a second spawn from interfering while the hazard's progress advances.
-    const midway = tickStormNavigationGame(
-      { ...spawned, hazardIntervalMs: 999999 },
-      1000,
-      () => 0,
-    );
-    expect(midway.hazards).toHaveLength(1);
-    expect(midway.hazards[0].progress).toBeCloseTo(0.35, 5);
+    // Reset msSinceLastHazard so this small follow-up tick can't trigger another spawn.
+    const midway = tickStormNavigationGame({ ...spawned, msSinceLastHazard: 0 }, 100, () => 0.99);
+    const hazard = midway.hazards.find((h) => h.id === 1);
+    expect(hazard).toBeDefined();
+    expect(hazard.progress).toBeCloseTo(0.035, 5);
+    expect(midway.running).toBe(true);
     expect(midway.hazardsDodged).toBe(0);
     expect(midway.hazardsHit).toBe(0);
+  });
 
-    const resolved = tickStormNavigationGame(
-      { ...midway, hazardIntervalMs: 999999 },
-      2000,
-      () => 0,
-    );
+  it("counts a dodge and keeps running when a completed hazard's lane differs from the player's lane (normal case)", () => {
+    const state = {
+      ...createStormNavigationGame(),
+      hazards: [{ id: 1, lane: 0, progress: 0.9995 }],
+      msSinceLastHazard: 0,
+    };
+    const resolved = tickStormNavigationGame(state, 5, () => 0.99);
     expect(resolved.hazards).toHaveLength(0);
     expect(resolved.hazardsDodged).toBe(1);
     expect(resolved.hazardsHit).toBe(0);
+    expect(resolved.running).toBe(true);
   });
 
-  it("advances hazard progress and removes it once complete, counting a hit when the lane matches the player (normal case)", () => {
-    const state = createStormNavigationGame({ hazardIntervalMs: 1000 });
-    // Spawn a hazard in lane 1, matching the default middle player lane.
-    const spawned = tickStormNavigationGame(state, 1000, () => 0.5);
-    expect(spawned.hazards).toHaveLength(1);
-    expect(spawned.hazards[0].lane).toBe(1);
-    expect(spawned.playerLane).toBe(1);
-
-    const resolved = tickStormNavigationGame(
-      { ...spawned, hazardIntervalMs: 999999 },
-      3000,
-      () => 0,
-    );
+  it("counts a hit and ends the run when a completed hazard's lane matches the player's lane (normal case)", () => {
+    const state = {
+      ...createStormNavigationGame(),
+      hazards: [{ id: 1, lane: 1, progress: 0.9995 }],
+      msSinceLastHazard: 0,
+    };
+    const resolved = tickStormNavigationGame(state, 5, () => 0.99);
     expect(resolved.hazards).toHaveLength(0);
     expect(resolved.hazardsHit).toBe(1);
     expect(resolved.hazardsDodged).toBe(0);
+    expect(resolved.running).toBe(false);
+  });
+
+  it("only ends the run for the hazard in the player's lane when multiple hazards resolve in the same tick (boundary case)", () => {
+    const state = {
+      ...createStormNavigationGame(),
+      hazards: [
+        { id: 1, lane: 1, progress: 0.9995 },
+        { id: 2, lane: 0, progress: 0.9995 },
+      ],
+      msSinceLastHazard: 0,
+    };
+    const resolved = tickStormNavigationGame(state, 5, () => 0.99);
+    expect(resolved.hazards).toHaveLength(0);
+    expect(resolved.hazardsHit).toBe(1);
+    expect(resolved.hazardsDodged).toBe(1);
+    expect(resolved.running).toBe(false);
   });
 
   it("is a no-op when running is already false (boundary case)", () => {
@@ -101,6 +110,58 @@ describe("tickStormNavigationGame", () => {
     expect(ticked).toBe(state);
     expect(ticked.hazards).toEqual([]);
     expect(ticked.running).toBe(false);
+  });
+
+  it("increments elapsedMs by the elapsed ms each tick, counting up with no limit (normal case)", () => {
+    const state = createStormNavigationGame();
+    const ticked = tickStormNavigationGame(state, 700, () => 0.99);
+    expect(ticked.elapsedMs).toBe(700);
+    const tickedAgain = tickStormNavigationGame(ticked, 400, () => 0.99);
+    expect(tickedAgain.elapsedMs).toBe(1100);
+  });
+});
+
+describe("difficulty ramp (hazardIntervalForDodges, exercised indirectly through tick)", () => {
+  it("uses the base 1200ms interval when hazardsDodged is 0 (normal case)", () => {
+    const state = createStormNavigationGame();
+    const tooSoon = tickStormNavigationGame(state, 1199, () => 0);
+    expect(tooSoon.hazards).toHaveLength(0);
+    expect(tooSoon.hazardIntervalMs).toBe(1200);
+
+    const onTime = tickStormNavigationGame(state, 1200, () => 0);
+    expect(onTime.hazards).toHaveLength(1);
+    expect(onTime.hazardIntervalMs).toBe(1200);
+  });
+
+  it("drops the interval by 60ms for every 5 hazards dodged (normal case)", () => {
+    const state = { ...createStormNavigationGame(), hazardsDodged: 5 };
+    const tooSoon = tickStormNavigationGame(state, 1139, () => 0);
+    expect(tooSoon.hazards).toHaveLength(0);
+    expect(tooSoon.hazardIntervalMs).toBe(1140);
+
+    const onTime = tickStormNavigationGame(state, 1140, () => 0);
+    expect(onTime.hazards).toHaveLength(1);
+    expect(onTime.hazardIntervalMs).toBe(1140);
+  });
+
+  it("floors the interval at 500ms no matter how high hazardsDodged climbs (boundary case)", () => {
+    const state = { ...createStormNavigationGame(), hazardsDodged: 1000 };
+    const tooSoon = tickStormNavigationGame(state, 499, () => 0);
+    expect(tooSoon.hazards).toHaveLength(0);
+    expect(tooSoon.hazardIntervalMs).toBe(500);
+
+    const onTime = tickStormNavigationGame(state, 500, () => 0);
+    expect(onTime.hazards).toHaveLength(1);
+    expect(onTime.hazardIntervalMs).toBe(500);
+  });
+
+  it("ignores the hazardIntervalMs stored at creation for spawn cadence, since tick recomputes it from hazardsDodged (invalid/missing data case)", () => {
+    const state = createStormNavigationGame({ hazardIntervalMs: 100 });
+    expect(state.hazardIntervalMs).toBe(100);
+    const ticked = tickStormNavigationGame(state, 100, () => 0);
+    // Recomputed from hazardsDodged (0) => 1200ms, not the stale 100ms override, so no spawn yet.
+    expect(ticked.hazards).toHaveLength(0);
+    expect(ticked.hazardIntervalMs).toBe(1200);
   });
 });
 
@@ -153,16 +214,60 @@ describe("renderStormNavigationGame", () => {
     expect(hazardLaneChunk).toContain('data-storm-hazard="1"');
   });
 
-  it("shows the countdown while running, Landfall! when stopped, and the dodge/hit tally (boundary case)", () => {
-    const running = { ...createStormNavigationGame(), remainingMs: 9000, hazardsDodged: 3, hazardsHit: 2 };
-    const runningHtml = renderStormNavigationGame(running);
-    expect(runningHtml).toContain("Time remaining: 9s");
-    expect(runningHtml).not.toContain("Landfall!");
-    expect(runningHtml).toContain("Dodged: 3");
-    expect(runningHtml).toContain("Hit: 2");
+  it("shows the elapsed time survived, the dodge tally, and Port/Starboard controls while running (normal case)", () => {
+    const state = { ...createStormNavigationGame(), elapsedMs: 45500, hazardsDodged: 3 };
+    const html = renderStormNavigationGame(state, 1);
+    expect(html).toContain("Time survived: 45s");
+    expect(html).not.toContain("Shipwrecked!");
+    expect(html).toContain("Dodged: 3 · Best: 3");
+    expect(html).not.toContain("Final score");
+    expect(html).toContain('data-storm-move="-1"');
+    expect(html).toContain('data-storm-move="1"');
+    expect(html).not.toContain("data-storm-restart");
+  });
 
-    const stopped = { ...running, running: false };
-    const stoppedHtml = renderStormNavigationGame(stopped);
-    expect(stoppedHtml).toContain("Landfall!");
+  it("shows Shipwrecked!, the final score, and a restart button once stopped (boundary case)", () => {
+    const state = {
+      ...createStormNavigationGame(),
+      running: false,
+      elapsedMs: 12000,
+      hazardsDodged: 4,
+      hazardsHit: 1,
+    };
+    const html = renderStormNavigationGame(state, 10);
+    expect(html).toContain("Shipwrecked!");
+    expect(html).not.toContain("Time survived");
+    expect(html).toContain("Dodged: 4 · Best: 10");
+    expect(html).toContain("Final score: 4");
+    expect(html).not.toContain("New best!");
+    expect(html).toContain("data-storm-restart");
+    expect(html).not.toContain('data-storm-move="-1"');
+    expect(html).not.toContain('data-storm-move="1"');
+  });
+
+  it("appends the New best! suffix and uses hazardsDodged as the displayed best once the run beats the prior best (boundary case)", () => {
+    const state = {
+      ...createStormNavigationGame(),
+      running: false,
+      hazardsDodged: 9,
+    };
+    const html = renderStormNavigationGame(state, 5);
+    expect(html).toContain("Dodged: 9 · Best: 9");
+    expect(html).toContain("Final score: 9 — New best!");
+  });
+
+  it("does not append New best! when the run ties or falls short of the prior best (boundary case)", () => {
+    const state = { ...createStormNavigationGame(), running: false, hazardsDodged: 5 };
+    const html = renderStormNavigationGame(state, 5);
+    expect(html).toContain("Dodged: 5 · Best: 5");
+    expect(html).toContain("Final score: 5");
+    expect(html).not.toContain("New best!");
+  });
+
+  it("defaults bestScore to 0 when omitted (boundary case)", () => {
+    const state = { ...createStormNavigationGame(), running: false, hazardsDodged: 2 };
+    const html = renderStormNavigationGame(state);
+    expect(html).toContain("Dodged: 2 · Best: 2");
+    expect(html).toContain("Final score: 2 — New best!");
   });
 });

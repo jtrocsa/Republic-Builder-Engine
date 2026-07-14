@@ -80,7 +80,7 @@ export const UNIT_02_EVIDENCE_ORGANIZING_QUESTS = [
       {
         id: "riverbend-ledger",
         label: "Wharf Account: Tobacco Shipped, Goods Received",
-        attribution: "Ship's factor, James River wharf, 1630",
+        attribution: "Ship's factor, James River wharf, 1630 (representative entry)",
         excerpt:
           "Received of the ship Speedwell: fourteen hogsheads of tobacco. Delivered in return: cloth, iron hoes, knives, and sundry English wares.",
         skillCategory: "Continuity and Change",

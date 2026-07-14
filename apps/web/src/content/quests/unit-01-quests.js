@@ -109,9 +109,9 @@ export const UNIT_01_SEQUENCING_QUESTS = [
       "Arrange these Case 1.01 developments in the order that reflects how each one caused or enabled the next — not simply the order the dates occurred in.",
     items: [
       {
-        id: "smallpox-epidemic-1520",
+        id: "smallpox-epidemic-1518",
         label:
-          "Sustained Atlantic contact and colonization trigger the 1520 smallpox epidemic, devastating Indigenous populations with no prior immunity",
+          "Sustained Atlantic contact and colonization trigger the Hispaniola smallpox epidemic beginning in December 1518, devastating Taíno populations with no prior immunity",
         position: 3,
       },
       {
@@ -140,7 +140,7 @@ export const UNIT_01_SEQUENCING_QUESTS = [
       },
     ],
     explanation:
-      "Each step enables the next: organized pre-contact Taíno society is what Columbus's expedition actually encountered; his letter's success in reassuring the crown's treasurer helped secure the continued backing that funded further voyages; those repeated voyages are what changed European geographic knowledge, shown in the Waldseemüller map; that same sustained contact and colonization is what exposed Indigenous populations to Old World pathogens, causing the 1520 smallpox epidemic among people with no prior immunity; and the ongoing exchange of the same period introduced horses, which went on to reshape conquest, transport, and Indigenous ways of life well beyond the moment of first contact.",
+      "Each step enables the next: organized pre-contact Taíno society is what Columbus's expedition actually encountered; his letter's success in reassuring the crown's treasurer helped secure the continued backing that funded further voyages; those repeated voyages are what changed European geographic knowledge, shown in the Waldseemüller map; that same sustained contact and colonization is what exposed Taíno populations to Old World pathogens, causing the Hispaniola smallpox epidemic that began in December 1518 and killed roughly a third of the island's remaining Taíno population by May 1519; and the ongoing exchange of the same period introduced horses, which went on to reshape conquest, transport, and Indigenous ways of life well beyond the moment of first contact.",
   },
 ];
 

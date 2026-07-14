@@ -5,22 +5,39 @@
 //
 // Not rubric-scored, not tied to the historical-thinking-skill schema, and
 // intentionally kept out of apps/web/src/quest-types/ for exactly that
-// reason. No currency, wallet, leaderboard, or persistent economy —
-// `hazardsDodged`/`hazardsHit` are ephemeral runtime tallies only, not saved
-// between sessions. No multiplayer/opponent mechanic of any kind.
+// reason. No currency, wallet, or persistent economy — the only persisted
+// value is a single best-score integer (hazards dodged in a run), saved via
+// the normal `progress` save path by the caller in main.js. This module
+// itself stays pure and has no localStorage/IO of its own: a best score is
+// passed into renderStormNavigationGame() as an argument, not read here.
+// No multiplayer/opponent mechanic of any kind.
+//
+// Endless mode: there is no run timer. A run ends the moment a hazard hits
+// the player's lane (`running` flips to false); hazardsDodged at that point
+// is the run's score. Difficulty ramps up gradually as hazardsDodged grows
+// (hazards spawn more frequently, floor-clamped) so an endless run actually
+// gets harder over time rather than staying flat.
 
 const LANE_COUNT = 3;
 const HAZARD_PROGRESS_PER_MS = 0.00035; // tuned so a hazard crosses lane in ~3s
+const BASE_HAZARD_INTERVAL_MS = 1200;
+const MIN_HAZARD_INTERVAL_MS = 500;
+const DODGES_PER_RAMP_STEP = 5;
+const HAZARD_INTERVAL_STEP_MS = 60;
+
+function hazardIntervalForDodges(hazardsDodged) {
+  const steps = Math.floor(hazardsDodged / DODGES_PER_RAMP_STEP);
+  return Math.max(MIN_HAZARD_INTERVAL_MS, BASE_HAZARD_INTERVAL_MS - steps * HAZARD_INTERVAL_STEP_MS);
+}
 
 /**
- * @param {{ durationMs?: number, hazardIntervalMs?: number }} [options]
+ * @param {{ hazardIntervalMs?: number }} [options]
  */
-export function createStormNavigationGame({ durationMs = 30000, hazardIntervalMs = 1200 } = {}) {
+export function createStormNavigationGame({ hazardIntervalMs = BASE_HAZARD_INTERVAL_MS } = {}) {
   return {
-    durationMs,
-    remainingMs: durationMs,
     hazardIntervalMs,
     msSinceLastHazard: 0,
+    elapsedMs: 0,
     playerLane: Math.floor(LANE_COUNT / 2),
     hazards: [],
     hazardsDodged: 0,
@@ -33,7 +50,8 @@ export function createStormNavigationGame({ durationMs = 30000, hazardIntervalMs
 /**
  * Pure timer/hazard advance — call each animation frame/tick with the
  * elapsed ms and a random-source function (injectable for deterministic
- * tests; defaults to Math.random).
+ * tests; defaults to Math.random). Endless: keeps running until a hazard
+ * hits the player's lane.
  * @param {ReturnType<typeof createStormNavigationGame>} state
  * @param {number} deltaMs
  * @param {() => number} [random]
@@ -41,16 +59,17 @@ export function createStormNavigationGame({ durationMs = 30000, hazardIntervalMs
 export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
   if (!state.running) return state;
 
-  const remainingMs = Math.max(0, state.remainingMs - deltaMs);
+  const elapsedMs = state.elapsedMs + deltaMs;
   let msSinceLastHazard = state.msSinceLastHazard + deltaMs;
   let nextHazardId = state.nextHazardId;
+  const hazardIntervalMs = hazardIntervalForDodges(state.hazardsDodged);
 
   const advancedHazards = state.hazards.map((hazard) => ({
     ...hazard,
     progress: hazard.progress + deltaMs * HAZARD_PROGRESS_PER_MS,
   }));
 
-  if (msSinceLastHazard >= state.hazardIntervalMs) {
+  if (msSinceLastHazard >= hazardIntervalMs) {
     msSinceLastHazard = 0;
     advancedHazards.push({
       id: nextHazardId++,
@@ -61,11 +80,16 @@ export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
 
   let hazardsDodged = state.hazardsDodged;
   let hazardsHit = state.hazardsHit;
+  let running = true;
   const survivors = [];
   advancedHazards.forEach((hazard) => {
     if (hazard.progress >= 1) {
-      if (hazard.lane === state.playerLane) hazardsHit += 1;
-      else hazardsDodged += 1;
+      if (hazard.lane === state.playerLane) {
+        hazardsHit += 1;
+        running = false;
+      } else {
+        hazardsDodged += 1;
+      }
     } else {
       survivors.push(hazard);
     }
@@ -73,13 +97,14 @@ export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
 
   return {
     ...state,
-    remainingMs,
+    hazardIntervalMs,
+    elapsedMs,
     msSinceLastHazard,
     hazards: survivors,
     nextHazardId,
     hazardsDodged,
     hazardsHit,
-    running: remainingMs > 0,
+    running,
   };
 }
 
@@ -95,9 +120,10 @@ export function moveShip(state, direction) {
 
 /**
  * @param {ReturnType<typeof createStormNavigationGame>} state
+ * @param {number} [bestScore] Best hazardsDodged from a prior run, for display only.
  */
-export function renderStormNavigationGame(state) {
-  const secondsLeft = Math.ceil(state.remainingMs / 1000);
+export function renderStormNavigationGame(state, bestScore = 0) {
+  const elapsedSeconds = Math.floor(state.elapsedMs / 1000);
   const lanes = Array.from({ length: LANE_COUNT }, (_, laneIndex) => {
     const hazardsInLane = state.hazards.filter((hazard) => hazard.lane === laneIndex);
     const isPlayerLane = laneIndex === state.playerLane;
@@ -112,13 +138,21 @@ export function renderStormNavigationGame(state) {
     </div>`;
   }).join("");
 
+  const isNewBest = !state.running && state.hazardsDodged > bestScore;
+  const displayedBest = Math.max(bestScore, state.hazardsDodged);
+
   return `<section class="mini-game mini-game-storm-navigation" data-mini-game="storm-navigation">
-  <p class="mini-game-timer">${state.running ? `Time remaining: ${secondsLeft}s` : "Landfall!"}</p>
+  <p class="mini-game-timer">${state.running ? `Time survived: ${elapsedSeconds}s` : "Shipwrecked!"}</p>
   <div class="storm-lanes">${lanes}</div>
-  <p class="storm-tally">Dodged: ${state.hazardsDodged} · Hit: ${state.hazardsHit}</p>
+  <p class="storm-tally">Dodged: ${state.hazardsDodged} · Best: ${displayedBest}</p>
+  ${state.running ? "" : `<p class="storm-final-score">Final score: ${state.hazardsDodged}${isNewBest ? " — New best!" : ""}</p>`}
   <div class="storm-controls">
-    <button type="button" data-storm-move="-1">◀ Port</button>
-    <button type="button" data-storm-move="1">Starboard ▶</button>
+    ${
+      state.running
+        ? `<button type="button" data-storm-move="-1">◀ Port</button>
+    <button type="button" data-storm-move="1">Starboard ▶</button>`
+        : `<button type="button" data-storm-restart>Set Sail Again ⛵</button>`
+    }
   </div>
 </section>`;
 }

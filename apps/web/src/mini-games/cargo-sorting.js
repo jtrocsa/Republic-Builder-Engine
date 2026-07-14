@@ -14,7 +14,7 @@
 // Content framing note (flagged explicitly for the project owner — see
 // docs/architecture/session-reports/2026-07-11-overnight-quest-types-and-minigames.md):
 // the default goods below are Columbian-Exchange-era Caribbean trade goods
-// and specimens (maize, cassava, cotton, gold ore, tobacco, cacao) —
+// and specimens (maize, cassava, pineapple, cotton, gold ore, tobacco) —
 // deliberately NOT the triangular-trade goods used by Unit 2's
 // TRIANGLE_CARGO (apps/web/src/content/unit-02-campaign.js), since Case
 // 1.01/Caribbean predates that later plantation-era system and this
@@ -39,7 +39,7 @@ export const DEFAULT_CARGO_HOLDS = [
 export const DEFAULT_CARGO_GOODS = [
   { id: "maize", label: "🌽 Maize", holdId: "foodstuffs" },
   { id: "cassava", label: "🍠 Cassava", holdId: "foodstuffs" },
-  { id: "cacao", label: "🍫 Cacao pods", holdId: "foodstuffs" },
+  { id: "pineapple", label: "🍍 Pineapple", holdId: "foodstuffs" },
   { id: "cotton", label: "🧺 Raw cotton", holdId: "materials-specimens" },
   { id: "gold-ore", label: "⛏ Gold ore samples", holdId: "materials-specimens" },
   { id: "tobacco-leaf", label: "🌿 Tobacco leaf", holdId: "materials-specimens" },

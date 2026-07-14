@@ -56,6 +56,19 @@ import {
 } from "./engine/audio-engine.js";
 import riverbendTmjRaw from "./content/maps/riverbend-field.tmj?raw";
 import caribbeanTmjRaw from "./content/maps/caribbean-field.tmj?raw";
+import {
+  createStormNavigationGame,
+  tickStormNavigationGame,
+  moveShip as moveStormShip,
+  renderStormNavigationGame,
+} from "./mini-games/storm-navigation.js";
+import {
+  createCargoSortingGame,
+  tickCargoSortingGame,
+  placeCargo,
+  isCargoSortingComplete,
+  renderCargoSortingGame,
+} from "./mini-games/cargo-sorting.js";
 
 const app = document.querySelector("#app");
 const chroniclerPreviewA = new URL("./assets/chronicle-sprites/chronicler-a.png", import.meta.url)
@@ -947,6 +960,7 @@ const VALID_SCREENS = new Set([
   "columbus-activity",
   "map-jigsaw",
   "practice-check",
+  "mini-games",
   "source",
   "codex",
   "reconstruction",
@@ -980,6 +994,15 @@ let authorPanelOpen = false;
 let showMainMenu = true;
 let briefingStep = 0;
 let activeTravelTimeout = null;
+// Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward layer, not
+// save-relevant progress — their in-run state lives here, outside `progress`,
+// the same way field/hub movement state does. Only Storm Navigation's best
+// score is persisted (see progress.miniGameScores).
+let activeMiniGame = null; // null | "storm-navigation" | "cargo-sorting"
+let stormNavigationState = null;
+let cargoSortingState = null;
+let miniGameMoveFrame = null;
+let miniGameLastTickAt = 0;
 
 function sceneForMusic() {
   if (progress.currentScreen === "field")
@@ -987,7 +1010,8 @@ function sceneForMusic() {
   if (
     progress.currentScreen === "institute" ||
     progress.currentScreen === "archive" ||
-    progress.currentScreen === "map-jigsaw"
+    progress.currentScreen === "map-jigsaw" ||
+    progress.currentScreen === "mini-games"
   )
     return "archive";
   if (progress.currentScreen === "upload") return "upload";
@@ -1384,7 +1408,90 @@ function archiveScreen() {
     selected.route === "field"
       ? `${countEvidence(selected.id)}/${sourcesForCase(selected.id).length || 3} evidence records secured`
       : selected.question;
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the Atlantic world. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map"><img src="${UNIT_MAP_ART[selectedUnit.id] || atlanticTable}" alt="Map of the Atlantic world showing eastern North America, Caribbean, Europe, Africa, and the Atlantic Ocean"><div class="atlas-label label-atlantic">ATLANTIC OCEAN</div>${selectedUnit.cases.map(caseMarker).join("")}<div class="route-thread ${progress.selectedCaseId === "case-002" ? "route-thread--atlantic" : ""}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p>${selectedUnit.cases.every((c) => isComplete(c.id)) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the Atlantic world. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map"><img src="${UNIT_MAP_ART[selectedUnit.id] || atlanticTable}" alt="Map of the Atlantic world showing eastern North America, Caribbean, Europe, Africa, and the Atlantic Ocean"><div class="atlas-label label-atlantic">ATLANTIC OCEAN</div>${selectedUnit.cases.map(caseMarker).join("")}<div class="route-thread ${progress.selectedCaseId === "case-002" ? "route-thread--atlantic" : ""}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${selectedUnit.cases.every((c) => isComplete(c.id)) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+}
+
+// Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
+// Institute Archive's Navigation Table, not tied to any case's unlock status or rubric
+// grading — see apps/web/src/mini-games/*.js for the pure logic modules this screen wires in.
+function renderMiniGameStage() {
+  if (activeMiniGame === "storm-navigation" && stormNavigationState) {
+    return renderStormNavigationGame(stormNavigationState, progress.miniGameScores.stormNavigationBest);
+  }
+  if (activeMiniGame === "cargo-sorting" && cargoSortingState) {
+    const complete =
+      cargoSortingState.running && isCargoSortingComplete(cargoSortingState)
+        ? `<p class="mini-game-complete">All cargo sorted! Keep going or stop the clock whenever you like.</p>`
+        : "";
+    const restart = cargoSortingState.running
+      ? ""
+      : `<button type="button" class="btn btn-outline mini-game-restart-btn" data-cargo-restart>Sort Again ↻</button>`;
+    return `${renderCargoSortingGame(cargoSortingState)}${complete}${restart}`;
+  }
+  return "";
+}
+function updateMiniGameUi() {
+  const container = document.getElementById("miniGameContainer");
+  if (container) container.innerHTML = renderMiniGameStage();
+}
+function startMiniGameLoop() {
+  if (miniGameMoveFrame) return;
+  miniGameLastTickAt = performance.now();
+  miniGameMoveFrame = window.requestAnimationFrame(runMiniGameLoop);
+}
+function stopMiniGameLoop() {
+  if (miniGameMoveFrame) window.cancelAnimationFrame(miniGameMoveFrame);
+  miniGameMoveFrame = null;
+  miniGameLastTickAt = 0;
+}
+function runMiniGameLoop(now) {
+  if (progress.currentScreen !== "mini-games" || !activeMiniGame) {
+    stopMiniGameLoop();
+    return;
+  }
+  const elapsed = Math.min(48, Math.max(0, now - miniGameLastTickAt || 16));
+  miniGameLastTickAt = now;
+  let redraw = false;
+  if (activeMiniGame === "storm-navigation" && stormNavigationState?.running) {
+    stormNavigationState = tickStormNavigationGame(stormNavigationState, elapsed);
+    if (!stormNavigationState.running) {
+      if (stormNavigationState.hazardsDodged > progress.miniGameScores.stormNavigationBest) {
+        progress.miniGameScores.stormNavigationBest = stormNavigationState.hazardsDodged;
+        save();
+      }
+    }
+    redraw = true;
+  }
+  if (activeMiniGame === "cargo-sorting" && cargoSortingState?.running) {
+    // Cargo Sorting's own UI only shows a whole-second countdown, but its cards/holds are
+    // drag targets — redrawing every animation frame (like Storm Navigation's moving hazards
+    // need) would destroy and recreate those DOM nodes ~30-60x/sec, aborting any drag gesture
+    // that takes longer than one frame. Only redraw when the displayed second actually changes
+    // (or the run ends), which is both correct for a text countdown and leaves a stable window
+    // for a real drag to complete.
+    const prevSeconds = Math.ceil(cargoSortingState.remainingMs / 1000);
+    cargoSortingState = tickCargoSortingGame(cargoSortingState, elapsed);
+    const nextSeconds = Math.ceil(cargoSortingState.remainingMs / 1000);
+    if (nextSeconds !== prevSeconds || !cargoSortingState.running) redraw = true;
+  }
+  if (redraw) updateMiniGameUi();
+  miniGameMoveFrame = window.requestAnimationFrame(runMiniGameLoop);
+}
+function miniGamesScreen() {
+  const best = progress.miniGameScores.stormNavigationBest;
+  let body;
+  if (activeMiniGame) {
+    if (activeMiniGame === "storm-navigation" && !stormNavigationState) {
+      stormNavigationState = createStormNavigationGame();
+    }
+    if (activeMiniGame === "cargo-sorting" && !cargoSortingState) {
+      cargoSortingState = createCargoSortingGame();
+    }
+    body = `<div class="mini-game-stage" id="miniGameContainer">${renderMiniGameStage()}</div><button class="text-button" data-action="mini-game-back">← Choose a different mini-game</button>`;
+  } else {
+    body = `<div class="mini-game-select"><article class="mini-game-card" data-action="mini-game-open" data-mini-game="storm-navigation"><h3>⛵ Storm Navigation</h3><p>Steer between three lanes and dodge storm hazards for as long as you can. Endless — see how high a score you can post.</p><span class="mini-game-best">Best: ${best} dodged</span></article><article class="mini-game-card" data-action="mini-game-open" data-mini-game="cargo-sorting"><h3>📦 Cargo Sorting</h3><p>Sort Caribbean trade goods into the correct ship hold before the 45-second timer runs out.</p></article></div>`;
+  }
+  return `${chrome()}<main class="shell mini-games-shell"><section class="mini-games-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">Institute Archive · Pacing break</p><h1>Mini-Games</h1><p>A short arcade break between cases — not scored, not required for any badge.</p></section>${body}</main>${authorPanel()}`;
 }
 
 function travelScreen() {
@@ -2044,6 +2151,9 @@ function render() {
       case "archive":
         html = archiveScreen();
         break;
+      case "mini-games":
+        html = miniGamesScreen();
+        break;
       case "travel":
         html = travelScreen();
         activeTravelTimeout = setTimeout(() => {
@@ -2145,6 +2255,11 @@ function render() {
       updateInstitutePlayer();
       updateInstituteNpcs();
     });
+  if (progress.currentScreen === "mini-games") {
+    window.requestAnimationFrame(startMiniGameLoop);
+  } else {
+    stopMiniGameLoop();
+  }
   updateMusicForScreen(sceneForMusic());
 }
 
@@ -2412,6 +2527,25 @@ function handleHubClick(target, action) {
   if (action === "archive") {
     progress.currentScreen = "archive";
     save();
+    render();
+    return true;
+  }
+  if (action === "mini-games") {
+    activeMiniGame = null;
+    progress.currentScreen = "mini-games";
+    save();
+    render();
+    return true;
+  }
+  if (action === "mini-game-open") {
+    activeMiniGame = target.dataset.miniGame;
+    render();
+    return true;
+  }
+  if (action === "mini-game-back") {
+    activeMiniGame = null;
+    stormNavigationState = null;
+    cargoSortingState = null;
     render();
     return true;
   }
@@ -2880,6 +3014,30 @@ const CLICK_HANDLER_GROUPS = [
 ];
 
 function handleAppClick(event) {
+  // Mini-game controls (Storm Navigation's lane buttons/restart, Cargo Sorting's wrapper
+  // restart) use their own module-authored data attributes rather than data-action, mirroring
+  // how drag-and-drop already has its own delegated listeners apart from the action dispatch
+  // below. Updated via the lighter updateMiniGameUi() targeted redraw, not a full render(),
+  // since these fire far more often than a normal navigation click.
+  const stormMove = event.target.closest("[data-storm-move]");
+  if (stormMove && activeMiniGame === "storm-navigation" && stormNavigationState) {
+    event.preventDefault();
+    stormNavigationState = moveStormShip(stormNavigationState, Number(stormMove.dataset.stormMove));
+    updateMiniGameUi();
+    return;
+  }
+  const restartControl = event.target.closest("[data-storm-restart], [data-cargo-restart]");
+  if (restartControl) {
+    event.preventDefault();
+    if (restartControl.hasAttribute("data-storm-restart")) {
+      stormNavigationState = createStormNavigationGame();
+    }
+    if (restartControl.hasAttribute("data-cargo-restart")) {
+      cargoSortingState = createCargoSortingGame();
+    }
+    updateMiniGameUi();
+    return;
+  }
   const target = event.target.closest("[data-action]");
   if (!target) {
     if (progress.currentScreen === "field" && progress.activeFieldNpc) {
@@ -2973,6 +3131,15 @@ function handleAppDragstart(event) {
     event.dataTransfer.effectAllowed = "move";
     return;
   }
+  // Cargo Sorting mini-game — distinct data attribute and dataTransfer type from the
+  // data-cargo-card/"text/cargo-card" pair above (Case 1.05's unrelated triangle-trade
+  // leg-drop feature), even though both happen to use the word "cargo".
+  const cargoGood = event.target.closest("[data-cargo-good]");
+  if (cargoGood) {
+    event.dataTransfer.setData("text/mini-cargo-good", cargoGood.dataset.cargoGood);
+    event.dataTransfer.effectAllowed = "move";
+    return;
+  }
   const regionCard = event.target.closest("[data-region-card]");
   if (regionCard) {
     event.dataTransfer.setData("text/region-card", regionCard.dataset.regionCard);
@@ -3005,7 +3172,9 @@ function handleAppDragover(event) {
   const regionDrop = event.target.closest("[data-region-drop]");
   const sequenceItem = event.target.closest("[data-sequence-item]");
   const evidenceSlot = event.target.closest("[data-evidence-slot]");
-  const dropTarget = mapSlot || zone || legDrop || regionDrop || sequenceItem || evidenceSlot;
+  const cargoHold = event.target.closest("[data-cargo-hold]");
+  const dropTarget =
+    mapSlot || zone || legDrop || regionDrop || sequenceItem || evidenceSlot || cargoHold;
   if (dropTarget) {
     event.preventDefault();
     dropTarget.classList.add("is-over");
@@ -3019,9 +3188,20 @@ function handleAppDragleave(event) {
   event.target.closest("[data-region-drop]")?.classList.remove("is-over");
   event.target.closest("[data-sequence-item]")?.classList.remove("is-over");
   event.target.closest("[data-evidence-slot]")?.classList.remove("is-over");
+  event.target.closest("[data-cargo-hold]")?.classList.remove("is-over");
 }
 
 function handleAppDrop(event) {
+  const cargoHold = event.target.closest("[data-cargo-hold]");
+  if (cargoHold) {
+    event.preventDefault();
+    cargoHold.classList.remove("is-over");
+    const goodId = event.dataTransfer.getData("text/mini-cargo-good");
+    if (!goodId || !cargoSortingState) return;
+    cargoSortingState = placeCargo(cargoSortingState, goodId, cargoHold.dataset.cargoHold);
+    updateMiniGameUi();
+    return;
+  }
   const sequenceItem = event.target.closest("[data-sequence-item]");
   if (sequenceItem) {
     event.preventDefault();
