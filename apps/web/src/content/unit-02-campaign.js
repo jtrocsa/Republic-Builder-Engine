@@ -22,13 +22,13 @@ export const UNIT_02 = {
       title: "The Riverbend Settlement",
       date: "1619",
       mapPosition: { left: "26%", top: "34%" },
-      location: "Chesapeake tidewater (placeholder)",
+      location: "Chesapeake tidewater, Virginia · 1619–1630",
       question:
-        "Placeholder: what do the settlement's own records reveal about who did its work and who held its power?",
+        "What do a land charter, a servant's letter, and a wharf ledger reveal about who did this settlement's work and who held its power?",
       mechanic: "Field Investigation",
       route: "field",
       summary:
-        "Placeholder: walk a young tobacco settlement on the river, speak with its people, and secure three records before they are lost.",
+        "Walk a young tobacco settlement on the James River, speak with its people, and secure three records — a company land charter, a servant's letter, and a wharf account — before they are lost.",
     },
     {
       id: "case-005",
@@ -64,59 +64,62 @@ export const UNIT_02 = {
 export const CASE_004_SOURCES = [
   {
     id: "riverbend-charter",
-    type: "Primary source · charter",
-    title: "Placeholder Charter of the Riverbend Company",
-    creator: "Placeholder colonial company",
+    type: "Primary source · charter instructions",
+    title: "Instructions to Governor George Yeardley",
+    creator: "Virginia Company of London",
     date: "1618",
-    record: "Company charter · placeholder",
+    record: "Company instructions establishing the headright system, Virginia",
     visual: "context",
     activityRoute: null,
     excerpt:
-      "Placeholder excerpt: the company grants fifty acres to every person who pays their own passage across the sea...",
+      "The Virginia Company instructed its governor to grant fifty acres of land to every person transported into the colony at his own charge, and fifty acres more for every servant he brought and settled there — a policy meant to draw settlers by tying land ownership to the number of people, free or bound, a planter could bring across the Atlantic.",
     prompt:
-      "Placeholder prompt: what was this charter trying to accomplish, and for whom was it written?",
+      "What did the Virginia Company hope to accomplish by tying land grants to the number of people a planter transported — including servants?",
     feedback:
-      "Placeholder Institute Context: headright-style land grants recruited settlers and tied land ownership to paying for passage — including the passage of others.",
-    citation: "Placeholder citation, colonial records collection.",
-    externalUrl: "https://www.loc.gov/",
+      "Institute Context: the 1618 instructions to Governor Yeardley created the headright system — fifty acres for every settler transported, and fifty more for every servant brought with him. By rewarding planters for importing labor, the policy directly encouraged the recruitment of indentured servants like the one whose letter follows.",
+    citation:
+      "Virginia Company of London, “Instructions to Governor George Yeardley,” 1618, in Susan Myra Kingsbury, ed., The Records of the Virginia Company of London, vol. III (Washington, D.C.: Government Printing Office, 1906–1935).",
+    externalUrl: "https://www.loc.gov/item/06019229/",
     reconstruction: "founding",
   },
   {
     id: "riverbend-letter",
     type: "Primary source · letter",
-    title: "Placeholder Letter of an Indentured Servant",
-    creator: "Placeholder indentured servant",
+    title: "Letter to His Parents from Jamestown",
+    creator: "Richard Frethorne",
     date: "1623",
-    record: "Personal letter · placeholder",
+    record: "Personal letter from an indentured servant in Virginia",
     visual: "letter",
     activityRoute: null,
     excerpt:
-      "Placeholder excerpt: I have nothing to comfort me, nor is there nothing to be gotten here but sickness and death...",
+      "“I have nothing to comfort me, nor is there nothing to be gotten here but sickness and death, except that one had money to lay out in some things for profit … People cry out day and night — Oh, that they were in England without their limbs — and would not care to lose any limb to be in England again, yea, though they beg from door to door.”",
     prompt:
-      "Placeholder prompt: what does this letter reveal about the conditions of bound labor, and how might its audience have shaped what it says?",
+      "What does Frethorne's letter reveal about the conditions of bound labor in Virginia, and how might writing to his parents have shaped what he chose to say?",
     feedback:
-      "Placeholder Institute Context: letters home from indentured servants describe the gap between recruitment promises and tobacco-field reality.",
-    citation: "Placeholder citation, colonial correspondence collection.",
-    externalUrl: "https://www.loc.gov/",
+      "Institute Context: Richard Frethorne wrote home in 1623 as an indentured servant, describing hunger, sickness, and fear so severe that colonists wished they could trade any limb to return to England. Writing to parents who might intervene on his behalf, he had reason to describe his suffering plainly rather than minimize it — the opposite pull from a report meant for a patron or investor.",
+    citation:
+      "Richard Frethorne to his father and mother, March 20, 1623, reprinted in Susan Myra Kingsbury, ed., The Records of the Virginia Company of London, vol. IV (Washington, D.C.: Government Printing Office, 1906–1935).",
+    externalUrl: "https://www.loc.gov/item/06019229/",
     reconstruction: "labor",
   },
   {
     id: "riverbend-ledger",
     type: "Primary source · account book",
-    title: "Placeholder Wharf Account Book",
-    creator: "Placeholder factor at the river landing",
+    title: "Wharf Account: Tobacco Shipped, Goods Received",
+    creator: "Ship's factor, James River wharf",
     date: "1630",
-    record: "Trade ledger · placeholder",
+    record: "Representative cargo account, Chesapeake tobacco trade",
     visual: "context",
     activityRoute: null,
     excerpt:
-      "Placeholder excerpt: received of the Charles, 14 hogsheads tobacco; delivered, cloth, tools, and sundry English goods...",
+      "Received of the ship Speedwell: fourteen hogsheads of tobacco, casked and weighed as within noted. Delivered in return: three pieces of Kentish cloth, two dozen iron hoes, six dozen knives, and sundry other English wares, per the planters' order at the landing.",
     prompt:
-      "Placeholder prompt: what does this account book prove about the settlement's place in a wider economy?",
+      "What does this account entry prove about the settlement's place in a wider Atlantic economy?",
     feedback:
-      "Placeholder Institute Context: wharf ledgers document the export economy that tied colonial settlements to English merchants and markets.",
-    citation: "Placeholder citation, mercantile records collection.",
-    externalUrl: "https://www.loc.gov/",
+      "Institute Context: entries like this one recur throughout early Chesapeake wharf and factor account books — tobacco hogsheads shipped out, English cloth and tools shipped back in return. The pattern shows a settlement whose economy already depended on exporting a single staple crop to pay for manufactured goods it could not make for itself.",
+    citation:
+      "Representative wharf account entry, modeled on the invoice and cargo-account pattern documented throughout Susan Myra Kingsbury, ed., The Records of the Virginia Company of London (Washington, D.C.: Government Printing Office, 1906–1935); no single verbatim entry is quoted here.",
+    externalUrl: "https://www.loc.gov/item/06019229/",
     reconstruction: "exchange",
   },
 ];

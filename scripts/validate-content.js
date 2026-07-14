@@ -133,6 +133,34 @@ function main() {
   results.push(
     runSchema("unit-02-campaign.js: UNIT_02_REVIEW", ReviewSchema, content.unit02.review)
   );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_MCQ_QUESTS",
+      McqQuestListSchema,
+      content.unit02.mcqQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_EVIDENCE_ORGANIZING_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit02.evidenceOrganizingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit02.sequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_SOURCE_ANALYSIS_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit02.sourceAnalysisQuests
+    )
+  );
 
   // Cross-file checks: main.js's caseById()/unitForCase()/sourceById() all
   // search across every unit, so case ids and source ids must be unique

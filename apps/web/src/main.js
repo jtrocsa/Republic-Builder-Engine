@@ -39,6 +39,12 @@ import {
   UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_01_SOURCE_ANALYSIS_QUESTS,
 } from "./content/quests/unit-01-quests.js";
+import {
+  UNIT_02_MCQ_QUESTS,
+  UNIT_02_SEQUENCING_QUESTS,
+  UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_02_SOURCE_ANALYSIS_QUESTS,
+} from "./content/quests/unit-02-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import {
@@ -604,7 +610,7 @@ const UNIT2_FIELD_NPCS = [
     name: "Settlement minister",
     label: "Minister",
     sprite: "spanish-scribe",
-    text: "Placeholder dialogue: the meetinghouse holds this settlement's promises — read the charter before you judge who benefits from them.",
+    text: "The meetinghouse holds this settlement's promises — read the charter before you judge who benefits from them.",
   },
   {
     id: "indentured-servant",
@@ -614,7 +620,7 @@ const UNIT2_FIELD_NPCS = [
     name: "Indentured field servant",
     label: "Field servant",
     sprite: "taino-gardener",
-    text: "Placeholder dialogue: seven years I owe for my passage. The rows do not care whose name is on the contract.",
+    text: "Seven years I owe for my passage. The rows do not care whose name is on the contract.",
   },
   {
     id: "settlement-burgess",
@@ -624,7 +630,7 @@ const UNIT2_FIELD_NPCS = [
     name: "Elected burgess",
     label: "Burgess",
     sprite: "columbus",
-    text: "Placeholder dialogue: we meet, we vote, we send our grievances — self-government grows here because the ocean is wide.",
+    text: "We meet, we vote, we send our grievances — self-government grows here because the ocean is wide.",
   },
   {
     id: "settlement-goodwife",
@@ -634,7 +640,7 @@ const UNIT2_FIELD_NPCS = [
     name: "Goodwife of the settlement",
     label: "Goodwife",
     sprite: "taino-elder",
-    text: "Placeholder dialogue: count who does the washing, the brewing, the tending — the record books forget us, but the settlement would starve without us.",
+    text: "Count who does the washing, the brewing, the tending — the record books forget us, but the settlement would starve without us.",
   },
   {
     id: "river-fisher",
@@ -644,7 +650,7 @@ const UNIT2_FIELD_NPCS = [
     name: "River fisher",
     label: "Fisher",
     sprite: "taino-fisher",
-    text: "Placeholder dialogue: the river feeds us and carries the hogsheads away. Everything here moves by water.",
+    text: "The river feeds us and carries the hogsheads away. Everything here moves by water.",
   },
   {
     id: "wharf-clerk",
@@ -654,7 +660,7 @@ const UNIT2_FIELD_NPCS = [
     name: "Wharf clerk",
     label: "Clerk",
     sprite: "spanish-sailor",
-    text: "Placeholder dialogue: every cask is entered twice — once for the company, once for the customs man. Ledgers remember what people forget.",
+    text: "Every cask is entered twice — once for the company, once for the customs man. Ledgers remember what people forget.",
   },
 ];
 const UNIT2_FIELD_NPC_PATROLS = {
@@ -997,6 +1003,12 @@ const PRACTICE_CHECK_QUESTS = {
     evidenceOrganizing: UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_01_SOURCE_ANALYSIS_QUESTS,
   },
+  "case-004": {
+    mcq: UNIT_02_MCQ_QUESTS,
+    sequencing: UNIT_02_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_02_SOURCE_ANALYSIS_QUESTS,
+  },
 };
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
 const unitForCase = (caseId) => UNITS.find((unit) => unit.cases.some((c) => c.id === caseId));
@@ -1133,7 +1145,7 @@ const UNIT_BADGES = {
       title: "Riverbend Field Badge",
       icon: "⚑",
       description:
-        "Placeholder: charter, servant's letter, and wharf accounts preserved from the settlement.",
+        "Company charter, indentured servant's letter, and wharf accounts preserved from the settlement.",
     },
     {
       id: "case-005",
@@ -1665,9 +1677,9 @@ const FIELD_COPY = {
   },
   "unit-02": {
     intro:
-      "Placeholder: you arrive at a young river settlement. Speak with its people, then secure the charter, the servant's letter, and the wharf accounts before the record destabilizes.",
+      "You arrive at a young river settlement. Speak with its people, then secure the charter, the servant's letter, and the wharf accounts before the record destabilizes.",
     defaultNotice:
-      "Placeholder: the Chronometer places you on the settlement green. The wharf accounts sit across the river bridge.",
+      "The Chronometer places you on the settlement green. The wharf accounts sit across the river bridge.",
     progressHint: "Secure the charter, the servant's letter, and the wharf accounts.",
   },
 };
@@ -1883,7 +1895,11 @@ const RECONSTRUCTION_LANES = {
   ],
   "case-004": CASE_004_LANES.map((lane) => ({
     ...lane,
-    hint: `Placeholder: records about ${lane.label.toLowerCase()}.`,
+    hint: {
+      founding: "A record of how land and settlement rights were granted.",
+      labor: "A firsthand account of the work and conditions bound labor actually involved.",
+      exchange: "A record of the goods and economy the settlement's labor sustained.",
+    }[lane.id],
   })),
 };
 function reconstructionScreen() {
