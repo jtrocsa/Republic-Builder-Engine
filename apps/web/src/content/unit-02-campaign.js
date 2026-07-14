@@ -1,10 +1,9 @@
 /**
- * Unit 2 — Period 2: 1607–1754 (placeholder content).
+ * Unit 2 — Period 2: 1607–1754.
  *
- * Structural mirror of unit-01-campaign.js. Every record below is a
- * PLACEHOLDER: the shapes are final, the historical copy is not. Swap titles,
- * excerpts, prompts, and citations when the real Period 2 content arrives —
- * nothing in main.js depends on the wording, only on the field names.
+ * Structural mirror of unit-01-campaign.js. Real, cited historical content
+ * for all three cases (Riverbend, Triangle Ledger, Charter & Compact) and the
+ * unit-level Archive Review (UNIT_02_REVIEW).
  */
 
 export const UNIT_02 = {
@@ -12,9 +11,9 @@ export const UNIT_02 = {
   title: "Colonial Crossroads",
   period: "Period 2 · 1607–1754",
   description:
-    "Placeholder: how distinct colonial societies took shape along the Atlantic seaboard, and how the transatlantic economy bound them together.",
+    "How distinct colonial societies took shape along the Atlantic seaboard — Chesapeake tobacco settlements built on headright land grants and bound labor, New England's covenanted farming and fishing towns, and the Middle Colonies' diverse grain-exporting ports — all bound together by a transatlantic economy in goods, cash crops, and enslaved people.",
   centralQuestion:
-    "Placeholder: how did geography, labor, and empire produce different colonial societies in British North America?",
+    "How did geography, labor systems, and the transatlantic economy produce distinct colonial societies in British North America between 1607 and 1754?",
   cases: [
     {
       id: "case-004",
@@ -360,81 +359,93 @@ export const REGION_EVIDENCE = [
 export const UNIT_02_REVIEW = {
   mcq: [
     {
-      prompt: "Placeholder Unit 2 MCQ 1: which factor most shaped Chesapeake settlement patterns?",
+      prompt:
+        "The Virginia Company's 1618 instructions to Governor Yeardley, which granted fifty acres of land for every settler transported and fifty more for every servant brought along, were most directly designed to",
       choices: [
-        "Placeholder correct answer",
-        "Placeholder distractor A",
-        "Placeholder distractor B",
-        "Placeholder distractor C",
+        "guarantee equal landholdings to all settlers regardless of how many servants they brought",
+        "restrict landownership to colonists who arrived without any indentured servants",
+        "encourage planters to recruit labor by tying land grants to the number of people, free or bound, they transported to the colony",
+        "transfer control of Virginia's land distribution from the Company to the Crown",
       ],
-      answer: 0,
-      explanation: "Placeholder explanation for question 1.",
+      answer: 2,
+      explanation:
+        "The headright system rewarded planters for importing labor by granting land per person transported — including servants — which directly encouraged the recruitment of indentured servants like Richard Frethorne.",
     },
     {
-      prompt: "Placeholder Unit 2 MCQ 2: what did the Navigation Acts require?",
+      prompt:
+        "Richard Frethorne's 1623 letter describing hunger and sickness in Virginia is especially valuable evidence for historians of indentured servitude because",
       choices: [
-        "Placeholder correct answer",
-        "Placeholder distractor A",
-        "Placeholder distractor B",
-        "Placeholder distractor C",
+        "it was composed by the Virginia Company to recruit new settlers",
+        "it was written to parents who might intervene on his behalf, giving him reason to describe his suffering candidly rather than minimize it for a patron or investor",
+        "it describes servitude entirely in positive terms to reassure his family",
+        "it was written decades after Frethorne's service ended, allowing him distance to reflect calmly",
       ],
-      answer: 0,
-      explanation: "Placeholder explanation for question 2.",
+      answer: 1,
+      explanation:
+        "Writing to parents who might act on his behalf gave Frethorne reason to describe his conditions plainly, the opposite pull from a report meant for a patron or investor.",
     },
     {
-      prompt: "Placeholder Unit 2 MCQ 3: how did New England towns differ from southern settlements?",
+      prompt:
+        "A historian researching the Middle Passage would find Olaudah Equiano's narrative and the 1788 diagram of the ship Brooks especially useful together because",
       choices: [
-        "Placeholder correct answer",
-        "Placeholder distractor A",
-        "Placeholder distractor B",
-        "Placeholder distractor C",
+        "both sources were produced by the same ship's crew for the same voyage",
+        "the Brooks diagram provides firsthand testimony while Equiano's narrative supplies measured cargo data",
+        "neither source describes conditions aboard slave ships, only trade goods carried outbound",
+        "Equiano's account supplies firsthand testimony of suffering below deck, while the Brooks diagram documents, in the traders' own measured terms, how enslaved people were packed into the hold",
       ],
-      answer: 0,
-      explanation: "Placeholder explanation for question 3.",
+      answer: 3,
+      explanation:
+        "Equiano's narrative offers a survivor's firsthand account of conditions, while the Brooks diagram shows how slave-ship owners themselves calculated maximum hold capacity — complementary but distinct kinds of evidence.",
     },
     {
-      prompt: "Placeholder Unit 2 MCQ 4: what changed as colonies shifted toward enslaved African labor?",
+      prompt:
+        "The enumerated-commodities clause of the Navigation Act of 1660 required colonial growers of tobacco and other listed goods to",
       choices: [
-        "Placeholder correct answer",
-        "Placeholder distractor A",
-        "Placeholder distractor B",
-        "Placeholder distractor C",
+        "sell their crop exclusively to Dutch merchants at fixed prices",
+        "grow tobacco only for consumption within their own colony",
+        "ship their crop only to England or other English possessions rather than sell it directly to foreign markets",
+        "pay a tariff to Spain before shipping tobacco to any market",
       ],
-      answer: 0,
-      explanation: "Placeholder explanation for question 4.",
+      answer: 2,
+      explanation:
+        "The clause barred enumerated goods like tobacco from being shipped to any destination other than English plantations or the kingdom of England, Ireland, or Wales — a core mercantilist restriction.",
     },
     {
-      prompt: "Placeholder Unit 2 MCQ 5: what does the triangular trade reveal about mercantilism?",
+      prompt:
+        "The Dedham Covenant's requirement that new residents be admitted only if they were \"probably of one heart\" with existing members best illustrates which feature of New England town founding?",
       choices: [
-        "Placeholder correct answer",
-        "Placeholder distractor A",
-        "Placeholder distractor B",
-        "Placeholder distractor C",
+        "Towns were organized as self-governing, covenanted communities that screened membership around shared religious commitment",
+        "New England towns admitted all settlers equally regardless of religious belief",
+        "Town government in New England was appointed directly by the Crown",
+        "New England settlement depended on a single export staple crop",
       ],
       answer: 0,
-      explanation: "Placeholder explanation for question 5.",
+      explanation:
+        "Dedham's founding families bound themselves by covenant to worship together and admit only the like-minded, a pattern of self-governing, congregationally organized settlement typical of New England towns.",
     },
     {
-      prompt: "Placeholder Unit 2 MCQ 6: which development pushed colonies toward greater self-government?",
+      prompt:
+        "Compared to the Southern colonies' reliance on tobacco and rice worked by indentured servants and enslaved Africans, the Middle Colonies' grain-export economy and Pennsylvania's liberty-of-conscience law best illustrate",
       choices: [
-        "Placeholder correct answer",
-        "Placeholder distractor A",
-        "Placeholder distractor B",
-        "Placeholder distractor C",
+        "that all thirteen colonies converged on an identical economic and religious model by 1754",
+        "that the Middle Colonies rejected the Atlantic trade the Southern colonies depended on",
+        "that religious toleration only existed in the Southern colonies",
+        "how differing labor systems and religious policies produced distinct regional societies along the Atlantic seaboard",
       ],
-      answer: 0,
-      explanation: "Placeholder explanation for question 6.",
+      answer: 3,
+      explanation:
+        "A staple-crop plantation economy built on bound labor, a diversified grain-export economy open to many faiths, and covenanted farming towns each produced a recognizably different colonial society by the mid-1700s.",
     },
   ],
   saq: {
     stimulus:
-      "Placeholder Unit 2 SAQ stimulus: an excerpt contrasting a New England town record with a Chesapeake plantation inventory.",
+      "“We whose names are hereunto subscribed do, in the fear and reverence of our Almighty God, mutually and severally promise amongst ourselves and each to other, to profess and practice one truth … and receive only such unto us as be such as may be probably of one heart with us.” — The Dedham Covenant, Massachusetts, founding families, 17th century\n\n“I have nothing to comfort me, nor is there nothing to be gotten here but sickness and death … People cry out day and night — Oh, that they were in England without their limbs.” — Richard Frethorne, letter to his parents from Jamestown, Virginia, March 20, 1623",
     prompts: [
-      "A. Placeholder: briefly describe ONE difference between the two colonial societies shown in the records.",
-      "B. Placeholder: explain ONE cause of the difference identified in part A.",
-      "C. Placeholder: explain ONE way the transatlantic economy connected both societies despite their differences.",
+      "A. Identify one difference between the two colonial societies reflected in these records.",
+      "B. Explain one cause of the difference identified in part A.",
+      "C. Explain one way the transatlantic economy connected New England and the Chesapeake despite that difference.",
     ],
     rubric:
-      "Placeholder rubric: one point per part — a specific difference, a developed cause, and a developed connection, each grounded in Period 2 evidence.",
+      "SAQ practice rubric: 3 points total. Earn 1 point for each response that gives a historically defensible claim and supports it with accurate, relevant historical information.",
   },
 };
