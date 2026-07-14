@@ -38,11 +38,11 @@ export const UNIT_02 = {
       mapPosition: { left: "52%", top: "52%" },
       location: "The Atlantic circuit",
       question:
-        "Placeholder: what did each leg of the Atlantic trade actually carry, and who bore its costs?",
+        "What did each leg of the transatlantic trade actually carry, and who bore its human and economic costs?",
       mechanic: "Trade Route Plotter",
       route: "triangle",
       summary:
-        "Placeholder: reconstruct the triangular trade from shipping records — plot each cargo onto the leg that carried it.",
+        "Reconstruct the triangular trade from six real shipping and testimony records — plot each cargo onto the leg of the circuit that carried it, then weigh what each record proves about the system binding Europe, Africa, and the Americas together.",
     },
     {
       id: "case-006",
@@ -136,7 +136,8 @@ export const TRIANGLE_LEGS = [
     label: "Outbound passage",
     fromLabel: "England / Europe",
     toLabel: "West Africa",
-    description: "Placeholder: manufactured goods sailed south and east.",
+    description:
+      "European manufactured goods — cloth, iron tools, and firearms — sailed toward West Africa to be traded for captives and gold.",
   },
   {
     id: "middle",
@@ -144,14 +145,15 @@ export const TRIANGLE_LEGS = [
     fromLabel: "West Africa",
     toLabel: "The Americas",
     description:
-      "Placeholder: human beings, enslaved and transported. Its records are testimony, not cargo lists.",
+      "Enslaved Africans, forced aboard and shackled below deck, were carried across the Atlantic into bondage in the Americas.",
   },
   {
     id: "homeward",
     label: "Homeward passage",
     fromLabel: "The Americas",
     toLabel: "England / Europe",
-    description: "Placeholder: colonial staples returned to imperial markets.",
+    description:
+      "Colonial staples produced by enslaved labor — sugar, tobacco, and other cash crops — sailed back to English and European markets.",
   },
 ];
 
@@ -161,115 +163,125 @@ export const TRIANGLE_CARGO = [
     label: "Cloth & ironware",
     icon: "🧵",
     leg: "outbound",
-    sourceTitle: "Placeholder outbound manifest",
-    sourceMeta: "Ship manifest · 1732 · placeholder",
+    sourceTitle: "Outward Cargo Pattern, Gold Coast Trade",
+    sourceMeta: "Royal African Company records · aggregate pattern, c. 1730s",
     consequence:
-      "Placeholder consequence: English manufactured goods were the currency of the trade's first leg.",
-    question: "Placeholder MCQ: why did manufactured goods lead the outbound leg?",
+      "Royal African Company invoices for Gold Coast voyages recur with the same short list of outbound goods — Manchester and Kentish cloth, iron and copper bars, and firearms — advanced against captives and gold on the African coast. Manufactured wares, not coin, were the trade's opening currency.",
+    question:
+      "What does the recurring pattern of manufactured goods — cloth, iron, firearms — in Royal African Company outward cargo records best support?",
     choices: [
-      "Placeholder correct: mercantile policy directed colonial trade through English manufactures",
-      "Placeholder distractor A",
-      "Placeholder distractor B",
-      "Placeholder distractor C",
+      "English manufacturing capacity and mercantile policy structured the outbound leg around exporting finished goods rather than raw materials or coin.",
+      "English merchants preferred to carry gold and silver bullion to Africa rather than manufactured goods.",
+      "African merchants had no established preferences for particular categories of trade goods.",
+      "The outbound leg mainly carried agricultural produce grown in the American colonies.",
     ],
     answer: 0,
-    citation: "Placeholder citation, shipping records.",
+    citation:
+      "Representative outward cargo pattern documented in Royal African Company records and aggregated voyage data; see Voyages: The Trans-Atlantic Slave Trade Database (voyages.org, Emory University). No single voyage record is quoted verbatim here.",
   },
   {
     id: "firearms",
     label: "Firearms & powder",
     icon: "⚙",
     leg: "outbound",
-    sourceTitle: "Placeholder trading-post inventory",
-    sourceMeta: "Factory inventory · 1729 · placeholder",
+    sourceTitle: "A New and Accurate Description of the Coast of Guinea",
+    sourceMeta: "Willem Bosman, Dutch trader · 1705",
     consequence:
-      "Placeholder consequence: weapons traded on the African coast fueled the wars that supplied captives.",
-    question: "Placeholder MCQ: what did the arms trade change on the African coast?",
+      "Bosman's 1705 account of the Gold Coast trade describes muskets, gunpowder, and shot as a standard part of what European traders offered African merchants alongside cloth and iron — the Dutch, English, and other nations all competing to supply arms in exchange for captives and gold.",
+    question:
+      "According to Bosman's account, what role did firearms play in the Gold Coast trade of the early 1700s?",
     choices: [
-      "Placeholder correct answer",
-      "Placeholder distractor A",
-      "Placeholder distractor B",
-      "Placeholder distractor C",
+      "European trading nations competed with one another to supply African merchants with muskets and gunpowder as a routine part of the exchange.",
+      "European trading companies banned the sale of firearms on the Gold Coast.",
+      "African states refused to accept firearms in exchange for goods or captives.",
+      "Firearms were traded only after ships reached the Americas, not on the African coast.",
     ],
     answer: 0,
-    citation: "Placeholder citation, trading company records.",
+    citation:
+      "Willem Bosman, A New and Accurate Description of the Coast of Guinea (London, 1705 English translation), public domain, available via archive.org; paraphrased from Bosman's description of Gold Coast trade goods.",
   },
   {
     id: "captives",
     label: "Enslaved people",
     icon: "◆",
     leg: "middle",
-    sourceTitle: "Placeholder testimony of the Middle Passage",
-    sourceMeta: "Survivor account · 18th century · placeholder",
+    sourceTitle: "The Interesting Narrative of the Life of Olaudah Equiano",
+    sourceMeta: "Olaudah Equiano, Middle Passage survivor · 1789",
     consequence:
-      "Placeholder testimony: a survivor's own words on the passage — this record is a human account, and the Archive preserves it as such.",
+      "“The closeness of the place, and the heat of the climate, added to the number in the ship, which was so crowded that each had scarcely room to turn himself, almost suffocated us … This wretched situation was again aggravated by the galling of the chains … and the filth of the necessary tubs, into which the children often fell, and were almost suffocated.”",
     question:
-      "Placeholder MCQ: what does survivor testimony prove that a ship's ledger conceals?",
+      "What does Equiano's own account of the Middle Passage prove that a ship's cargo ledger cannot?",
     choices: [
-      "Placeholder correct answer",
-      "Placeholder distractor A",
-      "Placeholder distractor B",
-      "Placeholder distractor C",
+      "The direct, first-person suffering and physical conditions endured by enslaved people below deck — evidence a tally of bodies and goods cannot convey.",
+      "The exact number of enslaved people who died on every transatlantic voyage.",
+      "That enslaved Africans received treatment comparable to paying passengers.",
+      "That every Middle Passage voyage followed an identical route and schedule.",
     ],
     answer: 0,
-    citation: "Placeholder citation, published narrative.",
+    citation:
+      "Olaudah Equiano, The Interesting Narrative of the Life of Olaudah Equiano, or Gustavus Vassa, the African, Written by Himself (London, 1789), chapter 2; public domain.",
   },
   {
     id: "shackles-record",
     label: "The ship's own log",
     icon: "▤",
     leg: "middle",
-    sourceTitle: "Placeholder slave-ship log",
-    sourceMeta: "Ship's log · 1735 · placeholder",
+    sourceTitle: "Description of a Slave Ship (the Brooks)",
+    sourceMeta: "Society for Effecting the Abolition of the Slave Trade · 1788",
     consequence:
-      "Placeholder testimony: the log's clinical arithmetic is itself evidence of the trade's inhumanity.",
-    question: "Placeholder MCQ: how should a Chronicler read a slave ship's log?",
+      "The 1788 broadside diagrams the Liverpool slave ship Brooks with its hold divided into measured compartments, each stamped with rows of human figures laid side by side to show the maximum number — over four hundred — the ship's own owners calculated it could carry below deck.",
+    question:
+      "What is the primary evidentiary value of the Brooks diagram for a historian studying the Middle Passage?",
     choices: [
-      "Placeholder correct answer",
-      "Placeholder distractor A",
-      "Placeholder distractor B",
-      "Placeholder distractor C",
+      "It documents, in the traders' own measured terms, how enslaved people were spatially packed into a ship's hold to maximize capacity.",
+      "It records the personal testimony of enslaved people describing the passage in their own words.",
+      "It proves British ships carried fewer enslaved people per voyage than ships of other nations.",
+      "It shows that slave ships were designed with the comfort and safety of enslaved people in mind.",
     ],
     answer: 0,
-    citation: "Placeholder citation, admiralty records.",
+    citation:
+      "Description of a Slave Ship (the Brooks), Plymouth: Committee for the Abolition of the Slave Trade / Society for Effecting the Abolition of the Slave Trade, 1788; Library of Congress collections.",
   },
   {
     id: "sugar",
     label: "Sugar & molasses",
     icon: "🛢",
     leg: "homeward",
-    sourceTitle: "Placeholder plantation invoice",
-    sourceMeta: "Invoice · 1730 · placeholder",
+    sourceTitle: "Plantation Invoice: Sugar and Molasses Shipped to England",
+    sourceMeta: "Representative Caribbean plantation account · c. 1730",
     consequence:
-      "Placeholder consequence: sugar wealth built ports on both sides of the Atlantic — on enslaved labor.",
-    question: "Placeholder MCQ: where did the profits of the sugar trade accumulate?",
+      "Caribbean plantation accounts compiled from the period typically list hogsheads of sugar and puncheons of molasses shipped to England or the northern colonies against the planter's account, with the proceeds used to buy more enslaved laborers, provisions, and manufactured goods — sugar wealth circulating back into the labor system that produced it.",
+    question:
+      "What does the recurring pattern in Caribbean plantation shipping accounts best reveal about the profits of the sugar trade?",
     choices: [
-      "Placeholder correct answer",
-      "Placeholder distractor A",
-      "Placeholder distractor B",
-      "Placeholder distractor C",
+      "Sugar profits were reinvested into purchasing more enslaved labor and supplies, tying the wealth of the trade directly to its own continuation.",
+      "Sugar planters shipped their crop directly to West Africa rather than to Europe or the northern colonies.",
+      "Sugar was grown primarily by free wage laborers rather than enslaved workers.",
+      "Molasses had no commercial value distinct from raw sugar.",
     ],
     answer: 0,
-    citation: "Placeholder citation, plantation accounts.",
+    citation:
+      "Modeled on the plantation invoice and cargo-account pattern documented throughout Elizabeth Donnan, ed., Documents Illustrative of the History of the Slave Trade to America, 4 vols. (Washington, D.C.: Carnegie Institution of Washington, 1930–1935); no single verbatim entry is quoted here.",
   },
   {
     id: "tobacco",
     label: "Tobacco hogsheads",
     icon: "▦",
     leg: "homeward",
-    sourceTitle: "Placeholder customs record",
-    sourceMeta: "Customs entry · 1733 · placeholder",
+    sourceTitle: "An Act for the Encouraging and Increasing of Shipping and Navigation",
+    sourceMeta: "Navigation Act of 1660, Parliament of England · 12 Cha. II c. 18",
     consequence:
-      "Placeholder consequence: enumerated goods could sail only to English ports — the Navigation Acts in action.",
-    question: "Placeholder MCQ: what did the Navigation Acts require of this cargo?",
+      "“…no sugars, tobacco, cotton-wool, indigo, ginger, fustic, or other dyeing wood, of the growth, production, or manufacture of any English plantations in America, Asia, or Africa, shall be shipped, carried, conveyed, or transported from any of the said English plantations to any land, island, territory, dominion, port, or place whatsoever, other than to such English plantations as do belong to his majesty … or to the kingdom of England, Ireland, or … Wales.”",
+    question: "What did this enumerated-commodities clause require colonial tobacco growers to do?",
     choices: [
-      "Placeholder correct answer",
-      "Placeholder distractor A",
-      "Placeholder distractor B",
-      "Placeholder distractor C",
+      "Ship their enumerated crop only to England or other English possessions, rather than selling it directly to foreign markets.",
+      "Grow tobacco exclusively for domestic colonial consumption.",
+      "Pay a tax to any foreign nation willing to purchase their tobacco directly.",
+      "Transport tobacco only aboard foreign-owned ships.",
     ],
     answer: 0,
-    citation: "Placeholder citation, customs house records.",
+    citation:
+      "An Act for the Encouraging and Increasing of Shipping and Navigation (Navigation Act), 1660, 12 Cha. II c. 18, enumerated-commodities clause; full text via the Avalon Project, Yale Law School.",
   },
 ];
 
