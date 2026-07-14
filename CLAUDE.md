@@ -33,7 +33,7 @@ A test runner **is** configured: `npm run test` (Vitest, non-watch, CI-compatibl
 
 ### The app is currently one file
 
-The entire running game is implemented in **`apps/web/src/main.js`** (3,328 lines — this file has grown substantially across hotfix milestones; re-check the line count with a quick `wc -l` before citing it if much time has passed, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, procedural Web Audio (music + SFX), the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, quest rendering/grading, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.).
+The entire running game is implemented in **`apps/web/src/main.js`** (3,181 lines as of the main.js modularization pass that extracted `engine/geometry.js` and `engine/audio-engine.js` and decomposed the giant click handler into named in-place functions — the first line-count _decrease_ in this file's history, down from 3,328; re-check the line count with a quick `wc -l` before citing it if much time has passed, don't trust a stale figure). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, quest rendering/grading, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.). Procedural Web Audio (music + SFX) now lives in `apps/web/src/engine/audio-engine.js`, imported by `main.js`.
 
 An orphaned second implementation of the onboarding→field→case-player loop (`apps/web/src/features/*`, plus its two supporting dead stores `engine/content/author-content-store.js` / `engine/player/player-profile-store.js`) used to exist alongside `main.js` — six files total, never imported by it, containing two more dead Author Mode implementations on top of `main.js`'s own broken one. It was confirmed zero-risk (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't recreate it; when extending gameplay, edit `main.js` directly unless deliberately doing modularization work.
 
@@ -50,6 +50,8 @@ There is also a live-but-placeholder **Unit 2 campaign** (`content/unit-02-campa
 - `REFLECTION_MIN_LENGTH` from `./quest-types/history/evidence-organizing-quest.js`
 - named exports from `./content/quests/unit-01-quests.js`
 - `renderTiledMap` / `createTilesetImageResolver` from `./engine/tiled-map-loader.js`
+- `ellipse` / `rectsOverlap` / `footBoxFor` from `./engine/geometry.js`
+- `playSfx` / `playQuestSfx` / `toggleAudio` / `updateMusicForScreen` / `isAudioEnabled` from `./engine/audio-engine.js`
 - two `.tmj` raw map imports from `./content/maps/`
 
 ### State and persistence
@@ -60,18 +62,18 @@ There is also a live-but-placeholder **Unit 2 campaign** (`content/unit-02-campa
 
 The repo's stated architecture rule (from the decision log): **engine code never contains APUSH-specific facts.** In practice today this is violated in at least three confirmed places — case-ID literals (`"case-001"`) are hard-coded directly into movement/interaction-gating code in `main.js`, not merely into content files. Treat the clean separation described in older docs as aspirational for the current vertical slice, not yet fully realized. Canonical folder intent (corrected against the actual repository — the old table here previously had the asset-tree row backwards):
 
-| Thing                                              | Home                                                                                     |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Reusable engine systems                            | `apps/web/src/engine/`                                                                    |
-| Campaign/unit content actually used at runtime     | `apps/web/src/content/` (`unit-01-campaign.js` real, `unit-02-campaign.js` placeholder)   |
-| Images, maps, audio, icons                         | `apps/web/src/assets/` — 148 real files, referenced via `new URL(..., import.meta.url)`   |
-| JSON schemas                                       | `data/schemas/` (currently one example instance, not a real JSON Schema)                  |
-| Docs                                               | `docs/`                                                                                    |
-| Build/import/validation scripts                    | `scripts/`                                                                                 |
+| Thing                                          | Home                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Reusable engine systems                        | `apps/web/src/engine/`                                                                  |
+| Campaign/unit content actually used at runtime | `apps/web/src/content/` (`unit-01-campaign.js` real, `unit-02-campaign.js` placeholder) |
+| Images, maps, audio, icons                     | `apps/web/src/assets/` — 148 real files, referenced via `new URL(..., import.meta.url)` |
+| JSON schemas                                   | `data/schemas/` (currently one example instance, not a real JSON Schema)                |
+| Docs                                           | `docs/`                                                                                 |
+| Build/import/validation scripts                | `scripts/`                                                                              |
 
 The placeholder-scaffold root `assets/` tree and the orphaned `apps/web/src/features/` island named in older revisions of this table were deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`.
 
-There is also a **dormant, unread** JSON content pipeline under `content/campaigns/chronicle/units/unit-01/` (`campaign.json`, `unit.json`, `case.json`, `activities/*.json`, `assessments/*.json`) plus record templates in `content/library/`. `main.js` never imports from this tree (confirmed by import-graph trace). It represents a *fourth* incompatible schema for the same Case 1.01 source content (alongside the live `unit-01-campaign.js` shape and two dead ones) — don't treat its presence as meaning it's wired up, and don't reconcile the schemas speculatively; that's tracked as future `ContentRegistry`/Zod work in `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md`, not a current task.
+There is also a **dormant, unread** JSON content pipeline under `content/campaigns/chronicle/units/unit-01/` (`campaign.json`, `unit.json`, `case.json`, `activities/*.json`, `assessments/*.json`) plus record templates in `content/library/`. `main.js` never imports from this tree (confirmed by import-graph trace). It represents a _fourth_ incompatible schema for the same Case 1.01 source content (alongside the live `unit-01-campaign.js` shape and two dead ones) — don't treat its presence as meaning it's wired up, and don't reconcile the schemas speculatively; that's tracked as future `ContentRegistry`/Zod work in `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md`, not a current task.
 
 ### Author Mode (the only "teacher tool" that exists, and it's broken)
 
@@ -84,7 +86,7 @@ A development-only in-app panel (toggled via the chrome button, rendered by `aut
 - `docs/architecture/CURRENT-REPOSITORY-AUDIT.md` — what actually exists in the repo today (line counts, dead code, schema conflicts), verified against source, not against prior doc claims.
 - `docs/architecture/THIRD-PARTY-TOOLING-AUDIT.md` — which dependencies are approved now, prototype-gated, or rejected, and why.
 - `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` — the long-term multi-subject-platform design (domains, data models, migration phases). Describes **future direction, not current implementation** — `PlatformCore`, `WorldComposition`, `QuestEngine`'s renderer/evaluation registries, `WorldRuntime`, the full 7-repository persistence layer, and `packs/<subject>/` extraction are all documented here as where the architecture is headed, not code that exists or should be scaffolded yet.
-- `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — a skeptical pass that cuts the proposal above down to what a solo developer should actually build near-term. **This is the binding scope document, not the proposal** — when the two disagree on what to build *now*, follow the review, not the proposal.
+- `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — a skeptical pass that cuts the proposal above down to what a solo developer should actually build near-term. **This is the binding scope document, not the proposal** — when the two disagree on what to build _now_, follow the review, not the proposal.
 
 **Near-term architecture is deliberately minimal**, per the review: keep working code where it already lives (`main.js`, `content/*.js`) and add thin wrappers/tests/schemas around it rather than moving it. Concretely:
 
