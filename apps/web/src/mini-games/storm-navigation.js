@@ -118,40 +118,51 @@ export function moveShip(state, direction) {
   return { ...state, playerLane };
 }
 
+// Lane 0/1/2 -> horizontal % offset from center, shared by the ship and every hazard so
+// they all converge toward the same vanishing point at the horizon (see --lane-offset/--p
+// usage in the CSS: hazards multiply this by their progress, so a hazard just spawned sits
+// near center-horizon and spreads out to its full lane position as it nears the player).
+const LANE_OFFSET_PERCENT = { 0: -24, 1: 0, 2: 24 };
+
 /**
  * @param {ReturnType<typeof createStormNavigationGame>} state
  * @param {number} [bestScore] Best hazardsDodged from a prior run, for display only.
  */
 export function renderStormNavigationGame(state, bestScore = 0) {
   const elapsedSeconds = Math.floor(state.elapsedMs / 1000);
-  const lanes = Array.from({ length: LANE_COUNT }, (_, laneIndex) => {
-    const hazardsInLane = state.hazards.filter((hazard) => hazard.lane === laneIndex);
-    const isPlayerLane = laneIndex === state.playerLane;
-    return `<div class="storm-lane${isPlayerLane ? " storm-lane--player" : ""}" data-storm-lane="${laneIndex}">
-      ${isPlayerLane ? `<div class="storm-ship" data-storm-ship>⛵</div>` : ""}
-      ${hazardsInLane
-        .map(
-          (hazard) =>
-            `<div class="storm-hazard" data-storm-hazard="${hazard.id}" style="top:${Math.round(hazard.progress * 100)}%">🌊</div>`,
-        )
-        .join("")}
-    </div>`;
-  }).join("");
+  const shipOffset = LANE_OFFSET_PERCENT[state.playerLane] ?? 0;
+  const hazards = state.hazards
+    .map((hazard) => {
+      const offset = LANE_OFFSET_PERCENT[hazard.lane] ?? 0;
+      const p = Math.max(0, Math.min(1, hazard.progress));
+      return `<div class="storm-hazard" data-storm-hazard="${hazard.id}" data-storm-lane="${hazard.lane}" style="--p:${p};--lane-offset:${offset}%"><span class="storm-rock"></span></div>`;
+    })
+    .join("");
 
   const isNewBest = !state.running && state.hazardsDodged > bestScore;
   const displayedBest = Math.max(bestScore, state.hazardsDodged);
 
   return `<section class="mini-game mini-game-storm-navigation" data-mini-game="storm-navigation">
   <p class="mini-game-timer">${state.running ? `Time survived: ${elapsedSeconds}s` : "Shipwrecked!"}</p>
-  <div class="storm-lanes">${lanes}</div>
+  <div class="storm-track">
+    <div class="storm-horizon"></div>
+    ${hazards}
+    <div class="storm-ship" data-storm-ship style="--lane-offset:${shipOffset}%">
+      <span class="storm-ship-wake"></span>
+      <span class="storm-ship-hull"></span>
+      <span class="storm-ship-mast"></span>
+    </div>
+  </div>
   <p class="storm-tally">Dodged: ${state.hazardsDodged} · Best: ${displayedBest}</p>
   ${state.running ? "" : `<p class="storm-final-score">Final score: ${state.hazardsDodged}${isNewBest ? " — New best!" : ""}</p>`}
   <div class="storm-controls">
     ${
       state.running
         ? `<button type="button" data-storm-move="-1">◀ Port</button>
-    <button type="button" data-storm-move="1">Starboard ▶</button>`
-        : `<button type="button" data-storm-restart>Set Sail Again ⛵</button>`
+    <button type="button" data-storm-move="1">Starboard ▶</button>
+    <span class="storm-controls-hint">or use ◄ ► / A D</span>`
+        : `<button type="button" data-storm-restart>Set Sail Again ⛵</button>
+    <span class="storm-controls-hint">or press Enter</span>`
     }
   </div>
 </section>`;

@@ -3294,6 +3294,34 @@ function handleWindowKeydown(event) {
     arrowright: [1, 0],
     d: [1, 0],
   };
+  if (progress.currentScreen === "mini-games" && activeMiniGame === "storm-navigation") {
+    // Discrete one-shot lane switch per keypress, not a held-key loop like field/hub
+    // movement — ignore OS key-repeat so holding the key doesn't skip multiple lanes.
+    if ((key === "arrowleft" || key === "a") && !event.repeat && stormNavigationState) {
+      event.preventDefault();
+      stormNavigationState = moveStormShip(stormNavigationState, -1);
+      updateMiniGameUi();
+      return;
+    }
+    if ((key === "arrowright" || key === "d") && !event.repeat && stormNavigationState) {
+      event.preventDefault();
+      stormNavigationState = moveStormShip(stormNavigationState, 1);
+      updateMiniGameUi();
+      return;
+    }
+    if (
+      (key === "enter" || key === " ") &&
+      !event.repeat &&
+      stormNavigationState &&
+      !stormNavigationState.running
+    ) {
+      event.preventDefault();
+      stormNavigationState = createStormNavigationGame();
+      updateMiniGameUi();
+      return;
+    }
+    return;
+  }
   if (progress.currentScreen === "institute") {
     if (key === "e" || key === "enter") {
       const nearby = nearestHubTarget();

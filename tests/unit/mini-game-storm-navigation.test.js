@@ -191,27 +191,63 @@ describe("moveShip", () => {
 });
 
 describe("renderStormNavigationGame", () => {
-  it("renders 3 lanes, marks the player's lane, and renders a hazard in its lane (normal case)", () => {
+  it("renders a single storm-track containing a horizon, one hazard element per hazard with correct data/style attributes, and exactly one ship element positioned for the player's lane (normal case)", () => {
     const state = {
       ...createStormNavigationGame(),
       hazards: [{ id: 1, lane: 2, progress: 0.5 }],
     };
     const html = renderStormNavigationGame(state);
 
-    const laneMatches = html.match(/data-storm-lane="\d"/g);
-    expect(laneMatches).toHaveLength(3);
+    expect(html).toContain('<div class="storm-track">');
+    expect(html).toContain('<div class="storm-horizon"></div>');
 
-    const laneChunks = html.split(/<div class="storm-lane(?!s)/).slice(1);
-    expect(laneChunks).toHaveLength(3);
+    const hazardMatches = html.match(/<div class="storm-hazard"[^>]*>/g);
+    expect(hazardMatches).toHaveLength(1);
+    expect(hazardMatches[0]).toContain('data-storm-hazard="1"');
+    expect(hazardMatches[0]).toContain('data-storm-lane="2"');
+    expect(hazardMatches[0]).toContain("--p:0.5");
+    expect(hazardMatches[0]).toContain("--lane-offset:24%");
+    expect(html).toContain('<span class="storm-rock"></span>');
 
-    const playerLaneChunk = laneChunks[1];
-    expect(playerLaneChunk).toContain("storm-lane--player");
-    expect(playerLaneChunk).toContain('data-storm-lane="1"');
-    expect(playerLaneChunk).toContain("data-storm-ship");
+    const shipMatches = html.match(/data-storm-ship/g);
+    expect(shipMatches).toHaveLength(1);
+    expect(html).toContain('<div class="storm-ship" data-storm-ship style="--lane-offset:0%">');
+    expect(html).toContain('<span class="storm-ship-wake"></span>');
+    expect(html).toContain('<span class="storm-ship-hull"></span>');
+    expect(html).toContain('<span class="storm-ship-mast"></span>');
+  });
 
-    const hazardLaneChunk = laneChunks[2];
-    expect(hazardLaneChunk).toContain('data-storm-lane="2"');
-    expect(hazardLaneChunk).toContain('data-storm-hazard="1"');
+  it("renders zero hazard elements when there are no active hazards, and positions the ship using the lane offset map for each edge lane (boundary case)", () => {
+    const noHazardsState = { ...createStormNavigationGame(), hazards: [] };
+    const html = renderStormNavigationGame(noHazardsState);
+    expect(html.match(/<div class="storm-hazard"/g)).toBeNull();
+
+    const leftLaneHtml = renderStormNavigationGame({ ...createStormNavigationGame(), playerLane: 0 });
+    expect(leftLaneHtml).toContain('data-storm-ship style="--lane-offset:-24%"');
+
+    const rightLaneHtml = renderStormNavigationGame({ ...createStormNavigationGame(), playerLane: 2 });
+    expect(rightLaneHtml).toContain('data-storm-ship style="--lane-offset:24%"');
+  });
+
+  it("renders one hazard element per hazard in state.hazards, each carrying its own lane/progress-derived attributes (normal case)", () => {
+    const state = {
+      ...createStormNavigationGame(),
+      hazards: [
+        { id: 1, lane: 0, progress: 0.1 },
+        { id: 2, lane: 1, progress: 0.75 },
+      ],
+    };
+    const html = renderStormNavigationGame(state);
+    const hazardMatches = html.match(/<div class="storm-hazard"[^>]*>/g);
+    expect(hazardMatches).toHaveLength(2);
+    expect(hazardMatches[0]).toContain('data-storm-hazard="1"');
+    expect(hazardMatches[0]).toContain('data-storm-lane="0"');
+    expect(hazardMatches[0]).toContain("--p:0.1");
+    expect(hazardMatches[0]).toContain("--lane-offset:-24%");
+    expect(hazardMatches[1]).toContain('data-storm-hazard="2"');
+    expect(hazardMatches[1]).toContain('data-storm-lane="1"');
+    expect(hazardMatches[1]).toContain("--p:0.75");
+    expect(hazardMatches[1]).toContain("--lane-offset:0%");
   });
 
   it("shows the elapsed time survived, the dodge tally, and Port/Starboard controls while running (normal case)", () => {
