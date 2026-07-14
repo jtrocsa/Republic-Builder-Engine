@@ -52,11 +52,11 @@ export const UNIT_02 = {
       mapPosition: { left: "30%", top: "20%" },
       location: "The thirteen colonies",
       question:
-        "Placeholder: which documents built which colonial societies — and what differences do they prove?",
+        "What do a town covenant, a headright grant, an indenture, a liberty-of-conscience clause, a grain manifest, and a school law reveal about the different societies colonists built in British North America?",
       mechanic: "Region Builder",
       route: "regions",
       summary:
-        "Placeholder: restore the Archive's damaged display of the colonial regions by returning each founding record to the society it built.",
+        "Restore the Archive's damaged display of the colonial regions by returning each founding record — from a Puritan town covenant to a Quaker liberty-of-conscience clause — to the society it built, then defend one difference between two regions in your own words.",
     },
   ],
 };
@@ -289,17 +289,20 @@ export const REGION_RECORDS = [
   {
     id: "new-england",
     label: "New England",
-    summary: "Placeholder: towns, meetinghouses, mixed economy, covenant communities.",
+    summary:
+      "New England towns organized around covenanted congregations and town meetings, built on a mixed farming, fishing, and shipbuilding economy rather than a single export staple.",
   },
   {
     id: "middle",
     label: "Middle Colonies",
-    summary: "Placeholder: grain, ports, and the most diverse population on the seaboard.",
+    summary:
+      "The Middle Colonies grew around grain exports flowing through booming port cities like Philadelphia and New York, drawing the most ethnically and religiously diverse population on the seaboard.",
   },
   {
     id: "southern",
     label: "Southern Colonies",
-    summary: "Placeholder: staple crops, plantation labor, scattered settlement.",
+    summary:
+      "The Southern colonies built a staple-crop plantation economy on tobacco and rice, worked first by indentured servants and increasingly by enslaved Africans on widely scattered landholdings.",
   },
 ];
 
@@ -307,43 +310,49 @@ export const REGION_EVIDENCE = [
   {
     id: "town-covenant",
     label: "Town covenant",
-    source: "Placeholder town covenant, 1636",
-    detail: "Placeholder: a community binds itself to worship and self-govern together.",
+    source: "The Dedham Covenant",
+    detail:
+      "“We whose names are hereunto subscribed do, in the fear and reverence of our Almighty God, mutually and severally promise amongst ourselves and each to other, to profess and practice one truth … And we shall by all means labor to keep off from us all such as are contrary minded, and receive only such unto us as be such as may be probably of one heart with us.” Founding families in Dedham, Massachusetts bound themselves by covenant to worship together, admit only the like-minded, and govern the town's shared business by common consent — a pattern of self-governing, congregationally organized settlement typical of New England town founding.",
     region: "new-england",
   },
   {
     id: "headright-grant",
     label: "Headright grant",
-    source: "Placeholder land grant, 1635",
-    detail: "Placeholder: fifty acres per passage paid — land policy that rewarded importing labor.",
+    source: "Virginia headright land patent, Library of Virginia Land Office Patents",
+    detail:
+      "Surviving Virginia land patents recorded in the Library of Virginia's Patent and Grant collection follow a recurring formula: a named patentee is granted a set number of acres — commonly fifty per head — for the transportation of listed persons, free or bound, into the colony, with the names of those transported entered as the patent's legal basis for the grant. The pattern (no single patent number is claimed here) shows land in the Chesapeake distributed by how much labor a planter could import rather than by settlement need alone.",
     region: "southern",
   },
   {
     id: "indenture-contract",
     label: "Indenture contract",
-    source: "Placeholder indenture, 1640",
-    detail: "Placeholder: seven years' service in exchange for passage across the Atlantic.",
+    source: "Representative Chesapeake indenture agreement, 17th century",
+    detail:
+      "Modeled on the standard indenture pattern documented among surviving 17th-century Virginia and Maryland servant contracts (Library of Virginia and Maryland State Archives collections): a servant bound himself to a master's service for a term — typically four to seven years — in exchange for passage across the Atlantic, with food, lodging, and (at the term's end) \"freedom dues\" promised in return. No single verbatim contract is quoted here.",
     region: "southern",
   },
   {
     id: "toleration-writ",
     label: "Liberty of conscience writ",
-    source: "Placeholder proprietary charter clause, 1682",
-    detail: "Placeholder: worship protected to draw settlers of many nations and faiths.",
+    source: "William Penn, Frame of Government of Pennsylvania, Laws Agreed Upon in England",
+    detail:
+      "“That all persons living in this province, who confess and acknowledge the one Almighty and eternal God to be the creator, upholder, and ruler of the world … shall in no ways be molested or prejudiced for their religious persuasion or practice in matters of faith and worship, nor shall they be compelled at any time to frequent or maintain any religious worship, place, or ministry whatever.” Penn's 1682 Frame of Government protected liberty of conscience by law, a deliberate policy to draw settlers of many nations and faiths to his proprietary colony.",
     region: "middle",
   },
   {
     id: "grain-manifest",
     label: "Flour export manifest",
-    source: "Placeholder port manifest, 1741",
-    detail: "Placeholder: the breadbasket trade moving through a fast-growing port city.",
+    source: "Representative flour-export shipping notice, Pennsylvania Gazette",
+    detail:
+      "Modeled on the recurring \"cleared out\" cargo notices Benjamin Franklin's Pennsylvania Gazette published through the 1730s–40s: a Philadelphia-built brig or schooner clearing port laden with several hundred barrels of superfine flour and ship bread bound for the West Indies or southern Europe — the breadbasket grain trade that fed Philadelphia's rapid growth into the busiest port in British North America.",
     region: "middle",
   },
   {
     id: "school-law",
     label: "Common school law",
-    source: "Placeholder colony law, 1647",
-    detail: "Placeholder: every town of fifty households must appoint a teacher of reading.",
+    source: "Massachusetts Bay, \"The Old Deluder Satan Act\" (1647)",
+    detail:
+      "“It being one chief project of that old deluder, Satan, to keep men from the knowledge of the Scriptures … it is therefore ordered, that every township in this jurisdiction, after the Lord hath increased them to the number of fifty householders, shall then forthwith appoint one within their town to teach all such children as shall resort to him to write and read … And where any town shall increase to the number of one hundred families or householders, they shall set up a grammar school.” Massachusetts required towns to fund reading — and, once large enough, grammar — schools, tying literacy directly to the colony's religious mission.",
     region: "new-england",
   },
 ];

@@ -1159,7 +1159,7 @@ const UNIT_BADGES = {
       label: "Regions",
       title: "Charter & Compact Badge",
       icon: "❖",
-      description: "Placeholder: the colonial regions display restored with founding records.",
+      description: "Colonial regions display restored with founding records.",
     },
   ],
 };
@@ -1957,7 +1957,7 @@ function regionsScreen() {
     const cardsHere = REGION_EVIDENCE.filter((card) => placements[card.id] === region.id);
     return `<div class="region-column ${cardsHere.length ? "is-filled" : ""}" data-region-drop="${region.id}"><header><b>${esc(region.label)}</b><p>${esc(region.summary)}</p></header>${cardsHere.map(regionCard).join("") || "<i>Drop founding records here</i>"}</div>`;
   }).join("");
-  return `${chrome()}<main class="shell regions-shell"><section class="regions-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · Colonial regions</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>Placeholder: the Archive's display of the colonial regions is damaged. Return each founding record to the society it built, then defend one comparison in your reflection.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="regionsReflection" placeholder="Placeholder: which difference between two regions does your evidence best prove?">${esc(state.reflection || "")}</textarea></div><div class="evidence-bank"><div class="bank-heading"><h2>Founding records</h2><button class="text-button" data-action="clear-regions">Reset display</button></div><div class="bank-cards">${tray.map(regionCard).join("") || '<p class="bank-empty">All records are on the display.</p>'}</div></div></section><section class="regions-board"><div class="region-columns">${columns}</div><button class="btn btn-gold" data-action="check-regions">Restore the display →</button><p class="feedback" id="regionsFeedback"></p></section></main>`;
+  return `${chrome()}<main class="shell regions-shell"><section class="regions-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · Colonial regions</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>The Archive's display of the colonial regions is damaged. Return each founding record to the society it built, then defend one comparison in your reflection.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="regionsReflection" placeholder="Which difference between two regions does your evidence best prove?">${esc(state.reflection || "")}</textarea></div><div class="evidence-bank"><div class="bank-heading"><h2>Founding records</h2><button class="text-button" data-action="clear-regions">Reset display</button></div><div class="bank-cards">${tray.map(regionCard).join("") || '<p class="bank-empty">All records are on the display.</p>'}</div></div></section><section class="regions-board"><div class="region-columns">${columns}</div><button class="btn btn-gold" data-action="check-regions">Restore the display →</button><p class="feedback" id="regionsFeedback"></p></section></main>`;
 }
 
 function exchangeLedgerScreen() {
