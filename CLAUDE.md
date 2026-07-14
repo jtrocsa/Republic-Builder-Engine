@@ -23,7 +23,7 @@ Run from the repo root (npm scripts shell out to Vite, which is rooted at `apps/
 - `npm run dev` — start the Vite dev server (opens the browser automatically)
 - `npm run build` — production build (output in `apps/web/dist/`)
 - `npm run preview` — preview a production build
-- `npm run validate:content` — placeholder only; not yet implemented (just logs a message)
+- `npm run validate:content` — real, working Zod-based validator (25 content schema/cross-reference groups as of Unit 2's 5-commit content completion pass). Validates `unit-01-campaign.js` and `unit-02-campaign.js` against schemas in `apps/web/src/content/schemas/`, runs global case/source id-uniqueness checks across both units, and checks cross-references (empire connections, triangle cargo, region evidence). See `docs/content/CONTENT-VALIDATION.md`.
 - `npm run lint` — real, working ESLint flat config (`eslint.config.js`)
 - `npm run format` / `npm run format:check` — real, working Prettier
 
@@ -37,12 +37,12 @@ The entire running game is implemented in **`apps/web/src/main.js`** (3,181 line
 
 An orphaned second implementation of the onboarding→field→case-player loop (`apps/web/src/features/*`, plus its two supporting dead stores `engine/content/author-content-store.js` / `engine/player/player-profile-store.js`) used to exist alongside `main.js` — six files total, never imported by it, containing two more dead Author Mode implementations on top of `main.js`'s own broken one. It was confirmed zero-risk (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't recreate it; when extending gameplay, edit `main.js` directly unless deliberately doing modularization work.
 
-There is also a live-but-placeholder **Unit 2 campaign** (`content/unit-02-campaign.js`, "Riverbend Settlement") reachable in the running app, and an **undocumented, unwired serverless AI-grading backend** at `api/evaluate.js` + `api/_lib/rubrics.js` (a real Claude-Haiku HIPP/SAQ/LEQ/DBQ evaluator — it's why `@anthropic-ai/sdk` is a production dependency even though the frontend never calls it). Neither is exercised by normal gameplay in Unit 1 / Case 1.01, but both are real and current — don't be surprised by them.
+There is also a **Unit 2 campaign** (`content/unit-02-campaign.js`, "Colonial Crossroads" / "Riverbend Settlement," case-004), with real, cited historical content across all three cases (case-004 Riverbend, case-005 Triangle Ledger, case-006 Charter & Compact) and the unit-level Archive Review. An **undocumented, unwired serverless AI-grading backend** also exists at `api/evaluate.js` + `api/_lib/rubrics.js` (a real Claude-Haiku HIPP/SAQ/LEQ/DBQ evaluator — it's why `@anthropic-ai/sdk` is a production dependency even though the frontend never calls it). The backend is real and current but not exercised by normal gameplay in Unit 1 / Case 1.01 or Unit 2's field case; don't be surprised by it.
 
 `main.js` only imports:
 
 - `./styles/global.css`
-- named exports from `./content/unit-01-campaign.js` and `./content/unit-02-campaign.js` (content shapes, one live-real, one live-placeholder)
+- named exports from `./content/unit-01-campaign.js` and `./content/unit-02-campaign.js` (content shapes, both live-real with cited historical content)
 - `./content/chronicle-opening.defaults.js` and `./content/chronicle-identity.defaults.js`
 - `readProgress` / `saveProgress` / `resetProgress` from `./repositories/local-progress-repository.js` (a thin wrapper around `chronicle-progress-store.js`)
 - named exports from `./repositories/local-teacher-override-store.js`
@@ -65,7 +65,7 @@ The repo's stated architecture rule (from the decision log): **engine code never
 | Thing                                          | Home                                                                                    |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Reusable engine systems                        | `apps/web/src/engine/`                                                                  |
-| Campaign/unit content actually used at runtime | `apps/web/src/content/` (`unit-01-campaign.js` real, `unit-02-campaign.js` placeholder) |
+| Campaign/unit content actually used at runtime | `apps/web/src/content/` (`unit-01-campaign.js` real, `unit-02-campaign.js` real) |
 | Images, maps, audio, icons                     | `apps/web/src/assets/` — 148 real files, referenced via `new URL(..., import.meta.url)` |
 | JSON schemas                                   | `data/schemas/` (currently one example instance, not a real JSON Schema)                |
 | Docs                                           | `docs/`                                                                                 |
@@ -113,7 +113,7 @@ Use these consistently in code, copy, and UI strings — they're the game's fixe
 - **Preservation Case** — the badge-case UI opened from the Archive trophy shelf (`unitOneBadgeCaseMarkup()` in `main.js`), styled like a Pokémon badge case, not a debug panel.
 - **Navigation Table** — the physical Archive object the player walks to and interacts with to pick a case/route (`archive` screen, `HUB_TARGETS.table`).
 - **Recall to Archive** — the field control that returns the player to the Institute.
-- Unit 1 badge areas: **Caribbean**, **Atlantic**, **Hispaniola** (`unitOneBadgeRecords()` — Atlantic and Hispaniola are defined as locked/future badges; only Caribbean/`case-001` is currently playable).
+- Unit 1 badge areas: **Caribbean**, **Atlantic**, **Hispaniola** — all three cases have real, fully-cited content and are playable via normal sequential progression (case-001 → case-002 → case-003), accessible after completing the prior case. Case-002 (Atlantic Exchange, `exchangeLedgerScreen()`) and case-003 (Hispaniola Empire, `empireScreen()`) are not placeholder content or locked behind missing implementation — they are reachable, fully playable, and real.
 - Institute NPCs: Director Rowan Hale, Dr. Amani Soto ("archive researcher"), Professor Julian Park ("route historian") — referenced in code as `director`, `amani`, `julian`.
 
 ## Gameplay invariants (regression-prone areas)
