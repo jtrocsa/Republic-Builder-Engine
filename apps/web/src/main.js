@@ -990,6 +990,14 @@ function sceneForMusic() {
 }
 const UNITS = [UNIT_01, UNIT_02];
 const UNIT_SOURCES = { "case-001": CASE_001_SOURCES, "case-004": CASE_004_SOURCES };
+const PRACTICE_CHECK_QUESTS = {
+  "case-001": {
+    mcq: UNIT_01_MCQ_QUESTS,
+    sequencing: UNIT_01_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_01_SOURCE_ANALYSIS_QUESTS,
+  },
+};
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
 const unitForCase = (caseId) => UNITS.find((unit) => unit.cases.some((c) => c.id === caseId));
 const caseById = (id) => {
@@ -1672,7 +1680,7 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${caseId === "case-001" && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -1744,7 +1752,11 @@ function practiceCheckScreen() {
   let overallTotal = 0;
   let overallComplete = 0;
 
-  const mcqQuests = UNIT_01_MCQ_QUESTS;
+  const caseId = activeFieldCaseId();
+  const activeCase = caseById(caseId);
+  const questSet = PRACTICE_CHECK_QUESTS[caseId];
+
+  const mcqQuests = questSet.mcq;
   const answeredCount = mcqQuests.filter(
     (quest) => progress.questResponses[quest.id]?.selected !== undefined
   ).length;
@@ -1764,7 +1776,7 @@ function practiceCheckScreen() {
     })
     .join("");
 
-  const sequencingCards = UNIT_01_SEQUENCING_QUESTS.map((quest) => {
+  const sequencingCards = questSet.sequencing.map((quest) => {
     const state = progress.questResponses[quest.id] || {};
     const result = gradeQuest("sequencing", quest, state);
     overallTotal += 1;
@@ -1778,7 +1790,7 @@ function practiceCheckScreen() {
     return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
   }).join("");
 
-  const evidenceCards = UNIT_01_EVIDENCE_ORGANIZING_QUESTS.map((quest) => {
+  const evidenceCards = questSet.evidenceOrganizing.map((quest) => {
     const state = progress.questResponses[quest.id] || {};
     const result = gradeQuest("evidence-organizing", quest, state);
     overallTotal += 1;
@@ -1795,7 +1807,7 @@ function practiceCheckScreen() {
     return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("evidence-organizing", quest, state)}${feedback}</div>`;
   }).join("");
 
-  const hippCards = UNIT_01_SOURCE_ANALYSIS_QUESTS.map((quest) => {
+  const hippCards = questSet.hipp.map((quest) => {
     const state = progress.questResponses[quest.id] || {};
     const result = gradeQuest("hipp", quest, state);
     overallTotal += 1;
@@ -1816,7 +1828,7 @@ function practiceCheckScreen() {
     return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("hipp", quest, state)}${feedback}</div>`;
   }).join("");
 
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in Case 1.01's own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(activeCase.title)} interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(activeCase.title)}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 function sourceVisual(source) {
@@ -2038,7 +2050,7 @@ function render() {
         html = mapJigsawScreen();
         break;
       case "practice-check":
-        if (!progress.settings.miniGamesEnabled) {
+        if (!progress.settings.miniGamesEnabled || !PRACTICE_CHECK_QUESTS[activeFieldCaseId()]) {
           progress.currentScreen = "field";
           save();
           render();
@@ -2196,7 +2208,9 @@ function applySequenceOrder(questId, order) {
 }
 
 function applySequenceMove(questId, itemId, direction) {
-  const list = UNIT_01_SEQUENCING_QUESTS.find((quest) => quest.id === questId)?.items || [];
+  const list =
+    PRACTICE_CHECK_QUESTS[activeFieldCaseId()]?.sequencing.find((quest) => quest.id === questId)
+      ?.items || [];
   const currentOrder =
     progress.questResponses[questId]?.order &&
     progress.questResponses[questId].order.length === list.length
