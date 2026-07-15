@@ -1004,13 +1004,65 @@ const HUB_TARGETS = {
       `The table displays teacher-unlocked cases geographically. Select a route only after you have reviewed the active investigation.`,
     action: "archive",
   },
+  archiveDoor: {
+    x: 14.3,
+    y: 2.3,
+    name: "Archive Room",
+    role: "Institute Archive entrance",
+    dialogue: () => "",
+    action: "enter-archive-room",
+  },
 };
+
+// The Institute's second walkable room. Generalizes the same
+// grid/blocks/targets + movement-engine shape HUB_GRID/HUB_BLOCK_RECTS/
+// HUB_TARGETS already prove out for the Main Hall, resolved dynamically via
+// activeHubGrid()/activeHubBlocks()/activeHubTargets() below (mirrors how
+// FIELD_MAPS/activeFieldMap() already generalize field exploration across
+// units). The Main Hall's own constants are left untouched.
+const ARCHIVE_ROOM_GRID = { columns: 10, rows: 8 };
+const ARCHIVE_ROOM_BLOCK_RECTS = [
+  { x1: 3.8, y1: 1.3, x2: 6.2, y2: 3.1, kind: "archive terminal desk" },
+];
+const ARCHIVE_ROOM_TARGETS = {
+  terminal: {
+    x: 5.0,
+    y: 3.7,
+    name: "Archive Terminal",
+    role: "Archive Challenges interface",
+    dialogue: () =>
+      "Archive Challenges for this unit are still being cataloged. Check back soon.",
+  },
+  exitDoor: {
+    x: 5.0,
+    y: 6.7,
+    name: "Institute Foyer",
+    role: "Return to the Main Hall",
+    dialogue: () => "",
+    action: "leave-archive-room",
+  },
+};
+function activeHubGrid() {
+  return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_GRID : HUB_GRID;
+}
+function activeHubBlocks() {
+  return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_BLOCK_RECTS : HUB_BLOCK_RECTS;
+}
+function activeHubTargets() {
+  return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_TARGETS : HUB_TARGETS;
+}
+
 let instituteMovement = { x: 7, y: 9, facing: "up", moving: false, step: false, queued: null };
+// Every existing call site means "place the player in the Main Hall" — reset
+// the room here so returning to the Institute never strands the player in a
+// sub-room at Main-Hall-relative coordinates. The two room-transition call
+// sites in interactWithHubTarget() explicitly set currentHubRoom afterward.
 function safeInstituteSpawn(x = 7, y = 9, facing = "up") {
   hubHeldKeys.clear();
   stopHubMovementLoop();
   instituteMovement = { x, y, facing, moving: false, step: false, queued: null };
   hubDialogueId = null;
+  progress.currentHubRoom = "main";
 }
 let hubDialogueId = null;
 const HUB_NPC_PATROLS = {
@@ -1052,17 +1104,18 @@ const hubHeldKeys = new Set();
 let hubMoveFrame = null;
 let lastHubMoveAt = 0;
 function hubTargetState(id) {
-  return hubNpcRuntime[id] || HUB_TARGETS[id];
+  return hubNpcRuntime[id] || activeHubTargets()[id];
 }
 function hubFootBoxFor(x, y) {
   return { x1: x - 0.28, x2: x + 0.28, y1: y - 0.06, y2: y + 0.44 };
 }
 function hubRectBlocked(foot) {
-  return HUB_BLOCK_RECTS.some((block) => rectsOverlap(foot, block));
+  return activeHubBlocks().some((block) => rectsOverlap(foot, block));
 }
 function isHubNpcBlocked(id, x, y) {
   const foot = hubFootBoxFor(x, y);
-  if (x < 0.6 || y < 0.8 || x > HUB_GRID.columns - 1.2 || y > HUB_GRID.rows - 1.2) return true;
+  const grid = activeHubGrid();
+  if (x < 0.6 || y < 0.8 || x > grid.columns - 1.2 || y > grid.rows - 1.2) return true;
   if (hubRectBlocked(foot)) return true;
   if (rectsOverlap(foot, hubFootBoxFor(instituteMovement.x, instituteMovement.y))) return true;
   return Object.entries(hubNpcRuntime).some(
@@ -1071,6 +1124,13 @@ function isHubNpcBlocked(id, x, y) {
 }
 function updateInstituteNpcs() {
   if (progress.currentScreen !== "institute") return;
+  // Director/Amani/Julian only exist and patrol in the Main Hall; skip their
+  // tick while the player is in the Archive Room, but still update the
+  // player sprite/position below (that has to run in every room).
+  if (progress.currentHubRoom === "archive") {
+    updateInstitutePlayer();
+    return;
+  }
   Object.entries(hubNpcRuntime).forEach(([id, state], index) => {
     if (hubDialogueId === id) {
       state.walking = false;
@@ -1133,6 +1193,22 @@ export let progress = loadProgress();
 if (progress.activeFieldNpc) {
   progress.activeFieldNpc = null;
   saveProgress(progress);
+}
+// instituteMovement (like field movement) is ephemeral, not persisted — it
+// always starts at the Main Hall's default spawn. If the player was in the
+// Archive Room when they last saved, place them just inside its doorway
+// instead, so they don't resume at Main-Hall-relative coordinates in a
+// smaller room. Mirrors the positioning interactWithHubTarget() uses when
+// entering the Archive Room mid-session.
+if (progress.currentScreen === "institute" && progress.currentHubRoom === "archive") {
+  instituteMovement = {
+    x: ARCHIVE_ROOM_TARGETS.exitDoor.x,
+    y: ARCHIVE_ROOM_TARGETS.exitDoor.y - 0.6,
+    facing: "up",
+    moving: false,
+    step: false,
+    queued: null,
+  };
 }
 const VOLATILE_SCREENS = new Set(["source"]);
 const VALID_SCREENS = new Set([
@@ -1403,7 +1479,8 @@ function unitOneBadgeCaseMarkup() {
 }
 
 function institutePositionStyle() {
-  return `left:${(((instituteMovement.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((instituteMovement.y + 0.54) / HUB_GRID.rows) * 100).toFixed(3)}%;`;
+  const grid = activeHubGrid();
+  return `left:${(((instituteMovement.x + 0.5) / grid.columns) * 100).toFixed(3)}%;top:${(((instituteMovement.y + 0.54) / grid.rows) * 100).toFixed(3)}%;`;
 }
 function instituteSpriteUrl() {
   const appearance = progress.profile.appearance === "b" ? "b" : "a";
@@ -1422,7 +1499,7 @@ function targetReach(id) {
 }
 function nearestHubTarget() {
   return (
-    Object.entries(HUB_TARGETS).find(
+    Object.entries(activeHubTargets()).find(
       ([id, target]) => targetDistance(target, id) <= targetReach(id)
     ) || null
   );
@@ -1444,16 +1521,21 @@ function updateInstitutePlayer() {
   updateHubProximityUi();
 }
 function updateHubProximityUi() {
-  Object.keys(HUB_TARGETS).forEach((id) => {
+  const targets = activeHubTargets();
+  Object.keys(targets).forEach((id) => {
     const selector =
-      id === "trophy" ? ".hub-trophy" : id === "table" ? ".hub-table" : `[data-hub-npc="${id}"]`;
+      id === "trophy"
+        ? ".hub-trophy"
+        : id === "table"
+          ? ".hub-table"
+          : `[data-hub-npc="${id}"], [data-hub-target="${id}"]`;
     const node = document.querySelector(selector);
-    if (node)
-      node.classList.toggle("is-near", targetDistance(HUB_TARGETS[id], id) <= targetReach(id));
+    if (node) node.classList.toggle("is-near", targetDistance(targets[id], id) <= targetReach(id));
   });
 }
 function isHubBlocked(x, y) {
-  const edge = x < 0.6 || y < 0.8 || x > HUB_GRID.columns - 1.2 || y > HUB_GRID.rows - 1.2;
+  const grid = activeHubGrid();
+  const edge = x < 0.6 || y < 0.8 || x > grid.columns - 1.2 || y > grid.rows - 1.2;
   if (edge) return true;
   const foot = hubFootBoxFor(x, y);
   if (hubRectBlocked(foot)) return true;
@@ -1530,7 +1612,7 @@ function runHubMovementLoop(now) {
   hubMoveFrame = window.requestAnimationFrame(runHubMovementLoop);
 }
 function interactWithHubTarget(id) {
-  const target = HUB_TARGETS[id];
+  const target = activeHubTargets()[id];
   if (!target) return;
   if (targetDistance(target, id) > targetReach(id)) {
     progress.hubNotice = `Move closer to interact with ${target.name}.`;
@@ -1538,9 +1620,28 @@ function interactWithHubTarget(id) {
     updateInstitutePlayer();
     return;
   }
-  if (id === "table") {
+  if (target.action === "archive") {
     playSfx("secure");
     progress.currentScreen = "archive";
+    save();
+    render();
+    return;
+  }
+  if (target.action === "enter-archive-room") {
+    playSfx("secure");
+    safeInstituteSpawn(
+      ARCHIVE_ROOM_TARGETS.exitDoor.x,
+      ARCHIVE_ROOM_TARGETS.exitDoor.y - 0.6,
+      "up"
+    );
+    progress.currentHubRoom = "archive";
+    save();
+    render();
+    return;
+  }
+  if (target.action === "leave-archive-room") {
+    playSfx("secure");
+    safeInstituteSpawn(HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6, "down");
     save();
     render();
     return;
@@ -1550,14 +1651,18 @@ function interactWithHubTarget(id) {
   render();
 }
 function instituteNpc(targetId, sprite, label) {
-  const target = HUB_TARGETS[targetId];
+  const target = activeHubTargets()[targetId];
   const state = hubTargetState(targetId);
   const isNear = targetDistance(target, targetId) <= targetReach(targetId);
   const walking = Boolean(hubNpcRuntime[targetId]?.walking);
   const spriteUrl = hubNpcSpriteUrl(targetId, state.facing || "down", walking) || sprite;
-  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(((state.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((state.y + 0.51) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><img src="${spriteUrl}" alt=""><span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
+  const grid = activeHubGrid();
+  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(((state.x + 0.5) / grid.columns) * 100).toFixed(3)}%;top:${(((state.y + 0.51) / grid.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><img src="${spriteUrl}" alt=""><span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
 }
 function instituteScreen() {
+  return progress.currentHubRoom === "archive" ? archiveRoomScreen() : instituteMainRoomScreen();
+}
+function instituteMainRoomScreen() {
   const nearby = nearestHubTarget();
   const dialogue = hubDialogueId ? HUB_TARGETS[hubDialogueId] : null;
   const status =
@@ -1566,7 +1671,17 @@ function instituteScreen() {
       ? `${progress.completedCases.length}/3 Unit 1 cases archived.`
       : "Your first active route awaits at the Navigation Table.");
   const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Active researcher · Unit 1</p><div class="hub-progress"><span><b>${progress.completedCases.length}</b> / 3 cases archived</span><span><b>${countEvidence("case-001")}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Badge case</b><span>Walk to the Preservation Case on the upper bookshelf to view Unit 1 badges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${countEvidence("case-001")}</b></button><button class="text-button" data-action="reset">Reset Unit 1 demo</button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map" id="instituteMap" aria-label="Playable Chronicle Institute interior"><img class="institute-map__art" src="${instituteHubBackground}" alt="Top-down interior of the Chronicle Institute showing a foyer and Archive room">${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}<button class="hub-trophy ${targetDistance(HUB_TARGETS.trophy, "trophy") <= targetReach("trophy") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.trophy.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.trophy.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="trophy" aria-label="Open Unit 1 preservation case"><span>▣</span><b>Preservation Case</b>${targetDistance(HUB_TARGETS.trophy, "trophy") <= targetReach("trophy") ? "<i>!</i>" : ""}</button><button class="hub-table ${targetDistance(HUB_TARGETS.table, "table") <= targetReach("table") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.table.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.table.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="table" aria-label="Open Chronicle Navigation Table"><span>✦</span><b>Navigation Table</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}</main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map" id="instituteMap" aria-label="Playable Chronicle Institute interior"><img class="institute-map__art" src="${instituteHubBackground}" alt="Top-down interior of the Chronicle Institute showing a foyer and Archive room">${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}<button class="hub-trophy ${targetDistance(HUB_TARGETS.trophy, "trophy") <= targetReach("trophy") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.trophy.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.trophy.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="trophy" aria-label="Open Unit 1 preservation case"><span>▣</span><b>Preservation Case</b>${targetDistance(HUB_TARGETS.trophy, "trophy") <= targetReach("trophy") ? "<i>!</i>" : ""}</button><button class="hub-table ${targetDistance(HUB_TARGETS.table, "table") <= targetReach("table") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.table.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.table.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="table" aria-label="Open Chronicle Navigation Table"><span>✦</span><b>Navigation Table</b></button><button class="hub-table hub-archive-door ${targetDistance(HUB_TARGETS.archiveDoor, "archiveDoor") <= targetReach("archiveDoor") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.archiveDoor.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.archiveDoor.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="archiveDoor" data-hub-target="archiveDoor" aria-label="Enter the Archive Room"><span>▤</span><b>Archive Room</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}</main>${authorPanel()}`;
+}
+
+function archiveRoomScreen() {
+  const targets = ARCHIVE_ROOM_TARGETS;
+  const nearby = nearestHubTarget();
+  const dialogue = hubDialogueId ? targets[hubDialogueId] : null;
+  const near = (id) => targetDistance(targets[id], id) <= targetReach(id);
+  const pos = (target) =>
+    `left:${(((target.x + 0.5) / ARCHIVE_ROOM_GRID.columns) * 100).toFixed(3)}%;top:${(((target.y + 0.5) / ARCHIVE_ROOM_GRID.rows) * 100).toFixed(3)}%`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p></section><section class="institute-map" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><button class="hub-table ${near("terminal") ? "is-near" : ""}" style="${pos(targets.terminal)}" data-action="hub-interact" data-target="terminal" data-hub-target="terminal" aria-label="Open Archive Terminal"><span>▤</span><b>Archive Terminal</b></button><button class="hub-table ${near("exitDoor") ? "is-near" : ""}" style="${pos(targets.exitDoor)}" data-action="hub-interact" data-target="exitDoor" data-hub-target="exitDoor" aria-label="Leave the Archive Room"><span>⤴</span><b>Leave Archive</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p></div></article></div>` : ""}</main>${authorPanel()}`;
 }
 
 function caseMarker(c) {

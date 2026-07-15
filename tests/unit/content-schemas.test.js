@@ -78,6 +78,42 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     const broken = { ...validUnit, cases: [{ ...validCase, route: "not-a-real-route" }] };
     expect(UnitSchema.safeParse(broken).success).toBe(false);
   });
+
+  it("defaults navigationTableVisible to true and archiveChallenge to null when omitted (normal case)", () => {
+    const result = UnitSchema.safeParse(validUnit);
+    expect(result.success).toBe(true);
+    expect(result.data.cases[0].navigationTableVisible).toBe(true);
+    expect(result.data.cases[0].archiveChallenge).toBeNull();
+  });
+
+  it("accepts a case relocated to the Archive Room (normal case)", () => {
+    const relocated = {
+      ...validUnit,
+      cases: [
+        {
+          ...validCase,
+          route: "regions",
+          navigationTableVisible: false,
+          archiveChallenge: { questType: "evidence-organizing", questId: "unit-02-charter-compact" },
+        },
+      ],
+    };
+    const result = UnitSchema.safeParse(relocated);
+    expect(result.success).toBe(true);
+    expect(result.data.cases[0].navigationTableVisible).toBe(false);
+    expect(result.data.cases[0].archiveChallenge).toEqual({
+      questType: "evidence-organizing",
+      questId: "unit-02-charter-compact",
+    });
+  });
+
+  it("rejects an archiveChallenge missing questId (invalid/missing data)", () => {
+    const broken = {
+      ...validUnit,
+      cases: [{ ...validCase, archiveChallenge: { questType: "mcq", questId: "" } }],
+    };
+    expect(UnitSchema.safeParse(broken).success).toBe(false);
+  });
 });
 
 describe("BrandSchema", () => {
@@ -115,6 +151,27 @@ describe("source schema (buildSourcesSchema)", () => {
     expect(schema.safeParse([{ ...validSource, reconstruction: "precontact" }]).success).toBe(
       false
     );
+  });
+
+  it("defaults investigationMode/investigationQuestId to null when omitted (normal case)", () => {
+    const schema = buildSourcesSchema({});
+    const result = schema.safeParse([validSource]);
+    expect(result.success).toBe(true);
+    expect(result.data[0].investigationMode).toBeNull();
+    expect(result.data[0].investigationQuestId).toBeNull();
+  });
+
+  it("accepts a source gated by an Investigation Challenge (normal case)", () => {
+    const schema = buildSourcesSchema({});
+    const gated = {
+      ...validSource,
+      activityRoute: null,
+      investigationMode: "mcq",
+      investigationQuestId: "unit-02-riverbend-letter-prediction",
+    };
+    const result = schema.safeParse([gated]);
+    expect(result.success).toBe(true);
+    expect(result.data[0].investigationMode).toBe("mcq");
   });
 });
 

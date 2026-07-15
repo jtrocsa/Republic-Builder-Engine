@@ -58,6 +58,17 @@ describe("readProgress", () => {
 
     expect(readProgress().completedCases).toEqual([]);
   });
+
+  it("merges a saved `archiveChallenges` bucket over the defaults (normal case)", () => {
+    saveProgress({
+      ...DEFAULT_PROGRESS,
+      archiveChallenges: { "case-006": { questState: { placements: {} }, completed: true } },
+    });
+
+    expect(readProgress().archiveChallenges).toEqual({
+      "case-006": { questState: { placements: {} }, completed: true },
+    });
+  });
 });
 
 describe("saveProgress / hasSavedProgress / resetProgress", () => {

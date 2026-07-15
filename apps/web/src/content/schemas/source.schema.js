@@ -35,6 +35,15 @@ export function buildSourceSchema({ reconstructionIds } = {}) {
     externalUrl: z.url({ message: "source.externalUrl must be a valid URL" }),
     localAsset: z.string().min(1).optional(),
     reconstruction,
+    // Investigation Challenge gating via the shared quest-type engine
+    // (quest-types/index.js's QUEST_TYPES) — an additive sibling to
+    // activityRoute's legacy bespoke-screen gating. A source should set at
+    // most one of activityRoute / investigationMode, not both. questType is
+    // cross-referenced against Object.keys(QUEST_TYPES) in
+    // validate-content.js, not a Zod enum, for the same reason as
+    // case.archiveChallenge.questType above.
+    investigationMode: z.string().min(1).nullable().default(null),
+    investigationQuestId: z.string().min(1).nullable().default(null),
   });
 }
 

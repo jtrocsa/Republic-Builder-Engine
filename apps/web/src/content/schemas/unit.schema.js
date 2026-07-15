@@ -20,6 +20,15 @@ export const BrandSchema = z.object({
   status: z.string().min(1, "BRAND.status is required"),
 });
 
+// A case's Archive Challenge, if it has one — the shared quest-type engine
+// (quest-types/index.js's QUEST_TYPES) renders/grades it, so questType is
+// cross-referenced against Object.keys(QUEST_TYPES) in validate-content.js,
+// not against a Zod enum here (Zod can't see application code).
+const ArchiveChallengeSchema = z.object({
+  questType: z.string().min(1, "case.archiveChallenge.questType is required"),
+  questId: z.string().min(1, "case.archiveChallenge.questId is required"),
+});
+
 export const CaseSchema = z.object({
   id: z.string().min(1, "case.id is required"),
   shortTitle: z.string().min(1, "case.shortTitle is required"),
@@ -33,6 +42,14 @@ export const CaseSchema = z.object({
     message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
   }),
   summary: z.string().min(1, "case.summary is required"),
+  // Whether this case still gets a marker on the Chronicle Navigation Table.
+  // Defaults true so every pre-existing case validates unchanged; cases
+  // relocated into the Institute Archive Room are flagged false in content.
+  navigationTableVisible: z.boolean().default(true),
+  // Present only for cases relocated into the Archive Room; null for
+  // ChronoTravel destination cases (route: "field") and for
+  // not-yet-migrated standalone cases.
+  archiveChallenge: ArchiveChallengeSchema.nullable().default(null),
 });
 
 export const UnitSchema = z.object({

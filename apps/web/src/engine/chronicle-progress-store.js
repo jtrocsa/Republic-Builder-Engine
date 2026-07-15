@@ -2,6 +2,7 @@ const KEY = "republic-builder.chronicle.unit-01.v2";
 export const DEFAULT_PROGRESS = {
   profile: { name: "Chronicler", appearance: "a" },
   currentScreen: "institute",
+  currentHubRoom: "main",
   selectedUnitId: "unit-01",
   selectedCaseId: "case-001",
   activeCaseId: null,
@@ -20,6 +21,7 @@ export const DEFAULT_PROGRESS = {
   hubNotice: "",
   fieldNotice: "",
   sourceActivities: {},
+  archiveChallenges: {},
   submissions: {},
   activityState: {},
   completedUnits: [],
@@ -39,6 +41,10 @@ export function readProgress() {
       reconstruction: { ...DEFAULT_PROGRESS.reconstruction, ...(saved.reconstruction || {}) },
       exchangeLedger: { ...DEFAULT_PROGRESS.exchangeLedger, ...(saved.exchangeLedger || {}) },
       sourceActivities: { ...DEFAULT_PROGRESS.sourceActivities, ...(saved.sourceActivities || {}) },
+      archiveChallenges: {
+        ...DEFAULT_PROGRESS.archiveChallenges,
+        ...(saved.archiveChallenges || {}),
+      },
       submissions: { ...DEFAULT_PROGRESS.submissions, ...(saved.submissions || {}) },
       activityState: { ...DEFAULT_PROGRESS.activityState, ...(saved.activityState || {}) },
       questResponses: { ...DEFAULT_PROGRESS.questResponses, ...(saved.questResponses || {}) },
