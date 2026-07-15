@@ -6,7 +6,7 @@
 
 - The game is **Chronicle**, an AP U.S. History RPG. "Republic Builder Engine" is retired as the project's identity; the eventual multi-subject platform has no final name yet.
 - The playable vertical slice is Unit 1 / Case 1.01 ("The Atlantic Crossroads"), fully playable end-to-end with all three sequential cases (case-001 through case-003 all have real, cited historical content). Unit 2 ("Colonial Crossroads," case-004 through case-006 plus unit review) is also complete with real content as of 2026-07-14.
-- The entire running game is one file, `apps/web/src/main.js` (3,181 lines as of Phase 13 below) — no framework, no React/Vue/Phaser. Procedural Web Audio now lives in `apps/web/src/engine/audio-engine.js`.
+- The entire running game is one file, `apps/web/src/main.js` (3,437 lines as of mini-games wiring) — no framework, no React/Vue/Phaser. Procedural Web Audio now lives in `apps/web/src/engine/audio-engine.js`.
 
 ## 2. Current branch / migration context
 
@@ -41,7 +41,7 @@
 
 **Post-Phase-13, content complete (2026-07-14): Unit 2 real-content pass done; no new architecture phase.** Practice Check's four quest types now have real progress/accessibility states (not just "wired," per Phase 11); the four-Cs skill taxonomy is a real enum with one value (Causation) now having real content from Unit 2 (case-004's headright/bound-labor/export-economy chain), and one value (Comparison) still lacking real examples, flagged in `docs/content-guide/skill-taxonomy.md`; Unit 1's field has real tile art and Unit 2's complete field/hub/sources/content work is live. `docs/architecture/NEXT-UNITS-ROADMAP.md` has been updated: Unit 1 and Unit 2 are both marked complete; Unit 3 planning (Period 3, 1754–1800 Revolution and Founding) is the natural next candidate.
 
-Scope stayed deliberately narrow per Phase 13: no registry/plugin-discovery system, no `PlatformCore`/`WorldComposition`/`QuestEngine` — those remain deferred per §8. The mini-games layer (`cargo-sorting`, `storm-navigation`) remains completely unwired into `main.js`, untouched. The tray+dropzone+reset drag/drop puzzle-screen pattern (record-reconstruction/triangle-trade/regions/exchange-ledger) remains identified as a future duplication risk and remains unextracted, pending real parameterization design (case IDs are hardcoded today), not code motion.
+Scope stayed deliberately narrow per Phase 13: no registry/plugin-discovery system, no `PlatformCore`/`WorldComposition`/`QuestEngine` — those remain deferred per §8. The mini-games layer (`cargo-sorting`, `storm-navigation`) is now wired and player-reachable via a "Try a Mini-Game →" button on the Navigation Table screen (`archiveScreen()`), routing to a `mini-games` screen (`miniGamesScreen()`) with both games fully playable via keyboard controls and score persistence. The tray+dropzone+reset drag/drop puzzle-screen pattern (record-reconstruction/triangle-trade/regions/exchange-ledger) remains identified as a future duplication risk and remains unextracted, pending real parameterization design (case IDs are hardcoded today), not code motion.
 
 ## 6. Exact next phase
 
