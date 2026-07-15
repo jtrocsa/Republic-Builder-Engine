@@ -10,8 +10,10 @@
  */
 import * as unit01Campaign from "../content/unit-01-campaign.js";
 import * as unit02Campaign from "../content/unit-02-campaign.js";
+import * as unit03Campaign from "../content/unit-03-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
+import * as unit03Quests from "../content/quests/unit-03-quests.js";
 
 export function loadChronicleContent() {
   return {
@@ -41,6 +43,15 @@ export function loadChronicleContent() {
       evidenceOrganizingQuests: unit02Quests.UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit02Quests.UNIT_02_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit02Quests.UNIT_02_SOURCE_ANALYSIS_QUESTS,
+    },
+    unit03: {
+      unit: unit03Campaign.UNIT_03,
+      sources: unit03Campaign.CASE_007_SOURCES,
+      lanes: unit03Campaign.CASE_007_LANES,
+      mcqQuests: unit03Quests.UNIT_03_MCQ_QUESTS,
+      evidenceOrganizingQuests: unit03Quests.UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
+      sequencingQuests: unit03Quests.UNIT_03_SEQUENCING_QUESTS,
+      sourceAnalysisQuests: unit03Quests.UNIT_03_SOURCE_ANALYSIS_QUESTS,
     },
   };
 }

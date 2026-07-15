@@ -121,6 +121,21 @@ describe("renderEvidenceOrganizingQuest", () => {
     expect(html).toContain('data-evidence-slot-filled="source-1"');
   });
 
+  it("shows both sources' labels when two sources share a correctSlotId (boundary case)", () => {
+    const sharedSlotQuest = {
+      ...validQuest,
+      sources: [
+        { ...validQuest.sources[0], correctSlotId: "slot-a" },
+        { ...validQuest.sources[1], correctSlotId: "slot-a" },
+      ],
+    };
+    const html = renderEvidenceOrganizingQuest(sharedSlotQuest, {
+      placements: { "source-1": "slot-a", "source-2": "slot-a" },
+    });
+    expect(html).toContain('data-evidence-slot-filled="source-1"');
+    expect(html).toContain('data-evidence-slot-filled="source-2"');
+  });
+
   it("omits the reflection field when the quest has none (boundary case)", () => {
     const withoutReflection = { ...validQuest };
     delete withoutReflection.reflectionPrompt;

@@ -1,0 +1,250 @@
+// Unit 3 (Period 3: 1754–1800) quest content, structural mirror of
+// unit-02-quests.js, built against Case 7's real CASE_007_SOURCES
+// (apps/web/src/content/unit-03-campaign.js).
+//
+// This file is the explicit gap-closing deliverable for the "Comparison"
+// historical-thinking skill: UNIT_03_EVIDENCE_ORGANIZING_QUESTS below tags
+// two sources — Prince Hall's 1777 freedom petition and Abigail Adams's 1776
+// "remember the ladies" letter — as Comparison, the first real
+// Comparison-tagged content in a field-route case's Practice Check surface
+// since Unit 2 shipped.
+export const UNIT_03_MCQ_QUESTS = [
+  {
+    id: "case-007-mcq-pontiac-sourcing",
+    prompt:
+      "Pontiac's 1763 speech survives only as an English translation of a contemporary French-recorded council account — no transcript exists in Pontiac's own language. This fact is most important for what reason?",
+    choices: [
+      "It means historians must treat the exact wording as filtered through translation and recording by others, not as Pontiac's verbatim words",
+      "It means the speech should be dismissed entirely as historical evidence",
+      "It proves Pontiac's Rebellion never actually occurred",
+      "It shows that Pontiac's speech was written by British colonial officials to justify war",
+    ],
+    answer: 0,
+    explanation:
+      "A source's path from an event to the page a Chronicler reads (translation, recording, editorial reprinting) doesn't make it worthless — but it does mean claims resting on its precise wording need to account for how many hands shaped that wording before it survived.",
+  },
+  {
+    id: "case-007-mcq-dunmore-causation",
+    prompt:
+      "Lord Dunmore's 1775 proclamation offered freedom only to enslaved people held by Patriot enslavers who joined British forces — not to enslaved people generally. What does this narrow scope reveal about Dunmore's purpose?",
+    choices: [
+      "The offer was a wartime strategy to weaken the rebellion's labor force and build a Loyalist military force, not a general antislavery measure",
+      "Dunmore intended to abolish slavery throughout the British Empire",
+      "The proclamation was aimed at freeing enslaved people held by Loyalist planters",
+      "The proclamation had no connection to the outbreak of the Revolutionary War",
+    ],
+    answer: 0,
+    explanation:
+      "By exempting enslaved people held by Loyalists, Dunmore revealed the proclamation's purpose was military and punitive toward rebels, not a principled stand against slavery itself.",
+  },
+  {
+    id: "case-007-mcq-comparison-hall-adams",
+    prompt:
+      "Prince Hall's 1777 petition for enslaved Black Bostonians' freedom and Abigail Adams's 1776 letter urging expanded legal rights for women both",
+    choices: [
+      "used the Revolution's natural-rights and no-law-without-consent language to argue for rights the Revolution's leaders had not extended to their own group",
+      "were formally adopted into Massachusetts and Continental Congress law within the year they were written",
+      "argued that only white male property holders deserved expanded rights under the new nation",
+      "were written by the same author under two different names",
+    ],
+    answer: 0,
+    explanation:
+      "Both documents borrow the Revolution's own justifying language — natural, unalienable rights and no binding law without consent or representation — to press claims for groups (enslaved Black Americans, women) the Revolution's institutions did not extend those rights to; neither was acted on by the bodies they addressed.",
+  },
+];
+
+export const UNIT_03_EVIDENCE_ORGANIZING_QUESTS = [
+  {
+    id: "case-007-evidence-record-sourcing",
+    prompt:
+      "Match each Case 7 record to the historical-thinking skill it best demonstrates, then explain what Prince Hall's petition and Abigail Adams's letter reveal when compared to each other.",
+    slots: [
+      { id: "contextualization", label: "Contextualization" },
+      { id: "causation", label: "Causation" },
+      { id: "continuity-and-change", label: "Continuity and Change" },
+      { id: "sourcing-situation", label: "Sourcing" },
+      { id: "comparison", label: "Comparison" },
+    ],
+    sources: [
+      {
+        id: "commoncause-pontiac-speech",
+        label: "Speech at a Council near Detroit",
+        attribution: "Pontiac (Odawa), 1763",
+        excerpt:
+          "This land, where you live, I have made for you and not for others… The Master of Life has ordered me to drive from your lands those dogs in red clothing who will do you nothing but harm.",
+        skillCategory: "Contextualization",
+        correctSlotId: "contextualization",
+      },
+      {
+        id: "commoncause-dunmore-proclamation",
+        label: "Lord Dunmore's Proclamation",
+        attribution: "John Murray, Earl of Dunmore, November 7, 1775",
+        excerpt:
+          "I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops.",
+        skillCategory: "Causation",
+        correctSlotId: "causation",
+      },
+      {
+        id: "commoncause-wheatley-poem",
+        label: "On the Death of Reverend Mr. George Whitefield",
+        attribution: "Phillis Wheatley, 1773 (composed 1770)",
+        excerpt: "Take him, ye Africans, he longs for you; / Impartial Saviour is his title due.",
+        skillCategory: "Continuity and Change",
+        correctSlotId: "continuity-and-change",
+      },
+      {
+        id: "commoncause-henry-speech",
+        label: "Give Me Liberty, or Give Me Death",
+        attribution: "Patrick Henry, reconstructed by William Wirt, 1817 (of a March 23, 1775 speech)",
+        excerpt:
+          "Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! … give me liberty, or give me death!",
+        skillCategory: "Sourcing",
+        correctSlotId: "sourcing-situation",
+      },
+      {
+        id: "commoncause-hall-petition",
+        label: "Petition for Freedom to the Massachusetts Council and House of Representatives",
+        attribution: "Prince Hall et al., January 13, 1777",
+        excerpt:
+          "Your petitioners apprehend that they have in common with all other men a natural and unalienable right to that freedom which the great Parent of the universe hath bestowed equally on all mankind.",
+        skillCategory: "Comparison",
+        correctSlotId: "comparison",
+      },
+      {
+        id: "commoncause-adams-letter",
+        label: "Letter to John Adams, \"Remember the Ladies\"",
+        attribution: "Abigail Adams, March 31 – April 5, 1776",
+        excerpt:
+          "I desire you would Remember the Ladies… Remember all Men would be tyrants if they could… we are determined to foment a Rebellion, and will not hold ourselves bound by any Laws in which we have no voice, or Representation.",
+        skillCategory: "Comparison",
+        correctSlotId: "comparison",
+      },
+    ],
+    reflectionPrompt:
+      "In 3–4 sentences, compare Prince Hall's petition and Abigail Adams's letter: what claim does each make using the Revolution's own language of rights and consent, and how differently was each received by the institutions it addressed?",
+    rubric: {
+      skillCategories: ["Contextualization", "Causation", "Continuity and Change", "Sourcing", "Comparison"],
+      pointsTotal: 6,
+      description:
+        "Earn 1 point per record correctly matched to the historical-thinking skill it best demonstrates.",
+    },
+  },
+];
+
+export const UNIT_03_SEQUENCING_QUESTS = [
+  {
+    id: "case-007-sequencing-frontier-to-founding",
+    prompt:
+      "Arrange these Case 7 developments in the order that reflects how each one caused or enabled the next — not simply the order the dates occurred in.",
+    items: [
+      {
+        id: "frontier-encroachment-pontiac",
+        label:
+          "After the Seven Years' War, British forts and settlers push onto lands recently promised to Indigenous nations, and Pontiac calls for resistance at a 1763 council near Detroit",
+        position: 0,
+      },
+      {
+        id: "townshend-protest-dickinson",
+        label:
+          "Parliament's new revenue acts on imported goods draw organized protest, including John Dickinson's 1767 newspaper letters denying Parliament's right to tax colonists for revenue",
+        position: 1,
+      },
+      {
+        id: "armed-resistance-henry",
+        label:
+          "Protest escalates toward open resistance, and Patrick Henry urges the Second Virginia Convention to arm its militia in March 1775",
+        position: 2,
+      },
+      {
+        id: "war-exploited-dunmore",
+        label:
+          "Once war has begun, Virginia's royal governor Lord Dunmore offers freedom to enslaved people who join British forces against their Patriot enslavers, in November 1775",
+        position: 3,
+      },
+      {
+        id: "ideals-claimed-hall-adams",
+        label:
+          "As independence is declared, groups excluded from the Revolution's promises invoke its own natural-rights language for themselves — Abigail Adams for women's legal standing, Prince Hall for enslaved Black Bostonians' freedom",
+        position: 4,
+      },
+    ],
+    explanation:
+      "Post-war frontier encroachment provoked Pontiac's resistance; escalating parliamentary taxation provoked organized protest like Dickinson's; that protest escalated toward Henry's call to arms; the war Henry helped bring about gave Dunmore a strategic reason to offer enslaved people freedom for joining the Crown; and the Revolution's own declared ideals, once articulated, were then claimed by groups — enslaved Black Americans and women — the Revolution's leaders had not intended to include, completing the chain from frontier grievance to a founding whose promises reached unevenly.",
+  },
+];
+
+export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
+  {
+    id: "case-007-hipp-henry-speech",
+    prompt:
+      "Analyze Patrick Henry's 1775 speech using HIPP reasoning. For each dimension below, choose the option that explains how or why it shapes the speech's argument — not the option that merely names the correct answer.",
+    document: {
+      text:
+        "It is in vain, sir, to extenuate the matter. Gentlemen may cry, Peace, Peace — but there is no peace. The war is actually begun! The next gale that sweeps from the north will bring to our ears the clash of resounding arms! Our brethren are already in the field! Why stand we here idle? What is it that gentlemen wish? What would they have? Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! I know not what course others may take; but as for me, give me liberty, or give me death!",
+      attribution:
+        "Patrick Henry, speech to the Second Virginia Convention, Richmond, Virginia, March 23, 1775 (as reconstructed by biographer William Wirt, 1817)",
+    },
+    hippPrompts: [
+      {
+        id: "henry-historical-situation",
+        dimension: "Historical situation",
+        argument:
+          "No transcript of Henry's speech was made in 1775; this wording was reconstructed more than forty years later by William Wirt from the recollections of elderly witnesses, which shapes how much weight the speech's precise phrasing can bear as evidence of Henry's exact words.",
+        options: [
+          {
+            id: "situation-explained",
+            text:
+              "Because this text was reconstructed decades after 1775 from witnesses' memories rather than transcribed at the time, historians can trust the speech's broader argument and impact but should be cautious about treating any single phrase as Henry's exact, verbatim wording.",
+            correct: true,
+          },
+          {
+            id: "situation-named-only",
+            text: "This speech was reconstructed by William Wirt in his 1817 biography of Patrick Henry.",
+            identificationOnly: true,
+            correct: false,
+          },
+          {
+            id: "situation-wrong-fabricated",
+            text: "Because Wirt reconstructed the speech in 1817, historians know it is entirely fabricated and reflects no real event.",
+            correct: false,
+          },
+          {
+            id: "situation-wrong-stenographer",
+            text: "The speech was recorded word-for-word by a court stenographer present at the Second Virginia Convention in 1775.",
+            correct: false,
+          },
+        ],
+      },
+      {
+        id: "henry-purpose",
+        dimension: "Purpose",
+        argument:
+          "Henry's purpose was to move a divided Convention to authorize arming Virginia's militia by arguing that war had already begun and that inaction was itself a choice for 'chains and slavery.'",
+        options: [
+          {
+            id: "purpose-explained",
+            text:
+              "By declaring that war was already underway and framing continued inaction as choosing 'chains and slavery,' Henry aimed to push wavering delegates past debate and toward voting to arm Virginia's militia immediately.",
+            correct: true,
+          },
+          {
+            id: "purpose-named-only",
+            text: "Patrick Henry delivered this speech to the Second Virginia Convention.",
+            identificationOnly: true,
+            correct: false,
+          },
+          {
+            id: "purpose-wrong-reconciliation",
+            text: "Henry's purpose was to negotiate a peaceful reconciliation between Virginia and King George III.",
+            correct: false,
+          },
+          {
+            id: "purpose-wrong-apology",
+            text: "The speech was intended to persuade the Convention to send a delegation apologizing to Parliament.",
+            correct: false,
+          },
+        ],
+      },
+    ],
+  },
+];

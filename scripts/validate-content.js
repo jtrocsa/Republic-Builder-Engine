@@ -162,6 +162,46 @@ function main() {
     )
   );
 
+  results.push(runSchema("unit-03-campaign.js: UNIT_03", UnitSchema, content.unit03.unit));
+  results.push(
+    runSchema("unit-03-campaign.js: CASE_007_LANES", CaseLanesSchema, content.unit03.lanes)
+  );
+  results.push(
+    runSchema(
+      "unit-03-campaign.js: CASE_007_SOURCES",
+      buildSourcesSchema({ reconstructionIds: content.unit03.lanes.map((lane) => lane.id) }),
+      content.unit03.sources
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_MCQ_QUESTS",
+      McqQuestListSchema,
+      content.unit03.mcqQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_EVIDENCE_ORGANIZING_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit03.evidenceOrganizingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit03.sequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_SOURCE_ANALYSIS_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit03.sourceAnalysisQuests
+    )
+  );
+
   // Cross-file checks: main.js's caseById()/unitForCase()/sourceById() all
   // search across every unit, so case ids and source ids must be unique
   // globally, not just within their own unit's array.
@@ -169,10 +209,12 @@ function main() {
     ...checkUniqueGlobalIds("cross-reference: case ids", [
       { source: "unit-01-campaign.js:UNIT_01.cases", items: content.unit01.unit.cases },
       { source: "unit-02-campaign.js:UNIT_02.cases", items: content.unit02.unit.cases },
+      { source: "unit-03-campaign.js:UNIT_03.cases", items: content.unit03.unit.cases },
     ]),
     ...checkUniqueGlobalIds("cross-reference: source ids", [
       { source: "unit-01-campaign.js:CASE_001_SOURCES", items: content.unit01.sources },
       { source: "unit-02-campaign.js:CASE_004_SOURCES", items: content.unit02.sources },
+      { source: "unit-03-campaign.js:CASE_007_SOURCES", items: content.unit03.sources },
     ]),
   ];
 

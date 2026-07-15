@@ -128,7 +128,10 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
   const placedBySlot = new Map();
   quest.sources.forEach((source) => {
     const slotId = placements[source.id];
-    if (slotId) placedBySlot.set(slotId, source);
+    if (!slotId) return;
+    const existing = placedBySlot.get(slotId) || [];
+    existing.push(source);
+    placedBySlot.set(slotId, existing);
   });
 
   const reflectionLength = (state.reflection || "").trim().length;
@@ -162,12 +165,17 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
   <div class="quest-evidence-slots">
     ${quest.slots
       .map((slot) => {
-        const placed = placedBySlot.get(slot.id);
+        const placed = placedBySlot.get(slot.id) || [];
         return `<div class="evidence-slot" data-evidence-slot="${escapeHtml(slot.id)}">
       <h4>${escapeHtml(slot.label)}</h4>
       ${
-        placed
-          ? `<p class="evidence-slot-filled" data-evidence-slot-filled="${escapeHtml(placed.id)}">${escapeHtml(placed.label)}</p>`
+        placed.length
+          ? placed
+              .map(
+                (source) =>
+                  `<p class="evidence-slot-filled" data-evidence-slot-filled="${escapeHtml(source.id)}">${escapeHtml(source.label)}</p>`,
+              )
+              .join("")
           : `<p class="evidence-slot-empty">Drop evidence here</p>`
       }
     </div>`;

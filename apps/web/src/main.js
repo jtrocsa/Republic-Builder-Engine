@@ -17,6 +17,7 @@ import {
   REGION_EVIDENCE,
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
+import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
 import {
   loadProgress,
   saveProgress,
@@ -45,6 +46,12 @@ import {
   UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_02_SOURCE_ANALYSIS_QUESTS,
 } from "./content/quests/unit-02-quests.js";
+import {
+  UNIT_03_MCQ_QUESTS,
+  UNIT_03_SEQUENCING_QUESTS,
+  UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_03_SOURCE_ANALYSIS_QUESTS,
+} from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import {
@@ -742,6 +749,157 @@ function isRiverbendLand(x, y) {
   return !inRiver || onBridge;
 }
 
+// ---- Unit 3 field: The Common Cause (Revolutionary-era Philadelphia gathering ground) ----
+// No tileset pack under assets/tilesets/ fits an 1760s-70s colonial Philadelphia street scene
+// (closest candidate, Medieval Fantasy Town, is European-medieval-coded) — see the case-007
+// field build notes. Rather than force a mismatched tileset through the Tiled pipeline, this
+// map falls back to the pre-Tiled, CSS-drawn scene approach (this repo's original Unit 1
+// technique, before docs/decision-log/0029-caribbean-tiled-rebuild.md). commonCauseWorldMarkup()
+// below renders each building directly from UNIT3_FIELD_BLOCKS so the drawn footprint and the
+// collision rect can never drift apart, in the same spirit as 0029's land-mask reuse.
+const UNIT3_FIELD_BLOCKS = [
+  { x1: 5.0, y1: 6.0, x2: 9.5, y2: 9.0, kind: "print shop" },
+  { x1: 16.0, y1: 3.5, x2: 23.0, y2: 7.0, kind: "assembly hall" },
+  { x1: 21.0, y1: 8.2, x2: 24.0, y2: 9.4, kind: "statehouse steps" },
+  { x1: 27.0, y1: 5.0, x2: 31.0, y2: 8.0, kind: "chapel" },
+  { x1: 13.0, y1: 13.0, x2: 16.0, y2: 14.5, kind: "market stalls" },
+  { x1: 18.7, y1: 11.0, x2: 20.3, y2: 12.0, kind: "town well" },
+  { x1: 19.3, y1: 9.0, x2: 20.7, y2: 10.0, kind: "liberty pole" },
+  { x1: 33.0, y1: 15.0, x2: 37.0, y2: 18.0, kind: "wharf" },
+  { x1: 3.0, y1: 15.0, x2: 6.5, y2: 17.5, kind: "frontier dispatch post" },
+  { x1: 9.0, y1: 17.0, x2: 13.0, y2: 20.0, kind: "family residence" },
+];
+const UNIT3_FIELD_NPCS = [
+  // Placeholder roster: sprites reuse Unit 1 field art, same as Unit 2's roster above —
+  // no Revolutionary-era sprite sheets exist yet.
+  {
+    id: "printer-apprentice",
+    x: 6.3,
+    y: 9.7,
+    group: "commoncause",
+    name: "Printer's apprentice",
+    label: "Printer's apprentice",
+    sprite: "spanish-scribe",
+    text: "Type must be set backward, letter by letter, until the words print true. Master Dickinson's letters go out under a farmer's name — safer for a press, and no less read for it.",
+  },
+  {
+    id: "town-crier",
+    x: 19.5,
+    y: 13.0,
+    group: "commoncause",
+    name: "Town crier",
+    label: "Town crier",
+    sprite: "columbus",
+    text: "Hear ye — Parliament's duties still stand, and talk in every tavern turns to committees, boycotts, and what a colony owes its King. I only carry the news; deciding what to do with it is your affair.",
+  },
+  {
+    id: "militia-recruiter",
+    x: 15.5,
+    y: 8.3,
+    group: "commoncause",
+    name: "Militia recruiter",
+    label: "Militia recruiter",
+    sprite: "spanish-sailor",
+    text: "Muster on the green Tuesday next. A man who won't drill now may wish later he had — word from Virginia says even the House of Burgesses is arming its militia.",
+  },
+  {
+    id: "free-tradesman",
+    x: 25.0,
+    y: 10.5,
+    group: "commoncause",
+    name: "Free Black tradesman",
+    label: "Tradesman",
+    sprite: "taino-elder",
+    text: "I read the broadsides same as any freeman here. Strange, to hear talk of chains and slavery from men who'd never let it touch their own thinking on who else wears them.",
+  },
+  {
+    id: "loyalist-merchant",
+    x: 32.0,
+    y: 16.5,
+    group: "commoncause",
+    name: "Loyalist merchant",
+    label: "Merchant",
+    sprite: "taino-fisher",
+    text: "My ledgers balance because the Crown's ships still call at this port. I'll not pretend disorder in the streets is good for trade, whatever cause it claims to serve.",
+  },
+  {
+    id: "farmwife",
+    x: 10.0,
+    y: 15.8,
+    group: "commoncause",
+    name: "Farmwife",
+    label: "Farmwife",
+    sprite: "taino-gardener",
+    text: "My husband's away with the militia and the mending doesn't stop because Parliament's vexed us. Whatever new government they draft, I mean to see it remembers the women keeping the house together.",
+  },
+];
+const UNIT3_FIELD_NPC_PATROLS = {
+  "printer-apprentice": [
+    { x: 6.3, y: 9.7 },
+    { x: 7.0, y: 9.5 },
+    { x: 7.3, y: 10.0 },
+    { x: 6.6, y: 10.2 },
+  ],
+  "town-crier": [
+    { x: 19.5, y: 13.0 },
+    { x: 20.3, y: 12.8 },
+    { x: 20.6, y: 13.6 },
+    { x: 19.2, y: 13.8 },
+  ],
+  "militia-recruiter": [
+    { x: 15.5, y: 8.3 },
+    { x: 16.2, y: 8.0 },
+    { x: 16.4, y: 8.7 },
+    { x: 15.2, y: 8.8 },
+  ],
+  "free-tradesman": [
+    { x: 25.0, y: 10.5 },
+    { x: 25.7, y: 10.2 },
+    { x: 26.0, y: 11.0 },
+    { x: 24.6, y: 11.2 },
+  ],
+  "loyalist-merchant": [
+    { x: 32.0, y: 16.5 },
+    { x: 32.6, y: 16.2 },
+    { x: 32.9, y: 17.0 },
+    { x: 31.6, y: 17.2 },
+  ],
+  farmwife: [
+    { x: 10.0, y: 15.8 },
+    { x: 10.7, y: 15.5 },
+    { x: 11.0, y: 16.3 },
+    { x: 9.6, y: 16.5 },
+  ],
+};
+const UNIT3_FIELD_SOURCE_POINTS = {
+  "commoncause-pontiac-speech": { x: 5.0, y: 18.1, label: "Frontier dispatch", kind: "Source" },
+  "commoncause-dickinson-letter": { x: 8.6, y: 9.6, label: "Print shop broadside", kind: "Source" },
+  "commoncause-henry-speech": { x: 19.5, y: 7.6, label: "Assembly hall speech", kind: "Source" },
+  "commoncause-wheatley-poem": { x: 29.0, y: 8.6, label: "Chapel elegy", kind: "Source" },
+  "commoncause-dunmore-proclamation": { x: 36.0, y: 18.7, label: "Wharf dispatch", kind: "Source" },
+  "commoncause-hall-petition": { x: 22.5, y: 9.9, label: "Statehouse petition", kind: "Source" },
+  "commoncause-adams-letter": { x: 11.0, y: 20.6, label: "Home correspondence", kind: "Source" },
+};
+function isCommonCauseLand(x, y) {
+  // A rectangular town gathering ground framed by a painted tree line, same simple
+  // shape as Riverbend's clearing — no water crossing needed for this setting.
+  return x > 2.2 && x < 37.8 && y > 2.2 && y < 21.8;
+}
+function commonCauseBuildingMarkup(block) {
+  const slug = block.kind.replace(/\s+/g, "-");
+  const left = (block.x1 * FIELD_GRID.tile).toFixed(1);
+  const top = (block.y1 * FIELD_GRID.tile).toFixed(1);
+  const width = ((block.x2 - block.x1) * FIELD_GRID.tile).toFixed(1);
+  const height = ((block.y2 - block.y1) * FIELD_GRID.tile).toFixed(1);
+  return `<div class="commoncause-building commoncause-building--${slug}" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px"><b>${esc(block.kind)}</b></div>`;
+}
+function commonCauseWorldMarkup() {
+  // CSS-drawn scene (see UNIT3_FIELD_BLOCKS comment above): every building is rendered
+  // directly from the same rects used for collision, so the art and the walkable space
+  // can't drift apart as the map is edited.
+  return `<div class="commoncause-ground" role="img" aria-label="Top-down Revolutionary-era Philadelphia gathering ground with a print shop, assembly hall, chapel, market, liberty pole, wharf, frontier dispatch post, and a family residence"></div>${UNIT3_FIELD_BLOCKS.map(commonCauseBuildingMarkup).join("")}`;
+}
+
 const FIELD_MAPS = {
   "unit-01": {
     id: "unit-01",
@@ -766,6 +924,18 @@ const FIELD_MAPS = {
     sourcePoints: UNIT2_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: riverbendWorldMarkup,
+  },
+  "unit-03": {
+    id: "unit-03",
+    spawn: { x: 20.0, y: 16.0 },
+    recall: { x: 24.0, y: 17.5 },
+    isLand: isCommonCauseLand,
+    blocks: UNIT3_FIELD_BLOCKS,
+    npcs: UNIT3_FIELD_NPCS,
+    patrols: UNIT3_FIELD_NPC_PATROLS,
+    sourcePoints: UNIT3_FIELD_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: commonCauseWorldMarkup,
   },
 };
 function activeFieldMap() {
@@ -1032,8 +1202,12 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-const UNITS = [UNIT_01, UNIT_02];
-const UNIT_SOURCES = { "case-001": CASE_001_SOURCES, "case-004": CASE_004_SOURCES };
+const UNITS = [UNIT_01, UNIT_02, UNIT_03];
+const UNIT_SOURCES = {
+  "case-001": CASE_001_SOURCES,
+  "case-004": CASE_004_SOURCES,
+  "case-007": CASE_007_SOURCES,
+};
 const PRACTICE_CHECK_QUESTS = {
   "case-001": {
     mcq: UNIT_01_MCQ_QUESTS,
@@ -1046,6 +1220,12 @@ const PRACTICE_CHECK_QUESTS = {
     sequencing: UNIT_02_SEQUENCING_QUESTS,
     evidenceOrganizing: UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_02_SOURCE_ANALYSIS_QUESTS,
+  },
+  "case-007": {
+    mcq: UNIT_03_MCQ_QUESTS,
+    sequencing: UNIT_03_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_03_SOURCE_ANALYSIS_QUESTS,
   },
 };
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
@@ -1060,7 +1240,8 @@ const caseById = (id) => {
 const sourcesForCase = (caseId) => UNIT_SOURCES[caseId] || [];
 const sourceById = (id) =>
   CASE_001_SOURCES.find((item) => item.id === id) ||
-  CASE_004_SOURCES.find((item) => item.id === id);
+  CASE_004_SOURCES.find((item) => item.id === id) ||
+  CASE_007_SOURCES.find((item) => item.id === id);
 // Author Mode unlocks every unit/case for design navigation without touching the save.
 const isUnlocked = (id) => authorMode || progress.unlocked.includes(id);
 const isComplete = (id) => progress.completedCases.includes(id);
@@ -1807,6 +1988,14 @@ const FIELD_COPY = {
       "The Chronometer places you on the settlement green. The wharf accounts sit across the river bridge.",
     progressHint: "Secure the charter, the servant's letter, and the wharf accounts.",
   },
+  "unit-03": {
+    intro:
+      "You arrive on a Philadelphia gathering ground threaded with news from the frontier, the press, the assembly, and the wharf. Walk the square, speak with its people, then gather all seven records before the record destabilizes.",
+    defaultNotice:
+      "The Chronometer places you near the town well. The print shop, assembly hall, chapel, statehouse steps, wharf, frontier dispatch post, and family residence each hold a record.",
+    progressHint:
+      "Secure the frontier speech, the farmer's letters, the liberty speech, the elegy, the proclamation, the petition, and the private letter.",
+  },
 };
 function fieldScreen() {
   const map = activeFieldMap();
@@ -1970,7 +2159,7 @@ function practiceCheckScreen() {
 
 function sourceVisual(source) {
   if (source.visual === "letter")
-    return `<div class="document-paper"><span>Primary-source transcript · 1493</span><blockquote>${esc(source.excerpt)}</blockquote><small>Textual record. Read for perspective, audience, purpose, and language.</small></div>`;
+    return `<div class="document-paper"><span>Primary-source transcript · ${esc(source.date)}</span><blockquote>${esc(source.excerpt)}</blockquote><small>Textual record. Read for perspective, audience, purpose, and language.</small></div>`;
   if (source.visual === "context")
     return `<div class="document-paper document-paper--context"><span>Secondary context record</span><p>${esc(source.excerpt)}</p><small>Background evidence, not a Taíno-authored primary source.</small></div>`;
   return `<figure class="document-image"><img src="${waldseemuller}" alt="Local course copy of Martin Waldseemüller’s 1507 world map"><figcaption>Local course copy of a Library of Congress scan. Zoom is intentionally preserved in the reader; students do not need to leave Chronicle to view it.</figcaption></figure>`;
@@ -2024,6 +2213,15 @@ const RECONSTRUCTION_LANES = {
       founding: "A record of how land and settlement rights were granted.",
       labor: "A firsthand account of the work and conditions bound labor actually involved.",
       exchange: "A record of the goods and economy the settlement's labor sustained.",
+    }[lane.id],
+  })),
+  "case-007": CASE_007_LANES.map((lane) => ({
+    ...lane,
+    hint: {
+      "empire-and-frontier": "A record of imperial competition or frontier conflict over land.",
+      "protest-and-rhetoric": "A record of colonists organizing or arguing against British policy.",
+      "revolution-and-its-promises":
+        "A record of the Revolution's ideals being invoked, extended, or denied once war began.",
     }[lane.id],
   })),
 };
@@ -2148,7 +2346,7 @@ function render() {
     return;
   }
   clearTimeout(activeTravelTimeout);
-  let html = "";
+  let html;
   try {
     switch (progress.currentScreen) {
       case "intro-welcome":
