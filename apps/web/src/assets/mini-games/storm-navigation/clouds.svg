@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" preserveAspectRatio="none" role="img" aria-label="Storm clouds">
+  <defs>
+    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5c7480"/>
+      <stop offset="100%" stop-color="#334752"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#cloud)" opacity="0.75">
+    <ellipse cx="40" cy="34" rx="46" ry="18"/>
+    <ellipse cx="90" cy="24" rx="38" ry="15"/>
+    <ellipse cx="160" cy="38" rx="54" ry="20"/>
+    <ellipse cx="230" cy="22" rx="42" ry="16"/>
+    <ellipse cx="300" cy="36" rx="50" ry="19"/>
+    <ellipse cx="365" cy="26" rx="40" ry="15"/>
+  </g>
+  <path d="M150 46 L142 62 L154 58 L146 76" fill="none" stroke="#f4e5be" stroke-width="2.5" opacity="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

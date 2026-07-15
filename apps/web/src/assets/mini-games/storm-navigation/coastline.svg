@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 60" preserveAspectRatio="none" role="img" aria-label="Distant coastline silhouette">
+  <defs>
+    <linearGradient id="coast" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#123543"/>
+      <stop offset="100%" stop-color="#0a222c"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 60 L0 40 L22 24 L40 38 L58 18 L78 34 L96 12 L118 32 L140 22 L162 40 L184 26 L206 40 L228 16 L250 36 L272 24 L294 40 L316 20 L338 36 L360 26 L380 40 L400 30 L400 60 Z" fill="url(#coast)"/>
+  <path d="M60 34 L64 20 L68 34 Z M64 22 L67 12 L70 22 Z" fill="#0a222c"/>
+  <path d="M240 32 L244 18 L248 32 Z M244 20 L247 10 L250 20 Z" fill="#0a222c"/>
+  <path d="M320 32 L324 18 L328 32 Z M324 20 L327 10 L330 20 Z" fill="#0a222c"/>
+</svg>

@@ -131,6 +131,20 @@ function renderCaribbeanTiledMap() {
 const waldseemuller = new URL("./assets/documents/source-waldseemuller-1507.jpg", import.meta.url)
   .href;
 
+// Storm Navigation mini-game art (see mini-games/storm-navigation.js) — resolved here, not in
+// that module, so the module stays free of Vite/import.meta.url concerns and can be unit-tested
+// with plain string fixtures.
+const STORM_NAVIGATION_SPRITES = {
+  ship: new URL("./assets/mini-games/storm-navigation/ship.svg", import.meta.url).href,
+  hazardKinds: {
+    rock: new URL("./assets/mini-games/storm-navigation/rock.svg", import.meta.url).href,
+    wreckage: new URL("./assets/mini-games/storm-navigation/wreckage.svg", import.meta.url).href,
+    whirlpool: new URL("./assets/mini-games/storm-navigation/whirlpool.svg", import.meta.url).href,
+  },
+  coastline: new URL("./assets/mini-games/storm-navigation/coastline.svg", import.meta.url).href,
+  clouds: new URL("./assets/mini-games/storm-navigation/clouds.svg", import.meta.url).href,
+};
+
 const recallBeaconBlue = new URL(
   "./assets/chronicle-sprites/field/recall-beacon-blue.png",
   import.meta.url
@@ -1416,7 +1430,11 @@ function archiveScreen() {
 // grading — see apps/web/src/mini-games/*.js for the pure logic modules this screen wires in.
 function renderMiniGameStage() {
   if (activeMiniGame === "storm-navigation" && stormNavigationState) {
-    return renderStormNavigationGame(stormNavigationState, progress.miniGameScores.stormNavigationBest);
+    return renderStormNavigationGame(
+      stormNavigationState,
+      progress.miniGameScores.stormNavigationBest,
+      STORM_NAVIGATION_SPRITES
+    );
   }
   if (activeMiniGame === "cargo-sorting" && cargoSortingState) {
     const complete =

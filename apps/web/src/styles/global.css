@@ -557,14 +557,16 @@ select {
    storm-navigation.js); hazards additionally scale it by their own --p (0-1 progress toward
    the player), so far-away hazards cluster near the horizon's center and spread out/grow as
    they approach — the same vanishing-point trick classic arcade "road" games use, done with
-   CSS custom properties instead of a canvas/3D engine (this repo has no canvas game layer). */
+   CSS custom properties instead of a canvas/3D engine (this repo has no canvas game layer).
+   Sized large/tall (vs. a compact embedded widget) so the corridor reads as immersive. */
 .storm-track {
   position: relative;
-  width: min(480px, 100%);
-  height: 300px;
+  overflow: hidden;
+  width: min(760px, 100%);
+  height: 520px;
   margin: 0 auto;
   border-radius: 12px;
-  clip-path: polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
+  clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
   background:
     linear-gradient(180deg, rgba(199, 231, 237, 0.4) 0%, rgba(18, 76, 94, 0.1) 16%, transparent 32%),
     repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.055) 0 3px, transparent 3px 26px),
@@ -574,6 +576,35 @@ select {
     140% 240px,
     100% 100%;
   animation: stormCurrent 2.6s linear infinite;
+}
+.storm-clouds {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 22%;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0.6;
+  animation: stormCloudsDrift 14s linear infinite;
+}
+@keyframes stormCloudsDrift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-8%);
+  }
+}
+.storm-coastline {
+  position: absolute;
+  top: 12%;
+  left: 0;
+  width: 100%;
+  height: 14%;
+  object-fit: cover;
+  object-position: center bottom;
+  opacity: 0.7;
 }
 @keyframes stormCurrent {
   from {
@@ -591,8 +622,8 @@ select {
 }
 .storm-horizon {
   position: absolute;
-  left: 30%;
-  right: 30%;
+  left: 42%;
+  right: 42%;
   top: 0;
   height: 2px;
   background: rgba(233, 213, 163, 0.5);
@@ -600,10 +631,10 @@ select {
 }
 .storm-ship {
   position: absolute;
-  bottom: 14px;
+  bottom: 22px;
   left: calc(50% + var(--lane-offset, 0%));
-  width: 46px;
-  height: 60px;
+  width: 84px;
+  height: 108px;
   transform: translateX(-50%);
   transition: left 0.18s ease;
   animation: shipBob 1.8s ease-in-out infinite;
@@ -614,55 +645,39 @@ select {
     transform: translateX(-50%) translateY(0);
   }
   50% {
-    transform: translateX(-50%) translateY(-3px);
+    transform: translateX(-50%) translateY(-4px);
   }
 }
 .storm-ship-wake {
   position: absolute;
   left: 50%;
-  bottom: -6px;
-  width: 30px;
-  height: 16px;
+  bottom: -10px;
+  width: 56px;
+  height: 26px;
   transform: translateX(-50%);
   background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4), transparent 70%);
   border-radius: 50%;
 }
-.storm-ship-hull {
-  position: absolute;
-  left: 50%;
-  bottom: 6px;
-  width: 34px;
-  height: 22px;
-  transform: translateX(-50%);
-  background: linear-gradient(#8b572e, #5f391e);
-  border: 2px solid #3d2618;
-  border-radius: 4px 4px 16px 16px;
-}
-.storm-ship-mast {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  width: 0;
-  height: 0;
-  transform: translateX(-50%);
-  border-left: 13px solid transparent;
-  border-right: 13px solid transparent;
-  border-bottom: 26px solid #eee1bd;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+.storm-ship-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
 }
 .storm-hazard {
   position: absolute;
   left: calc(50% + (var(--lane-offset, 0%) * var(--p, 0)));
-  top: calc(6% + (var(--p, 0) * 72%));
-  transform: translate(-50%, -50%) scale(calc(0.32 + (var(--p, 0) * 0.85)));
+  top: calc(4% + (var(--p, 0) * 74%));
+  transform: translate(-50%, -50%) scale(calc(0.3 + (var(--p, 0) * 1)));
 }
-.storm-rock {
+.storm-hazard-art {
   display: block;
-  width: 26px;
-  height: 20px;
-  background: linear-gradient(160deg, #6b6459, #38342c);
-  clip-path: polygon(10% 100%, 0% 55%, 30% 20%, 55% 0%, 85% 25%, 100% 60%, 90% 100%);
-  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.4);
+  width: 58px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
 }
 .storm-tally,
 .storm-final-score,
@@ -2474,7 +2489,7 @@ dd {
 }
 .bank-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -3053,9 +3068,6 @@ dd {
   .return-warp-shell {
     grid-template-columns: 1fr;
   }
-  .bank-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .system-track {
     grid-template-columns: repeat(11, minmax(132px, 1fr));
   }
@@ -3064,9 +3076,6 @@ dd {
   }
 }
 @media (max-width: 700px) {
-  .bank-cards {
-    grid-template-columns: 1fr;
-  }
   .upload-core,
   .ledger-success-core {
     padding: 28px 19px;

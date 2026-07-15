@@ -162,7 +162,7 @@ export const TRIANGLE_CARGO = [
     label: "Cloth & ironware",
     icon: "🧵",
     leg: "outbound",
-    sourceTitle: "Outward Cargo Pattern, Gold Coast Trade",
+    sourceTitle: "Outward cargo consistently ran to cloth, iron, and firearms",
     sourceMeta: "Royal African Company records · aggregate pattern, c. 1730s",
     consequence:
       "Royal African Company invoices for Gold Coast voyages recur with the same short list of outbound goods — Manchester and Kentish cloth, iron and copper bars, and firearms — advanced against captives and gold on the African coast. Manufactured wares, not coin, were the trade's opening currency.",
@@ -246,7 +246,7 @@ export const TRIANGLE_CARGO = [
     label: "Sugar & molasses",
     icon: "🛢",
     leg: "homeward",
-    sourceTitle: "Plantation Invoice: Sugar and Molasses Shipped to England",
+    sourceTitle: "Plantation accounts recorded hogsheads of sugar and puncheons of molasses shipped to England",
     sourceMeta: "Representative Caribbean plantation account · c. 1730",
     consequence:
       "Caribbean plantation accounts compiled from the period typically list hogsheads of sugar and puncheons of molasses shipped to England or the northern colonies against the planter's account, with the proceeds used to buy more enslaved laborers, provisions, and manufactured goods — sugar wealth circulating back into the labor system that produced it.",

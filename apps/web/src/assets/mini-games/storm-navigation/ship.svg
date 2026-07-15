@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 150" role="img" aria-label="Sailing ship, stern view">
+  <defs>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a3703f"/>
+      <stop offset="55%" stop-color="#8b572e"/>
+      <stop offset="100%" stop-color="#4a2c17"/>
+    </linearGradient>
+    <linearGradient id="sail" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0%" stop-color="#e6d6a9"/>
+      <stop offset="55%" stop-color="#fbf3dd"/>
+      <stop offset="100%" stop-color="#e6d6a9"/>
+    </linearGradient>
+    <radialGradient id="lantern" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffe9a8"/>
+      <stop offset="70%" stop-color="#e5be66"/>
+      <stop offset="100%" stop-color="#a97c33" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+
+  <!-- single wind-filled main sail, dominates the silhouette -->
+  <line x1="60" y1="4" x2="60" y2="70" stroke="#3d2618" stroke-width="4"/>
+  <path d="M60 8 Q20 24 26 58 Q44 46 60 44 Q76 46 94 58 Q100 24 60 8 Z" fill="url(#sail)" stroke="#c9b47f" stroke-width="1.5"/>
+  <path d="M60 10 L72 4 L60 -3 Z" fill="#e5be66" transform="translate(0 8)"/>
+
+  <!-- hull: wide transom tapering to a V keel, a ship silhouette rather than a barrel -->
+  <path d="M14 66 L106 66 L96 118 Q60 146 24 118 Z" fill="url(#hull)" stroke="#2c1c10" stroke-width="3"/>
+
+  <!-- gold rail trim along the transom -->
+  <rect x="12" y="60" width="96" height="8" rx="3" fill="#e5be66" stroke="#3d2618" stroke-width="2"/>
+
+  <!-- plank lines following the taper -->
+  <path d="M22 84 L98 84" stroke="#2c1c10" stroke-width="1.5" opacity="0.45"/>
+  <path d="M27 100 Q60 108 93 100" fill="none" stroke="#2c1c10" stroke-width="1.5" opacity="0.4"/>
+  <path d="M34 114 Q60 120 86 114" fill="none" stroke="#2c1c10" stroke-width="1.5" opacity="0.35"/>
+
+  <!-- single stern window, mullioned -->
+  <rect x="46" y="76" width="28" height="20" rx="3" fill="#1c2f36" stroke="#e5be66" stroke-width="2.5"/>
+  <line x1="60" y1="76" x2="60" y2="96" stroke="#e5be66" stroke-width="1.5"/>
+  <line x1="46" y1="86" x2="74" y2="86" stroke="#e5be66" stroke-width="1.5"/>
+
+  <!-- corner lanterns, low on the hull rail -->
+  <circle cx="20" cy="72" r="5" fill="url(#lantern)"/>
+  <circle cx="100" cy="72" r="5" fill="url(#lantern)"/>
+</svg>

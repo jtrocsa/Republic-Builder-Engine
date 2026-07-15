@@ -14,20 +14,34 @@
 //
 // Endless mode: there is no run timer. A run ends the moment a hazard hits
 // the player's lane (`running` flips to false); hazardsDodged at that point
-// is the run's score. Difficulty ramps up gradually as hazardsDodged grows
-// (hazards spawn more frequently, floor-clamped) so an endless run actually
-// gets harder over time rather than staying flat.
+// is the run's score. Difficulty ramps up gradually as hazardsDodged grows —
+// hazards spawn more frequently AND approach faster (both floor/ceiling
+// clamped) — so an endless run actually gets harder over time rather than
+// staying flat.
 
 const LANE_COUNT = 3;
-const HAZARD_PROGRESS_PER_MS = 0.00035; // tuned so a hazard crosses lane in ~3s
+const BASE_HAZARD_PROGRESS_PER_MS = 0.00035; // tuned so a fresh-run hazard crosses lane in ~3s
+const MAX_HAZARD_PROGRESS_PER_MS = 0.0007; // top speed: crosses in ~1.4s
+const HAZARD_SPEED_STEP_PER_RAMP = 0.00002;
 const BASE_HAZARD_INTERVAL_MS = 1200;
 const MIN_HAZARD_INTERVAL_MS = 500;
 const DODGES_PER_RAMP_STEP = 5;
 const HAZARD_INTERVAL_STEP_MS = 60;
+// Visual variety only (see renderStormNavigationGame's `sprites.hazardKinds` lookup) — every
+// kind is resolved identically for collision/timing, so this doesn't touch difficulty.
+export const HAZARD_KINDS = ["rock", "wreckage", "whirlpool"];
 
 function hazardIntervalForDodges(hazardsDodged) {
   const steps = Math.floor(hazardsDodged / DODGES_PER_RAMP_STEP);
   return Math.max(MIN_HAZARD_INTERVAL_MS, BASE_HAZARD_INTERVAL_MS - steps * HAZARD_INTERVAL_STEP_MS);
+}
+
+// Hazards not only spawn more often as a run goes on (hazardIntervalForDodges above) but also
+// physically approach faster, so a long run keeps feeling like it's accelerating rather than
+// just getting busier at a flat speed.
+function hazardSpeedForDodges(hazardsDodged) {
+  const steps = Math.floor(hazardsDodged / DODGES_PER_RAMP_STEP);
+  return Math.min(MAX_HAZARD_PROGRESS_PER_MS, BASE_HAZARD_PROGRESS_PER_MS + steps * HAZARD_SPEED_STEP_PER_RAMP);
 }
 
 /**
@@ -36,6 +50,7 @@ function hazardIntervalForDodges(hazardsDodged) {
 export function createStormNavigationGame({ hazardIntervalMs = BASE_HAZARD_INTERVAL_MS } = {}) {
   return {
     hazardIntervalMs,
+    hazardProgressPerMs: BASE_HAZARD_PROGRESS_PER_MS,
     msSinceLastHazard: 0,
     elapsedMs: 0,
     playerLane: Math.floor(LANE_COUNT / 2),
@@ -63,10 +78,11 @@ export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
   let msSinceLastHazard = state.msSinceLastHazard + deltaMs;
   let nextHazardId = state.nextHazardId;
   const hazardIntervalMs = hazardIntervalForDodges(state.hazardsDodged);
+  const hazardProgressPerMs = hazardSpeedForDodges(state.hazardsDodged);
 
   const advancedHazards = state.hazards.map((hazard) => ({
     ...hazard,
-    progress: hazard.progress + deltaMs * HAZARD_PROGRESS_PER_MS,
+    progress: hazard.progress + deltaMs * hazardProgressPerMs,
   }));
 
   if (msSinceLastHazard >= hazardIntervalMs) {
@@ -74,6 +90,7 @@ export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
     advancedHazards.push({
       id: nextHazardId++,
       lane: Math.floor(random() * LANE_COUNT),
+      kind: HAZARD_KINDS[Math.floor(random() * HAZARD_KINDS.length)],
       progress: 0,
     });
   }
@@ -98,6 +115,7 @@ export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
   return {
     ...state,
     hazardIntervalMs,
+    hazardProgressPerMs,
     elapsedMs,
     msSinceLastHazard,
     hazards: survivors,
@@ -124,18 +142,26 @@ export function moveShip(state, direction) {
 // near center-horizon and spreads out to its full lane position as it nears the player).
 const LANE_OFFSET_PERCENT = { 0: -24, 1: 0, 2: 24 };
 
+// Falls back to empty (broken-image) src when a caller — e.g. unit tests — doesn't supply
+// real sprite URLs. Asset resolution stays in main.js (this module has no Vite/import.meta.url
+// concerns of its own, matching the "stays pure" intent above), so sprites are always passed in.
+const DEFAULT_SPRITES = { ship: "", hazardKinds: {}, coastline: "", clouds: "" };
+
 /**
  * @param {ReturnType<typeof createStormNavigationGame>} state
  * @param {number} [bestScore] Best hazardsDodged from a prior run, for display only.
+ * @param {{ ship: string, hazardKinds: Record<string, string>, coastline: string, clouds: string }} [sprites]
  */
-export function renderStormNavigationGame(state, bestScore = 0) {
+export function renderStormNavigationGame(state, bestScore = 0, sprites = DEFAULT_SPRITES) {
   const elapsedSeconds = Math.floor(state.elapsedMs / 1000);
   const shipOffset = LANE_OFFSET_PERCENT[state.playerLane] ?? 0;
   const hazards = state.hazards
     .map((hazard) => {
       const offset = LANE_OFFSET_PERCENT[hazard.lane] ?? 0;
       const p = Math.max(0, Math.min(1, hazard.progress));
-      return `<div class="storm-hazard" data-storm-hazard="${hazard.id}" data-storm-lane="${hazard.lane}" style="--p:${p};--lane-offset:${offset}%"><span class="storm-rock"></span></div>`;
+      const kind = hazard.kind || HAZARD_KINDS[0];
+      const art = sprites.hazardKinds?.[kind] || "";
+      return `<div class="storm-hazard" data-storm-hazard="${hazard.id}" data-storm-lane="${hazard.lane}" data-storm-kind="${kind}" style="--p:${p};--lane-offset:${offset}%"><img class="storm-hazard-art" src="${art}" alt="" draggable="false"></div>`;
     })
     .join("");
 
@@ -145,12 +171,13 @@ export function renderStormNavigationGame(state, bestScore = 0) {
   return `<section class="mini-game mini-game-storm-navigation" data-mini-game="storm-navigation">
   <p class="mini-game-timer">${state.running ? `Time survived: ${elapsedSeconds}s` : "Shipwrecked!"}</p>
   <div class="storm-track">
+    <img class="storm-clouds" src="${sprites.clouds}" alt="" draggable="false">
+    <img class="storm-coastline" src="${sprites.coastline}" alt="" draggable="false">
     <div class="storm-horizon"></div>
     ${hazards}
     <div class="storm-ship" data-storm-ship style="--lane-offset:${shipOffset}%">
       <span class="storm-ship-wake"></span>
-      <span class="storm-ship-hull"></span>
-      <span class="storm-ship-mast"></span>
+      <img class="storm-ship-art" src="${sprites.ship}" alt="" draggable="false">
     </div>
   </div>
   <p class="storm-tally">Dodged: ${state.hazardsDodged} · Best: ${displayedBest}</p>
