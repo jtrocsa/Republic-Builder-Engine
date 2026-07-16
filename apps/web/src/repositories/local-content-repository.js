@@ -53,6 +53,7 @@ export function loadChronicleContent() {
       evidenceOrganizingQuests: unit03Quests.UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit03Quests.UNIT_03_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit03Quests.UNIT_03_SOURCE_ANALYSIS_QUESTS,
+      investigationQuests: unit03Quests.UNIT_03_INVESTIGATION_QUESTS,
     },
   };
 }

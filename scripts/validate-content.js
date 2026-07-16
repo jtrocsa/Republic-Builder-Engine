@@ -210,6 +210,13 @@ function main() {
       content.unit03.sourceAnalysisQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_INVESTIGATION_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit03.investigationQuests
+    )
+  );
 
   // Cross-file checks: main.js's caseById()/unitForCase()/sourceById() all
   // search across every unit, so case ids and source ids must be unique
@@ -246,6 +253,7 @@ function main() {
       ...idsOf(content.unit01.sourceAnalysisQuests),
       ...idsOf(content.unit02.sourceAnalysisQuests),
       ...idsOf(content.unit03.sourceAnalysisQuests),
+      ...idsOf(content.unit03.investigationQuests),
     ]),
   };
   const questTypeKeys = Object.keys(QUEST_TYPES);

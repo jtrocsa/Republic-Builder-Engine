@@ -150,6 +150,11 @@ export const CASE_007_SOURCES = [
     record: "Martial-law proclamation offering freedom to enslaved people who left Patriot enslavers to join British forces",
     visual: "context",
     activityRoute: null,
+    // Investigation Challenge pilot (Phase 3 of the Investigation/Archive
+    // Challenge plan) — gates this source's sourceReader() worksheet behind a
+    // pre-reveal Source Prediction quest (UNIT_03_INVESTIGATION_QUESTS).
+    investigationMode: "hipp",
+    investigationQuestId: "case-007-investigation-dunmore-proclamation",
     excerpt:
       "I do require every person capable of bearing arms, to resort to his Majesty's STANDARD, or be looked upon as traitors… and I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops as soon as may be, for the more speedily reducing this Colony to a proper sense of their duty, to His Majesty's crown and dignity.",
     prompt:

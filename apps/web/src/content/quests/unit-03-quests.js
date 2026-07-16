@@ -173,6 +173,91 @@ export const UNIT_03_SEQUENCING_QUESTS = [
   },
 ];
 
+// Investigation Challenge content — gates field access to a source's full
+// sourceReader() worksheet (see main.js's sourceEntryScreen()/investigationScreen()).
+// Reuses the "hipp" quest type/schema as-is (SourceAnalysisQuestSchema), reframed
+// as a pre-reveal "Source Prediction": the Chronicler reasons about Point of view
+// and Purpose from the record's wording alone, before Institute Context (a
+// separate, later reveal inside sourceReader()) supplies the fuller background.
+// Kept in its own array (not merged into UNIT_03_SOURCE_ANALYSIS_QUESTS) so it
+// doesn't also surface as a practiceCheckScreen() card — mirrors how
+// UNIT_02_ARCHIVE_CHALLENGE_QUESTS stays separate from UNIT_02_EVIDENCE_ORGANIZING_QUESTS.
+export const UNIT_03_INVESTIGATION_QUESTS = [
+  {
+    id: "case-007-investigation-dunmore-proclamation",
+    prompt:
+      "Before you open the full record, read Lord Dunmore's proclamation and predict its Point of view and Purpose from the wording alone. You'll compare your prediction with Institute Context once the record unlocks.",
+    document: {
+      text:
+        "I do require every person capable of bearing arms, to resort to his Majesty's STANDARD, or be looked upon as traitors… and I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops as soon as may be, for the more speedily reducing this Colony to a proper sense of their duty, to His Majesty's crown and dignity.",
+      attribution:
+        "John Murray, Earl of Dunmore, Royal Governor of Virginia, proclamation, November 7, 1775",
+    },
+    hippPrompts: [
+      {
+        id: "dunmore-point-of-view",
+        dimension: "Point of view",
+        argument:
+          "Dunmore was Virginia's royal governor, writing from a British warship after Patriot militia had already driven him from the colony's government — a position that shapes whose interests this proclamation serves.",
+        options: [
+          {
+            id: "pov-explained",
+            text:
+              "As a royal governor loyal to the Crown who had just been driven from power by Patriot militia, Dunmore writes as an official punishing rebellion and shoring up British military strength — not as someone opposed to slavery itself.",
+            correct: true,
+          },
+          {
+            id: "pov-named-only",
+            text: "Dunmore was the Royal Governor of Virginia in 1775.",
+            identificationOnly: true,
+            correct: false,
+          },
+          {
+            id: "pov-wrong-neutral",
+            text: "Dunmore writes as a neutral outsider with no stake in whether Britain or the colonies win the war.",
+            correct: false,
+          },
+          {
+            id: "pov-wrong-abolitionist",
+            text: "Dunmore writes as a committed abolitionist seeking to free all enslaved people in Virginia regardless of loyalty.",
+            correct: false,
+          },
+        ],
+      },
+      {
+        id: "dunmore-purpose",
+        dimension: "Purpose",
+        argument:
+          "The proclamation offers freedom only to enslaved people held by Patriot enslavers who are 'able and willing to bear arms' for the King — not to enslaved people generally, and not to any held by Loyalists.",
+        options: [
+          {
+            id: "purpose-explained",
+            text:
+              "By limiting the offer to able-bodied men willing to fight and excluding anyone held by Loyalists, Dunmore's purpose was to weaken the rebellion's labor force and build an armed force for the Crown — a wartime military strategy, not an antislavery measure.",
+            correct: true,
+          },
+          {
+            id: "purpose-named-only",
+            text: "Dunmore issued this proclamation on November 7, 1775.",
+            identificationOnly: true,
+            correct: false,
+          },
+          {
+            id: "purpose-wrong-abolish",
+            text: "Dunmore's purpose was to abolish slavery throughout the British Empire.",
+            correct: false,
+          },
+          {
+            id: "purpose-wrong-peace",
+            text: "Dunmore's purpose was to negotiate a peace settlement with the Continental Congress.",
+            correct: false,
+          },
+        ],
+      },
+    ],
+  },
+];
+
 export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-007-hipp-henry-speech",

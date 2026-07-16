@@ -52,6 +52,7 @@ import {
   UNIT_03_SEQUENCING_QUESTS,
   UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_03_SOURCE_ANALYSIS_QUESTS,
+  UNIT_03_INVESTIGATION_QUESTS,
 } from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -1271,6 +1272,7 @@ const VALID_SCREENS = new Set([
   "triangle",
   "regions",
   "archive-challenges",
+  "investigation",
   "intro-welcome",
   "intro-briefing",
   "intro-protocol",
@@ -1351,6 +1353,15 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
 };
 function archiveChallengeQuestFor(questType, questId) {
   return (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+}
+// Investigation Challenge quest content, resolved by (questType, questId) from a
+// source's source.investigationMode/investigationQuestId pointer (source.schema.js).
+// Mirrors ARCHIVE_CHALLENGE_QUESTS_BY_TYPE's shape — see that constant's comment.
+const INVESTIGATION_QUESTS_BY_TYPE = {
+  hipp: UNIT_03_INVESTIGATION_QUESTS,
+};
+function investigationQuestFor(questType, questId) {
+  return (INVESTIGATION_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
 }
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
 const unitForCase = (caseId) => UNITS.find((unit) => unit.cases.some((c) => c.id === caseId));
@@ -1781,6 +1792,32 @@ function archiveChallengesScreen() {
   return `${chrome()}<main class="shell activity-shell quest-practice-shell archive-challenges-shell"><section class="activity-copy"><button class="back-link" data-action="archive-room">← Return to Archive Terminal</button><p class="kicker">${esc(resolvedUnitTitle(unit))} · Institute Archive</p><h1>Archive Challenges</h1><p>Restore each unit's damaged record display using evidence secured in the field. Completing a unit's Archive Challenges preserves its case record and is required to fully archive the unit.</p></section><section class="activity-board quest-practice-board">${cards || '<p class="bank-empty">Archive Challenges for this unit are still being cataloged. Check back soon.</p>'}</section></main>${authorPanel()}`;
 }
 
+// Investigation Challenge gate for the source currently opened from the field (openSourceId),
+// reached only when sourceEntryScreen() finds source.investigationMode set and not yet
+// complete. Same live-graded renderQuest/gradeQuest pattern as archiveChallengesScreen() —
+// no separate "submit" step. Completing it (gradeQuest(...).complete) reveals a "Source
+// Unlocked" button that continues into the normal sourceReader() worksheet; state lives in
+// the existing progress.questResponses bucket, so leaving and resuming later just re-grades
+// the same saved selections.
+function investigationScreen() {
+  const source = sourceById(openSourceId);
+  if (!source?.investigationMode) {
+    progress.currentScreen = "field";
+    save();
+    return `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Investigation reset</p><h1>Investigation Challenge unavailable.</h1><p>The app recovered from a reload while an Investigation Challenge was open. Return to the field and approach the record again.</p><button class="btn btn-gold" data-action="field">Back to field →</button></section></main>`;
+  }
+  const { investigationMode: questType, investigationQuestId: questId } = source;
+  const quest = investigationQuestFor(questType, questId);
+  const state = progress.questResponses[questId] || {};
+  const result = quest ? gradeQuest(questType, quest, state) : { complete: false };
+  const answeredAny = Object.keys(state.selected || {}).length > 0;
+  const status = !answeredAny ? "unanswered" : result.complete ? "correct" : "in-progress";
+  const feedback = result.complete
+    ? `<p class="activity-feedback success" role="status" aria-live="polite">Investigation complete — this record is ready to open.</p>`
+    : `<p class="activity-feedback" role="status" aria-live="polite">Choose the option that explains how or why this shapes the source's argument, not just names it.</p>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to field</button><p class="kicker">${esc(source.type)} · Investigation Challenge</p><h1>Begin Investigation</h1><p>Predict this record's sourcing before you open its full worksheet.</p></section><section class="activity-board quest-practice-board">${quest ? `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(questType, quest, state)}${feedback}</div>` : '<p class="bank-empty">This record\'s Investigation Challenge is still being cataloged.</p>'}${result.complete ? `<button class="btn btn-gold" data-action="investigation-continue" data-source="${source.id}">Source Unlocked · Continue →</button>` : ""}</section></main>${authorPanel()}`;
+}
+
 function caseMarker(c) {
   const state = isComplete(c.id) ? "complete" : isUnlocked(c.id) ? "available" : "locked";
   return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${c.mapPosition.left};top:${c.mapPosition.top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(c.title)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
@@ -2080,6 +2117,23 @@ function ensureSourceActivity(sourceId) {
 }
 function sourceActivityRoute(sourceId) {
   return sourceById(sourceId)?.activityRoute || "source";
+}
+// Investigation Challenge gate: a source with investigationMode set must have its
+// gating quest graded complete before sourceEntryScreen() will route into sourceReader().
+function sourceInvestigationComplete(source) {
+  if (!source?.investigationMode) return true;
+  const quest = investigationQuestFor(source.investigationMode, source.investigationQuestId);
+  if (!quest) return true;
+  const state = progress.questResponses[source.investigationQuestId] || {};
+  return gradeQuest(source.investigationMode, quest, state).complete;
+}
+// Shared destination-screen resolver for a not-yet-secured source, used by both the
+// click ("start-source-activity") and keyboard (field "E" interact) entry points so
+// they can't drift out of sync on Investigation Challenge gating.
+function sourceEntryScreen(sourceId) {
+  const source = sourceById(sourceId);
+  if (source?.investigationMode && !sourceInvestigationComplete(source)) return "investigation";
+  return sourceActivityRoute(sourceId);
 }
 function sourcePointStyle(sourceId) {
   const point = activeFieldMap().sourcePoints[sourceId] || { x: 10, y: 10 };
@@ -2644,6 +2698,9 @@ function render() {
       case "archive-challenges":
         html = archiveChallengesScreen();
         break;
+      case "investigation":
+        html = investigationScreen();
+        break;
       case "upload":
         html = uploadScreen();
         break;
@@ -3087,7 +3144,7 @@ function handleFieldClick(target, action) {
     sourceOrigin = "field";
     ensureSourceActivity(openSourceId);
     playQuestSfx(openSourceId);
-    progress.currentScreen = sourceActivityRoute(openSourceId);
+    progress.currentScreen = sourceEntryScreen(openSourceId);
     save();
     render();
     return true;
@@ -3130,6 +3187,14 @@ function handleFieldClick(target, action) {
 }
 
 function handleSourceReaderClick(target, action) {
+  if (action === "investigation-continue") {
+    openSourceId = target.dataset.source;
+    sourceOrigin = "field";
+    progress.currentScreen = "source";
+    save();
+    render();
+    return true;
+  }
   if (action === "open-source") {
     progress.activeFieldNpc = null;
     openSourceId = target.dataset.source;
@@ -3815,7 +3880,7 @@ function handleWindowKeydown(event) {
           playQuestSfx(openSourceId);
           progress.currentScreen = hasEvidence(activeFieldCaseId(), openSourceId)
             ? "source"
-            : sourceActivityRoute(openSourceId);
+            : sourceEntryScreen(openSourceId);
           save();
           render();
         }
