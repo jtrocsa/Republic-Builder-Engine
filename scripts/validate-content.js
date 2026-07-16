@@ -258,13 +258,20 @@ function main() {
   };
   const questTypeKeys = Object.keys(QUEST_TYPES);
 
-  const archiveChallengeEntries = (unitLabel, unit) =>
-    unit.cases.map((c) => ({
+  const archiveChallengeEntries = (unitLabel, unit) => [
+    ...unit.cases.map((c) => ({
       source: unitLabel,
       path: `cases[${JSON.stringify(c.id)}].archiveChallenge`,
       questType: c.archiveChallenge?.questType ?? null,
       questId: c.archiveChallenge?.questId ?? null,
-    }));
+    })),
+    ...(unit.archiveChallenges || []).map((challenge, index) => ({
+      source: unitLabel,
+      path: `archiveChallenges[${index}]`,
+      questType: challenge.questType ?? null,
+      questId: challenge.questId ?? null,
+    })),
+  ];
   const investigationEntries = (sourceLabel, sources) =>
     sources.map((s) => ({
       source: sourceLabel,

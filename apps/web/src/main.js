@@ -1823,6 +1823,19 @@ function caseMarker(c) {
   return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${c.mapPosition.left};top:${c.mapPosition.top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(c.title)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
 }
 
+// Whether every unit-level Archive Challenge (unit.archiveChallenges[] — bonus
+// content not tied to relocating one case) is complete. Case-level Archive
+// Challenges (case.archiveChallenge) already gate unit completion for free
+// via isComplete(), since completing one writes to progress.completedCases
+// the same as any other case.
+const unitArchiveChallengesComplete = (unit) =>
+  (unit.archiveChallenges || []).every(
+    (challenge) => progress.archiveChallenges[challenge.questId]?.status === "complete"
+  );
+
+const unitReadyForReview = (unit) =>
+  unit.cases.every((c) => isComplete(c.id)) && unitArchiveChallengesComplete(unit);
+
 const UNIT_MAP_ART = {
   "unit-01": atlanticTable,
   // Placeholder: reuses the Atlantic table until dedicated Unit 2 navigation art exists.
@@ -1852,7 +1865,7 @@ function archiveScreen() {
     selected.route === "field"
       ? `${countEvidence(selected.id)}/${sourcesForCase(selected.id).length || 3} evidence records secured`
       : selected.question;
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the Atlantic world. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map"><img src="${UNIT_MAP_ART[selectedUnit.id] || atlanticTable}" alt="Map of the Atlantic world showing eastern North America, Caribbean, Europe, Africa, and the Atlantic Ocean"><div class="atlas-label label-atlantic">ATLANTIC OCEAN</div>${selectedUnit.cases.map(caseMarker).join("")}<div class="route-thread ${progress.selectedCaseId === "case-002" ? "route-thread--atlantic" : ""}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${selectedUnit.cases.every((c) => isComplete(c.id)) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the Atlantic world. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map"><img src="${UNIT_MAP_ART[selectedUnit.id] || atlanticTable}" alt="Map of the Atlantic world showing eastern North America, Caribbean, Europe, Africa, and the Atlantic Ocean"><div class="atlas-label label-atlantic">ATLANTIC OCEAN</div>${selectedUnit.cases.filter((c) => c.navigationTableVisible !== false).map(caseMarker).join("")}<div class="route-thread ${progress.selectedCaseId === "case-002" ? "route-thread--atlantic" : ""}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
@@ -3495,7 +3508,20 @@ function handleReviewClick(target, action) {
     });
     const filled = Object.values(reviewState.saq).filter((v) => v.length > 0).length;
     save();
-    if (filled === reviewData.saq.prompts.length) {
+    const reviewUnit = unitById(reviewUnitId);
+    if (filled !== reviewData.saq.prompts.length) {
+      showFeedback(
+        "reviewFeedback",
+        "Draft a response for every SAQ part before submitting the archive record.",
+        "error"
+      );
+    } else if (reviewUnit && !unitReadyForReview(reviewUnit)) {
+      showFeedback(
+        "reviewFeedback",
+        "Complete every case and Archive Challenge in this unit before submitting the Archive Review.",
+        "error"
+      );
+    } else {
       if (reviewUnitId === "unit-01") progress.unitComplete = true;
       if (!progress.completedUnits.includes(reviewUnitId))
         progress.completedUnits.push(reviewUnitId);
@@ -3503,12 +3529,7 @@ function handleReviewClick(target, action) {
       progress.currentScreen = "completion";
       save();
       render();
-    } else
-      showFeedback(
-        "reviewFeedback",
-        "Draft a response for every SAQ part before submitting the archive record.",
-        "error"
-      );
+    }
     return true;
   }
   return false;

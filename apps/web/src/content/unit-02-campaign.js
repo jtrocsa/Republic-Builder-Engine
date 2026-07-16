@@ -56,6 +56,10 @@ export const UNIT_02 = {
       route: "regions",
       summary:
         "Restore the Archive's damaged display of the colonial regions by returning each founding record — from a Puritan town covenant to a Quaker liberty-of-conscience clause — to the society it built, then defend one difference between two regions in your own words.",
+      // Relocated into the Institute Archive Room (Archive Terminal) — no longer
+      // shown as a Navigation Table marker. regionsScreen()/the "regions" route
+      // stays reachable until plan Phase 5 deletes it.
+      navigationTableVisible: false,
       archiveChallenge: {
         questType: "evidence-organizing",
         questId: "case-006-archive-region-display",

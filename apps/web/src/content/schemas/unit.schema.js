@@ -58,6 +58,12 @@ export const UnitSchema = z.object({
   period: z.string().min(1, "unit.period is required"),
   description: z.string().min(1, "unit.description is required"),
   centralQuestion: z.string().min(1, "unit.centralQuestion is required"),
+  // Unit-level Archive Challenges — bonus content not tied to relocating one
+  // case (contrast with a case's own `archiveChallenge`, singular). Defaults
+  // to empty so every pre-existing unit validates unchanged; completing all
+  // of these is required for unit completion alongside all cases (see
+  // main.js's unitReadyForReview()).
+  archiveChallenges: z.array(ArchiveChallengeSchema).default([]),
   cases: z
     .array(CaseSchema)
     .min(1, "unit.cases must contain at least one case")
