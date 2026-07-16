@@ -3177,6 +3177,11 @@ dd {
   image-rendering: auto;
   filter: saturate(0.97) contrast(1.03);
 }
+/* Archive Room's ARCHIVE_ROOM_GRID is 10x8 (1.25:1) — narrower than the Main Hall's 18x12
+   (1.67:1) — so its .field-world-art canvas isn't stretched off its own tile grid. */
+.institute-map--archive-room {
+  aspect-ratio: 1.25/1;
+}
 .institute-map::after {
   content: "";
   position: absolute;
