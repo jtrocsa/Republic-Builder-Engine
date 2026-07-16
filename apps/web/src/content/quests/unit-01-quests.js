@@ -144,6 +144,235 @@ export const UNIT_01_SEQUENCING_QUESTS = [
   },
 ];
 
+// Investigation Challenge content (Phase A of the Investigation/Archive
+// Challenge plan's catalog-expansion pass) — gates each source's
+// sourceReader() worksheet behind a pre-reveal prediction quest, the same
+// mechanic UNIT_03_INVESTIGATION_QUESTS pioneered for case-007's Dunmore
+// proclamation (apps/web/src/content/quests/unit-03-quests.js), but proving
+// out the generic mcq quest-type contract as the gating mechanic instead of
+// hipp. Kept in their own arrays (not merged into UNIT_01_MCQ_QUESTS) so they
+// don't also surface as a practiceCheckScreen() card, and framed as
+// predictions made from a record's title/creator/date/type alone — the only
+// metadata investigationScreen() exposes before the quest is complete — not
+// as a restatement of the existing post-reveal UNIT_01_MCQ_QUESTS questions
+// on the same sources. Two entries are authored per source; only the first
+// is wired via investigationQuestId (CASE_001_SOURCES), matching how a
+// single object is fetched by investigationQuestFor() in main.js — the
+// second is kept as a ready second question for a future multi-question
+// gate.
+export const UNIT_01_INVESTIGATION_MCQ_QUESTS = [
+  {
+    id: "case-001-investigation-mcq-taino-origins",
+    prompt:
+      "This record's title is “The Caribbean—Island Society,” credited to a Library of Congress exhibition written in 1991 — centuries after the Taíno societies it describes. Before opening the full record, what should a Chronicler predict about how a record like this was assembled, given that no Taíno-authored written account survives from before contact?",
+    choices: [
+      "It synthesizes archaeological findings and later documentary evidence into a modern secondary account, since the Taínos left no known written record of their own for historians to draw on directly",
+      "It is a direct English translation of a Taíno written chronicle preserved in Spanish royal archives",
+      "It transcribes interviews Library of Congress staff conducted with Taíno community members in 1991",
+      "It reprints Columbus's 1493 letter verbatim with no independent research behind it",
+    ],
+    answer: 0,
+    explanation:
+      "Because no Taíno-authored written account from before contact survives, any modern record describing pre-contact Taíno society — including this 1991 exhibition text — has to be built from archaeological and later documentary evidence rather than a Taíno-authored original.",
+  },
+  {
+    id: "case-001-investigation-mcq-taino-emphasis",
+    prompt:
+      "Before opening the full record, its title (“The Caribbean—Island Society”) and its listing as context for the record “1492: An Ongoing Voyage” are the only clues available. What kind of detail should a Chronicler predict this record emphasizes?",
+    choices: [
+      "How Caribbean societies were organized and governed — village structure, kinship, and leadership — rather than a narrative of the 1492 voyage itself",
+      "A firsthand, day-by-day account of Columbus's Atlantic crossing",
+      "Technical specifications of Spanish ships used in early voyages",
+      "A legal transcript of a Spanish crown court proceeding",
+    ],
+    answer: 0,
+    explanation:
+      "A record titled around Caribbean “society,” framed as background context rather than voyage narrative, most plausibly emphasizes how communities were organized and governed — which the full record confirms by describing villages led by caciques.",
+  },
+];
+
+export const UNIT_01_INVESTIGATION_SEQUENCING_QUESTS = [
+  {
+    id: "case-001-investigation-sequencing-waldseemuller-naming",
+    prompt:
+      "Before you open the full 1507 Waldseemüller map record, arrange these developments in the order that reflects how each one caused or enabled the next — the chain of voyages, publications, and revisions that produced, and later reconsidered, the name “America.”",
+    // Item array is deliberately NOT authored in already-correct order — see
+    // renderSequencingQuest()'s own doc comment in
+    // quest-types/generic/sequencing-quest.js: the array's authored order is
+    // what renders before the player makes any move, so an already-sorted
+    // array would hand the player the answer with zero interaction. `position`
+    // (not array order) is the real answer key.
+    items: [
+      {
+        id: "waldseemuller-names-america-1507",
+        label:
+          "Working at Saint-Dié, Martin Waldseemüller and Matthias Ringmann publish the 1507 map Universalis cosmographia, applying the name “America” — a Latinized form of Amerigo's first name — to the new lands",
+        position: 2,
+      },
+      {
+        id: "columbus-voyages-asia-belief",
+        label:
+          "Columbus's transatlantic voyages (1492–1504) reach Caribbean islands he insists, to his death, are part of Asia",
+        position: 0,
+      },
+      {
+        id: "mercator-cements-name-1538",
+        label:
+          "Gerardus Mercator's 1538 world map reapplies “America” to both continents, cementing the name still used today",
+        position: 4,
+      },
+      {
+        id: "waldseemuller-drops-name-1513",
+        label:
+          "Reconsidering the claim, Waldseemüller drops the “America” label from his own 1513 world map edition",
+        position: 3,
+      },
+      {
+        id: "vespucci-new-world-account",
+        label:
+          "Amerigo Vespucci's voyages along South America's coast and his widely printed 1503 account, Mundus Novus, argue these lands are a separate “New World,” not Asia",
+        position: 1,
+      },
+    ],
+    explanation:
+      "Columbus's voyages made first contact but he never accepted these lands were anything other than Asia; Vespucci's later voyages and published account were what first argued in print that this was a separate “New World”; that argument is what led Waldseemüller and Ringmann to label the 1507 map “America” after Vespucci; Waldseemüller himself then had second thoughts and dropped the name from his 1513 edition; and it was Mercator's 1538 map, not Waldseemüller's own later doubts, that permanently cemented “America” as the name for both continents.",
+  },
+];
+
+// Archive Challenge content (Phase B of the Investigation/Archive Challenge
+// plan's catalog-expansion pass) — case-003's Archive Challenge, migrating
+// EMPIRE_CONNECTIONS' real causal chain (also in
+// apps/web/src/content/unit-01-campaign.js) onto the sequencing quest-type
+// contract. empireScreen()/the "empire" route stays case-003's primary
+// Navigation Table experience — this is a parallel, additional way to
+// engage the same content, not a replacement.
+export const UNIT_01_ARCHIVE_CHALLENGE_QUESTS = [
+  {
+    id: "case-003-archive-empire-system",
+    prompt:
+      "The Archive's record of how Hispaniola's colonial system took shape has come loose from its causal order. Arrange these six records in the order that reflects how each development caused or enabled the next.",
+    // Item array is deliberately NOT authored in already-correct order — see
+    // renderSequencingQuest()'s own doc comment in
+    // quest-types/generic/sequencing-quest.js: the array's authored order is
+    // what renders before the player makes any move, so an already-sorted
+    // array would hand the player the answer with zero interaction. `position`
+    // (not array order) is the real answer key.
+    items: [
+      {
+        id: "hierarchy",
+        label:
+          "Caste and social hierarchy: colonial labor systems tied to Indigenous tribute and African slavery develop into a social order ranking people by ancestry, legal status, and place of birth",
+        position: 3,
+      },
+      {
+        id: "claim",
+        label:
+          "The Requerimiento (1513): Spanish officials assert authority over Indigenous communities and demand submission to the Spanish crown and Christianity",
+        position: 0,
+      },
+      {
+        id: "resistance",
+        label:
+          "Resistance and adaptation: Indigenous and African communities resist exploitation within and against this hierarchy, preserving practices and adapting to change",
+        position: 4,
+      },
+      {
+        id: "encomienda",
+        label:
+          "Encomienda labor: Spanish claims of authority help justify Spanish colonists' right to demand labor and tribute from Indigenous communities",
+        position: 1,
+      },
+      {
+        id: "exchange",
+        label:
+          "Cultural interaction: that same conflict, coercion, adaptation, and survival reshape language, religion, foodways, and customs into new Atlantic cultural forms",
+        position: 5,
+      },
+      {
+        id: "slavery",
+        label:
+          "Expansion of African slavery: encomienda labor demands and Indigenous population losses accelerate the forced migration of Africans to the Americas",
+        position: 2,
+      },
+    ],
+    explanation:
+      "Each step enables the next: the Requerimiento's assertion of Spanish authority over Indigenous communities is what colonists used to justify demanding their labor and tribute under the encomienda; encomienda's labor demands, combined with Indigenous population losses, are what drove colonists to rely increasingly on forced African migration; the labor systems built on both encomienda tribute and African slavery are what produced a caste hierarchy ranking people by ancestry, legal status, and birthplace; that same hierarchy is what Indigenous and African communities resisted and adapted within and against; and it was precisely that ongoing conflict, coercion, and adaptation that reshaped language, religion, foodways, and customs into the new cultural forms of the Atlantic world.",
+  },
+];
+
+// Unit-level bonus Archive Challenge content (Phase C of the
+// Investigation/Archive Challenge plan's catalog-expansion pass) — the first
+// content in unit.archiveChallenges[] (a Zod field that existed but had
+// never been populated by any unit). Not tied to relocating any single
+// case's activity screen; reachable from archiveChallengesScreen()'s new
+// bonus section. Kept in a separate array from UNIT_01_ARCHIVE_CHALLENGE_QUESTS
+// above since that array is validated as a homogeneous sequencing list
+// (case-003's quest) and this one is evidence-organizing-shaped — mixing
+// shapes in one array would fail schema validation. Reuses Case 1.02's real
+// EXCHANGE_RECORDS content (also in apps/web/src/content/unit-01-campaign.js)
+// — record text duplicated from EXCHANGE_RECORDS rather than imported,
+// matching how UNIT_01_EVIDENCE_ORGANIZING_QUESTS above already duplicates
+// CASE_001_SOURCES excerpts instead of importing them. A claim-and-evidence
+// builder: each of the four Exchange Ledger records is sorted under the
+// claim about the Columbian Exchange's impact its content most directly
+// supports (a 1:1 mapping, so every placement has exactly one defensible
+// answer).
+export const UNIT_01_ARCHIVE_EVIDENCE_QUESTS = [
+  {
+    id: "unit-01-archive-claim-and-evidence-builder",
+    prompt:
+      "The Archive's claim board for the Columbian Exchange has come apart from its evidence. Sort each record beneath the claim about the Exchange's impact that its content most directly supports.",
+    slots: [
+      { id: "agriculture-diet", label: "Transformed Agriculture and Diet" },
+      { id: "demographic-catastrophe", label: "Caused Demographic Catastrophe" },
+      { id: "mobility-warfare", label: "Reshaped Mobility, Warfare, and Transport" },
+      { id: "forced-labor", label: "Built Systems of Forced Labor" },
+    ],
+    sources: [
+      {
+        id: "maize-claim-evidence",
+        label: "Maize",
+        attribution: "José de Acosta, Natural and Moral History of the Indies, 1590",
+        excerpt: "“The principal grain of the Indies is maize … whereof the Indians make their bread.”",
+        skillCategory: "Continuity and Change",
+        correctSlotId: "agriculture-diet",
+      },
+      {
+        id: "smallpox-claim-evidence",
+        label: "Smallpox",
+        attribution: "Toribio de Benavente “Motolinía,” History of the Indians of New Spain, c. 1541",
+        excerpt: "“In the year 1520 came the smallpox … and a very great many Indians died of it.”",
+        skillCategory: "Causation",
+        correctSlotId: "demographic-catastrophe",
+      },
+      {
+        id: "horses-claim-evidence",
+        label: "Horses",
+        attribution: "Bernal Díaz del Castillo, True History of the Conquest of New Spain, completed c. 1568",
+        excerpt: "“The sight of the horses caused them great wonder.”",
+        skillCategory: "Contextualization",
+        correctSlotId: "mobility-warfare",
+      },
+      {
+        id: "enslaved-africans-claim-evidence",
+        label: "Enslaved Africans",
+        attribution: "Spanish Crown license for African captives to the Indies, 1518",
+        excerpt:
+          "The Crown authorized the transport of African captives to “the Indies” under royal license.",
+        skillCategory: "Sourcing",
+        correctSlotId: "forced-labor",
+      },
+    ],
+    reflectionPrompt:
+      "In 2–3 sentences, choose one claim above and explain why its record is the strongest possible evidence for that claim specifically — not just plausible evidence for the Columbian Exchange in general.",
+    rubric: {
+      skillCategories: ["Continuity and Change", "Causation", "Contextualization", "Sourcing"],
+      pointsTotal: 4,
+      description: "Earn 1 point per record correctly matched to the claim its evidence best supports.",
+    },
+  },
+];
+
 export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-001-hipp-columbus-letter",

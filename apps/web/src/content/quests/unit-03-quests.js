@@ -258,6 +258,98 @@ export const UNIT_03_INVESTIGATION_QUESTS = [
   },
 ];
 
+// Second Investigation Challenge content pass (Phase A of the Investigation/
+// Archive Challenge plan's catalog-expansion pass) — gates the Dickinson
+// letter's sourceReader() worksheet behind a pre-reveal prediction quest,
+// proving out the generic mcq quest-type contract as a gating mechanic
+// (UNIT_03_INVESTIGATION_QUESTS above already proved out hipp for the
+// Dunmore proclamation). Kept in its own array, separate from
+// UNIT_03_INVESTIGATION_QUESTS, so main.js's INVESTIGATION_QUESTS_BY_TYPE
+// map can key "hipp" and "mcq" investigation content independently without
+// the two mixing. Two entries are authored; only the first is wired via
+// investigationQuestId (CASE_007_SOURCES), matching how a single object is
+// fetched by investigationQuestFor() — the second is kept as a ready second
+// question for a future multi-question gate.
+export const UNIT_03_INVESTIGATION_MCQ_QUESTS = [
+  {
+    id: "case-007-investigation-mcq-dickinson-persona",
+    prompt:
+      "This essay's title, “Letters from a Farmer in Pennsylvania, Letter II,” credits no author by name — John Dickinson, a Philadelphia lawyer and assemblyman, published the series anonymously under the persona of a modest “Farmer.” Before opening the full letter, what should a Chronicler predict this choice signals about Dickinson's intended rhetorical strategy?",
+    choices: [
+      "A calm, reasonable persona meant to persuade moderate colonists and sympathetic Britons, not just committed radicals",
+      "A satirical persona meant to mock rural colonists as too ignorant to understand Parliament's tax policy",
+      "A disguise meant to conceal a call for immediate, violent separation from Britain",
+      "A neutral persona adopted only to protect Dickinson's law license, with no argumentative purpose",
+    ],
+    answer: 0,
+    explanation:
+      "A modest, reasonable “Farmer” persona — rather than Dickinson's own well-known name as a lawyer and assemblyman, or an inflammatory pen name — fits a strategy aimed at winning over moderate, undecided readers rather than preaching only to colonists already committed to resistance.",
+  },
+  {
+    id: "case-007-investigation-mcq-dickinson-strategy",
+    prompt:
+      "This essay is dated December 10, 1767 and is described as part of a serialized newspaper series opposing the Townshend Revenue Act's new import duties, published in a colonial press that had never fully denied Parliament's authority over colonial trade. Before opening the full letter, what argumentative strategy should a Chronicler predict Dickinson uses against that backdrop?",
+    choices: [
+      "Concede Parliament's power to regulate colonial trade while denying it may tax colonists to raise revenue — a narrower, more legally defensible line than rejecting Parliament's authority outright",
+      "Reject any Parliament authority over the colonies whatsoever, including the power to regulate trade",
+      "Argue that the colonies should accept the Townshend duties as a reasonable and necessary trade measure",
+      "Call for colonial representatives to be seated in Parliament as the only acceptable resolution",
+    ],
+    answer: 0,
+    explanation:
+      "Writing for an audience that had not denied Parliament's trade-regulating power outright, a persuasive strategy would concede that narrower authority while drawing a sharper line against taxation for revenue — which is exactly the distinction Dickinson's Letter II goes on to draw.",
+  },
+];
+
+// Unit-level bonus Archive Challenge content (Phase C of the
+// Investigation/Archive Challenge plan's catalog-expansion pass) — the first
+// content in UNIT_03.archiveChallenges[] (a Zod field that existed but had
+// never been populated by any unit). Not tied to relocating any single
+// case's activity screen; reachable from archiveChallengesScreen()'s new
+// bonus section. Reuses Prince Hall's petition and Abigail Adams's letter —
+// the same two sources UNIT_03_EVIDENCE_ORGANIZING_QUESTS above already
+// tags "Comparison" — but with a freshly authored, distinct 2-slot framing
+// (sorted by the *form* of appeal each made, not by historical-thinking
+// skill) and a new reflection prompt, rather than duplicating that quest.
+export const UNIT_03_ARCHIVE_CHALLENGE_QUESTS = [
+  {
+    id: "unit-03-archive-appeal-form-comparison",
+    prompt:
+      "The Archive's record of how Revolutionary rights language reached beyond its intended audience has come loose. Sort each record beneath the form of appeal it made.",
+    slots: [
+      { id: "public-petition", label: "Formal Petition to a Legislative Body" },
+      { id: "private-appeal", label: "Private Appeal Within a Personal Relationship" },
+    ],
+    sources: [
+      {
+        id: "hall-petition-appeal-form",
+        label: "Petition for Freedom to the Massachusetts Council and House of Representatives",
+        attribution: "Prince Hall et al., January 13, 1777",
+        excerpt:
+          "Your petitioners apprehend that they have in common with all other men a natural and unalienable right to that freedom which the great Parent of the universe hath bestowed equally on all mankind.",
+        skillCategory: "Contextualization",
+        correctSlotId: "public-petition",
+      },
+      {
+        id: "adams-letter-appeal-form",
+        label: "Letter to John Adams, \"Remember the Ladies\"",
+        attribution: "Abigail Adams, March 31 – April 5, 1776",
+        excerpt:
+          "I desire you would Remember the Ladies… Remember all Men would be tyrants if they could… we are determined to foment a Rebellion, and will not hold ourselves bound by any Laws in which we have no voice, or Representation.",
+        skillCategory: "Sourcing",
+        correctSlotId: "private-appeal",
+      },
+    ],
+    reflectionPrompt:
+      "In 2–3 sentences, explain how the form each appeal took — a formal petition to a legislature versus a private letter to a husband — shaped what its author could say, and how each was likely received by its audience.",
+    rubric: {
+      skillCategories: ["Contextualization", "Sourcing"],
+      pointsTotal: 2,
+      description: "Earn 1 point per record correctly matched to the form of appeal it made.",
+    },
+  },
+];
+
 export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-007-hipp-henry-speech",

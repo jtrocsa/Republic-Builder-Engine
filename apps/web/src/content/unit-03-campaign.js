@@ -36,6 +36,17 @@ export const UNIT_03 = {
     "How a widening imperial crisis over land, taxation, and representation after the Seven Years' War escalated into armed revolution — and how the ideals colonists invoked to justify independence were claimed, extended, and denied unevenly among Indigenous nations, enslaved and free Black Americans, women, and Loyalists.",
   centralQuestion:
     "How did the ideals colonists used to justify revolution against Britain both inspire and fail to extend equally to the many peoples who lived through Period 3?",
+  // Unit-level bonus Archive Challenge (Phase C of the Investigation/Archive
+  // Challenge plan's catalog-expansion pass) — not tied to relocating any
+  // single case's activity screen; reachable from the Archive Terminal's
+  // archiveChallengesScreen(). Completing it, alongside every case, is
+  // required for unit completion (see main.js's unitReadyForReview()).
+  archiveChallenges: [
+    {
+      questType: "evidence-organizing",
+      questId: "unit-03-archive-appeal-form-comparison",
+    },
+  ],
   cases: [
     {
       id: "case-007",
@@ -90,6 +101,12 @@ export const CASE_007_SOURCES = [
     record: "Serialized newspaper essay opposing the Townshend Revenue Act",
     visual: "context",
     activityRoute: null,
+    // Investigation Challenge (Phase A of the Investigation/Archive Challenge
+    // plan's catalog-expansion pass) — gates this source's sourceReader()
+    // worksheet behind a pre-reveal prediction quest
+    // (UNIT_03_INVESTIGATION_MCQ_QUESTS).
+    investigationMode: "mcq",
+    investigationQuestId: "case-007-investigation-mcq-dickinson-persona",
     excerpt:
       "My dear Countrymen, There is another late act of Parliament, which appears to me to be unconstitutional, and as destructive to the liberty of these colonies, as that mentioned in my last letter; that is, the act for granting the duties on paper, glass, and other articles imported into these colonies… The parliament unquestionably possesses a legal authority to regulate the trade of Great Britain and all her colonies. Such a power is essential to the relation between a mother country and her colonies… But here I apprehend the parliament has exceeded the bounds of that authority… If you once admit, that Great Britain may lay duties upon her exportations to us, for the purpose of levying money on us only, she will then have nothing to do, but to lay those duties on the articles which she prohibits us to manufacture — and the tragedy of American liberty is finished.",
     prompt:

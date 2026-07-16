@@ -29,6 +29,10 @@ export function loadChronicleContent() {
       evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit01Quests.UNIT_01_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit01Quests.UNIT_01_SOURCE_ANALYSIS_QUESTS,
+      investigationMcqQuests: unit01Quests.UNIT_01_INVESTIGATION_MCQ_QUESTS,
+      investigationSequencingQuests: unit01Quests.UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
+      archiveChallengeQuests: unit01Quests.UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
+      archiveEvidenceQuests: unit01Quests.UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
     },
     unit02: {
       unit: unit02Campaign.UNIT_02,
@@ -42,6 +46,8 @@ export function loadChronicleContent() {
       sequencingQuests: unit02Quests.UNIT_02_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit02Quests.UNIT_02_SOURCE_ANALYSIS_QUESTS,
       archiveChallengeQuests: unit02Quests.UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
+      investigationEvidenceQuests: unit02Quests.UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
+      archiveStrongestEvidenceQuests: unit02Quests.UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
     },
     unit03: {
       unit: unit03Campaign.UNIT_03,
@@ -52,6 +58,8 @@ export function loadChronicleContent() {
       sequencingQuests: unit03Quests.UNIT_03_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit03Quests.UNIT_03_SOURCE_ANALYSIS_QUESTS,
       investigationQuests: unit03Quests.UNIT_03_INVESTIGATION_QUESTS,
+      investigationMcqQuests: unit03Quests.UNIT_03_INVESTIGATION_MCQ_QUESTS,
+      archiveChallengeQuests: unit03Quests.UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
     },
   };
 }

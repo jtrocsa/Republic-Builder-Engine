@@ -14,6 +14,21 @@ export const UNIT_02 = {
     "How distinct colonial societies took shape along the Atlantic seaboard — Chesapeake tobacco settlements built on headright land grants and bound labor, New England's covenanted farming and fishing towns, and the Middle Colonies' diverse grain-exporting ports — all bound together by a transatlantic economy in goods, cash crops, and enslaved people.",
   centralQuestion:
     "How did geography, labor systems, and the transatlantic economy produce distinct colonial societies in British North America between 1607 and 1754?",
+  // Unit-level bonus Archive Challenges (Phase C of the Investigation/Archive
+  // Challenge plan's catalog-expansion pass) — not tied to relocating any
+  // single case's activity screen; reachable from the Archive Terminal's
+  // archiveChallengesScreen(). Completing both, alongside every case, is
+  // required for unit completion (see main.js's unitReadyForReview()).
+  archiveChallenges: [
+    {
+      questType: "mcq",
+      questId: "unit-02-archive-strongest-evidence-coerced-labor",
+    },
+    {
+      questType: "mcq",
+      questId: "unit-02-archive-strongest-evidence-mercantile-policy",
+    },
+  ],
   cases: [
     {
       id: "case-004",
@@ -42,6 +57,10 @@ export const UNIT_02 = {
       route: "triangle",
       summary:
         "Reconstruct the triangular trade from six real shipping and testimony records — plot each cargo onto the leg of the circuit that carried it, then weigh what each record proves about the system binding Europe, Africa, and the Americas together.",
+      archiveChallenge: {
+        questType: "evidence-organizing",
+        questId: "case-005-archive-triangle-cargo",
+      },
     },
     {
       id: "case-006",
@@ -121,6 +140,12 @@ export const CASE_004_SOURCES = [
     record: "Representative cargo account, Chesapeake tobacco trade",
     visual: "context",
     activityRoute: null,
+    // Investigation Challenge (Phase A of the Investigation/Archive Challenge
+    // plan's catalog-expansion pass) — gates this source's sourceReader()
+    // worksheet behind a pre-reveal prediction quest
+    // (UNIT_02_INVESTIGATION_EVIDENCE_QUESTS).
+    investigationMode: "evidence-organizing",
+    investigationQuestId: "case-004-investigation-evidence-riverbend-ledger",
     excerpt:
       "Received of the ship Speedwell: fourteen hogsheads of tobacco, casked and weighed as within noted. Delivered in return: three pieces of Kentish cloth, two dozen iron hoes, six dozen knives, and sundry other English wares, per the planters' order at the landing.",
     prompt:

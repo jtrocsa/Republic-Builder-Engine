@@ -214,6 +214,215 @@ export const UNIT_02_ARCHIVE_CHALLENGE_QUESTS = [
       description: "Earn 1 point per founding record correctly returned to the region it built.",
     },
   },
+  // Second Archive Challenge (Phase B of the Investigation/Archive Challenge
+  // plan's catalog-expansion pass), proving the evidence-organizing quest
+  // type against a second case rather than only the case-006 pilot above.
+  // Reuses Case 5's real TRIANGLE_LEGS/TRIANGLE_CARGO content (also in
+  // apps/web/src/content/unit-02-campaign.js) — record labels/excerpts
+  // duplicated from TRIANGLE_CARGO rather than imported, matching the
+  // duplication convention the case-006 quest above already established.
+  // triangleScreen()/the "triangle" route stays the case's primary
+  // Navigation Table experience — this is a parallel, additional way to
+  // engage the same content, not a replacement.
+  {
+    id: "case-005-archive-triangle-cargo",
+    prompt:
+      "The Archive's chart of the transatlantic circuit has come loose. Return each cargo record to the leg of the crossing that carried it, then defend your reasoning in the reflection.",
+    slots: [
+      { id: "outbound", label: "Outbound passage — England/Europe to West Africa" },
+      { id: "middle", label: "The Middle Passage — West Africa to the Americas" },
+      { id: "homeward", label: "Homeward passage — the Americas to England/Europe" },
+    ],
+    sources: [
+      {
+        id: "cloth-tools",
+        label: "Cloth & ironware",
+        attribution: "Royal African Company records · aggregate pattern, c. 1730s",
+        excerpt:
+          "Royal African Company invoices for Gold Coast voyages recur with the same short list of outbound goods — Manchester and Kentish cloth, iron and copper bars, and firearms — advanced against captives and gold on the African coast. Manufactured wares, not coin, were the trade's opening currency.",
+        skillCategory: "Causation",
+        correctSlotId: "outbound",
+      },
+      {
+        id: "firearms",
+        label: "Firearms & powder",
+        attribution: "Willem Bosman, Dutch trader · 1705",
+        excerpt:
+          "Bosman's 1705 account of the Gold Coast trade describes muskets, gunpowder, and shot as a standard part of what European traders offered African merchants alongside cloth and iron — the Dutch, English, and other nations all competing to supply arms in exchange for captives and gold.",
+        skillCategory: "Contextualization",
+        correctSlotId: "outbound",
+      },
+      {
+        id: "captives",
+        label: "Enslaved people",
+        attribution: "Olaudah Equiano, Middle Passage survivor · 1789",
+        excerpt:
+          "“The closeness of the place, and the heat of the climate, added to the number in the ship, which was so crowded that each had scarcely room to turn himself, almost suffocated us … This wretched situation was again aggravated by the galling of the chains … and the filth of the necessary tubs, into which the children often fell, and were almost suffocated.”",
+        skillCategory: "Sourcing",
+        correctSlotId: "middle",
+      },
+      {
+        id: "shackles-record",
+        label: "The ship's own log",
+        attribution: "Society for Effecting the Abolition of the Slave Trade · 1788",
+        excerpt:
+          "The 1788 broadside diagrams the Liverpool slave ship Brooks with its hold divided into measured compartments, each stamped with rows of human figures laid side by side to show the maximum number — over four hundred — the ship's own owners calculated it could carry below deck.",
+        skillCategory: "Comparison",
+        correctSlotId: "middle",
+      },
+      {
+        id: "sugar",
+        label: "Sugar & molasses",
+        attribution: "Representative Caribbean plantation account · c. 1730",
+        excerpt:
+          "Caribbean plantation accounts compiled from the period typically list hogsheads of sugar and puncheons of molasses shipped to England or the northern colonies against the planter's account, with the proceeds used to buy more enslaved laborers, provisions, and manufactured goods — sugar wealth circulating back into the labor system that produced it.",
+        skillCategory: "Continuity and Change",
+        correctSlotId: "homeward",
+      },
+      {
+        id: "tobacco",
+        label: "Tobacco hogsheads",
+        attribution: "Navigation Act of 1660, Parliament of England · 12 Cha. II c. 18",
+        excerpt:
+          "“…no sugars, tobacco, cotton-wool, indigo, ginger, fustic, or other dyeing wood, of the growth, production, or manufacture of any English plantations in America, Asia, or Africa, shall be shipped, carried, conveyed, or transported from any of the said English plantations to any land, island, territory, dominion, port, or place whatsoever, other than to such English plantations as do belong to his majesty … or to the kingdom of England, Ireland, or … Wales.”",
+        skillCategory: "Causation",
+        correctSlotId: "homeward",
+      },
+    ],
+    reflectionPrompt:
+      "In 2–3 sentences, explain how one leg's cargo directly depended on or enabled what another leg of the circuit carried.",
+    rubric: {
+      skillCategories: ["Causation", "Contextualization", "Sourcing", "Comparison", "Continuity and Change"],
+      pointsTotal: 6,
+      description:
+        "Earn 1 point per cargo record correctly returned to the leg of the triangular trade that carried it.",
+    },
+  },
+];
+
+// Investigation Challenge content (Phase A of the Investigation/Archive
+// Challenge plan's catalog-expansion pass) — gates the wharf-ledger source's
+// sourceReader() worksheet behind a pre-reveal prediction quest, the same
+// mechanic UNIT_03_INVESTIGATION_QUESTS pioneered for case-007's Dunmore
+// proclamation, proving out the history evidence-organizing quest-type
+// contract as a gating mechanic instead of hipp. Framed as sorting
+// *predicted* trade-category entries (not the actual riverbend-ledger
+// excerpt, which stays behind the gate) into the categories a 1630s
+// Chesapeake wharf account would plausibly contain, before the record
+// unlocks — distinct from UNIT_02_EVIDENCE_ORGANIZING_QUESTS above, which
+// sorts riverbend-ledger's real excerpt (post-reveal) by historical-thinking
+// skill, not by trade category. The evidence items below are representative
+// entries in the same spirit as riverbend-ledger's own excerpt (see its
+// citation: "no single verbatim entry is quoted here"), modeled on the
+// invoice/cargo-account pattern documented throughout Kingsbury's Records of
+// the Virginia Company of London.
+export const UNIT_02_INVESTIGATION_EVIDENCE_QUESTS = [
+  {
+    id: "case-004-investigation-evidence-riverbend-ledger",
+    prompt:
+      "Before you open the full wharf account, predict what kinds of entries a 1630s James River wharf ledger would contain. Sort each representative entry below into the trade category it belongs to.",
+    slots: [
+      { id: "exports", label: "Exports: staple crop shipped out" },
+      { id: "imports", label: "Imports: manufactured goods received" },
+      { id: "record-keeping", label: "Shipping and measurement record-keeping" },
+    ],
+    sources: [
+      {
+        id: "riverbend-ledger-predict-tobacco",
+        label: "Tobacco Hogsheads Outbound",
+        attribution: "Representative wharf ledger entry, James River, c. 1630",
+        excerpt:
+          "Fourteen hogsheads of tobacco, laded aboard the Speedwell for shipment to England.",
+        skillCategory: "Contextualization",
+        correctSlotId: "exports",
+      },
+      {
+        id: "riverbend-ledger-predict-tobacco-parcel",
+        label: "Additional Planters' Tobacco Consigned",
+        attribution: "Representative wharf ledger entry, James River, c. 1630",
+        excerpt:
+          "A further parcel of hogsheads, consigned by neighboring planters, added to the same outbound shipment.",
+        skillCategory: "Contextualization",
+        correctSlotId: "exports",
+      },
+      {
+        id: "riverbend-ledger-predict-cloth",
+        label: "Kentish Cloth Received",
+        attribution: "Representative wharf ledger entry, James River, c. 1630",
+        excerpt: "Three pieces of Kentish cloth delivered to the planters' order at the landing.",
+        skillCategory: "Contextualization",
+        correctSlotId: "imports",
+      },
+      {
+        id: "riverbend-ledger-predict-tools",
+        label: "Iron Hoes and Knives Received",
+        attribution: "Representative wharf ledger entry, James River, c. 1630",
+        excerpt:
+          "Two dozen iron hoes and six dozen knives, delivered in return for the tobacco shipped.",
+        skillCategory: "Contextualization",
+        correctSlotId: "imports",
+      },
+      {
+        id: "riverbend-ledger-predict-tally",
+        label: "Cask Weight Tally",
+        attribution: "Representative wharf ledger entry, James River, c. 1630",
+        excerpt:
+          "Fourteen hogsheads, casked and weighed as within noted, entered against the ship Speedwell's account.",
+        skillCategory: "Contextualization",
+        correctSlotId: "record-keeping",
+      },
+    ],
+    reflectionPrompt:
+      "Before opening the full wharf account, predict in 2–3 sentences: what does sorting these entries into exports, imports, and record-keeping suggest about what kind of economy this 1630s Chesapeake settlement already depended on?",
+    rubric: {
+      skillCategories: ["Contextualization"],
+      pointsTotal: 5,
+      description: "Earn 1 point per entry correctly sorted into the trade category it represents.",
+    },
+  },
+];
+
+// Unit-level bonus Archive Challenge content (Phase C of the
+// Investigation/Archive Challenge plan's catalog-expansion pass) — the first
+// content in UNIT_02.archiveChallenges[] (a Zod field that existed but had
+// never been populated by any unit). Not tied to relocating any single
+// case's activity screen; reachable from archiveChallengesScreen()'s new
+// bonus section. Kept in its own array (not merged into UNIT_02_MCQ_QUESTS)
+// so it doesn't also surface as a practiceCheckScreen() card. A
+// "strongest-evidence" framing: each prompt poses a real historical claim
+// about Unit 2's content, and the choices are real excerpts already present
+// elsewhere in this file (CASE_004_SOURCES, TRIANGLE_CARGO) — only one of
+// which is the strongest direct support for the claim, the others being
+// plausible but less direct.
+export const UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS = [
+  {
+    id: "unit-02-archive-strongest-evidence-coerced-labor",
+    prompt:
+      "Historians argue that coerced and enslaved labor were central to building wealth in England's Atlantic colonies during this period. Which record below is the strongest direct evidence for that claim?",
+    choices: [
+      "The wharf account recording fourteen hogsheads of tobacco shipped from Riverbend in exchange for English cloth, hoes, and knives (1630) — shows the settlement's export economy, but not who performed the labor or how they were bound to it.",
+      "Richard Frethorne's 1623 letter describing hunger, sickness, and despair as an indentured servant in Virginia — powerful evidence of what bound labor felt like, but it documents one servant's suffering, not how that labor built colonial wealth.",
+      "Caribbean plantation accounts recording sugar and molasses shipped to England, with the proceeds spent on purchasing more enslaved laborers, provisions, and manufactured goods (c. 1730) — direct evidence that enslaved labor's profits were reinvested to expand the very labor system that produced them.",
+      "Olaudah Equiano's 1789 account of the crowded, suffocating conditions of the Middle Passage — powerful evidence of the human cost of the slave trade, but focused on the voyage itself rather than how that labor went on to build colonial wealth.",
+    ],
+    answer: 2,
+    explanation:
+      "The plantation accounts are the strongest direct evidence because they show the actual mechanism connecting coerced labor to colonial wealth: profits from enslaved-produced sugar were spent on buying more enslaved laborers, expanding the very system that generated the wealth. Frethorne's letter and Equiano's account are powerful, closer-to-the-ground evidence of what bound and enslaved labor felt like, but neither directly shows wealth being built and reinvested; the wharf ledger shows an export economy but says nothing about who performed the labor or under what conditions.",
+  },
+  {
+    id: "unit-02-archive-strongest-evidence-mercantile-policy",
+    prompt:
+      "Historians argue that English mercantile policy — not just market demand — determined where colonial staple crops could legally be sold. Which record below is the strongest direct evidence for that claim?",
+    choices: [
+      "The Navigation Act of 1660's enumerated-commodities clause, requiring that colonial tobacco, sugar, and other listed goods be shipped only to England or other English possessions, not sold directly to foreign markets.",
+      "The wharf account recording tobacco hogsheads shipped out of Riverbend in exchange for English cloth and tools (1630) — shows a trading pattern, but not the legal requirement compelling it.",
+      "Willem Bosman's 1705 account describing European nations competing to trade cloth, iron, and firearms for captives and gold on the Gold Coast — evidence about the outbound leg of the trade, not about restrictions on colonial exports.",
+      "Royal African Company invoices showing outbound cargo of cloth, iron, and firearms bound for West Africa (c. 1730s) — evidence of what England exported, not of legal restrictions on what the colonies could sell and where.",
+    ],
+    answer: 0,
+    explanation:
+      "The Navigation Act's enumerated-commodities clause is the strongest direct evidence because it is the actual legal text requiring colonial tobacco and other listed goods to be shipped only to England or English possessions — a policy, not merely a market pattern. The wharf ledger shows a trading pattern consistent with that policy but doesn't reveal the legal requirement behind it, and the Bosman and Royal African Company records document the outbound leg of the trade to Africa, unrelated to restrictions on colonial exports.",
+  },
 ];
 
 export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [

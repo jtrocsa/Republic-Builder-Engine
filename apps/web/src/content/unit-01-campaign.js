@@ -12,6 +12,17 @@ export const UNIT_01 = {
     "Investigate the societies, exchanges, and colonial systems that reshaped the Atlantic world after 1492.",
   centralQuestion:
     "How did contact among Europe, Africa, and the Americas reshape societies on both sides of the Atlantic?",
+  // Unit-level bonus Archive Challenge (Phase C of the Investigation/Archive
+  // Challenge plan's catalog-expansion pass) — not tied to relocating any
+  // single case's activity screen; reachable from the Archive Terminal's
+  // archiveChallengesScreen(). Completing it, alongside every case, is
+  // required for unit completion (see main.js's unitReadyForReview()).
+  archiveChallenges: [
+    {
+      questType: "evidence-organizing",
+      questId: "unit-01-archive-claim-and-evidence-builder",
+    },
+  ],
   cases: [
     {
       id: "case-001",
@@ -53,6 +64,10 @@ export const UNIT_01 = {
       route: "empire",
       summary:
         "Connect evidence about conquest, labor, forced migration, hierarchy, resistance, and cultural exchange.",
+      archiveChallenge: {
+        questType: "sequencing",
+        questId: "case-003-archive-empire-system",
+      },
     },
   ],
 };
@@ -67,6 +82,12 @@ export const CASE_001_SOURCES = [
     record: "1492: An Ongoing Voyage, Library of Congress",
     visual: "context",
     activityRoute: "village-activity",
+    // Investigation Challenge (Phase A of the Investigation/Archive Challenge
+    // plan's catalog-expansion pass) — gates this source's sourceReader()
+    // worksheet behind a pre-reveal prediction quest
+    // (UNIT_01_INVESTIGATION_MCQ_QUESTS).
+    investigationMode: "mcq",
+    investigationQuestId: "case-001-investigation-mcq-taino-origins",
     excerpt:
       "The largest group of people living in the islands of the Caribbean were the Taínos. Their villages were governed by chieftains, or caciques. Related families lived together in large houses built of poles, mats, and thatch.",
     prompt:
@@ -106,6 +127,12 @@ export const CASE_001_SOURCES = [
     record: "Printed world map; Library of Congress Geography and Map Division",
     visual: "map",
     activityRoute: "map-jigsaw",
+    // Investigation Challenge (Phase A of the Investigation/Archive Challenge
+    // plan's catalog-expansion pass) — gates this source's sourceReader()
+    // worksheet behind a pre-reveal prediction quest
+    // (UNIT_01_INVESTIGATION_SEQUENCING_QUESTS).
+    investigationMode: "sequencing",
+    investigationQuestId: "case-001-investigation-sequencing-waldseemuller-naming",
     excerpt:
       "A printed European world map made after early Atlantic voyages. It depicts a separate Western Hemisphere and labels the new lands “America.”",
     prompt:

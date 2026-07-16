@@ -37,6 +37,10 @@ import {
   UNIT_01_SEQUENCING_QUESTS,
   UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_01_SOURCE_ANALYSIS_QUESTS,
+  UNIT_01_INVESTIGATION_MCQ_QUESTS,
+  UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
+  UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
+  UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
 } from "./content/quests/unit-01-quests.js";
 import {
   UNIT_02_MCQ_QUESTS,
@@ -44,6 +48,8 @@ import {
   UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_02_SOURCE_ANALYSIS_QUESTS,
   UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
+  UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
+  UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
 } from "./content/quests/unit-02-quests.js";
 import {
   UNIT_03_MCQ_QUESTS,
@@ -51,6 +57,8 @@ import {
   UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_03_SOURCE_ANALYSIS_QUESTS,
   UNIT_03_INVESTIGATION_QUESTS,
+  UNIT_03_INVESTIGATION_MCQ_QUESTS,
+  UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
 } from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -1341,12 +1349,20 @@ const PRACTICE_CHECK_QUESTS = {
     hipp: UNIT_03_SOURCE_ANALYSIS_QUESTS,
   },
 };
-// Archive Challenge quest content, resolved by (questType, questId) from a case's
-// case.archiveChallenge pointer (unit.schema.js), grouped by quest type since a
-// unit's Archive Challenges can eventually mix types (only evidence-organizing
-// exists so far — see UNIT_02_ARCHIVE_CHALLENGE_QUESTS).
+// Archive Challenge quest content, resolved by (questType, questId) from
+// either a case's case.archiveChallenge pointer or a unit's
+// unit.archiveChallenges[] bonus entries (unit.schema.js), grouped by quest
+// type since a unit's Archive Challenges can mix types (case-003 uses
+// sequencing; case-005/case-006 and the unit-01/unit-03 bonus challenges use
+// evidence-organizing; the unit-02 bonus challenges use mcq).
 const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
-  "evidence-organizing": UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
+  "evidence-organizing": [
+    ...UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
+    ...UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
+    ...UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
+  ],
+  sequencing: UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
+  mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
 };
 function archiveChallengeQuestFor(questType, questId) {
   return (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
@@ -1356,9 +1372,50 @@ function archiveChallengeQuestFor(questType, questId) {
 // Mirrors ARCHIVE_CHALLENGE_QUESTS_BY_TYPE's shape — see that constant's comment.
 const INVESTIGATION_QUESTS_BY_TYPE = {
   hipp: UNIT_03_INVESTIGATION_QUESTS,
+  mcq: [...UNIT_01_INVESTIGATION_MCQ_QUESTS, ...UNIT_03_INVESTIGATION_MCQ_QUESTS],
+  sequencing: UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
+  "evidence-organizing": UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
 };
 function investigationQuestFor(questType, questId) {
   return (INVESTIGATION_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+}
+// gradeQuest()'s result shape differs by quest type: evidence-organizing
+// ({allPlacedCorrectly, reflectionOk, complete}) and hipp ({results,
+// pointsEarned, pointsPossible, complete}) both carry a `complete` field,
+// but mcq and sequencing only return {answered, correct} — no `complete`.
+// investigationScreen()/archiveChallengesScreen() need one completion
+// signal that works across all four, since case-003's Archive Challenge
+// (sequencing) and taino-context/waldseemuller-map/dickinson-letter's
+// Investigation Challenges (mcq/sequencing) were the first quests of those
+// types ever reached through either screen.
+function isChallengeQuestComplete(questType, result) {
+  return questType === "mcq" || questType === "sequencing" ? !!result.correct : !!result.complete;
+}
+// Same cross-type problem for "has the player started answering yet":
+// mcq/hipp state lives in state.selected, sequencing in state.order,
+// evidence-organizing in state.placements.
+function challengeQuestAnsweredAny(questType, state) {
+  if (questType === "sequencing") return Array.isArray(state.order) && state.order.length > 0;
+  if (questType === "evidence-organizing") return Object.keys(state.placements || {}).length > 0;
+  return Object.keys(state.selected || {}).length > 0;
+}
+// True when the incomplete-state hint below represents a partial-success
+// state (all placements correct, only the reflection missing) rather than a
+// plain not-yet-answered instruction — callers use this to keep the old
+// "success"-styled feedback for that specific evidence-organizing state.
+function challengeQuestPartialSuccess(questType, result) {
+  return questType === "evidence-organizing" && !!result.allPlacedCorrectly && !result.reflectionOk;
+}
+function challengeQuestHint(questType, result) {
+  if (questType === "evidence-organizing") {
+    return challengeQuestPartialSuccess(questType, result)
+      ? "All records restored to the right slot. Add a reflection of at least a sentence to complete this challenge."
+      : 'Drag each record into the slot it belongs in (or use the "Place in" menu on each card).';
+  }
+  if (questType === "sequencing") return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
+  if (questType === "hipp")
+    return "Choose the option that explains how or why this shapes the source's argument, not just names it.";
+  return "Choose the option that best explains why, not just the option that names the correct answer.";
 }
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
 const unitForCase = (caseId) => UNITS.find((unit) => unit.cases.some((c) => c.id === caseId));
@@ -1746,46 +1803,64 @@ function archiveRoomScreen() {
   return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p></section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down archive records room with a record shelf, a wine-rack-style record cabinet, and a reading table (Medieval Tavern tileset)"></canvas><button class="hub-table ${near("terminal") ? "is-near" : ""}" style="${pos(targets.terminal)}" data-action="hub-interact" data-target="terminal" data-hub-target="terminal" aria-label="Open Archive Terminal"><span>▤</span><b>Archive Terminal</b></button><button class="hub-table ${near("exitDoor") ? "is-near" : ""}" style="${pos(targets.exitDoor)}" data-action="hub-interact" data-target="exitDoor" data-hub-target="exitDoor" aria-label="Leave the Archive Room"><span>⤴</span><b>Leave Archive</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
 }
 
+// Shared card renderer for one Archive Challenge, used for both case-level
+// challenges (case.archiveChallenge — completing one unlocks the next case,
+// same as the bespoke screen it replaced, e.g. regionsScreen()) and
+// unit-level bonus challenges (unit.archiveChallenges[] — not tied to any
+// case, so there's nothing to unlock via onComplete). A case-level challenge
+// already in progress.completedCases from before its migration is shown as
+// complete without replay, preserving old-save completion (alreadyComplete).
+function archiveChallengeCard(kicker, questType, questId, { alreadyComplete = false, onComplete } = {}) {
+  const quest = archiveChallengeQuestFor(questType, questId);
+  if (!quest) return "";
+  const state = progress.questResponses[questId] || {};
+  const result = alreadyComplete ? { complete: true } : gradeQuest(questType, quest, state);
+  const complete = alreadyComplete || isChallengeQuestComplete(questType, result);
+  if (complete && progress.archiveChallenges[questId]?.status !== "complete") {
+    progress.archiveChallenges[questId] = { status: "complete", completedAt: new Date().toISOString() };
+    if (!alreadyComplete) playSfx("upload");
+    onComplete?.();
+  }
+  if (alreadyComplete) {
+    return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(kicker)}</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — this collection has already been restored and preserved.</p></div>`;
+  }
+  const feedback = complete
+    ? `<p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — case record preserved.</p>`
+    : `<p class="activity-feedback${challengeQuestPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${challengeQuestHint(questType, result)}</p>`;
+  const status = complete
+    ? "correct"
+    : challengeQuestAnsweredAny(questType, state)
+      ? "in-progress"
+      : "unanswered";
+  return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}</div>`;
+}
 // Archive Challenges list for the active unit, reached from the Archive Terminal.
 // Follows the same live-graded renderQuest/gradeQuest pattern practiceCheckScreen()
 // already uses (no separate "submit" step — placement/reflection state is graded on
-// every render), but unlike practice, completing one here is real progress: it writes
-// progress.archiveChallenges[questId] and, for a case-level challenge, unlocks the
-// next case exactly as the bespoke screen it replaces (e.g. regionsScreen()) used to
-// via unlockNext(). A case already in progress.completedCases from before this
-// migration is shown as complete without replay, preserving old-save completion.
+// every render). Renders two kinds of cards: case-level challenges (relocating an
+// existing case's activity — completing one is real case progress) and unit-level
+// bonus challenges (unit.archiveChallenges[], not tied to any case — bonus content
+// that's still required for unit completion via unitArchiveChallengesComplete()).
 function archiveChallengesScreen() {
   const unit = unitById(progress.selectedUnitId) || UNIT_01;
-  const challengeCases = unit.cases.filter((c) => c.archiveChallenge);
-  const cards = challengeCases
-    .map((c) => {
-      const { questType, questId } = c.archiveChallenge;
-      const quest = archiveChallengeQuestFor(questType, questId);
-      if (!quest) return "";
-      const alreadyComplete = progress.completedCases.includes(c.id);
-      const state = progress.questResponses[questId] || {};
-      const result = alreadyComplete
-        ? { complete: true, allPlacedCorrectly: true, reflectionOk: true }
-        : gradeQuest(questType, quest, state);
-      if (result.complete && progress.archiveChallenges[questId]?.status !== "complete") {
-        progress.archiveChallenges[questId] = { status: "complete", completedAt: new Date().toISOString() };
-        if (!alreadyComplete) playSfx("upload");
-        unlockNext(c.id);
-      }
-      if (alreadyComplete) {
-        return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(c.shortTitle)} · Archive Challenge</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — this collection has already been restored and preserved.</p></div>`;
-      }
-      const feedback = result.allPlacedCorrectly
-        ? `<p class="activity-feedback success" role="status" aria-live="polite">All records restored to the right region.${result.reflectionOk ? " Archive Challenge complete — case record preserved." : " Add a reflection of at least a sentence to complete this challenge."}</p>`
-        : `<p class="activity-feedback" role="status" aria-live="polite">Drag each founding record into the region it built (or use the "Place in" menu on each card).</p>`;
-      const status = result.complete
-        ? "correct"
-        : Object.keys(state.placements || {}).length
-          ? "in-progress"
-          : "unanswered";
-      return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(c.shortTitle)} · Archive Challenge</p>${renderQuest(questType, quest, state)}${feedback}</div>`;
-    })
-    .join("");
+  const caseCards = unit.cases
+    .filter((c) => c.archiveChallenge)
+    .map((c) =>
+      archiveChallengeCard(
+        `${c.shortTitle} · Archive Challenge`,
+        c.archiveChallenge.questType,
+        c.archiveChallenge.questId,
+        { alreadyComplete: progress.completedCases.includes(c.id), onComplete: () => unlockNext(c.id) }
+      )
+    );
+  const bonusCards = (unit.archiveChallenges || []).map((challenge) =>
+    archiveChallengeCard(
+      `${resolvedUnitTitle(unit)} · Bonus Archive Challenge`,
+      challenge.questType,
+      challenge.questId
+    )
+  );
+  const cards = [...caseCards, ...bonusCards].join("");
   return `${chrome()}<main class="shell activity-shell quest-practice-shell archive-challenges-shell"><section class="activity-copy"><button class="back-link" data-action="archive-room">← Return to Archive Terminal</button><p class="kicker">${esc(resolvedUnitTitle(unit))} · Institute Archive</p><h1>Archive Challenges</h1><p>Restore each unit's damaged record display using evidence secured in the field. Completing a unit's Archive Challenges preserves its case record and is required to fully archive the unit.</p></section><section class="activity-board quest-practice-board">${cards || '<p class="bank-empty">Archive Challenges for this unit are still being cataloged. Check back soon.</p>'}</section></main>${authorPanel()}`;
 }
 
@@ -1806,13 +1881,14 @@ function investigationScreen() {
   const { investigationMode: questType, investigationQuestId: questId } = source;
   const quest = investigationQuestFor(questType, questId);
   const state = progress.questResponses[questId] || {};
-  const result = quest ? gradeQuest(questType, quest, state) : { complete: false };
-  const answeredAny = Object.keys(state.selected || {}).length > 0;
-  const status = !answeredAny ? "unanswered" : result.complete ? "correct" : "in-progress";
-  const feedback = result.complete
+  const result = quest ? gradeQuest(questType, quest, state) : {};
+  const complete = quest ? isChallengeQuestComplete(questType, result) : false;
+  const answeredAny = challengeQuestAnsweredAny(questType, state);
+  const status = !answeredAny ? "unanswered" : complete ? "correct" : "in-progress";
+  const feedback = complete
     ? `<p class="activity-feedback success" role="status" aria-live="polite">Investigation complete — this record is ready to open.</p>`
-    : `<p class="activity-feedback" role="status" aria-live="polite">Choose the option that explains how or why this shapes the source's argument, not just names it.</p>`;
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to field</button><p class="kicker">${esc(source.type)} · Investigation Challenge</p><h1>Begin Investigation</h1><p>Predict this record's sourcing before you open its full worksheet.</p></section><section class="activity-board quest-practice-board">${quest ? `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(questType, quest, state)}${feedback}</div>` : '<p class="bank-empty">This record\'s Investigation Challenge is still being cataloged.</p>'}${result.complete ? `<button class="btn btn-gold" data-action="investigation-continue" data-source="${source.id}">Source Unlocked · Continue →</button>` : ""}</section></main>${authorPanel()}`;
+    : `<p class="activity-feedback${challengeQuestPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${challengeQuestHint(questType, result)}</p>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to field</button><p class="kicker">${esc(source.type)} · Investigation Challenge</p><h1>Begin Investigation</h1><p>Predict this record's sourcing before you open its full worksheet.</p></section><section class="activity-board quest-practice-board">${quest ? `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(questType, quest, state)}${feedback}</div>` : '<p class="bank-empty">This record\'s Investigation Challenge is still being cataloged.</p>'}${complete ? `<button class="btn btn-gold" data-action="investigation-continue" data-source="${source.id}">Source Unlocked · Continue →</button>` : ""}</section></main>${authorPanel()}`;
 }
 
 function caseMarker(c) {
@@ -2135,7 +2211,7 @@ function sourceInvestigationComplete(source) {
   const quest = investigationQuestFor(source.investigationMode, source.investigationQuestId);
   if (!quest) return true;
   const state = progress.questResponses[source.investigationQuestId] || {};
-  return gradeQuest(source.investigationMode, quest, state).complete;
+  return isChallengeQuestComplete(source.investigationMode, gradeQuest(source.investigationMode, quest, state));
 }
 // Shared destination-screen resolver for a not-yet-secured source, used by both the
 // click ("start-source-activity") and keyboard (field "E" interact) entry points so
@@ -2819,10 +2895,26 @@ function applySequenceOrder(questId, order) {
   render();
 }
 
+// Resolves a sequencing quest's `items` by id across every place a
+// sequencing quest can live: Practice Check's per-case content (the only
+// source this used to check, before Archive/Investigation Challenges also
+// started reusing the sequencing quest type — case-003's Archive Challenge
+// and waldseemuller-map's Investigation Challenge are the first two quests
+// that need this fallback), plus ARCHIVE_CHALLENGE_QUESTS_BY_TYPE and
+// INVESTIGATION_QUESTS_BY_TYPE's "sequencing" buckets.
+function sequencingQuestItemsFor(questId) {
+  const practiceQuest = Object.values(PRACTICE_CHECK_QUESTS)
+    .flatMap((set) => set.sequencing || [])
+    .find((quest) => quest.id === questId);
+  return (
+    practiceQuest?.items ||
+    archiveChallengeQuestFor("sequencing", questId)?.items ||
+    investigationQuestFor("sequencing", questId)?.items ||
+    []
+  );
+}
 function applySequenceMove(questId, itemId, direction) {
-  const list =
-    PRACTICE_CHECK_QUESTS[activeFieldCaseId()]?.sequencing.find((quest) => quest.id === questId)
-      ?.items || [];
+  const list = sequencingQuestItemsFor(questId);
   const currentOrder =
     progress.questResponses[questId]?.order &&
     progress.questResponses[questId].order.length === list.length
@@ -3182,7 +3274,12 @@ function handleSourceReaderClick(target, action) {
   if (action === "investigation-continue") {
     openSourceId = target.dataset.source;
     sourceOrigin = "field";
-    progress.currentScreen = "source";
+    // Re-resolve via sourceEntryScreen() rather than hardcoding "source": a
+    // source can carry both investigationMode and a bespoke activityRoute
+    // (e.g. taino-context's village-activity, waldseemuller-map's map-jigsaw)
+    // — the Investigation Challenge gates entry, it doesn't replace the
+    // bespoke mini-game that source still has.
+    progress.currentScreen = sourceEntryScreen(openSourceId);
     save();
     render();
     return true;
@@ -3686,7 +3783,12 @@ function handleAppDrop(event) {
     const questId = sequenceItem.closest("[data-quest-id]")?.dataset.questId;
     const list = sequenceItem.closest(".quest-sequence-list");
     if (!sourceItemId || sourceItemId === targetItemId || !questId || !list) return;
-    const currentOrder = Array.from(list.querySelectorAll("[data-sequence-item]")).map(
+    // Scoped to the <li> itself, not "[data-sequence-item]" alone — each
+    // item's ↑/↓ move buttons also carry data-sequence-item (for their own
+    // click handler), so the unscoped selector triples every id and
+    // produces a corrupted order that can never satisfy
+    // order.length === quest.items.length.
+    const currentOrder = Array.from(list.querySelectorAll("li.sequence-item[data-sequence-item]")).map(
       (el) => el.dataset.sequenceItem
     );
     const withoutSource = currentOrder.filter((id) => id !== sourceItemId);
