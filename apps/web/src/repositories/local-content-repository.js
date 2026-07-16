@@ -43,6 +43,7 @@ export function loadChronicleContent() {
       evidenceOrganizingQuests: unit02Quests.UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit02Quests.UNIT_02_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit02Quests.UNIT_02_SOURCE_ANALYSIS_QUESTS,
+      archiveChallengeQuests: unit02Quests.UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
     },
     unit03: {
       unit: unit03Campaign.UNIT_03,

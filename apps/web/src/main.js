@@ -45,6 +45,7 @@ import {
   UNIT_02_SEQUENCING_QUESTS,
   UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_02_SOURCE_ANALYSIS_QUESTS,
+  UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
 } from "./content/quests/unit-02-quests.js";
 import {
   UNIT_03_MCQ_QUESTS,
@@ -1067,6 +1068,7 @@ const ARCHIVE_ROOM_TARGETS = {
     role: "Archive Challenges interface",
     dialogue: () =>
       "Archive Challenges for this unit are still being cataloged. Check back soon.",
+    action: "archive-challenges",
   },
   exitDoor: {
     x: 5.0,
@@ -1268,6 +1270,7 @@ const VALID_SCREENS = new Set([
   "completion",
   "triangle",
   "regions",
+  "archive-challenges",
   "intro-welcome",
   "intro-briefing",
   "intro-protocol",
@@ -1339,6 +1342,16 @@ const PRACTICE_CHECK_QUESTS = {
     hipp: UNIT_03_SOURCE_ANALYSIS_QUESTS,
   },
 };
+// Archive Challenge quest content, resolved by (questType, questId) from a case's
+// case.archiveChallenge pointer (unit.schema.js), grouped by quest type since a
+// unit's Archive Challenges can eventually mix types (only evidence-organizing
+// exists so far — see UNIT_02_ARCHIVE_CHALLENGE_QUESTS).
+const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
+  "evidence-organizing": UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
+};
+function archiveChallengeQuestFor(questType, questId) {
+  return (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+}
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
 const unitForCase = (caseId) => UNITS.find((unit) => unit.cases.some((c) => c.id === caseId));
 const caseById = (id) => {
@@ -1681,6 +1694,13 @@ function interactWithHubTarget(id) {
     render();
     return;
   }
+  if (target.action === "archive-challenges") {
+    playSfx("secure");
+    progress.currentScreen = "archive-challenges";
+    save();
+    render();
+    return;
+  }
   playSfx(id === "trophy" ? "archive-receive" : "dialogue");
   hubDialogueId = id;
   render();
@@ -1712,11 +1732,53 @@ function instituteMainRoomScreen() {
 function archiveRoomScreen() {
   const targets = ARCHIVE_ROOM_TARGETS;
   const nearby = nearestHubTarget();
-  const dialogue = hubDialogueId ? targets[hubDialogueId] : null;
   const near = (id) => targetDistance(targets[id], id) <= targetReach(id);
   const pos = (target) =>
     `left:${(((target.x + 0.5) / ARCHIVE_ROOM_GRID.columns) * 100).toFixed(3)}%;top:${(((target.y + 0.5) / ARCHIVE_ROOM_GRID.rows) * 100).toFixed(3)}%`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p></section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down archive records room with a record shelf, a wine-rack-style record cabinet, and a reading table (Medieval Tavern tileset)"></canvas><button class="hub-table ${near("terminal") ? "is-near" : ""}" style="${pos(targets.terminal)}" data-action="hub-interact" data-target="terminal" data-hub-target="terminal" aria-label="Open Archive Terminal"><span>▤</span><b>Archive Terminal</b></button><button class="hub-table ${near("exitDoor") ? "is-near" : ""}" style="${pos(targets.exitDoor)}" data-action="hub-interact" data-target="exitDoor" data-hub-target="exitDoor" aria-label="Leave the Archive Room"><span>⤴</span><b>Leave Archive</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p></div></article></div>` : ""}</main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p></section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down archive records room with a record shelf, a wine-rack-style record cabinet, and a reading table (Medieval Tavern tileset)"></canvas><button class="hub-table ${near("terminal") ? "is-near" : ""}" style="${pos(targets.terminal)}" data-action="hub-interact" data-target="terminal" data-hub-target="terminal" aria-label="Open Archive Terminal"><span>▤</span><b>Archive Terminal</b></button><button class="hub-table ${near("exitDoor") ? "is-near" : ""}" style="${pos(targets.exitDoor)}" data-action="hub-interact" data-target="exitDoor" data-hub-target="exitDoor" aria-label="Leave the Archive Room"><span>⤴</span><b>Leave Archive</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
+}
+
+// Archive Challenges list for the active unit, reached from the Archive Terminal.
+// Follows the same live-graded renderQuest/gradeQuest pattern practiceCheckScreen()
+// already uses (no separate "submit" step — placement/reflection state is graded on
+// every render), but unlike practice, completing one here is real progress: it writes
+// progress.archiveChallenges[questId] and, for a case-level challenge, unlocks the
+// next case exactly as the bespoke screen it replaces (e.g. regionsScreen()) used to
+// via unlockNext(). A case already in progress.completedCases from before this
+// migration is shown as complete without replay, preserving old-save completion.
+function archiveChallengesScreen() {
+  const unit = unitById(progress.selectedUnitId) || UNIT_01;
+  const challengeCases = unit.cases.filter((c) => c.archiveChallenge);
+  const cards = challengeCases
+    .map((c) => {
+      const { questType, questId } = c.archiveChallenge;
+      const quest = archiveChallengeQuestFor(questType, questId);
+      if (!quest) return "";
+      const alreadyComplete = progress.completedCases.includes(c.id);
+      const state = progress.questResponses[questId] || {};
+      const result = alreadyComplete
+        ? { complete: true, allPlacedCorrectly: true, reflectionOk: true }
+        : gradeQuest(questType, quest, state);
+      if (result.complete && progress.archiveChallenges[questId]?.status !== "complete") {
+        progress.archiveChallenges[questId] = { status: "complete", completedAt: new Date().toISOString() };
+        if (!alreadyComplete) playSfx("upload");
+        unlockNext(c.id);
+      }
+      if (alreadyComplete) {
+        return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(c.shortTitle)} · Archive Challenge</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — this collection has already been restored and preserved.</p></div>`;
+      }
+      const feedback = result.allPlacedCorrectly
+        ? `<p class="activity-feedback success" role="status" aria-live="polite">All records restored to the right region.${result.reflectionOk ? " Archive Challenge complete — case record preserved." : " Add a reflection of at least a sentence to complete this challenge."}</p>`
+        : `<p class="activity-feedback" role="status" aria-live="polite">Drag each founding record into the region it built (or use the "Place in" menu on each card).</p>`;
+      const status = result.complete
+        ? "correct"
+        : Object.keys(state.placements || {}).length
+          ? "in-progress"
+          : "unanswered";
+      return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(c.shortTitle)} · Archive Challenge</p>${renderQuest(questType, quest, state)}${feedback}</div>`;
+    })
+    .join("");
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell archive-challenges-shell"><section class="activity-copy"><button class="back-link" data-action="archive-room">← Return to Archive Terminal</button><p class="kicker">${esc(resolvedUnitTitle(unit))} · Institute Archive</p><h1>Archive Challenges</h1><p>Restore each unit's damaged record display using evidence secured in the field. Completing a unit's Archive Challenges preserves its case record and is required to fully archive the unit.</p></section><section class="activity-board quest-practice-board">${cards || '<p class="bank-empty">Archive Challenges for this unit are still being cataloged. Check back soon.</p>'}</section></main>${authorPanel()}`;
 }
 
 function caseMarker(c) {
@@ -2579,6 +2641,9 @@ function render() {
       case "regions":
         html = regionsScreen();
         break;
+      case "archive-challenges":
+        html = archiveChallengesScreen();
+        break;
       case "upload":
         html = uploadScreen();
         break;
@@ -2723,11 +2788,14 @@ function applySequenceMove(questId, itemId, direction) {
 }
 
 function applyEvidencePlacement(questId, sourceId, slotId) {
+  // Slots accept many sources (renderEvidenceOrganizingQuest groups every source
+  // whose placement matches a given slot id, not just one) — only this source's own
+  // placement changes here. An eviction loop that cleared any other occupant of
+  // slotId used to live here; it silently broke every quest with more sources than
+  // slots (a 2-sources-per-region case like case-006's Archive Challenge), since it
+  // was never exercised by case-004's coincidentally 1:1 source-to-slot content.
   const state = progress.questResponses[questId] || {};
   const placements = { ...(state.placements || {}) };
-  Object.keys(placements).forEach((id) => {
-    if (placements[id] === slotId) delete placements[id];
-  });
   if (slotId) {
     placements[sourceId] = slotId;
   } else {
@@ -2771,6 +2839,17 @@ function handleChromeClick(target, action) {
     progress.activeFieldNpc = null;
     safeInstituteSpawn(7, 9, "up");
     progress.currentScreen = "institute";
+    save();
+    render();
+    return true;
+  }
+  if (action === "archive-room") {
+    // Unlike "home", deliberately does not touch currentHubRoom/spawn position —
+    // this only returns from the archive-challenges screen back into whichever
+    // room the player was already standing in (always "archive" in practice,
+    // since the Terminal is the only entry point into this screen).
+    progress.currentScreen = "institute";
+    hubDialogueId = null;
     save();
     render();
     return true;

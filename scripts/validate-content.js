@@ -163,6 +163,13 @@ function main() {
       content.unit02.sourceAnalysisQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_ARCHIVE_CHALLENGE_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit02.archiveChallengeQuests
+    )
+  );
 
   results.push(runSchema("unit-03-campaign.js: UNIT_03", UnitSchema, content.unit03.unit));
   results.push(
@@ -233,6 +240,7 @@ function main() {
       ...idsOf(content.unit01.evidenceOrganizingQuests),
       ...idsOf(content.unit02.evidenceOrganizingQuests),
       ...idsOf(content.unit03.evidenceOrganizingQuests),
+      ...idsOf(content.unit02.archiveChallengeQuests),
     ]),
     hipp: new Set([
       ...idsOf(content.unit01.sourceAnalysisQuests),

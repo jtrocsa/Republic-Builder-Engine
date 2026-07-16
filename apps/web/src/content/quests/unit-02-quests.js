@@ -133,6 +133,89 @@ export const UNIT_02_SEQUENCING_QUESTS = [
   },
 ];
 
+// Archive Challenge content — migrates the "Region Builder" drag-and-drop activity
+// (previously regionsScreen()/REGION_EVIDENCE/REGION_RECORDS in unit-02-campaign.js)
+// onto the generic evidence-organizing quest-type contract, so Case 6 ("Charter &
+// Compact") can be played from the Institute Archive Terminal via renderQuest/
+// gradeQuest instead of a bespoke screen. Record text duplicated from
+// REGION_EVIDENCE rather than imported, matching how UNIT_02_EVIDENCE_ORGANIZING_QUESTS
+// above already duplicates CASE_004_SOURCES excerpts instead of importing them.
+export const UNIT_02_ARCHIVE_CHALLENGE_QUESTS = [
+  {
+    id: "case-006-archive-region-display",
+    prompt:
+      "The Archive's display of the colonial regions is damaged. Return each founding record to the society it built, then defend one comparison in your reflection.",
+    slots: [
+      { id: "new-england", label: "New England" },
+      { id: "middle", label: "Middle Colonies" },
+      { id: "southern", label: "Southern Colonies" },
+    ],
+    sources: [
+      {
+        id: "town-covenant",
+        label: "Town covenant",
+        attribution: "The Dedham Covenant",
+        excerpt:
+          "“We whose names are hereunto subscribed do, in the fear and reverence of our Almighty God, mutually and severally promise amongst ourselves and each to other, to profess and practice one truth … and receive only such unto us as be such as may be probably of one heart with us.”",
+        skillCategory: "Comparison",
+        correctSlotId: "new-england",
+      },
+      {
+        id: "headright-grant",
+        label: "Headright grant",
+        attribution: "Virginia headright land patent, Library of Virginia Land Office Patents",
+        excerpt:
+          "A named patentee is granted fifty acres per head for the transportation of listed persons, free or bound, into the colony — land in the Chesapeake distributed by how much labor a planter could import.",
+        skillCategory: "Comparison",
+        correctSlotId: "southern",
+      },
+      {
+        id: "indenture-contract",
+        label: "Indenture contract",
+        attribution: "Representative Chesapeake indenture agreement, 17th century",
+        excerpt:
+          "A servant bound himself to a master's service for four to seven years in exchange for passage across the Atlantic, with food, lodging, and \"freedom dues\" promised at the term's end.",
+        skillCategory: "Comparison",
+        correctSlotId: "southern",
+      },
+      {
+        id: "toleration-writ",
+        label: "Liberty of conscience writ",
+        attribution:
+          "William Penn, Frame of Government of Pennsylvania, Laws Agreed Upon in England",
+        excerpt:
+          "“All persons living in this province … shall in no ways be molested or prejudiced for their religious persuasion or practice in matters of faith and worship.”",
+        skillCategory: "Comparison",
+        correctSlotId: "middle",
+      },
+      {
+        id: "grain-manifest",
+        label: "Flour export manifest",
+        attribution: "Representative flour-export shipping notice, Pennsylvania Gazette",
+        excerpt:
+          "A Philadelphia-built brig clearing port laden with several hundred barrels of superfine flour bound for the West Indies — the breadbasket grain trade that fed Philadelphia's growth into the busiest port in British North America.",
+        skillCategory: "Comparison",
+        correctSlotId: "middle",
+      },
+      {
+        id: "school-law",
+        label: "Common school law",
+        attribution: "Massachusetts Bay, \"The Old Deluder Satan Act\" (1647)",
+        excerpt:
+          "“Every township in this jurisdiction, after the Lord hath increased them to the number of fifty householders, shall then forthwith appoint one within their town to teach all such children as shall resort to him to write and read.”",
+        skillCategory: "Comparison",
+        correctSlotId: "new-england",
+      },
+    ],
+    reflectionPrompt: "Which difference between two regions does your evidence best prove?",
+    rubric: {
+      skillCategories: ["Comparison"],
+      pointsTotal: 6,
+      description: "Earn 1 point per founding record correctly returned to the region it built.",
+    },
+  },
+];
+
 export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-004-hipp-frethorne-letter",
