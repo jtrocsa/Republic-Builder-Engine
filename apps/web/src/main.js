@@ -96,19 +96,21 @@ const atlanticTable = new URL("./assets/maps/atlantic-navigation-table.png", imp
 // 2026-07-10 entry) — replaces the static placeholder PNG above with a composited .tmj map.
 // Scoped to this one map only; not a project-wide Tiled adoption.
 const riverbendTmj = JSON.parse(riverbendTmjRaw);
-// Globbed per pack folder (not the whole assets/tilesets/ tree) so unrelated downloaded packs
-// don't get bundled into the production build — see tiled-map-loader.js and
-// docs/architecture/tiled-map-import-checklist.md.
+// Scoped to the exact three sheets the .tmj references (tile-B-04, 1.png, farm/3.png),
+// not the whole pack folders — see docs/architecture/art-and-map-style-guide.md and
+// docs/architecture/tiled-map-import-checklist.md. This previously globbed whole pack
+// folders (13-16 unused sheets bundled per pack), the same unscoped-glob regression the
+// checklist warns about; Caribbean/Archive already scope by exact file.
 const resolveRiverbendTilesetImage = createTilesetImageResolver(
-  import.meta.glob("./assets/tilesets/Medieval Fishing Village/**", {
+  import.meta.glob("./assets/tilesets/Medieval Fishing Village/tile-B-04.png", {
     eager: true,
     import: "default",
   }),
-  import.meta.glob("./assets/tilesets/Medieval Fantasy Town/**", {
+  import.meta.glob("./assets/tilesets/Medieval Fantasy Town/1.png", {
     eager: true,
     import: "default",
   }),
-  import.meta.glob("./assets/tilesets/farm/**", { eager: true, import: "default" })
+  import.meta.glob("./assets/tilesets/farm/3.png", { eager: true, import: "default" })
 );
 function renderRiverbendTiledMap() {
   const canvas = document.getElementById("riverbendTiledCanvas");

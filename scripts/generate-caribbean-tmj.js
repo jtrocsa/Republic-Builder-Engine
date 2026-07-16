@@ -39,6 +39,16 @@ const WATER_DEEP = gidB01(4, 6); // dark navy deep water
 const PATH_LEFT = gidB01(9, 4); // dirt path, left half (grass border on the left)
 const PATH_RIGHT = gidB01(9, 5); // dirt path, right half (grass border on the right)
 
+// Enrichment pass (docs/architecture/art-and-map-style-guide.md, Caribbean row) — opaque
+// full-bleed terrain variants only (confirmed via a grid-labeled crop of tile-B-01.png,
+// same technique as the original authoring pass), never the rows 12-15 transparent-bg prop
+// icons, which are structures-layer stamps that need their own FIELD_BLOCKS collision rect
+// and are out of scope for a ground-only enrichment pass.
+const GRASS_TUFT = gidB01(11, 2); // wispy tall-grass texture, reads like a Pokémon grass patch
+const SAND_DRIFTWOOD = gidB01(0, 6); // driftwood log embedded in the sand texture
+const SAND_SHELLS = gidB01(0, 8); // scattered shells embedded in the sand texture
+const CORAL_PATCH = gidB01(4, 8); // full-bleed underwater coral cluster, for open water only
+
 // Ground layer: concentric rings computed straight from the same land mask the game
 // uses for collision, padded in/out by 1.2 grid units so the ring width reads clearly
 // at 48px tiles without needing directional/rotated edge tiles.
@@ -47,9 +57,15 @@ function groundTileAt(col, row) {
   const cy = row + 0.5;
   if (isCaribbeanLand(cx, cy, -1.2)) {
     // interior land — light deterministic variation, no randomness (reproducible)
+    if ((col * 7 + row * 3) % 11 === 0) return GRASS_TUFT; // sparse tall-grass accent
     return (col + row) % 5 === 0 ? GRASS_B : GRASS_A;
   }
-  if (isCaribbeanLand(cx, cy, 0)) return SAND; // coastal ring
+  if (isCaribbeanLand(cx, cy, 0)) {
+    // coastal ring — mostly plain sand, sparse driftwood/shell debris for texture
+    if ((col * 5 + row * 2) % 13 === 0) return SAND_DRIFTWOOD;
+    if ((col * 3 + row * 7) % 17 === 0) return SAND_SHELLS;
+    return SAND;
+  }
   if (isCaribbeanLand(cx, cy, 1.2)) return WATER_SHALLOW; // just offshore
   return WATER_DEEP; // open water
 }
@@ -58,6 +74,20 @@ const groundData = [];
 for (let row = 0; row < HEIGHT; row += 1) {
   for (let col = 0; col < WIDTH; col += 1) {
     groundData.push(groundTileAt(col, row));
+  }
+}
+
+// One fixed coral-patch accent, placed at the first solidly-open-water cell found (padding
+// 3 grid units beyond the land mask, i.e. nowhere near the shore/path/prop cluster) rather
+// than a hand-picked coordinate, so it stays correct even if the land mask ellipses change.
+outer: for (let row = 0; row < HEIGHT; row += 1) {
+  for (let col = 0; col < WIDTH; col += 1) {
+    const cx = col + 0.5;
+    const cy = row + 0.5;
+    if (!isCaribbeanLand(cx, cy, 3)) {
+      groundData[row * WIDTH + col] = CORAL_PATCH;
+      break outer;
+    }
   }
 }
 
