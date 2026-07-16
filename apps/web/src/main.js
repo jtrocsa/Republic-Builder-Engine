@@ -91,6 +91,12 @@ const chroniclerPreviewA = new URL("./assets/chronicle-sprites/chronicler-a.png"
   .href;
 const chroniclerPreviewB = new URL("./assets/chronicle-sprites/chronicler-b.png", import.meta.url)
   .href;
+// Director intro scene reveal cards — lookup keys, not literal paths, so content stays
+// data-only (see docs/architecture/art-and-map-style-guide.md's "src is a lookup key"
+// convention already established for tileset packs, reused here for reveal images).
+const INTRO_REVEAL_IMAGES = {
+  codex: new URL("./assets/chronicle-sprites/chronicle-codex.png", import.meta.url).href,
+};
 const atlanticTable = new URL("./assets/maps/atlantic-navigation-table.png", import.meta.url).href;
 // Riverbend Tiled tileset proof of concept (see docs/architecture/POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md,
 // 2026-07-10 entry) — replaces the static placeholder PNG above with a composited .tmj map.
@@ -1301,6 +1307,13 @@ let authorPanelOpen = false;
 let showMainMenu = true;
 let briefingStep = 0;
 let activeTravelTimeout = null;
+// Director intro scene (intro-welcome/intro-briefing/intro-protocol) typewriter state.
+// introLineIndex tracks position within the current step's body-line array; introSeenSteps
+// is runtime-only (not persisted to progress) so a step only ever types out once per session
+// — revisiting via "Previous message" shows it fully complete instantly.
+let introLineIndex = 0;
+let introTypewriterTimer = null;
+const introSeenSteps = new Set();
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward layer, not
 // save-relevant progress — their in-run state lives here, outside `progress`,
 // the same way field/hub movement state does. Only Storm Navigation's best
@@ -1494,22 +1507,117 @@ function mainMenuScreen() {
   return `<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="completion-actions">${items}</div></section></main>`;
 }
 
+// Director intro scene — Pokémon-"meet the Professor"-style presentation shared by
+// intro-welcome/intro-briefing/intro-protocol. Markup always renders an empty text/rail
+// shell; startIntroTypewriter() (called via requestAnimationFrame right after this HTML is
+// injected, see render()) is the single source of truth for filling it in, whether that's
+// typing a fresh line or instantly restoring a previously-seen step. Keeping that logic in
+// one place avoids the markup and the JS state machine silently drifting out of sync.
+function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" }) {
+  return `<section class="director-scene"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1><div class="director-scene__stage"><img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false"><div class="director-reveal-rail" id="directorRevealRail"></div></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="director-extra-content" hidden>${extraContent}</div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></section>`;
+}
+
 function introWelcomeScreen() {
   const s = CHRONICLE_OPENING_DEFAULTS.scenes.welcome;
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(s.eyebrow)}</p><h1>${esc(s.title)}</h1><p class="subtitle">${esc(s.subtitle)}</p><p>${esc(s.body)}</p><div class="completion-actions"><button class="btn btn-gold" data-action="intro-advance" data-next="intro-briefing">${esc(s.action)} →</button></div></section></main>`;
+  const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="intro-briefing" hidden>${esc(s.action)} →</button>`;
+  return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: s.eyebrow, title: s.title, buttonsHtml: buttons })}</main>`;
 }
 
 function introBriefingScreen() {
   const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
   const entry = entries[briefingStep];
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(entry.eyebrow)}</p><h1>${esc(entry.title)}</h1><p class="subtitle">${esc(entry.subtitle)}</p><p>${esc(entry.body)}</p><div class="completion-actions"><button class="btn btn-outline" data-action="briefing-back">${esc(entry.secondary)}</button><button class="btn btn-gold" data-action="briefing-next">${esc(entry.action)} →</button></div></section></main>`;
+  const buttons = `<button class="btn btn-outline director-back-button" data-action="briefing-back">${esc(entry.secondary)}</button><button class="btn btn-gold director-continue-button" data-action="briefing-next" hidden>${esc(entry.action)} →</button>`;
+  return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: entry.eyebrow, title: entry.title, buttonsHtml: buttons })}</main>`;
 }
 
 function introProtocolScreen() {
   const oath = CHRONICLE_OPENING_DEFAULTS.scenes.oath;
   const protocol = CHRONICLE_OPENING_DEFAULTS.protocol;
   const assignment = CHRONICLE_OPENING_DEFAULTS.assignment;
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(oath.eyebrow)}</p><h1>${esc(oath.title)}</h1><p class="subtitle">${esc(oath.subtitle)}</p><p>${esc(oath.body)}</p><div class="completion-stats">${protocol.map((p) => `<span><b>${esc(p.number)}</b> ${esc(p.title)} — ${esc(p.body)}</span>`).join("")}</div><div class="completion-stats"><span class="kicker">${esc(assignment.kicker)}</span><span>${esc(assignment.unit)}</span><span>${esc(assignment.title)}</span></div><p>${esc(assignment.description)}</p><div class="completion-actions"><button class="btn btn-gold" data-action="intro-advance" data-next="identity">${esc(oath.action)} →</button></div></section></main>`;
+  const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="identity" hidden>${esc(oath.action)} →</button>`;
+  const extraContent = `<div class="completion-stats">${protocol.map((p) => `<span><b>${esc(p.number)}</b> ${esc(p.title)} — ${esc(p.body)}</span>`).join("")}</div><div class="completion-stats"><span class="kicker">${esc(assignment.kicker)}</span><span>${esc(assignment.unit)}</span><span>${esc(assignment.title)}</span></div><p>${esc(assignment.description)}</p>`;
+  return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
+}
+
+// Resolves the {stepKey, lines} for whichever intro screen/step is currently active.
+// stepKey is unique per step (director-briefing steps are keyed by index) so introSeenSteps
+// tracks "has this exact beat been typed out before" independent of screen navigation.
+function currentIntroLines() {
+  if (progress.currentScreen === "intro-welcome") {
+    return { stepKey: "intro-welcome", lines: CHRONICLE_OPENING_DEFAULTS.scenes.welcome.body };
+  }
+  if (progress.currentScreen === "intro-briefing") {
+    return {
+      stepKey: `intro-briefing-${briefingStep}`,
+      lines: CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries[briefingStep].body,
+    };
+  }
+  if (progress.currentScreen === "intro-protocol") {
+    return { stepKey: "intro-protocol", lines: CHRONICLE_OPENING_DEFAULTS.scenes.oath.body };
+  }
+  return null;
+}
+
+function revealCardMarkup(reveal) {
+  if (reveal.type === "chips") {
+    return `<div class="director-reveal-card director-reveal-card--chips">${reveal.items.map((item, index) => `<span class="director-reveal-chip" style="animation-delay:${index * 120}ms">${esc(item)}</span>`).join("")}</div>`;
+  }
+  if (reveal.type === "image") {
+    const src = INTRO_REVEAL_IMAGES[reveal.src] || "";
+    return `<div class="director-reveal-card director-reveal-card--image"><img src="${src}" alt="${esc(reveal.label)}"><span>${esc(reveal.label)}</span></div>`;
+  }
+  return `<div class="director-reveal-card director-reveal-card--badge"><span class="director-reveal-badge">${esc(reveal.icon || "✦")}</span><span>${esc(reveal.label)}</span></div>`;
+}
+
+function completeCurrentIntroStep(step) {
+  introSeenSteps.add(step.stepKey);
+  document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
+  document.querySelector(".director-continue-button")?.removeAttribute("hidden");
+  document.querySelector(".director-extra-content")?.removeAttribute("hidden");
+}
+
+// Fills in the empty shell directorSceneMarkup() rendered, using the setInterval +
+// direct-DOM-patch convention already established by updateInstituteNpcs/updateFieldNpcs
+// (main.js) rather than re-running render() per character.
+function startIntroTypewriter() {
+  clearInterval(introTypewriterTimer);
+  introTypewriterTimer = null;
+  const step = currentIntroLines();
+  const textEl = document.getElementById("directorLineText");
+  const railEl = document.getElementById("directorRevealRail");
+  if (!step || !textEl || !railEl) return;
+
+  if (introSeenSteps.has(step.stepKey)) {
+    introLineIndex = step.lines.length - 1;
+    textEl.textContent = step.lines[introLineIndex].text;
+    railEl.innerHTML = step.lines
+      .filter((line) => line.reveal)
+      .map((line) => revealCardMarkup(line.reveal))
+      .join("");
+    completeCurrentIntroStep(step);
+    return;
+  }
+
+  if (introLineIndex === 0) railEl.innerHTML = "";
+  const line = step.lines[introLineIndex];
+  textEl.textContent = "";
+  document.getElementById("directorContinueIndicator")?.setAttribute("hidden", "");
+  if (line.reveal) railEl.insertAdjacentHTML("beforeend", revealCardMarkup(line.reveal));
+
+  let charIndex = 0;
+  introTypewriterTimer = setInterval(() => {
+    charIndex += 1;
+    textEl.textContent = line.text.slice(0, charIndex);
+    if (charIndex >= line.text.length) {
+      clearInterval(introTypewriterTimer);
+      introTypewriterTimer = null;
+      if (introLineIndex === step.lines.length - 1) {
+        completeCurrentIntroStep(step);
+      } else {
+        document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
+      }
+    }
+  }, 20);
 }
 
 function identityScreen() {
@@ -2685,6 +2793,8 @@ function render() {
     return;
   }
   clearTimeout(activeTravelTimeout);
+  clearInterval(introTypewriterTimer);
+  introTypewriterTimer = null;
   let html;
   try {
     switch (progress.currentScreen) {
@@ -2801,6 +2911,7 @@ function render() {
     html = `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Chronicle recovery</p><h1>Archive display restored.</h1><p>The screen recovered instead of staying blank. Return to the Institute and continue testing.</p><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="reset-case-001">Reset Case 1.01 demo</button></section></main>${authorPanel()}`;
   }
   app.innerHTML = html;
+  if (currentIntroLines()) window.requestAnimationFrame(startIntroTypewriter);
   if (progress.currentScreen === "field")
     window.requestAnimationFrame(() => {
       updateFieldPlayer();
@@ -3029,6 +3140,8 @@ function handleOnboardingClick(target, action) {
     resetFieldPosition();
     progress.currentScreen = "intro-welcome";
     briefingStep = 0;
+    introLineIndex = 0;
+    introSeenSteps.clear();
     save();
     showMainMenu = false;
     render();
@@ -3044,6 +3157,7 @@ function handleOnboardingClick(target, action) {
     const next = target.dataset.next;
     if (next === "intro-briefing") briefingStep = 0;
     if (next === "institute") safeInstituteSpawn(7, 9, "up");
+    introLineIndex = 0;
     progress.currentScreen = next;
     save();
     render();
@@ -3051,6 +3165,7 @@ function handleOnboardingClick(target, action) {
   }
   if (action === "briefing-next") {
     const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
+    introLineIndex = 0;
     if (briefingStep < entries.length - 1) {
       briefingStep += 1;
       render();
@@ -3062,6 +3177,7 @@ function handleOnboardingClick(target, action) {
     return true;
   }
   if (action === "briefing-back") {
+    introLineIndex = 0;
     if (briefingStep > 0) {
       briefingStep -= 1;
       render();
@@ -3069,6 +3185,27 @@ function handleOnboardingClick(target, action) {
       progress.currentScreen = "intro-welcome";
       save();
       render();
+    }
+    return true;
+  }
+  if (action === "director-dialogue-click") {
+    const step = currentIntroLines();
+    if (!step) return true;
+    if (introTypewriterTimer) {
+      clearInterval(introTypewriterTimer);
+      introTypewriterTimer = null;
+      const textEl = document.getElementById("directorLineText");
+      if (textEl) textEl.textContent = step.lines[introLineIndex].text;
+      if (introLineIndex === step.lines.length - 1) {
+        completeCurrentIntroStep(step);
+      } else {
+        document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
+      }
+      return true;
+    }
+    if (introLineIndex < step.lines.length - 1) {
+      introLineIndex += 1;
+      startIntroTypewriter();
     }
     return true;
   }
