@@ -53,3 +53,50 @@ export function checkUniqueGlobalIds(groupLabel, entries) {
   }
   return errors;
 }
+
+// Checks Investigation/Archive Challenge gating pointers (case.archiveChallenge.questType/
+// questId, source.investigationMode/investigationQuestId) against the real quest-type engine
+// (quest-types/index.js's QUEST_TYPES) — Zod alone can't do this, since a Zod schema can't see
+// application code, which is why these fields are typed as plain strings, not enums (see the
+// doc comments on source.schema.js/unit.schema.js). `questTypeKeys` and `questsByType` are
+// passed in rather than imported directly so this stays a pure function, testable without
+// importing the full quest-type engine or real content.
+//
+// Each entry represents one gating pointer: { source, path, questType, questId }, where
+// questType/questId are the resolved (possibly null) values from content. A pointer with both
+// left null is "not gated" and is skipped, not an error — most sources/cases don't (yet) have
+// an Investigation/Archive Challenge assigned.
+export function checkChallengeReferences(groupLabel, entries, questTypeKeys, questsByType) {
+  const knownTypes = new Set(questTypeKeys);
+  const errors = [];
+  for (const { source, path, questType, questId } of entries) {
+    if (questType == null && questId == null) continue;
+    if (questType == null || questId == null) {
+      errors.push({
+        group: groupLabel,
+        id: questId ?? undefined,
+        path: `${source}.${path}`,
+        message: `questType and questId must both be set together, or both left null — got questType=${JSON.stringify(questType)}, questId=${JSON.stringify(questId)}.`,
+      });
+      continue;
+    }
+    if (!knownTypes.has(questType)) {
+      errors.push({
+        group: groupLabel,
+        id: questId,
+        path: `${source}.${path}`,
+        message: `questType "${questType}" is not a known quest type — known types: ${[...knownTypes].join(", ")}.`,
+      });
+      continue;
+    }
+    if (!(questsByType[questType] || new Set()).has(questId)) {
+      errors.push({
+        group: groupLabel,
+        id: questId,
+        path: `${source}.${path}`,
+        message: `questId "${questId}" was not found among "${questType}" quest content.`,
+      });
+    }
+  }
+  return errors;
+}

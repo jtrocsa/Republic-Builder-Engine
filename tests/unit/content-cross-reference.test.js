@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   runSchema,
   checkUniqueGlobalIds,
+  checkChallengeReferences,
 } from "../../apps/web/src/content/schemas/cross-reference.js";
 
 describe("runSchema", () => {
@@ -51,5 +52,88 @@ describe("checkUniqueGlobalIds", () => {
     ]);
     expect(errors).toHaveLength(1);
     expect(errors[0].id).toBe("x");
+  });
+});
+
+describe("checkChallengeReferences", () => {
+  const QUEST_TYPE_KEYS = ["mcq", "evidence-organizing"];
+  const QUESTS_BY_TYPE = {
+    mcq: new Set(["mcq-1"]),
+    "evidence-organizing": new Set(["evorg-1"]),
+  };
+
+  it("finds no errors for a pointer with a known type and a real quest id (normal case)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: "mcq", questId: "mcq-1" }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("finds no errors for an ungated pointer (both questType and questId null, normal case)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: null, questId: null }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("flags an unknown questType (invalid data)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: "not-a-real-type", questId: "mcq-1" }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("not-a-real-type");
+    expect(errors[0].message).toContain("mcq");
+  });
+
+  it("flags a questId that doesn't resolve within its questType's content (dangling reference)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: "mcq", questId: "mcq-does-not-exist" }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0].id).toBe("mcq-does-not-exist");
+  });
+
+  it("flags a questId that exists but under the wrong questType (boundary case)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: "mcq", questId: "evorg-1" }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it("flags questType set without a matching questId (missing/incomplete pair)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: "mcq", questId: null }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("must both be set together");
+  });
+
+  it("flags questId set without a matching questType (missing/incomplete pair)", () => {
+    const errors = checkChallengeReferences(
+      "test",
+      [{ source: "fileA", path: "x", questType: null, questId: "mcq-1" }],
+      QUEST_TYPE_KEYS,
+      QUESTS_BY_TYPE
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0].id).toBe("mcq-1");
   });
 });
