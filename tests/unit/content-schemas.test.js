@@ -10,8 +10,6 @@ import { ReviewSchema } from "../../apps/web/src/content/schemas/review.schema.j
 import {
   TriangleLegsSchema,
   buildTriangleCargoSchema,
-  RegionRecordsSchema,
-  buildRegionEvidenceSchema,
 } from "../../apps/web/src/content/schemas/unit02-activities.schema.js";
 
 const validCase = {
@@ -86,13 +84,13 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     expect(result.data.cases[0].archiveChallenge).toBeNull();
   });
 
-  it("accepts a case relocated to the Archive Room (normal case)", () => {
+  it("accepts a case relocated to the Archive Room, with a null route (normal case)", () => {
     const relocated = {
       ...validUnit,
       cases: [
         {
           ...validCase,
-          route: "regions",
+          route: null,
           navigationTableVisible: false,
           archiveChallenge: { questType: "evidence-organizing", questId: "unit-02-charter-compact" },
         },
@@ -100,11 +98,18 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     };
     const result = UnitSchema.safeParse(relocated);
     expect(result.success).toBe(true);
+    expect(result.data.cases[0].route).toBeNull();
     expect(result.data.cases[0].navigationTableVisible).toBe(false);
     expect(result.data.cases[0].archiveChallenge).toEqual({
       questType: "evidence-organizing",
       questId: "unit-02-charter-compact",
     });
+  });
+
+  it("defaults unit-level archiveChallenges to an empty array when omitted (normal case)", () => {
+    const result = UnitSchema.safeParse(validUnit);
+    expect(result.success).toBe(true);
+    expect(result.data.archiveChallenges).toEqual([]);
   });
 
   it("rejects an archiveChallenge missing questId (invalid/missing data)", () => {
@@ -314,25 +319,5 @@ describe("unit-02 activity cross-references", () => {
   it("rejects cargo referencing a leg id that doesn't exist (missing referenced quest)", () => {
     const schema = buildTriangleCargoSchema(legs.map((leg) => leg.id));
     expect(schema.safeParse([{ ...validCargo, leg: "no-such-leg" }]).success).toBe(false);
-  });
-
-  const regions = [{ id: "new-england", label: "New England", summary: "s" }];
-  const validRegionEvidence = {
-    id: "town-covenant",
-    label: "l",
-    source: "s",
-    detail: "d",
-    region: "new-england",
-  };
-
-  it("accepts region evidence referencing a real region id (normal case)", () => {
-    expect(RegionRecordsSchema.safeParse(regions).success).toBe(true);
-    const schema = buildRegionEvidenceSchema(regions.map((region) => region.id));
-    expect(schema.safeParse([validRegionEvidence]).success).toBe(true);
-  });
-
-  it("rejects region evidence referencing a region id that doesn't exist (missing referenced quest)", () => {
-    const schema = buildRegionEvidenceSchema(regions.map((region) => region.id));
-    expect(schema.safeParse([{ ...validRegionEvidence, region: "atlantis" }]).success).toBe(false);
   });
 });

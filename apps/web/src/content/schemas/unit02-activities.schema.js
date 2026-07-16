@@ -73,33 +73,7 @@ export function buildTriangleCargoSchema(legIds) {
   });
 }
 
-// A colonial region column in the "Charter & Compact" activity
-// (`regionsScreen()` in main.js).
-export const RegionRecordSchema = z.object({
-  id: z.string().min(1, "regionRecord.id is required"),
-  label: z.string().min(1, "regionRecord.label is required"),
-  summary: z.string().min(1, "regionRecord.summary is required"),
-});
-
-export const RegionRecordsSchema = z
-  .array(RegionRecordSchema)
-  .min(1, "REGION_RECORDS must contain at least one region")
-  .superRefine((regions, ctx) => assertUniqueIds(regions, ctx, "region"));
-
-function buildRegionEvidenceItemSchema(regionIds) {
-  return z.object({
-    id: z.string().min(1, "regionEvidence.id is required"),
-    label: z.string().min(1, "regionEvidence.label is required"),
-    source: z.string().min(1, "regionEvidence.source is required"),
-    detail: z.string().min(1, "regionEvidence.detail is required"),
-    region: z.enum(regionIds, {
-      message: `regionEvidence.region must be one of: ${regionIds.join(", ")}`,
-    }),
-  });
-}
-
-export function buildRegionEvidenceSchema(regionIds) {
-  return z.array(buildRegionEvidenceItemSchema(regionIds)).superRefine((evidence, ctx) => {
-    assertUniqueIds(evidence, ctx, "region evidence");
-  });
-}
+// RegionRecordSchema/RegionRecordsSchema/buildRegionEvidenceSchema (for the
+// "Charter & Compact" activity's regionsScreen() in main.js) were removed in
+// plan Phase 5 once that screen was deleted — its content now validates as
+// an Archive Challenge quest (evidence-organizing-quest.js's schemas) instead.

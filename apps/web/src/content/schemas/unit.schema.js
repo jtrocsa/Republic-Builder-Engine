@@ -4,7 +4,7 @@ import { z } from "zod";
 // `currentScreen = "travel"`, which self-advances to `caseById(id).route`).
 // Zod can't see main.js's route dispatch, so this list is a second source of
 // truth — update it by hand if a new case route is ever added in main.js.
-const CASE_ROUTES = ["field", "ledger", "empire", "triangle", "regions"];
+const CASE_ROUTES = ["field", "ledger", "empire", "triangle"];
 
 const MapPositionSchema = z.object({
   left: z.string().min(1, "mapPosition.left is required"),
@@ -38,9 +38,16 @@ export const CaseSchema = z.object({
   location: z.string().min(1, "case.location is required"),
   question: z.string().min(1, "case.question is required"),
   mechanic: z.string().min(1, "case.mechanic is required"),
-  route: z.enum(CASE_ROUTES, {
-    message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
-  }),
+  // Null for a case relocated entirely into the Institute Archive Room (its
+  // Archive Challenge is the destination, not a ChronoTravel route) — see
+  // navigationTableVisible/archiveChallenge below. Every ChronoTravel
+  // destination (route: "field") and not-yet-migrated standalone case still
+  // requires a real route name.
+  route: z
+    .enum(CASE_ROUTES, {
+      message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
+    })
+    .nullable(),
   summary: z.string().min(1, "case.summary is required"),
   // Whether this case still gets a marker on the Chronicle Navigation Table.
   // Defaults true so every pre-existing case validates unchanged; cases

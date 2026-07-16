@@ -36,8 +36,6 @@ export function loadChronicleContent() {
       lanes: unit02Campaign.CASE_004_LANES,
       triangleLegs: unit02Campaign.TRIANGLE_LEGS,
       triangleCargo: unit02Campaign.TRIANGLE_CARGO,
-      regionRecords: unit02Campaign.REGION_RECORDS,
-      regionEvidence: unit02Campaign.REGION_EVIDENCE,
       review: unit02Campaign.UNIT_02_REVIEW,
       mcqQuests: unit02Quests.UNIT_02_MCQ_QUESTS,
       evidenceOrganizingQuests: unit02Quests.UNIT_02_EVIDENCE_ORGANIZING_QUESTS,

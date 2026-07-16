@@ -13,8 +13,6 @@ import {
   CASE_004_LANES,
   TRIANGLE_LEGS,
   TRIANGLE_CARGO,
-  REGION_RECORDS,
-  REGION_EVIDENCE,
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
 import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
@@ -1270,7 +1268,6 @@ const VALID_SCREENS = new Set([
   "review",
   "completion",
   "triangle",
-  "regions",
   "archive-challenges",
   "investigation",
   "intro-welcome",
@@ -2547,21 +2544,6 @@ function triangleScreen() {
   return `${chrome()}<main class="shell triangle-shell"><section class="triangle-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · The Atlantic circuit</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>Read each cargo record, then drag it onto the leg of the triangular trade that carried it. The Middle Passage records are testimony — the Archive preserves them as human accounts, not cargo lists.</p><div class="evidence-bank"><div class="bank-heading"><h2>Cargo records</h2><button class="text-button" data-action="clear-triangle">Reset chart</button></div><div class="bank-cards">${tray.map(triangleCargoChip).join("") || '<p class="bank-empty">All records are on the chart.</p>'}</div></div></section><section class="triangle-board"><div class="triangle-legs">${legs}</div>${state.charted ? "" : `<button class="btn btn-gold" data-action="check-triangle">Chart the circuit →</button><p class="feedback" id="triangleFeedback"></p>`}${mcqPhase}</section></main>`;
 }
 
-function regionsScreen() {
-  const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
-  const activeCase = caseById("case-006");
-  const placements = state.placements || {};
-  const placedIds = new Set(Object.keys(placements));
-  const tray = REGION_EVIDENCE.filter((card) => !placedIds.has(card.id));
-  const regionCard = (card) =>
-    `<article class="system-card region-card" draggable="true" data-region-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>`;
-  const columns = REGION_RECORDS.map((region) => {
-    const cardsHere = REGION_EVIDENCE.filter((card) => placements[card.id] === region.id);
-    return `<div class="region-column ${cardsHere.length ? "is-filled" : ""}" data-region-drop="${region.id}"><header><b>${esc(region.label)}</b><p>${esc(region.summary)}</p></header>${cardsHere.map(regionCard).join("") || "<i>Drop founding records here</i>"}</div>`;
-  }).join("");
-  return `${chrome()}<main class="shell regions-shell"><section class="regions-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · Colonial regions</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>The Archive's display of the colonial regions is damaged. Return each founding record to the society it built, then defend one comparison in your reflection.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="regionsReflection" placeholder="Which difference between two regions does your evidence best prove?">${esc(state.reflection || "")}</textarea></div><div class="evidence-bank"><div class="bank-heading"><h2>Founding records</h2><button class="text-button" data-action="clear-regions">Reset display</button></div><div class="bank-cards">${tray.map(regionCard).join("") || '<p class="bank-empty">All records are on the display.</p>'}</div></div></section><section class="regions-board"><div class="region-columns">${columns}</div><button class="btn btn-gold" data-action="check-regions">Restore the display →</button><p class="feedback" id="regionsFeedback"></p></section></main>`;
-}
-
 function exchangeLedgerScreen() {
   const answers = progress.exchangeLedger.answers || {};
   const allAnswered = EXCHANGE_RECORDS.every((record) => answers[record.id] !== undefined);
@@ -2704,9 +2686,6 @@ function render() {
         break;
       case "triangle":
         html = triangleScreen();
-        break;
-      case "regions":
-        html = regionsScreen();
         break;
       case "archive-challenges":
         html = archiveChallengesScreen();
@@ -3098,7 +3077,7 @@ function handleHubClick(target, action) {
   }
   if (action === "skip-travel") {
     const c = caseById(progress.activeCaseId);
-    progress.currentScreen = c.route;
+    progress.currentScreen = c?.route || "archive";
     save();
     render();
     return true;
@@ -3419,34 +3398,6 @@ function handlePuzzleScreenClick(target, action) {
       );
     return true;
   }
-  if (action === "clear-regions") {
-    progress.activityState["case-006"] = { placements: {}, reflection: "" };
-    save();
-    render();
-    return true;
-  }
-  if (action === "check-regions") {
-    const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
-    state.reflection = document.getElementById("regionsReflection")?.value.trim() || "";
-    const allPlaced = REGION_EVIDENCE.every((card) => state.placements[card.id]);
-    const correct =
-      allPlaced && REGION_EVIDENCE.every((card) => state.placements[card.id] === card.region);
-    save();
-    if (correct && state.reflection.length >= 20) {
-      playSfx("upload");
-      unlockNext("case-006");
-      progress.pendingUploadCaseId = "case-006";
-      progress.currentScreen = "upload";
-      save();
-      render();
-    } else
-      showFeedback(
-        "regionsFeedback",
-        "Place every founding record in the region it built, then defend one comparison in your reflection (at least a sentence).",
-        "error"
-      );
-    return true;
-  }
   if (action === "check-empire") {
     const reflection = document.getElementById("empireReflection")?.value.trim() || "";
     progress.responses["empire-reflection"] = reflection;
@@ -3672,12 +3623,6 @@ function handleAppDragstart(event) {
     event.dataTransfer.effectAllowed = "move";
     return;
   }
-  const regionCard = event.target.closest("[data-region-card]");
-  if (regionCard) {
-    event.dataTransfer.setData("text/region-card", regionCard.dataset.regionCard);
-    event.dataTransfer.effectAllowed = "move";
-    return;
-  }
   const card = event.target.closest("[data-empire-card]");
   if (card) {
     event.dataTransfer.setData("text/plain", card.dataset.empireCard);
@@ -3701,12 +3646,11 @@ function handleAppDragover(event) {
   const mapSlot = event.target.closest("[data-map-slot]");
   const zone = event.target.closest("[data-drop-index]");
   const legDrop = event.target.closest("[data-leg-drop]");
-  const regionDrop = event.target.closest("[data-region-drop]");
   const sequenceItem = event.target.closest("[data-sequence-item]");
   const evidenceSlot = event.target.closest("[data-evidence-slot]");
   const cargoHold = event.target.closest("[data-cargo-hold]");
   const dropTarget =
-    mapSlot || zone || legDrop || regionDrop || sequenceItem || evidenceSlot || cargoHold;
+    mapSlot || zone || legDrop || sequenceItem || evidenceSlot || cargoHold;
   if (dropTarget) {
     event.preventDefault();
     dropTarget.classList.add("is-over");
@@ -3717,7 +3661,6 @@ function handleAppDragleave(event) {
   event.target.closest("[data-drop-index]")?.classList.remove("is-over");
   event.target.closest("[data-map-slot]")?.classList.remove("is-over");
   event.target.closest("[data-leg-drop]")?.classList.remove("is-over");
-  event.target.closest("[data-region-drop]")?.classList.remove("is-over");
   event.target.closest("[data-sequence-item]")?.classList.remove("is-over");
   event.target.closest("[data-evidence-slot]")?.classList.remove("is-over");
   event.target.closest("[data-cargo-hold]")?.classList.remove("is-over");
@@ -3785,18 +3728,6 @@ function handleAppDrop(event) {
     if (!cargoId) return;
     const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
     state.placements[cargoId] = legDrop.dataset.legDrop;
-    save();
-    render();
-    return;
-  }
-  const regionDrop = event.target.closest("[data-region-drop]");
-  if (regionDrop) {
-    event.preventDefault();
-    regionDrop.classList.remove("is-over");
-    const cardId = event.dataTransfer.getData("text/region-card");
-    if (!cardId) return;
-    const state = ensureActivityState("case-006", { placements: {}, reflection: "" });
-    state.placements[cardId] = regionDrop.dataset.regionDrop;
     save();
     render();
     return;

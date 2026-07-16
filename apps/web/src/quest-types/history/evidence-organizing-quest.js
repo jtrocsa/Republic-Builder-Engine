@@ -3,11 +3,12 @@
 // categories, plus an optional free-text reflection gate. Deliberately not
 // forced generic — it assumes historical source attribution and
 // skill-category rubric structure, the way EMPIRE_EVIDENCE/TRIANGLE_CARGO/
-// REGION_EVIDENCE already do in apps/web/src/content/unit-01-campaign.js and
-// unit-02-campaign.js. This generalizes that recurring pattern (see
-// apps/web/src/content/schemas/unit02-activities.schema.js for the existing
-// buildTriangleCargoSchema/buildRegionEvidenceSchema factory precedent this
-// follows) rather than inventing a new shape from scratch.
+// REGION_EVIDENCE (removed in plan Phase 5, once its regionsScreen() was
+// migrated onto this quest type) already did in apps/web/src/content/unit-01-campaign.js
+// and unit-02-campaign.js. This generalizes that recurring pattern (see
+// apps/web/src/content/schemas/unit02-activities.schema.js for the
+// buildTriangleCargoSchema factory precedent this follows) rather than
+// inventing a new shape from scratch.
 import { z } from "zod";
 import { escapeHtml } from "../shared/html.js";
 

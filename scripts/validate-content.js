@@ -19,8 +19,6 @@ import {
   CaseLanesSchema,
   TriangleLegsSchema,
   buildTriangleCargoSchema,
-  RegionRecordsSchema,
-  buildRegionEvidenceSchema,
 } from "../apps/web/src/content/schemas/unit02-activities.schema.js";
 import {
   runSchema,
@@ -116,20 +114,6 @@ function main() {
       "unit-02-campaign.js: TRIANGLE_CARGO",
       buildTriangleCargoSchema(content.unit02.triangleLegs.map((leg) => leg.id)),
       content.unit02.triangleCargo
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-campaign.js: REGION_RECORDS",
-      RegionRecordsSchema,
-      content.unit02.regionRecords
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-campaign.js: REGION_EVIDENCE",
-      buildRegionEvidenceSchema(content.unit02.regionRecords.map((region) => region.id)),
-      content.unit02.regionEvidence
     )
   );
   results.push(
