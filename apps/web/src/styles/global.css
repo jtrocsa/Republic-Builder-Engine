@@ -1893,6 +1893,35 @@ dd {
   font-size: 1rem;
   line-height: 1.7;
 }
+/* Tighter than the shared .completion-shell > section padding/h1 size — keeps the director
+   scene's card within a normal viewport without scrolling; main-menu title screen is unaffected
+   since it isn't a .director-scene. */
+.completion-shell > .director-scene {
+  position: relative;
+  overflow: hidden;
+  /* isolate: without its own stacking context, .director-scene__backdrop's z-index:-1 would
+     escape past this section's own background and paint behind the whole page instead of just
+     behind this card's content. */
+  isolation: isolate;
+  padding: 22px 40px;
+  /* Wider than the shared 820px .completion-shell > section max-width: intro-protocol's protocol
+     cards + assignment tags wrap onto fewer rows at this width, which is what actually keeps
+     that content-heavy screen from needing to scroll (padding/gap trims alone weren't enough). */
+  max-width: 960px;
+}
+.director-scene h1 {
+  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+}
+/* The intro-protocol screen packs the 3 protocol cards + assignment tags + description into
+   the same card via .director-extra-content — the shared .completion-stats 24px margin (tuned
+   for less crowded screens elsewhere) is too generous here and was the main cause of this
+   screen needing to scroll. */
+.director-scene .completion-stats {
+  margin: 8px 0;
+}
+.director-scene p {
+  margin: 8px 0;
+}
 .completion-stats {
   display: flex;
   gap: 9px;
@@ -1900,7 +1929,7 @@ dd {
   margin: 24px 0;
 }
 .completion-stats span {
-  padding: 7px 9px;
+  padding: 5px 9px;
   border: 1px solid rgba(239, 204, 122, 0.28);
   border-radius: 999px;
   color: #d8e3de;
@@ -1914,21 +1943,132 @@ dd {
 .director-scene {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
 }
 .director-scene__stage {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  min-height: 200px;
-  padding-top: 12px;
+  min-height: 110px;
+  padding-top: 6px;
 }
 .director-scene__sprite {
-  width: 176px;
+  width: 140px;
   height: auto;
   image-rendering: pixelated;
   filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.45));
+}
+/* Ambient Archive-rotunda backdrop: a wireframe globe, soft pillar-glow columns, and slow
+   drifting record-fragment words. Purely decorative (aria-hidden), CSS/SVG only — no image
+   assets. Negative z-index so it paints behind the scene's normal-flow content (title, sprite,
+   dialogue box) despite being position:absolute, without needing z-index on every sibling. */
+.director-scene__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.director-scene__map {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(70%, 480px);
+  height: auto;
+  transform: translate(-50%, -50%);
+  opacity: 0.16;
+}
+.director-scene__map circle,
+.director-scene__map ellipse,
+.director-scene__map line {
+  fill: none;
+  stroke: var(--gold-soft);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+.director-scene__pillar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 140px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(239, 204, 122, 0.16) 42%,
+    rgba(23, 148, 158, 0.14) 58%,
+    transparent
+  );
+  filter: blur(6px);
+}
+.director-scene__pillar--1 {
+  left: -20px;
+}
+.director-scene__pillar--2 {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.director-scene__pillar--3 {
+  right: -20px;
+}
+.director-scene__fragments {
+  position: absolute;
+  inset: 0;
+}
+.director-scene__fragment {
+  position: absolute;
+  font:
+    700 0.7rem "Cinzel",
+    serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+  opacity: 0;
+  animation: director-backdrop-drift 14s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 1.8s);
+}
+/* Positioned to sit in the gutters beside the sprite stage — clear of the title/eyebrow text
+   above and the opaque dialogue box below, so fragments never overlap readable UI text. */
+.director-scene__fragment:nth-child(1) {
+  top: 26%;
+  left: 4%;
+}
+.director-scene__fragment:nth-child(2) {
+  top: 48%;
+  left: 9%;
+}
+.director-scene__fragment:nth-child(3) {
+  top: 22%;
+  right: 5%;
+}
+.director-scene__fragment:nth-child(4) {
+  top: 50%;
+  right: 10%;
+}
+.director-scene__fragment:nth-child(5) {
+  top: 36%;
+  left: 2%;
+}
+@keyframes director-backdrop-drift {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15%,
+  85% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.22;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .director-scene__fragment {
+    animation: none;
+    opacity: 0.16;
+    transform: none;
+  }
 }
 .director-reveal-rail {
   position: absolute;
@@ -2065,7 +2205,7 @@ dd {
 }
 .director-dialogue-box {
   position: relative;
-  padding: 18px 44px 22px 20px;
+  padding: 13px 44px 16px 20px;
   border: 2px solid rgba(239, 204, 122, 0.66);
   border-radius: 17px;
   background: rgba(3, 28, 40, 0.98);
@@ -2084,7 +2224,8 @@ dd {
 }
 .director-dialogue-box__text {
   margin: 0;
-  min-height: 3.4em;
+  height: 3.6em;
+  overflow-y: auto;
   font-size: 1rem;
   line-height: 1.7;
   color: #f6fffb;
@@ -2099,11 +2240,12 @@ dd {
 .director-continue-indicator[hidden] {
   display: none;
 }
-/* .btn sets display:inline-flex at equal (0,1,0) specificity to [hidden]'s UA display:none,
-   and author rules beat UA rules on a tie — without this, the continue button stays visible
-   through the whole typewriter animation instead of appearing only once the last line completes. */
-.director-continue-button[hidden] {
-  display: none;
+/* The continue button always renders (never [hidden]) so the button row never changes size as
+   lines advance — it's just inert/dimmed via :disabled until the current step's last line
+   finishes typing, matching a fixed-layout dialogue box (see completeCurrentIntroStep()). */
+.director-continue-button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 @keyframes director-continue-blink {
   0%,
@@ -2134,6 +2276,9 @@ dd {
   }
   .director-reveal-card--chips {
     justify-content: flex-start;
+  }
+  .director-scene__fragments {
+    display: none;
   }
 }
 .author-panel {
