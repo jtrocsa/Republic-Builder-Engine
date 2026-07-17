@@ -1957,6 +1957,71 @@ dd {
   height: auto;
   image-rendering: pixelated;
 }
+/* Cinematic reveal for "image"-type reveal cards (e.g. the Codex): a gold/teal light gathers
+   behind the art, then the card itself rises and settles into place — replacing the plain
+   director-reveal-pop those cards used before. Class names are generic (not Codex-specific) so
+   this same sequence is reusable for future artifact/tool reveals. */
+.artifact-reveal {
+  position: relative;
+  animation: artifact-container-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.artifact-reveal__glow {
+  position: absolute;
+  inset: -14px -20px;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(239, 204, 122, 0.55),
+    rgba(23, 148, 158, 0.3) 55%,
+    transparent 75%
+  );
+  opacity: 0;
+  animation: artifact-light-gather 900ms ease-out both;
+}
+.artifact-reveal__art,
+.artifact-reveal__label {
+  position: relative;
+  z-index: 1;
+}
+@keyframes artifact-light-gather {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+}
+@keyframes artifact-container-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.85);
+  }
+  60% {
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-3px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .artifact-reveal,
+  .artifact-reveal__glow {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
 .director-reveal-badge {
   display: inline-flex;
   align-items: center;

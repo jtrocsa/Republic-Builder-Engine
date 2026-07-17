@@ -71,6 +71,39 @@ describe("readProgress", () => {
   });
 });
 
+describe("tutorial field (retroactive onboarding for pre-existing saves)", () => {
+  it("defaults a genuinely fresh profile (nothing ever saved) to not-started (normal case)", () => {
+    expect(readProgress().tutorial).toEqual({
+      step: "not-started",
+      completed: false,
+      skipped: false,
+    });
+  });
+
+  it("treats a pre-existing save with no tutorial field as already onboarded (regression case)", () => {
+    // Simulates a save written before the tutorial system existed - the player has
+    // clearly already been through the Institute, so they should not be forced
+    // through a retroactive tutorial the next time they load this save.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedCases: ["case-001"] }));
+
+    expect(readProgress().tutorial).toEqual({
+      step: "complete",
+      completed: true,
+      skipped: false,
+    });
+  });
+
+  it("still merges a saved partial tutorial object over the defaults (normal case)", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tutorial: { step: "table" } }));
+
+    expect(readProgress().tutorial).toEqual({
+      step: "table",
+      completed: false,
+      skipped: false,
+    });
+  });
+});
+
 describe("saveProgress / hasSavedProgress / resetProgress", () => {
   it("hasSavedProgress reflects whether a save exists", () => {
     expect(hasSavedProgress()).toBe(false);

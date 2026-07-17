@@ -52,6 +52,7 @@ describe("sound functions while audio is disabled", () => {
     expect(() => audioNote(440)).not.toThrow();
     expect(() => audioNoise()).not.toThrow();
     expect(() => playSfx("chrono")).not.toThrow();
+    expect(() => playSfx("codex-reveal")).not.toThrow();
     expect(() => playQuestSfx("taino-context")).not.toThrow();
     expect(() => updateMusicForScreen("island")).not.toThrow();
   });

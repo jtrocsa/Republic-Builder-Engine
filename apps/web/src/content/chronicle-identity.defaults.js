@@ -20,8 +20,8 @@ export const CHRONICLE_IDENTITY_DEFAULTS = {
   },
   registration: {
     eyebrow: "Chronicle Archive · Registration complete",
-    title: "Your identity is now part of the Archive.",
-    subtitle: "A Codex has been assigned to your field record.",
+    title: "Your Codex is linked to the Archive.",
+    subtitle: "Let’s put it to use.",
     profileLabel: "Chronicler",
     assignmentLabel: "Assignment",
     assignment: "Case 1.01 · The Atlantic Crossroads",

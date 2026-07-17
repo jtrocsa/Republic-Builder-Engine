@@ -1558,13 +1558,18 @@ function currentIntroLines() {
   return null;
 }
 
+// "image" reveals get the full cinematic artifact-reveal treatment (light gather → rise →
+// settle, see the artifact-* keyframes in global.css, including their own
+// prefers-reduced-motion override) rather than the plain 320ms pop the "chips"/"badge" reveal
+// types still use — named generically (not Codex-specific) so this same treatment can be reused
+// for future artifact/tool reveals, per the intro reveal rail's existing type-keyed pattern.
 function revealCardMarkup(reveal) {
   if (reveal.type === "chips") {
     return `<div class="director-reveal-card director-reveal-card--chips">${reveal.items.map((item, index) => `<span class="director-reveal-chip" style="animation-delay:${index * 120}ms">${esc(item)}</span>`).join("")}</div>`;
   }
   if (reveal.type === "image") {
     const src = INTRO_REVEAL_IMAGES[reveal.src] || "";
-    return `<div class="director-reveal-card director-reveal-card--image"><img src="${src}" alt="${esc(reveal.label)}"><span>${esc(reveal.label)}</span></div>`;
+    return `<div class="director-reveal-card director-reveal-card--image artifact-reveal"><span class="artifact-reveal__glow" aria-hidden="true"></span><img class="artifact-reveal__art" src="${src}" alt="${esc(reveal.label)}"><span class="artifact-reveal__label">${esc(reveal.label)}</span></div>`;
   }
   return `<div class="director-reveal-card director-reveal-card--badge"><span class="director-reveal-badge">${esc(reveal.icon || "✦")}</span><span>${esc(reveal.label)}</span></div>`;
 }
@@ -1576,11 +1581,24 @@ function completeCurrentIntroStep(step) {
   document.querySelector(".director-extra-content")?.removeAttribute("hidden");
 }
 
-// Fills in the empty shell directorSceneMarkup() rendered, using the setInterval +
+// True when the OS/browser requests reduced motion. Checked live (not cached) since a user can
+// toggle this mid-session. Reused by both the intro typewriter and the Codex cinematic reveal.
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+// Base per-character delay for the intro typewriter, plus extra hold time (as a multiple of
+// INTRO_TYPE_MS) after punctuation so a line reads with natural rhythm instead of a flat scroll.
+// Kept as named constants (not inlined) so a future progress.settings.textSpeed can scale them.
+const INTRO_TYPE_MS = 30;
+const INTRO_PAUSE_AFTER = { ".": 5, "!": 5, "?": 5, ",": 2 };
+
+// Fills in the empty shell directorSceneMarkup() rendered, using the setTimeout +
 // direct-DOM-patch convention already established by updateInstituteNpcs/updateFieldNpcs
-// (main.js) rather than re-running render() per character.
+// (main.js) rather than re-running render() per character. setTimeout (not setInterval) is used
+// so each character's delay can vary for the punctuation-pause effect below.
 function startIntroTypewriter() {
-  clearInterval(introTypewriterTimer);
+  clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
   const step = currentIntroLines();
   const textEl = document.getElementById("directorLineText");
@@ -1602,22 +1620,38 @@ function startIntroTypewriter() {
   const line = step.lines[introLineIndex];
   textEl.textContent = "";
   document.getElementById("directorContinueIndicator")?.setAttribute("hidden", "");
-  if (line.reveal) railEl.insertAdjacentHTML("beforeend", revealCardMarkup(line.reveal));
+  if (line.reveal) {
+    railEl.insertAdjacentHTML("beforeend", revealCardMarkup(line.reveal));
+    if (line.reveal.type === "image") playSfx("codex-reveal");
+  }
+
+  const finishLine = () => {
+    if (introLineIndex === step.lines.length - 1) {
+      completeCurrentIntroStep(step);
+    } else {
+      document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
+    }
+  };
+
+  if (prefersReducedMotion()) {
+    textEl.textContent = line.text;
+    finishLine();
+    return;
+  }
 
   let charIndex = 0;
-  introTypewriterTimer = setInterval(() => {
+  const typeNextChar = () => {
     charIndex += 1;
     textEl.textContent = line.text.slice(0, charIndex);
     if (charIndex >= line.text.length) {
-      clearInterval(introTypewriterTimer);
       introTypewriterTimer = null;
-      if (introLineIndex === step.lines.length - 1) {
-        completeCurrentIntroStep(step);
-      } else {
-        document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
-      }
+      finishLine();
+      return;
     }
-  }, 20);
+    const pause = INTRO_PAUSE_AFTER[line.text[charIndex - 1]] || 1;
+    introTypewriterTimer = setTimeout(typeNextChar, INTRO_TYPE_MS * pause);
+  };
+  introTypewriterTimer = setTimeout(typeNextChar, INTRO_TYPE_MS);
 }
 
 function identityScreen() {
@@ -2793,7 +2827,7 @@ function render() {
     return;
   }
   clearTimeout(activeTravelTimeout);
-  clearInterval(introTypewriterTimer);
+  clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
   let html;
   try {
@@ -3192,7 +3226,7 @@ function handleOnboardingClick(target, action) {
     const step = currentIntroLines();
     if (!step) return true;
     if (introTypewriterTimer) {
-      clearInterval(introTypewriterTimer);
+      clearTimeout(introTypewriterTimer);
       introTypewriterTimer = null;
       const textEl = document.getElementById("directorLineText");
       if (textEl) textEl.textContent = step.lines[introLineIndex].text;
@@ -4023,6 +4057,19 @@ function handleWindowKeydown(event) {
       stormNavigationState = createStormNavigationGame();
       updateMiniGameUi();
       return;
+    }
+    return;
+  }
+  if (
+    progress.currentScreen === "intro-welcome" ||
+    progress.currentScreen === "intro-briefing" ||
+    progress.currentScreen === "intro-protocol"
+  ) {
+    // Mirrors the click/tap advance on .director-dialogue-box (data-action="director-dialogue-click")
+    // so keyboard users get the same skip-then-advance behavior — no separate implementation.
+    if ((key === "enter" || key === " ") && !event.repeat) {
+      event.preventDefault();
+      handleOnboardingClick(null, "director-dialogue-click");
     }
     return;
   }

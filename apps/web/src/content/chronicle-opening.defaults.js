@@ -30,8 +30,8 @@ export const CHRONICLE_OPENING_DEFAULTS = {
       title: "Chronicle",
       subtitle: "An AP U.S. History Adventure",
       body: [
-        { text: "The past does not speak for itself." },
-        { text: "You must investigate the evidence it leaves behind." },
+        { text: "Welcome, Chronicler." },
+        { text: "The Institute has been waiting for you." },
       ],
       action: "Begin Orientation",
       secondary: "What is Chronicle?",
@@ -67,19 +67,15 @@ export const CHRONICLE_OPENING_DEFAULTS = {
     entries: [
       {
         eyebrow: "Director’s briefing · 01 / 04",
-        title: "The record is changing.",
-        subtitle: "The Chronicle Institute preserves humanity’s understanding of the past.",
+        title: "Who we are.",
+        subtitle: "I’m Director Rowan Hale. I run the Chronicle Institute.",
         body: [
           {
-            text: "The Chronicle Institute preserves humanity’s understanding of the past.",
+            text: "I’m Director Rowan Hale. I run the Chronicle Institute.",
             reveal: { type: "badge", icon: "✦", label: "The Institute" },
           },
           {
-            text: "We have detected a record drift: an anomaly in the historical record.",
-            reveal: { type: "badge", icon: "◈", label: "Record Drift" },
-          },
-          {
-            text: "At first, it appeared small—a sentence missing from a letter, a date altered in a newspaper, a map that no longer matched the world it was meant to describe.",
+            text: "We preserve the historical record—and right now, part of it is disappearing.",
           },
         ],
         action: "Continue briefing",
@@ -87,40 +83,33 @@ export const CHRONICLE_OPENING_DEFAULTS = {
       },
       {
         eyebrow: "Director’s briefing · 02 / 04",
-        title: "The past survives in fragments.",
-        subtitle: "Testimony. Artifacts. Images. Laws. Journals. The voices people left behind.",
+        title: "What’s wrong.",
+        subtitle: "We call it record drift.",
         body: [
-          { text: "The past survives in fragments." },
           {
-            text: "Testimony. Artifacts. Images. Laws. Journals. The voices people left behind.",
+            text: "We call it record drift: fragments of the past changing, vanishing, or contradicting each other.",
             reveal: {
               type: "chips",
               items: ["Testimony", "Artifacts", "Images", "Laws", "Journals"],
             },
           },
           {
-            text: "When those fragments change, disappear, or begin to contradict what they once revealed, humanity loses more than information.",
+            text: "If we lose them, we lose the ability to understand what really happened.",
           },
-          { text: "It loses its ability to understand itself." },
         ],
         action: "Continue briefing",
         secondary: "Previous message",
       },
       {
         eyebrow: "Director’s briefing · 03 / 04",
-        title: "That is why the Institute needs Chroniclers.",
-        subtitle: "A Chronicler does not travel into the past to become its hero.",
+        title: "What a Chronicler does.",
+        subtitle: "A Chronicler travels to the moment and secures the record before it’s lost.",
         body: [
           {
-            text: "That is why the Institute needs Chroniclers.",
-            reveal: { type: "badge", icon: "✦", label: "The Institute" },
-          },
-          { text: "A Chronicler does not travel into the past to become its hero." },
-          {
-            text: "You do not alter events. You investigate the evidence: who created it, why they created it, who was meant to see it, and what it can truly prove.",
+            text: "A Chronicler travels to the moment and secures the record before it’s lost.",
           },
           {
-            text: "You gather the record before it is lost.",
+            text: "Not to change history—to prove it.",
             reveal: { type: "image", src: "codex", label: "The Codex" },
           },
         ],
@@ -129,16 +118,14 @@ export const CHRONICLE_OPENING_DEFAULTS = {
       },
       {
         eyebrow: "Director’s briefing · 04 / 04",
-        title: "Follow the evidence.",
-        subtitle: "Return with an account others can examine, challenge, and understand.",
+        title: "Why you.",
+        subtitle: "Every record you secure updates your Codex.",
         body: [
-          { text: "Follow the evidence." },
-          { text: "Return with an account others can examine, challenge, and understand." },
           {
-            text: "The Archive needs a Chronicler.",
+            text: "Every record you secure updates your Codex—the Archive’s memory.",
             reveal: { type: "badge", icon: "⌁", label: "The Archive" },
           },
-          { text: "We need you." },
+          { text: "I’ll show you how this works. Follow me." },
         ],
         action: "Accept field protocol",
         secondary: "Previous message",

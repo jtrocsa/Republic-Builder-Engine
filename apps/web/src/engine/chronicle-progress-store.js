@@ -28,10 +28,15 @@ export const DEFAULT_PROGRESS = {
   questResponses: {},
   settings: { miniGamesEnabled: true },
   miniGameScores: { stormNavigationBest: 0 },
+  tutorial: { step: "not-started", completed: false, skipped: false },
 };
 export function readProgress() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || "null") || {};
+    // A saved blob with keys at all means this is a returning player, not a brand-new profile —
+    // used below so pre-existing saves (which predate the tutorial system) aren't forced through
+    // a tutorial they've already effectively completed.
+    const hadPriorSave = Object.keys(saved).length > 0;
     return {
       ...structuredClone(DEFAULT_PROGRESS),
       ...saved,
@@ -70,6 +75,14 @@ export function readProgress() {
       unlocked: Array.isArray(saved.unlocked) ? saved.unlocked : ["case-001"],
       completedCases: Array.isArray(saved.completedCases) ? saved.completedCases : [],
       revealedContexts: Array.isArray(saved.revealedContexts) ? saved.revealedContexts : [],
+      // Pre-existing saves predate the tutorial system and are already onboarded — do not force
+      // them through it retroactively. Only a genuinely fresh profile (no prior save at all)
+      // gets the not-started default. Deliberately not the same shape as the other merges above.
+      tutorial: saved.tutorial
+        ? { ...DEFAULT_PROGRESS.tutorial, ...saved.tutorial }
+        : hadPriorSave
+          ? { step: "complete", completed: true, skipped: false }
+          : { ...DEFAULT_PROGRESS.tutorial },
     };
   } catch {
     return structuredClone(DEFAULT_PROGRESS);

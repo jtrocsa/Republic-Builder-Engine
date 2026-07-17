@@ -110,6 +110,14 @@ export function playSfx(name, sourceId = null) {
     audioChord([392, 587, 784], 0.72, 0.62, "sine", 0.36);
     return;
   }
+  if (name === "codex-reveal") {
+    audioNote(220, 0.9, 0, "sine", 0.22);
+    [330, 415, 494, 587].forEach((freq, i) =>
+      audioNote(freq, 0.4, 0.1 + i * 0.14, "triangle", 0.3)
+    );
+    audioChord([392, 494, 659], 0.75, 0.62, "sine", 0.3);
+    return;
+  }
   if (name === "archive-receive") {
     audioChord([262, 330, 392], 0.42, 0, "triangle", 0.32);
     audioNote(523, 0.18, 0.32, "sine", 0.34);
