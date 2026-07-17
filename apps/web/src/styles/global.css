@@ -2242,12 +2242,47 @@ dd {
   background: #04212d;
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.4);
 }
+/* Corridor framing: dark/teal vignette bands along both edges (echoing .director-scene__pillar's
+   gold/teal glow language) so the tightly-cropped door art reads as a hallway mouth with walls on
+   either side, instead of a flat zoomed-in photo. Pure CSS, no new art. Painted above .hallway-crop
+   via ::before/::after rather than extra DOM nodes. */
+.hallway-viewport::before,
+.hallway-viewport::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 26%;
+  z-index: 2;
+  pointer-events: none;
+}
+.hallway-viewport::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    rgba(4, 20, 28, 0.95) 0%,
+    rgba(23, 148, 158, 0.22) 60%,
+    rgba(4, 20, 28, 0) 100%
+  );
+}
+.hallway-viewport::after {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    rgba(4, 20, 28, 0.95) 0%,
+    rgba(23, 148, 158, 0.22) 60%,
+    rgba(4, 20, 28, 0) 100%
+  );
+}
 .hallway-crop {
   position: absolute;
   inset: 0;
   background-repeat: no-repeat;
-  background-size: 420% auto;
-  background-position: 29% 100%;
+  background-size: 650% auto;
+  /* Anchored on the door's own center (not the image's bottom edge) so zooming in via
+     runHallwayWalk() tightens the frame around the door instead of pushing it out of view. */
+  background-position: 29% 92%;
+  transition: background-size 80ms linear;
 }
 .hallway-sprite {
   position: absolute;
@@ -2280,6 +2315,9 @@ dd {
 }
 @media (prefers-reduced-motion: reduce) {
   .scene-fade {
+    transition: none;
+  }
+  .hallway-crop {
     transition: none;
   }
 }
@@ -3906,6 +3944,31 @@ dd {
 }
 .hub-dialogue .btn {
   margin-top: 16px;
+}
+/* Guided-tour variant of the shared .hub-dialogue panel (tourCalloutMarkup() in main.js) — the
+   regular NPC/trophy dialogue above keeps its dim+blur scrim and default text sizing untouched;
+   this modifier only applies while progress.tutorial.step is a tour-* step, where the whole point
+   is to see the highlighted target's gold pulse clearly behind the caption rather than through a
+   blurred scrim. */
+.hub-dialogue--tour {
+  background: transparent;
+  backdrop-filter: none;
+}
+.hub-dialogue--tour p:not(.kicker) {
+  font:
+    500 1.2rem/1.6 "DM Sans",
+    sans-serif;
+}
+.hub-dialogue--tour h2 {
+  font-size: 2rem;
+}
+/* The director sprite's native 48x64 pixel art is almost the same aspect ratio as the 82x112
+   portrait render (0.75 vs 0.732), so object-fit: contain leaves almost no margin — the
+   character's feet sit flush against the box edge and read as clipped even though nothing is
+   technically cropped. Rendering it smaller inside the same box gives real breathing room. */
+.hub-dialogue--tour .hub-dialogue__portrait img {
+  width: 68px;
+  height: 90px;
 }
 /* The field is historical space. The Codex, not a local Archive door, connects it to home. */
 .field-arrival-marker {

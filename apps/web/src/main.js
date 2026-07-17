@@ -1591,7 +1591,7 @@ function introProtocolScreen() {
 // No Continue/back buttons — the walk itself drives the transition into the Main Hall once it
 // completes (see completeHallwayWalk()), so buttonsHtml is intentionally empty.
 function introHallwayScreen() {
-  const stageHtml = `<div class="hallway-viewport"><div class="hallway-crop" style="background-image:url(${instituteHubBackground})"><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%"><img src="${fieldSpriteAssets[progress.profile.appearance === "b" ? "b" : "a"].up.idle}" alt=""></div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%"><img src="${instituteNpcSprites.director}" alt=""></div></div></div><div class="director-reveal-rail" id="directorRevealRail"></div>`;
+  const stageHtml = `<div class="hallway-viewport"><div class="hallway-crop" id="hallwayCrop" style="background-image:url(${instituteHubBackground})"><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%"><img src="${fieldSpriteAssets[progress.profile.appearance === "b" ? "b" : "a"].up.idle}" alt=""></div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%"><img src="${instituteNpcSprites.director}" alt=""></div></div></div><div class="director-reveal-rail" id="directorRevealRail"></div>`;
   return `${chrome()}<main class="director-stage">${directorSceneMarkup({
     eyebrow: "Chronicle Institute · Orientation",
     title: "Welcome to the Institute.",
@@ -1686,7 +1686,7 @@ function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
-const HALLWAY_WALK_MS = 2000;
+const HALLWAY_WALK_MS = 5000;
 // Bespoke requestAnimationFrame walk for intro-hallway, following the same direct-DOM-patch
 // convention updateInstituteNpcs()/runHubMovementLoop() already use rather than re-rendering
 // per frame. Not a general cutscene engine — this is deliberately one-off, one-shot animation
@@ -1703,6 +1703,11 @@ function runHallwayWalk(now) {
   const t = Math.min(1, elapsed / duration);
   const playerEl = document.getElementById("hallwayPlayerSprite");
   const directorEl = document.getElementById("hallwayDirectorSprite");
+  const cropEl = document.getElementById("hallwayCrop");
+  // Zoom the tightly-cropped background in further as the walk progresses (a dolly-forward,
+  // not just the sprites sliding over a static image) so it reads as advancing down a corridor
+  // toward the door rather than a fixed zoomed photo with figures moving on top of it.
+  if (cropEl) cropEl.style.backgroundSize = `${650 + t * 260}% auto`;
   // Director leads (higher/further along), player follows a step behind and to one side —
   // a fixed horizontal/vertical offset the whole walk so the two sprites read as single-file
   // "follow me" rather than converging into an overlapping blob by the time they reach the door.
@@ -2092,7 +2097,7 @@ function tourCalloutMarkup() {
   const stepId = currentTourStepId();
   const content = CHRONICLE_OPENING_DEFAULTS.tour[stepId];
   if (!content) return "";
-  return `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="tourCalloutTitle"><article><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites.director}" alt=""></div><div><p class="kicker">${esc(content.role)}</p><h2 id="tourCalloutTitle">${esc(content.name)}</h2><p>${esc(content.body)}</p><button class="btn btn-gold" data-action="tutorial-tour-next">${esc(content.cta)}</button></div></article></div>`;
+  return `<div class="hub-dialogue hub-dialogue--tour" role="dialog" aria-modal="true" aria-labelledby="tourCalloutTitle"><article><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites.director}" alt=""></div><div><p class="kicker">${esc(content.role)}</p><h2 id="tourCalloutTitle">${esc(content.name)}</h2><p>${esc(content.body)}</p><button class="btn btn-gold" data-action="tutorial-tour-next">${esc(content.cta)}</button></div></article></div>`;
 }
 function instituteMainRoomScreen() {
   const nearby = nearestHubTarget();
