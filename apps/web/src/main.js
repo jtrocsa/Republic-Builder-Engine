@@ -1529,14 +1529,14 @@ function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" })
 
 function introWelcomeScreen() {
   const s = CHRONICLE_OPENING_DEFAULTS.scenes.welcome;
-  const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="intro-briefing" disabled>${esc(s.action)} →</button>`;
+  const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="intro-briefing">${esc(s.action)} →</button>`;
   return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: s.eyebrow, title: s.title, buttonsHtml: buttons })}</main>`;
 }
 
 function introBriefingScreen() {
   const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
   const entry = entries[briefingStep];
-  const buttons = `<button class="btn btn-outline director-back-button" data-action="briefing-back">${esc(entry.secondary)}</button><button class="btn btn-gold director-continue-button" data-action="briefing-next" disabled>${esc(entry.action)} →</button>`;
+  const buttons = `<button class="btn btn-outline director-back-button" data-action="briefing-back">${esc(entry.secondary)}</button><button class="btn btn-gold director-continue-button" data-action="briefing-next">${esc(entry.action)} →</button>`;
   return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: entry.eyebrow, title: entry.title, buttonsHtml: buttons })}</main>`;
 }
 
@@ -1544,7 +1544,7 @@ function introProtocolScreen() {
   const oath = CHRONICLE_OPENING_DEFAULTS.scenes.oath;
   const protocol = CHRONICLE_OPENING_DEFAULTS.protocol;
   const assignment = CHRONICLE_OPENING_DEFAULTS.assignment;
-  const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="identity" disabled>${esc(oath.action)} →</button>`;
+  const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="identity">${esc(oath.action)} →</button>`;
   const extraContent = `<div class="completion-stats">${protocol.map((p) => `<span><b>${esc(p.number)}</b> ${esc(p.title)} — ${esc(p.body)}</span>`).join("")}</div><div class="completion-stats"><span class="kicker">${esc(assignment.kicker)}</span><span>${esc(assignment.unit)}</span><span>${esc(assignment.title)}</span></div><p>${esc(assignment.description)}</p>`;
   return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
 }
@@ -1587,8 +1587,34 @@ function revealCardMarkup(reveal) {
 function completeCurrentIntroStep(step) {
   introSeenSteps.add(step.stepKey);
   document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
-  document.querySelector(".director-continue-button")?.removeAttribute("disabled");
   document.querySelector(".director-extra-content")?.removeAttribute("hidden");
+}
+
+// Shared by both the dialogue box click and the always-active Continue button, so the two
+// controls behave identically: skip the typewriter if mid-line, else advance to the next line.
+// Returns true if it handled something; false once the current step's last line is already
+// fully revealed, meaning the caller should move on to the next screen instead.
+function advanceIntroDialogue() {
+  const step = currentIntroLines();
+  if (!step) return false;
+  if (introTypewriterTimer) {
+    clearTimeout(introTypewriterTimer);
+    introTypewriterTimer = null;
+    const textEl = document.getElementById("directorLineText");
+    if (textEl) textEl.textContent = step.lines[introLineIndex].text;
+    if (introLineIndex === step.lines.length - 1) {
+      completeCurrentIntroStep(step);
+    } else {
+      document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
+    }
+    return true;
+  }
+  if (introLineIndex < step.lines.length - 1) {
+    introLineIndex += 1;
+    startIntroTypewriter();
+    return true;
+  }
+  return false;
 }
 
 // True when the OS/browser requests reduced motion. Checked live (not cached) since a user can
@@ -3198,6 +3224,7 @@ function handleOnboardingClick(target, action) {
     return true;
   }
   if (action === "intro-advance") {
+    if (advanceIntroDialogue()) return true;
     const next = target.dataset.next;
     if (next === "intro-briefing") briefingStep = 0;
     if (next === "institute") safeInstituteSpawn(7, 9, "up");
@@ -3208,6 +3235,7 @@ function handleOnboardingClick(target, action) {
     return true;
   }
   if (action === "briefing-next") {
+    if (advanceIntroDialogue()) return true;
     const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
     introLineIndex = 0;
     if (briefingStep < entries.length - 1) {
@@ -3233,24 +3261,12 @@ function handleOnboardingClick(target, action) {
     return true;
   }
   if (action === "director-dialogue-click") {
-    const step = currentIntroLines();
-    if (!step) return true;
-    if (introTypewriterTimer) {
-      clearTimeout(introTypewriterTimer);
-      introTypewriterTimer = null;
-      const textEl = document.getElementById("directorLineText");
-      if (textEl) textEl.textContent = step.lines[introLineIndex].text;
-      if (introLineIndex === step.lines.length - 1) {
-        completeCurrentIntroStep(step);
-      } else {
-        document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
-      }
-      return true;
-    }
-    if (introLineIndex < step.lines.length - 1) {
-      introLineIndex += 1;
-      startIntroTypewriter();
-    }
+    if (advanceIntroDialogue()) return true;
+    // Current step's last line is already fully revealed — clicking the dialogue box should do
+    // exactly what the Continue button does, so delegate to it rather than duplicating each
+    // screen's transition logic here.
+    const continueButton = document.querySelector(".director-continue-button");
+    if (continueButton) return handleOnboardingClick(continueButton, continueButton.dataset.action);
     return true;
   }
   if (action === "set-appearance") {

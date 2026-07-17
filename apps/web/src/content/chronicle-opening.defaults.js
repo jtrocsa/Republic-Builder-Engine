@@ -109,7 +109,7 @@ export const CHRONICLE_OPENING_DEFAULTS = {
             text: "A Chronicler travels to the moment and secures the record before it’s lost.",
           },
           {
-            text: "Not to change history—to prove it.",
+            text: "Not to change history—to prove it. This is your Codex.",
             reveal: { type: "image", src: "codex", label: "The Codex" },
           },
         ],

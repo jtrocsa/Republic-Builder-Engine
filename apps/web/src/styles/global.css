@@ -2240,13 +2240,6 @@ dd {
 .director-continue-indicator[hidden] {
   display: none;
 }
-/* The continue button always renders (never [hidden]) so the button row never changes size as
-   lines advance — it's just inert/dimmed via :disabled until the current step's last line
-   finishes typing, matching a fixed-layout dialogue box (see completeCurrentIntroStep()). */
-.director-continue-button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 @keyframes director-continue-blink {
   0%,
   100% {
