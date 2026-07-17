@@ -2227,6 +2227,62 @@ dd {
 .director-extra-content[hidden] {
   display: none;
 }
+/* intro-hallway's cropped/zoomed slice of the institute hub background, framed on the door
+   already drawn at its bottom edge — not a new scene image (see docs/tour-plan.md). Sprite
+   positions are driven by runHallwayWalk() in main.js patching left/top inline, the same
+   direct-DOM-patch convention used for hub/field movement. */
+.hallway-viewport {
+  position: relative;
+  width: min(560px, 100%);
+  height: min(340px, 42vh);
+  margin: 0 auto 12px;
+  overflow: hidden;
+  border: 2px solid rgba(239, 204, 122, 0.5);
+  border-radius: 18px;
+  background: #04212d;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.4);
+}
+.hallway-crop {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 420% auto;
+  background-position: 29% 100%;
+}
+.hallway-sprite {
+  position: absolute;
+  width: 13%;
+  aspect-ratio: 1/1.3;
+  transform: translate(-50%, -50%);
+}
+.hallway-sprite img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35));
+}
+/* Full-screen fade used for the hallway → Main Hall cut. Rendered by both introHallwayScreen()
+   (added to, then held, once the scripted walk reaches the door) and instituteMainRoomScreen()
+   (rendered already-active for one frame, then dropped a frame later so the transition reads as
+   a fade-in rather than a hard cut — see the hallwayFadeToInstitute handling in render()). */
+.scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 480ms ease;
+}
+.scene-fade.is-active {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-fade {
+    transition: none;
+  }
+}
 @media (max-width: 700px) {
   .director-scene {
     padding-bottom: 190px;

@@ -57,6 +57,35 @@ export const CHRONICLE_OPENING_DEFAULTS = {
       action: "Create Chronicler",
       secondary: "Review field protocol",
     },
+    hallway: {
+      body: [{ text: "Welcome, {{chroniclerName}}. Follow me." }],
+    },
+  },
+  tour: {
+    intro: {
+      name: "Director Rowan Hale",
+      role: "Director of Field Studies",
+      body: "This is the Institute Archive — your home base between investigations. Dr. Amani Soto and Professor Julian Park keep the record straight; lean on both of them once real casework begins.",
+      cta: "Next →",
+    },
+    table: {
+      name: "Director Rowan Hale",
+      role: "Director of Field Studies",
+      body: "The Chronicle Navigation Table displays every route your teacher has unlocked. You'll return here between cases to choose where the record needs you next.",
+      cta: "Next →",
+    },
+    archiveDoor: {
+      name: "Director Rowan Hale",
+      role: "Director of Field Studies",
+      body: "Through there is the Archive Room, where recovered records are organized, reviewed, and preserved.",
+      cta: "Next →",
+    },
+    trophy: {
+      name: "Director Rowan Hale",
+      role: "Director of Field Studies",
+      body: "And that's your Preservation Case. Every investigation you complete earns its place there.",
+      cta: "Got it →",
+    },
   },
   director: {
     kicker: "Institute Director",

@@ -1104,6 +1104,28 @@ function activeHubTargets() {
   return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_TARGETS : HUB_TARGETS;
 }
 
+// Post-hallway guided tour of the Main Hall (progress.tutorial.step === "tour-<id>" for one of
+// these ids, or "tour-intro" for the unhighlighted orientation beat before them). Movement is
+// locked for the whole tour — see the three isTutorialTourActive() call sites in the institute
+// keydown handler, runHubMovementLoop(), and interactWithHubTarget().
+const TUTORIAL_TOUR_STEPS = ["intro", "table", "archiveDoor", "trophy"];
+function isTutorialTourActive() {
+  return typeof progress.tutorial?.step === "string" && progress.tutorial.step.startsWith("tour-");
+}
+function currentTourStepId() {
+  return isTutorialTourActive() ? progress.tutorial.step.slice("tour-".length) : null;
+}
+function isTourHighlighted(id) {
+  return isTutorialTourActive() && currentTourStepId() === id;
+}
+// Shared by instituteMainRoomScreen()'s markup and updateHubProximityUi() so a hub target's
+// "is-near" gold pulse reflects real proximity OR (during the tour) being the currently
+// highlighted step — factored out so the two sites can't drift out of sync with each other.
+function isHubTargetNear(id) {
+  const targets = activeHubTargets();
+  return targetDistance(targets[id], id) <= targetReach(id) || isTourHighlighted(id);
+}
+
 let instituteMovement = { x: 7, y: 9, facing: "up", moving: false, step: false, queued: null };
 // Every existing call site means "place the player in the Main Hall" — reset
 // the room here so returning to the Institute never strands the player in a
@@ -1184,7 +1206,7 @@ function updateInstituteNpcs() {
     return;
   }
   Object.entries(hubNpcRuntime).forEach(([id, state], index) => {
-    if (hubDialogueId === id) {
+    if (hubDialogueId === id || (id === "director" && isTutorialTourActive())) {
       state.walking = false;
       const node = document.querySelector(`[data-hub-npc="${id}"]`);
       if (node) {
@@ -1291,6 +1313,7 @@ const VALID_SCREENS = new Set([
   "intro-protocol",
   "identity",
   "intro-registration",
+  "intro-hallway",
 ]);
 if (
   !VALID_SCREENS.has(progress.currentScreen) ||
@@ -1314,6 +1337,17 @@ let activeTravelTimeout = null;
 let introLineIndex = 0;
 let introTypewriterTimer = null;
 const introSeenSteps = new Set();
+// intro-hallway scripted walk (Director leads the newly-created Chronicler from the
+// registration screen into the Main Hall) — runtime-only state for the bespoke
+// requestAnimationFrame walk loop and the fade-to-black that follows it.
+let hallwayWalkFrame = null;
+let hallwayWalkStartedAt = null;
+let hallwayWalkDone = false;
+let hallwayFadeTimer = null;
+// Set right before the hallway walk hands off to the Main Hall so instituteMainRoomScreen()
+// renders one frame with the fade overlay at full opacity, then render()'s institute
+// requestAnimationFrame block removes .is-active so it transitions back to 0 (a fade-in cut).
+let hallwayFadeToInstitute = false;
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward layer, not
 // save-relevant progress — their in-run state lives here, outside `progress`,
 // the same way field/hub movement state does. Only Storm Navigation's best
@@ -1521,8 +1555,11 @@ const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidd
 // render()) is the single source of truth for filling it in, whether that's typing a fresh line or
 // instantly restoring a previously-seen step. Keeping that logic in one place avoids the markup and
 // the JS state machine silently drifting out of sync.
-function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" }) {
-  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage"><img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false"><div class="director-reveal-rail" id="directorRevealRail"></div></div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
+function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "", stageHtml = "" }) {
+  const stage =
+    stageHtml ||
+    `<img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false"><div class="director-reveal-rail" id="directorRevealRail"></div>`;
+  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${stage}</div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
 }
 
 function introWelcomeScreen() {
@@ -1547,6 +1584,22 @@ function introProtocolScreen() {
   return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
 }
 
+// The scripted walk from Registration into the Main Hall — reuses directorSceneMarkup()'s
+// bottom dialogue bar (typewriter, Continue indicator) wholesale via its stageHtml override,
+// swapping in a cropped/zoomed slice of the existing institute hub background (framed on the
+// door already drawn at its bottom edge) plus two sprite divs that runHallwayWalk() animates.
+// No Continue/back buttons — the walk itself drives the transition into the Main Hall once it
+// completes (see completeHallwayWalk()), so buttonsHtml is intentionally empty.
+function introHallwayScreen() {
+  const stageHtml = `<div class="hallway-viewport"><div class="hallway-crop" style="background-image:url(${instituteHubBackground})"><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%"><img src="${fieldSpriteAssets[progress.profile.appearance === "b" ? "b" : "a"].up.idle}" alt=""></div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%"><img src="${instituteNpcSprites.director}" alt=""></div></div></div><div class="director-reveal-rail" id="directorRevealRail"></div>`;
+  return `${chrome()}<main class="director-stage">${directorSceneMarkup({
+    eyebrow: "Chronicle Institute · Orientation",
+    title: "Welcome to the Institute.",
+    buttonsHtml: "",
+    stageHtml,
+  })}</main><div class="scene-fade" id="sceneFade"></div>`;
+}
+
 // Resolves the {stepKey, lines} for whichever intro screen/step is currently active.
 // stepKey is unique per step (director-briefing steps are keyed by index) so introSeenSteps
 // tracks "has this exact beat been typed out before" independent of screen navigation.
@@ -1562,6 +1615,18 @@ function currentIntroLines() {
   }
   if (progress.currentScreen === "intro-protocol") {
     return { stepKey: "intro-protocol", lines: CHRONICLE_OPENING_DEFAULTS.scenes.oath.body };
+  }
+  if (progress.currentScreen === "intro-hallway") {
+    // The only content line in this file that interpolates player state — scoped to this one
+    // branch since nothing else here has a reason to reference progress.profile.name.
+    const name = progress.profile.name || "Chronicler";
+    return {
+      stepKey: "intro-hallway",
+      lines: CHRONICLE_OPENING_DEFAULTS.scenes.hallway.body.map((line) => ({
+        ...line,
+        text: line.text.replace("{{chroniclerName}}", name),
+      })),
+    };
   }
   return null;
 }
@@ -1619,6 +1684,64 @@ function advanceIntroDialogue() {
 // toggle this mid-session. Reused by both the intro typewriter and the Codex cinematic reveal.
 function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+const HALLWAY_WALK_MS = 2000;
+// Bespoke requestAnimationFrame walk for intro-hallway, following the same direct-DOM-patch
+// convention updateInstituteNpcs()/runHubMovementLoop() already use rather than re-rendering
+// per frame. Not a general cutscene engine — this is deliberately one-off, one-shot animation
+// code for this single scripted moment (see docs/tour-plan.md "Explicitly not building").
+function runHallwayWalk(now) {
+  if (progress.currentScreen !== "intro-hallway" || hallwayWalkDone) {
+    hallwayWalkFrame = null;
+    return;
+  }
+  if (!hallwayWalkStartedAt) hallwayWalkStartedAt = now;
+  const reduced = prefersReducedMotion();
+  const duration = reduced ? 1 : HALLWAY_WALK_MS;
+  const elapsed = now - hallwayWalkStartedAt;
+  const t = Math.min(1, elapsed / duration);
+  const playerEl = document.getElementById("hallwayPlayerSprite");
+  const directorEl = document.getElementById("hallwayDirectorSprite");
+  // Director leads (higher/further along), player follows a step behind and to one side —
+  // a fixed horizontal/vertical offset the whole walk so the two sprites read as single-file
+  // "follow me" rather than converging into an overlapping blob by the time they reach the door.
+  if (playerEl) {
+    playerEl.style.left = "53%";
+    playerEl.style.top = `${86 - t * 44}%`;
+    const img = playerEl.querySelector("img");
+    const appearance = progress.profile.appearance === "b" ? "b" : "a";
+    const frame = reduced || Math.floor(elapsed / 220) % 2 === 0 ? "idle" : "step";
+    if (img) img.src = fieldSpriteAssets[appearance].up[frame];
+  }
+  if (directorEl) {
+    directorEl.style.left = "45%";
+    directorEl.style.top = `${76 - t * 44}%`;
+  }
+  if (t >= 1) {
+    hallwayWalkDone = true;
+    hallwayWalkFrame = null;
+    completeHallwayWalk();
+    return;
+  }
+  hallwayWalkFrame = window.requestAnimationFrame(runHallwayWalk);
+}
+
+// Fires once the walk reaches the door: fades to black, holds briefly, then cuts to the Main
+// Hall with the tour's first (unhighlighted) beat active. safeInstituteSpawn(7, 9, "up") is the
+// same spawn point the old direct "Enter Institute" → institute jump used.
+function completeHallwayWalk() {
+  document.getElementById("sceneFade")?.classList.add("is-active");
+  const holdMs = prefersReducedMotion() ? 60 : 420;
+  clearTimeout(hallwayFadeTimer);
+  hallwayFadeTimer = setTimeout(() => {
+    safeInstituteSpawn(7, 9, "up");
+    progress.currentScreen = "institute";
+    progress.tutorial.step = "tour-intro";
+    hallwayFadeToInstitute = true;
+    save();
+    render();
+  }, holdMs);
 }
 
 // Base per-character delay for the intro typewriter, plus extra hold time (as a multiple of
@@ -1696,7 +1819,7 @@ function identityScreen() {
 
 function introRegistrationScreen() {
   const r = CHRONICLE_IDENTITY_DEFAULTS.registration;
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(r.eyebrow)}</p><h1>${esc(r.title)}</h1><p class="subtitle">${esc(r.subtitle)}</p><p><b>${esc(r.profileLabel)}:</b> ${esc(progress.profile.name)} · <b>${esc(r.assignmentLabel)}:</b> ${esc(r.assignment)}</p><p>${esc(r.codexLabel)} — ${esc(r.codexBody)}</p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="identity">${esc(r.back)}</button><button class="btn btn-gold" data-action="intro-advance" data-next="institute">${esc(r.enter)} →</button></div></section></main>`;
+  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(r.eyebrow)}</p><h1>${esc(r.title)}</h1><p class="subtitle">${esc(r.subtitle)}</p><p><b>${esc(r.profileLabel)}:</b> ${esc(progress.profile.name)} · <b>${esc(r.assignmentLabel)}:</b> ${esc(r.assignment)}</p><p>${esc(r.codexLabel)} — ${esc(r.codexBody)}</p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="identity">${esc(r.back)}</button><button class="btn btn-gold" data-action="intro-advance" data-next="intro-hallway">${esc(r.enter)} →</button></div></section></main>`;
 }
 
 const UNIT_BADGES = {
@@ -1821,7 +1944,7 @@ function updateHubProximityUi() {
           ? ".hub-table"
           : `[data-hub-npc="${id}"], [data-hub-target="${id}"]`;
     const node = document.querySelector(selector);
-    if (node) node.classList.toggle("is-near", targetDistance(targets[id], id) <= targetReach(id));
+    if (node) node.classList.toggle("is-near", isHubTargetNear(id));
   });
 }
 function isHubBlocked(x, y) {
@@ -1860,7 +1983,7 @@ function stopHubMovementLoop() {
   lastHubMoveAt = 0;
 }
 function runHubMovementLoop(now) {
-  if (progress.currentScreen !== "institute") {
+  if (progress.currentScreen !== "institute" || isTutorialTourActive()) {
     hubHeldKeys.clear();
     instituteMovement.moving = false;
     stopHubMovementLoop();
@@ -1903,6 +2026,7 @@ function runHubMovementLoop(now) {
   hubMoveFrame = window.requestAnimationFrame(runHubMovementLoop);
 }
 function interactWithHubTarget(id) {
+  if (isTutorialTourActive()) return;
   const target = activeHubTargets()[id];
   if (!target) return;
   if (targetDistance(target, id) > targetReach(id)) {
@@ -1960,6 +2084,16 @@ function instituteNpc(targetId, sprite, label) {
 function instituteScreen() {
   return progress.currentHubRoom === "archive" ? archiveRoomScreen() : instituteMainRoomScreen();
 }
+// Caption panel for the post-hallway guided tour — reuses the existing .hub-dialogue panel
+// structure/styling (the same markup hubDialogueId's dialogue renders) rather than inventing new
+// UI, but with a "Next"/"Got it" advance button instead of a close button, since the tour has no
+// way to dismiss early.
+function tourCalloutMarkup() {
+  const stepId = currentTourStepId();
+  const content = CHRONICLE_OPENING_DEFAULTS.tour[stepId];
+  if (!content) return "";
+  return `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="tourCalloutTitle"><article><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites.director}" alt=""></div><div><p class="kicker">${esc(content.role)}</p><h2 id="tourCalloutTitle">${esc(content.name)}</h2><p>${esc(content.body)}</p><button class="btn btn-gold" data-action="tutorial-tour-next">${esc(content.cta)}</button></div></article></div>`;
+}
 function instituteMainRoomScreen() {
   const nearby = nearestHubTarget();
   const dialogue = hubDialogueId ? HUB_TARGETS[hubDialogueId] : null;
@@ -1969,7 +2103,7 @@ function instituteMainRoomScreen() {
       ? `${progress.completedCases.length}/3 Unit 1 cases archived.`
       : "Your first active route awaits at the Navigation Table.");
   const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Active researcher · Unit 1</p><div class="hub-progress"><span><b>${progress.completedCases.length}</b> / 3 cases archived</span><span><b>${countEvidence("case-001")}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Badge case</b><span>Walk to the Preservation Case on the upper bookshelf to view Unit 1 badges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${countEvidence("case-001")}</b></button><button class="text-button" data-action="reset">Reset Unit 1 demo</button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map" id="instituteMap" aria-label="Playable Chronicle Institute interior"><img class="institute-map__art" src="${instituteHubBackground}" alt="Top-down interior of the Chronicle Institute showing a foyer and Archive room">${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}<button class="hub-trophy ${targetDistance(HUB_TARGETS.trophy, "trophy") <= targetReach("trophy") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.trophy.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.trophy.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="trophy" aria-label="Open Unit 1 preservation case"><span>▣</span><b>Preservation Case</b>${targetDistance(HUB_TARGETS.trophy, "trophy") <= targetReach("trophy") ? "<i>!</i>" : ""}</button><button class="hub-table ${targetDistance(HUB_TARGETS.table, "table") <= targetReach("table") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.table.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.table.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="table" aria-label="Open Chronicle Navigation Table"><span>✦</span><b>Navigation Table</b></button><button class="hub-table hub-archive-door ${targetDistance(HUB_TARGETS.archiveDoor, "archiveDoor") <= targetReach("archiveDoor") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.archiveDoor.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.archiveDoor.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="archiveDoor" data-hub-target="archiveDoor" aria-label="Enter the Archive Room"><span>▤</span><b>Archive Room</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}</main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map" id="instituteMap" aria-label="Playable Chronicle Institute interior"><img class="institute-map__art" src="${instituteHubBackground}" alt="Top-down interior of the Chronicle Institute showing a foyer and Archive room">${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}<button class="hub-trophy ${isHubTargetNear("trophy") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.trophy.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.trophy.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="trophy" aria-label="Open Unit 1 preservation case"><span>▣</span><b>Preservation Case</b>${isHubTargetNear("trophy") ? "<i>!</i>" : ""}</button><button class="hub-table ${isHubTargetNear("table") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.table.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.table.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="table" aria-label="Open Chronicle Navigation Table"><span>✦</span><b>Navigation Table</b></button><button class="hub-table hub-archive-door ${isHubTargetNear("archiveDoor") ? "is-near" : ""}" style="left:${(((HUB_TARGETS.archiveDoor.x + 0.5) / HUB_GRID.columns) * 100).toFixed(3)}%;top:${(((HUB_TARGETS.archiveDoor.y + 0.5) / HUB_GRID.rows) * 100).toFixed(3)}%" data-action="hub-interact" data-target="archiveDoor" data-hub-target="archiveDoor" aria-label="Enter the Archive Room"><span>▤</span><b>Archive Room</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 function archiveRoomScreen() {
@@ -2863,6 +2997,13 @@ function render() {
   clearTimeout(activeTravelTimeout);
   clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
+  // Navigating away from intro-hallway mid-walk (refresh, reset, a stray render() call) must not
+  // leave an orphaned rAF loop or fade timeout running against DOM nodes this render is about to
+  // replace.
+  window.cancelAnimationFrame(hallwayWalkFrame);
+  hallwayWalkFrame = null;
+  clearTimeout(hallwayFadeTimer);
+  hallwayFadeTimer = null;
   let html;
   try {
     switch (progress.currentScreen) {
@@ -2880,6 +3021,9 @@ function render() {
         break;
       case "intro-registration":
         html = introRegistrationScreen();
+        break;
+      case "intro-hallway":
+        html = introHallwayScreen();
         break;
       case "archive":
         html = archiveScreen();
@@ -2987,12 +3131,27 @@ function render() {
       if (activeFieldMap().id === "unit-02") renderRiverbendTiledMap();
       if (activeFieldMap().id === "unit-01") renderCaribbeanTiledMap();
     });
-  if (progress.currentScreen === "institute")
+  if (progress.currentScreen === "intro-hallway") {
+    hallwayWalkStartedAt = null;
+    hallwayWalkDone = false;
+    hallwayWalkFrame = window.requestAnimationFrame(runHallwayWalk);
+  }
+  if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {
       updateInstitutePlayer();
       updateInstituteNpcs();
       if (progress.currentHubRoom === "archive") renderArchiveRoomTiledMap();
     });
+    // The Main Hall's first render right after the hallway walk includes the fade div at full
+    // opacity for one frame (see instituteMainRoomScreen()); dropping .is-active a frame later
+    // lets its CSS transition read as a fade-in rather than a hard cut.
+    if (hallwayFadeToInstitute) {
+      hallwayFadeToInstitute = false;
+      window.requestAnimationFrame(() => {
+        document.getElementById("sceneFade")?.classList.remove("is-active");
+      });
+    }
+  }
   if (progress.currentScreen === "mini-games") {
     window.requestAnimationFrame(startMiniGameLoop);
   } else {
@@ -3226,6 +3385,11 @@ function handleOnboardingClick(target, action) {
     const next = target.dataset.next;
     if (next === "intro-briefing") briefingStep = 0;
     if (next === "institute") safeInstituteSpawn(7, 9, "up");
+    if (next === "intro-hallway") {
+      progress.tutorial.step = "hallway";
+      hallwayWalkStartedAt = null;
+      hallwayWalkDone = false;
+    }
     introLineIndex = 0;
     progress.currentScreen = next;
     save();
@@ -3291,6 +3455,17 @@ function handleOnboardingClick(target, action) {
 }
 
 function handleHubClick(target, action) {
+  if (action === "tutorial-tour-next") {
+    const idx = TUTORIAL_TOUR_STEPS.indexOf(currentTourStepId());
+    if (idx > -1 && idx < TUTORIAL_TOUR_STEPS.length - 1) {
+      progress.tutorial.step = `tour-${TUTORIAL_TOUR_STEPS[idx + 1]}`;
+    } else {
+      progress.tutorial = { step: "complete", completed: true, skipped: false };
+    }
+    save();
+    render();
+    return true;
+  }
   if (action === "hub-open-table") {
     playSfx("secure");
     progress.hubNotice = "Navigation Table opened. Select a teacher-unlocked route.";
@@ -4098,6 +4273,7 @@ function handleWindowKeydown(event) {
     return;
   }
   if (progress.currentScreen === "institute") {
+    if (isTutorialTourActive()) return;
     if (key === "e" || key === "enter") {
       const nearby = nearestHubTarget();
       if (nearby) {
