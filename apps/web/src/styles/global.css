@@ -1893,35 +1893,6 @@ dd {
   font-size: 1rem;
   line-height: 1.7;
 }
-/* Tighter than the shared .completion-shell > section padding/h1 size — keeps the director
-   scene's card within a normal viewport without scrolling; main-menu title screen is unaffected
-   since it isn't a .director-scene. */
-.completion-shell > .director-scene {
-  position: relative;
-  overflow: hidden;
-  /* isolate: without its own stacking context, .director-scene__backdrop's z-index:-1 would
-     escape past this section's own background and paint behind the whole page instead of just
-     behind this card's content. */
-  isolation: isolate;
-  padding: 22px 40px;
-  /* Wider than the shared 820px .completion-shell > section max-width: intro-protocol's protocol
-     cards + assignment tags wrap onto fewer rows at this width, which is what actually keeps
-     that content-heavy screen from needing to scroll (padding/gap trims alone weren't enough). */
-  max-width: 960px;
-}
-.director-scene h1 {
-  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
-}
-/* The intro-protocol screen packs the 3 protocol cards + assignment tags + description into
-   the same card via .director-extra-content — the shared .completion-stats 24px margin (tuned
-   for less crowded screens elsewhere) is too generous here and was the main cause of this
-   screen needing to scroll. */
-.director-scene .completion-stats {
-  margin: 8px 0;
-}
-.director-scene p {
-  margin: 8px 0;
-}
 .completion-stats {
   display: flex;
   gap: 9px;
@@ -1940,29 +1911,63 @@ dd {
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Full-bleed Pokémon-"meet the Professor" presentation for the 3 director-scene screens
+   (welcome/briefing/protocol) — the scene fills the whole stage below the chrome bar instead of
+   a small bordered card floating on the page background; main-menu title screen keeps the
+   original .completion-shell card treatment untouched, since it isn't a .director-scene. */
+.director-stage {
+  position: relative;
+  min-height: calc(100vh - 58px);
+  width: 100%;
+}
 .director-scene {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  min-height: calc(100vh - 58px);
+  width: 100%;
+  overflow: hidden;
+  /* isolate: without its own stacking context, .director-scene__backdrop's z-index:-1 would
+     escape past this section's own background and paint behind the whole page instead of just
+     behind this scene's content. */
+  isolation: isolate;
+  /* Bottom padding reserves room for .director-scene__bar, which is absolutely positioned rather
+     than in normal flow. */
+  padding: 28px clamp(24px, 5vw, 64px) 156px;
+}
+.director-scene h1 {
+  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+}
+.director-scene .completion-stats {
+  margin: 8px 0;
+}
+.director-scene p {
+  margin: 8px 0;
+}
+.director-scene__head {
+  flex: none;
 }
 .director-scene__stage {
   position: relative;
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  min-height: 110px;
-  padding-top: 6px;
+  min-height: 0;
+  padding-bottom: 12px;
 }
 .director-scene__sprite {
-  width: 140px;
+  width: 240px;
   height: auto;
   image-rendering: pixelated;
   filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.45));
 }
-/* Ambient Archive-rotunda backdrop: a wireframe globe, soft pillar-glow columns, and slow
-   drifting record-fragment words. Purely decorative (aria-hidden), CSS/SVG only — no image
-   assets. Negative z-index so it paints behind the scene's normal-flow content (title, sprite,
-   dialogue box) despite being position:absolute, without needing z-index on every sibling. */
+/* Ambient Archive-rotunda backdrop: a wireframe globe + soft pillar-glow columns, filling the
+   entire scene now rather than a small clipped card. Purely decorative (aria-hidden), CSS/SVG
+   only — no image assets, no word/text content (that's the contextual reveal system's job, see
+   revealCardMarkup()). Negative z-index so it paints behind the scene's normal-flow content
+   (title, sprite, dialogue bar) despite being position:absolute, without needing z-index on
+   every sibling. */
 .director-scene__backdrop {
   position: absolute;
   inset: 0;
@@ -1971,9 +1976,9 @@ dd {
 }
 .director-scene__map {
   position: absolute;
-  top: 50%;
+  top: 46%;
   left: 50%;
-  width: min(70%, 480px);
+  width: min(55%, 640px);
   height: auto;
   transform: translate(-50%, -50%);
   opacity: 0.16;
@@ -1990,7 +1995,7 @@ dd {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 140px;
+  width: 220px;
   background: linear-gradient(
     to bottom,
     transparent,
@@ -1998,77 +2003,17 @@ dd {
     rgba(23, 148, 158, 0.14) 58%,
     transparent
   );
-  filter: blur(6px);
+  filter: blur(10px);
 }
 .director-scene__pillar--1 {
-  left: -20px;
+  left: 2%;
 }
 .director-scene__pillar--2 {
   left: 50%;
   transform: translateX(-50%);
 }
 .director-scene__pillar--3 {
-  right: -20px;
-}
-.director-scene__fragments {
-  position: absolute;
-  inset: 0;
-}
-.director-scene__fragment {
-  position: absolute;
-  font:
-    700 0.7rem "Cinzel",
-    serif;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gold-soft);
-  opacity: 0;
-  animation: director-backdrop-drift 14s ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * 1.8s);
-}
-/* Positioned to sit in the gutters beside the sprite stage — clear of the title/eyebrow text
-   above and the opaque dialogue box below, so fragments never overlap readable UI text. */
-.director-scene__fragment:nth-child(1) {
-  top: 26%;
-  left: 4%;
-}
-.director-scene__fragment:nth-child(2) {
-  top: 48%;
-  left: 9%;
-}
-.director-scene__fragment:nth-child(3) {
-  top: 22%;
-  right: 5%;
-}
-.director-scene__fragment:nth-child(4) {
-  top: 50%;
-  right: 10%;
-}
-.director-scene__fragment:nth-child(5) {
-  top: 36%;
-  left: 2%;
-}
-@keyframes director-backdrop-drift {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  15%,
-  85% {
-    opacity: 0.22;
-  }
-  50% {
-    opacity: 0.22;
-    transform: translateY(-6px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .director-scene__fragment {
-    animation: none;
-    opacity: 0.16;
-    transform: none;
-  }
+  right: 2%;
 }
 .director-reveal-rail {
   position: absolute;
@@ -2203,6 +2148,19 @@ dd {
     transform: translateY(0) scale(1);
   }
 }
+/* Bottom-anchored bar holding the dialogue box + Continue/back buttons — the piece that actually
+   reads as "Pokémon-style": a wide bar pinned to the scene's bottom edge, not a card floating
+   mid-page. Reuses the shared .completion-actions class unmodified (no scoped override needed)
+   since positioning it comes from this wrapper, not the buttons themselves. */
+.director-scene__bar {
+  position: absolute;
+  left: clamp(24px, 5vw, 64px);
+  right: clamp(24px, 5vw, 64px);
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .director-dialogue-box {
   position: relative;
   padding: 13px 44px 16px 20px;
@@ -2251,15 +2209,35 @@ dd {
     transform: translateY(3px);
   }
 }
+/* intro-protocol's only screen with more to show than a line of dialogue — the 3 protocol cards +
+   assignment tags + description. Rendered as its own panel in the scene's upper-left rather than
+   stacked below the dialogue bar, so the bar stays the same size on every director-scene screen
+   (stacking it would grow the bar and reintroduce the reflow problem this whole layout fixes). */
 .director-extra-content {
-  display: contents;
+  position: absolute;
+  top: 104px;
+  left: clamp(24px, 5vw, 64px);
+  width: min(380px, 42%);
+  max-height: calc(100% - 320px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .director-extra-content[hidden] {
   display: none;
 }
 @media (max-width: 700px) {
+  .director-scene {
+    padding-bottom: 190px;
+  }
   .director-scene__sprite {
-    width: 120px;
+    width: 130px;
+  }
+  .director-scene__bar {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
   }
   .director-reveal-rail {
     position: static;
@@ -2270,8 +2248,11 @@ dd {
   .director-reveal-card--chips {
     justify-content: flex-start;
   }
-  .director-scene__fragments {
-    display: none;
+  .director-extra-content {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 12px 0 20px;
   }
 }
 .author-panel {

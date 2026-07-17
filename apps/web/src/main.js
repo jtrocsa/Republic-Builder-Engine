@@ -1507,37 +1507,35 @@ function mainMenuScreen() {
   return `<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="completion-actions">${items}</div></section></main>`;
 }
 
-// Purely decorative ambient words drifting behind the director scene — reuses the same generic
-// archive-vocabulary already shown as reveal chips in briefing step 2 ("record drift" fragments
-// of testimony/artifacts/etc.) rather than inventing new copy or baking specific years/facts into
-// engine markup.
-const DIRECTOR_SCENE_FRAGMENT_WORDS = ["Testimony", "Artifacts", "Images", "Laws", "Journals"];
+// Static, content-free background layer (globe wireframe + pillar glows) evoking the Institute
+// Archive rotunda. Built once since it has no dynamic data. No text/word content here — the
+// contextual reveal system (badges/chips/Codex image, see revealCardMarkup()) is the only
+// word-level content, so nothing appears in the backdrop unrelated to the current line.
+const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidden="true"><svg class="director-scene__map" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice"><circle cx="100" cy="100" r="90"></circle><ellipse cx="100" cy="100" rx="90" ry="30"></ellipse><ellipse cx="100" cy="100" rx="90" ry="60"></ellipse><ellipse cx="100" cy="100" rx="30" ry="90"></ellipse><ellipse cx="100" cy="100" rx="60" ry="90"></ellipse><line x1="10" y1="100" x2="190" y2="100"></line></svg><span class="director-scene__pillar director-scene__pillar--1"></span><span class="director-scene__pillar director-scene__pillar--2"></span><span class="director-scene__pillar director-scene__pillar--3"></span></div>`;
 
-// Static, content-free background layer (globe wireframe + pillar glows + drifting fragment
-// words) evoking the Institute Archive rotunda. Built once since it has no dynamic data.
-const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidden="true"><svg class="director-scene__map" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice"><circle cx="100" cy="100" r="90"></circle><ellipse cx="100" cy="100" rx="90" ry="30"></ellipse><ellipse cx="100" cy="100" rx="90" ry="60"></ellipse><ellipse cx="100" cy="100" rx="30" ry="90"></ellipse><ellipse cx="100" cy="100" rx="60" ry="90"></ellipse><line x1="10" y1="100" x2="190" y2="100"></line></svg><span class="director-scene__pillar director-scene__pillar--1"></span><span class="director-scene__pillar director-scene__pillar--2"></span><span class="director-scene__pillar director-scene__pillar--3"></span><div class="director-scene__fragments">${DIRECTOR_SCENE_FRAGMENT_WORDS.map((word, index) => `<span class="director-scene__fragment" style="--i:${index}">${esc(word)}</span>`).join("")}</div></div>`;
-
-// Director intro scene — Pokémon-"meet the Professor"-style presentation shared by
-// intro-welcome/intro-briefing/intro-protocol. Markup always renders an empty text/rail
-// shell; startIntroTypewriter() (called via requestAnimationFrame right after this HTML is
-// injected, see render()) is the single source of truth for filling it in, whether that's
-// typing a fresh line or instantly restoring a previously-seen step. Keeping that logic in
-// one place avoids the markup and the JS state machine silently drifting out of sync.
+// Director intro scene — full-bleed Pokémon-"meet the Professor"-style presentation shared by
+// intro-welcome/intro-briefing/intro-protocol: the backdrop/sprite fill the whole stage below the
+// chrome bar, and the dialogue box + buttons are a bar anchored to the bottom edge rather than a
+// small card floating mid-page. Markup always renders an empty text/rail shell;
+// startIntroTypewriter() (called via requestAnimationFrame right after this HTML is injected, see
+// render()) is the single source of truth for filling it in, whether that's typing a fresh line or
+// instantly restoring a previously-seen step. Keeping that logic in one place avoids the markup and
+// the JS state machine silently drifting out of sync.
 function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" }) {
-  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1><div class="director-scene__stage"><img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false"><div class="director-reveal-rail" id="directorRevealRail"></div></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="director-extra-content" hidden>${extraContent}</div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></section>`;
+  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage"><img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false"><div class="director-reveal-rail" id="directorRevealRail"></div></div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
 }
 
 function introWelcomeScreen() {
   const s = CHRONICLE_OPENING_DEFAULTS.scenes.welcome;
   const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="intro-briefing">${esc(s.action)} →</button>`;
-  return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: s.eyebrow, title: s.title, buttonsHtml: buttons })}</main>`;
+  return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: s.eyebrow, title: s.title, buttonsHtml: buttons })}</main>`;
 }
 
 function introBriefingScreen() {
   const entries = CHRONICLE_OPENING_DEFAULTS.directorBriefing.entries;
   const entry = entries[briefingStep];
   const buttons = `<button class="btn btn-outline director-back-button" data-action="briefing-back">${esc(entry.secondary)}</button><button class="btn btn-gold director-continue-button" data-action="briefing-next">${esc(entry.action)} →</button>`;
-  return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: entry.eyebrow, title: entry.title, buttonsHtml: buttons })}</main>`;
+  return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: entry.eyebrow, title: entry.title, buttonsHtml: buttons })}</main>`;
 }
 
 function introProtocolScreen() {
@@ -1546,7 +1544,7 @@ function introProtocolScreen() {
   const assignment = CHRONICLE_OPENING_DEFAULTS.assignment;
   const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="identity">${esc(oath.action)} →</button>`;
   const extraContent = `<div class="completion-stats">${protocol.map((p) => `<span><b>${esc(p.number)}</b> ${esc(p.title)} — ${esc(p.body)}</span>`).join("")}</div><div class="completion-stats"><span class="kicker">${esc(assignment.kicker)}</span><span>${esc(assignment.unit)}</span><span>${esc(assignment.title)}</span></div><p>${esc(assignment.description)}</p>`;
-  return `${chrome()}<main class="shell completion-shell">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
+  return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
 }
 
 // Resolves the {stepKey, lines} for whichever intro screen/step is currently active.
