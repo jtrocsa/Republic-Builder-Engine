@@ -101,7 +101,12 @@ export const CHRONICLE_OPENING_DEFAULTS = {
         body: [
           {
             text: "I’m Director Rowan Hale. I run the Chronicle Institute.",
-            reveal: { type: "badge", icon: "✦", label: "The Institute" },
+            reveal: {
+              type: "badge",
+              icon: "✦",
+              label: "The Institute",
+              sublabel: "Where Chroniclers work",
+            },
           },
           {
             text: "We preserve the historical record—and right now, part of it is disappearing.",
@@ -119,7 +124,13 @@ export const CHRONICLE_OPENING_DEFAULTS = {
             text: "We call it record drift: fragments of the past changing, vanishing, or contradicting each other.",
             reveal: {
               type: "chips",
-              items: ["Testimony", "Artifacts", "Images", "Laws", "Journals"],
+              items: [
+                "Testimony · eyewitness accounts",
+                "Artifacts · recovered objects",
+                "Images · period art and photographs",
+                "Laws · statutes and charters",
+                "Journals · firsthand writing",
+              ],
             },
           },
           {
@@ -152,9 +163,14 @@ export const CHRONICLE_OPENING_DEFAULTS = {
         body: [
           {
             text: "Every record you secure updates your Codex—the Archive’s memory.",
-            reveal: { type: "badge", icon: "⌁", label: "The Archive" },
+            reveal: {
+              type: "badge",
+              icon: "⌁",
+              label: "The Archive",
+              sublabel: "Records you secure, kept safe",
+            },
           },
-          { text: "I’ll show you how this works. Follow me." },
+          { text: "I’ll show you how this works." },
         ],
         action: "Accept field protocol",
         secondary: "Previous message",

@@ -2015,15 +2015,16 @@ dd {
 .director-scene__pillar--3 {
   right: 2%;
 }
+/* Sits directly above the dialogue box (inside .director-scene__bar) rather than floating in
+   the stage's top-right corner, so a reveal visually reads as tied to what's being said. */
 .director-reveal-rail {
-  position: absolute;
-  right: 0;
-  top: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 8px;
-  max-width: 230px;
+}
+.director-reveal-rail:empty {
+  display: none;
 }
 .director-reveal-card {
   display: flex;
@@ -2035,7 +2036,17 @@ dd {
   background: rgba(5, 40, 56, 0.9);
   font-size: 0.78rem;
   color: var(--gold-soft);
-  animation: director-reveal-pop 320ms ease-out both;
+  animation: director-reveal-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.director-reveal-badge__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.director-reveal-badge__text em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: rgba(216, 227, 222, 0.7);
 }
 .director-reveal-card--image img {
   width: 26px;
@@ -2119,16 +2130,23 @@ dd {
   color: var(--gold);
   font-size: 0.85rem;
 }
+.director-reveal-badge svg {
+  width: 13px;
+  height: 13px;
+}
 .director-reveal-card--chips {
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   background: none;
   border: none;
   padding: 0;
   gap: 6px;
 }
 .director-reveal-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 5px 11px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -2136,16 +2154,36 @@ dd {
   font-size: 0.74rem;
   color: var(--gold-soft);
   opacity: 0;
-  animation: director-reveal-pop 320ms ease-out both;
+  animation: director-reveal-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+.director-reveal-chip__icon {
+  display: inline-flex;
+  color: var(--gold);
+}
+.director-reveal-chip__icon svg {
+  width: 13px;
+  height: 13px;
+}
+.director-reveal-chip__label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.director-reveal-chip__label em {
+  font-style: normal;
+  font-size: 0.66rem;
+  color: rgba(216, 227, 222, 0.65);
+}
+/* A gentle fade + slight rise, not a bouncy pop — softened per feedback that reveals should
+   read as "fading in" alongside the dialogue rather than popping in all at once. */
 @keyframes director-reveal-pop {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.92);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 /* Bottom-anchored bar holding the dialogue box + Continue/back buttons — the piece that actually
@@ -2163,7 +2201,7 @@ dd {
 }
 .director-dialogue-box {
   position: relative;
-  padding: 13px 44px 16px 20px;
+  padding: 12px 44px 14px 20px;
   border: 2px solid rgba(239, 204, 122, 0.66);
   border-radius: 17px;
   background: rgba(3, 28, 40, 0.98);
@@ -2182,10 +2220,10 @@ dd {
 }
 .director-dialogue-box__text {
   margin: 0;
-  height: 3.6em;
+  height: 3.4em;
   overflow-y: auto;
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 1.15rem;
+  line-height: 1.5;
   color: #f6fffb;
 }
 .director-continue-indicator {
@@ -2227,14 +2265,16 @@ dd {
 .director-extra-content[hidden] {
   display: none;
 }
-/* intro-hallway's cropped/zoomed slice of the institute hub background, framed on the door
-   already drawn at its bottom edge — not a new scene image (see docs/tour-plan.md). Sprite
-   positions are driven by runHallwayWalk() in main.js patching left/top inline, the same
-   direct-DOM-patch convention used for hub/field movement. */
+/* intro-hallway's real Tiled-rendered corridor (renderHallwayTiledMap(), same pattern as the
+   Archive Room's canvas — see docs/decision-log/0030-archive-room-tiled-interior.md) plus a
+   small door-art overlay cropped from the existing institute hub background. Portrait (narrower
+   than tall) since a corridor walked away from camera toward a door reads better tall than the
+   old landscape crop did. Sprite positions are driven by runHallwayWalk() in main.js patching
+   left/top inline, the same direct-DOM-patch convention used for hub/field movement. */
 .hallway-viewport {
   position: relative;
-  width: min(560px, 100%);
-  height: min(340px, 42vh);
+  width: min(300px, 78vw);
+  height: min(560px, 64vh);
   margin: 0 auto 12px;
   overflow: hidden;
   border: 2px solid rgba(239, 204, 122, 0.5);
@@ -2243,16 +2283,16 @@ dd {
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.4);
 }
 /* Corridor framing: dark/teal vignette bands along both edges (echoing .director-scene__pillar's
-   gold/teal glow language) so the tightly-cropped door art reads as a hallway mouth with walls on
-   either side, instead of a flat zoomed-in photo. Pure CSS, no new art. Painted above .hallway-crop
-   via ::before/::after rather than extra DOM nodes. */
+   gold/teal glow language) so the tile art reads as a hallway with walls on either side, since
+   the tileset draws floor/shelving accents but no wall tiles (see decision-log 0030). Pure CSS,
+   no new art. Painted above .hallway-scaler via ::before/::after rather than extra DOM nodes. */
 .hallway-viewport::before,
 .hallway-viewport::after {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 26%;
+  width: 18%;
   z-index: 2;
   pointer-events: none;
 }
@@ -2274,15 +2314,27 @@ dd {
     rgba(4, 20, 28, 0) 100%
   );
 }
-.hallway-crop {
+/* Wraps the tile canvas + door overlay together so runHallwayWalk() can scale both as one unit
+   (the "dolly forward" effect) via a single transform, origin pinned to the door at the top. */
+.hallway-scaler {
   position: absolute;
   inset: 0;
+  transform-origin: 50% 0%;
+}
+.hallway-scaler canvas {
+  image-rendering: pixelated;
+}
+/* Cropped slice of the institute hub background framing just its door, positioned at the far
+   (top) end of the corridor so the walk ends facing the same door the player spawns beside. */
+.hallway-door {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
   background-repeat: no-repeat;
   background-size: 650% auto;
-  /* Anchored on the door's own center (not the image's bottom edge) so zooming in via
-     runHallwayWalk() tightens the frame around the door instead of pushing it out of view. */
   background-position: 29% 92%;
-  transition: background-size 80ms linear;
 }
 .hallway-sprite {
   position: absolute;
@@ -2317,9 +2369,6 @@ dd {
   .scene-fade {
     transition: none;
   }
-  .hallway-crop {
-    transition: none;
-  }
 }
 @media (max-width: 700px) {
   .director-scene {
@@ -2332,15 +2381,6 @@ dd {
     left: 16px;
     right: 16px;
     bottom: 16px;
-  }
-  .director-reveal-rail {
-    position: static;
-    align-items: stretch;
-    max-width: none;
-    margin-bottom: 8px;
-  }
-  .director-reveal-card--chips {
-    justify-content: flex-start;
   }
   .director-extra-content {
     position: static;

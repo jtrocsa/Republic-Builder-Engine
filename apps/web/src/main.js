@@ -72,6 +72,7 @@ import {
 import riverbendTmjRaw from "./content/maps/riverbend-field.tmj?raw";
 import caribbeanTmjRaw from "./content/maps/caribbean-field.tmj?raw";
 import archiveRoomTmjRaw from "./content/maps/archive-room.tmj?raw";
+import hallwayTmjRaw from "./content/maps/hallway.tmj?raw";
 import {
   createStormNavigationGame,
   tickStormNavigationGame,
@@ -96,6 +97,19 @@ const chroniclerPreviewB = new URL("./assets/chronicle-sprites/chronicler-b.png"
 // convention already established for tileset packs, reused here for reveal images).
 const INTRO_REVEAL_IMAGES = {
   codex: new URL("./assets/chronicle-sprites/chronicle-codex.png", import.meta.url).href,
+};
+// Small inline-SVG line icons for the reveal badge/chip system (revealCardMarkup()) — matches
+// the project's existing convention of inline SVG for small UI chrome (e.g. the cursor in
+// global.css) rather than new PNG asset files, since no icon assets exist for these concepts.
+// Keyed by the reveal's primary label (chips strip any " · descriptor" suffix before lookup).
+const DIRECTOR_REVEAL_ICONS = {
+  "The Institute": `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7 10 2l7 5"/><path d="M4 7v9M8 7v9M12 7v9M16 7v9"/><path d="M2 16h16"/><path d="M2 7h16"/></svg>`,
+  "The Archive": `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="15" height="10" rx="1.2"/><path d="M2.5 7l1.5-3.5h12L17.5 7"/><path d="M8 11.2h4"/></svg>`,
+  Testimony: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h14a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-3.5 3v-3H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z"/></svg>`,
+  Artifacts: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5h4M8.5 2.5c-.8 2-2 2.6-2 4.6 0 1.6 1 2.4 1 2.4-2.4.6-3.5 2.6-3.5 4.6 0 2.4 2.5 3.4 6 3.4s6-1 6-3.4c0-2-1.1-4-3.5-4.6 0 0 1-.8 1-2.4 0-2-1.2-2.6-2-4.6"/></svg>`,
+  Images: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="1.2"/><circle cx="7" cy="8" r="1.4"/><path d="M3 15l4.5-4.5 3 3 2.5-3 4 4.5"/></svg>`,
+  Laws: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v14M6 17h8M10 3 4 6M10 3l6 3"/><path d="M4 6 1.5 11a2.7 2.7 0 0 0 5 0L4 6ZM16 6l-2.5 5a2.7 2.7 0 0 0 5 0L16 6Z"/></svg>`,
+  Journals: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5c-1.5-1.2-3.5-1.5-6-1.2v10.7c2.5-.3 4.5 0 6 1.2 1.5-1.2 3.5-1.5 6-1.2V3.8c-2.5-.3-4.5 0-6 1.2Z"/><path d="M10 5v10.7"/></svg>`,
 };
 const atlanticTable = new URL("./assets/maps/atlantic-navigation-table.png", import.meta.url).href;
 // Riverbend Tiled tileset proof of concept (see docs/architecture/POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md,
@@ -175,6 +189,34 @@ function renderArchiveRoomTiledMap() {
   const canvas = document.getElementById("archiveRoomTiledCanvas");
   if (!canvas || canvas.dataset.rendered === "true") return;
   renderTiledMap(canvas, archiveRoomTmj, resolveArchiveRoomTilesetImage).then(() => {
+    canvas.dataset.rendered = "true";
+  });
+}
+// Onboarding hallway corridor — see scripts/generate-hallway-tmj.js. Reuses the exact same three
+// Medieval Tavern sheets as the Archive Room above (the glob calls target identical file paths,
+// so Vite doesn't bundle any additional tileset sheets) for visual continuity between the two
+// Institute interiors. This is a scripted cutscene (runHallwayWalk() in main.js drives the sprite
+// positions directly), so unlike Archive Room there's no HALLWAY_GRID/BLOCK_RECTS/TARGETS —
+// no player movement or collision happens here.
+const hallwayTmj = JSON.parse(hallwayTmjRaw);
+const resolveHallwayTilesetImage = createTilesetImageResolver(
+  import.meta.glob("./assets/tilesets/Medieval Tavern/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  }),
+  import.meta.glob("./assets/tilesets/Medieval Tavern/tile-B-03.png", {
+    eager: true,
+    import: "default",
+  }),
+  import.meta.glob("./assets/tilesets/Medieval Tavern/tile-B-05.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderHallwayTiledMap() {
+  const canvas = document.getElementById("hallwayTiledCanvas");
+  if (!canvas || canvas.dataset.rendered === "true") return;
+  renderTiledMap(canvas, hallwayTmj, resolveHallwayTilesetImage).then(() => {
     canvas.dataset.rendered = "true";
   });
 }
@@ -1558,8 +1600,11 @@ const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidd
 function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "", stageHtml = "" }) {
   const stage =
     stageHtml ||
-    `<img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false"><div class="director-reveal-rail" id="directorRevealRail"></div>`;
-  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${stage}</div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
+    `<img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false">`;
+  // The reveal rail lives here, directly above the dialogue box it's illustrating, rather than
+  // floating in the stage's top-right corner — see docs decision to anchor reveals to what's
+  // being said instead of parking them in a disconnected corner.
+  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${stage}</div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-reveal-rail" id="directorRevealRail"></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
 }
 
 function introWelcomeScreen() {
@@ -1585,13 +1630,16 @@ function introProtocolScreen() {
 }
 
 // The scripted walk from Registration into the Main Hall — reuses directorSceneMarkup()'s
-// bottom dialogue bar (typewriter, Continue indicator) wholesale via its stageHtml override,
-// swapping in a cropped/zoomed slice of the existing institute hub background (framed on the
-// door already drawn at its bottom edge) plus two sprite divs that runHallwayWalk() animates.
-// No Continue/back buttons — the walk itself drives the transition into the Main Hall once it
-// completes (see completeHallwayWalk()), so buttonsHtml is intentionally empty.
+// bottom dialogue bar (typewriter, Continue indicator, reveal rail) wholesale via its stageHtml
+// override, swapping in a real Tiled-rendered corridor (renderHallwayTiledMap(), same
+// renderTiledMap()/createTilesetImageResolver() pattern the Archive Room uses, see
+// docs/decision-log/0030-archive-room-tiled-interior.md) plus a small door-art overlay cropped
+// from the existing institute hub background, framing the same door the player emerges at.
+// Two sprite divs are animated by runHallwayWalk(). No Continue/back buttons — the walk itself
+// drives the transition into the Main Hall once it completes (see completeHallwayWalk()), so
+// buttonsHtml is intentionally empty.
 function introHallwayScreen() {
-  const stageHtml = `<div class="hallway-viewport"><div class="hallway-crop" id="hallwayCrop" style="background-image:url(${instituteHubBackground})"><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%"><img src="${fieldSpriteAssets[progress.profile.appearance === "b" ? "b" : "a"].up.idle}" alt=""></div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%"><img src="${instituteNpcSprites.director}" alt=""></div></div></div><div class="director-reveal-rail" id="directorRevealRail"></div>`;
+  const stageHtml = `<div class="hallway-viewport"><div class="hallway-scaler" id="hallwayScaler"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="A corridor lined with archive record shelving and torches, leading to a door"></canvas><div class="hallway-door" aria-hidden="true" style="background-image:url(${instituteHubBackground})"></div></div><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%"><img src="${fieldSpriteAssets[progress.profile.appearance === "b" ? "b" : "a"].up.idle}" alt=""></div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%"><img src="${instituteNpcSprites.director}" alt=""></div></div>`;
   return `${chrome()}<main class="director-stage">${directorSceneMarkup({
     eyebrow: "Chronicle Institute · Orientation",
     title: "Welcome to the Institute.",
@@ -1638,13 +1686,20 @@ function currentIntroLines() {
 // for future artifact/tool reveals, per the intro reveal rail's existing type-keyed pattern.
 function revealCardMarkup(reveal) {
   if (reveal.type === "chips") {
-    return `<div class="director-reveal-card director-reveal-card--chips">${reveal.items.map((item, index) => `<span class="director-reveal-chip" style="animation-delay:${index * 120}ms">${esc(item)}</span>`).join("")}</div>`;
+    return `<div class="director-reveal-card director-reveal-card--chips">${reveal.items
+      .map((item, index) => {
+        const [primary, descriptor] = item.split(" · ");
+        const icon = DIRECTOR_REVEAL_ICONS[primary] || "";
+        return `<span class="director-reveal-chip" style="animation-delay:${index * 240}ms"><span class="director-reveal-chip__icon" aria-hidden="true">${icon}</span><span class="director-reveal-chip__label">${esc(primary)}${descriptor ? `<em>${esc(descriptor)}</em>` : ""}</span></span>`;
+      })
+      .join("")}</div>`;
   }
   if (reveal.type === "image") {
     const src = INTRO_REVEAL_IMAGES[reveal.src] || "";
     return `<div class="director-reveal-card director-reveal-card--image artifact-reveal"><span class="artifact-reveal__glow" aria-hidden="true"></span><img class="artifact-reveal__art" src="${src}" alt="${esc(reveal.label)}"><span class="artifact-reveal__label">${esc(reveal.label)}</span></div>`;
   }
-  return `<div class="director-reveal-card director-reveal-card--badge"><span class="director-reveal-badge">${esc(reveal.icon || "✦")}</span><span>${esc(reveal.label)}</span></div>`;
+  const icon = DIRECTOR_REVEAL_ICONS[reveal.label];
+  return `<div class="director-reveal-card director-reveal-card--badge"><span class="director-reveal-badge">${icon || esc(reveal.icon || "✦")}</span><span class="director-reveal-badge__text"><span>${esc(reveal.label)}</span>${reveal.sublabel ? `<em>${esc(reveal.sublabel)}</em>` : ""}</span></div>`;
 }
 
 function completeCurrentIntroStep(step) {
@@ -1703,11 +1758,13 @@ function runHallwayWalk(now) {
   const t = Math.min(1, elapsed / duration);
   const playerEl = document.getElementById("hallwayPlayerSprite");
   const directorEl = document.getElementById("hallwayDirectorSprite");
-  const cropEl = document.getElementById("hallwayCrop");
-  // Zoom the tightly-cropped background in further as the walk progresses (a dolly-forward,
-  // not just the sprites sliding over a static image) so it reads as advancing down a corridor
-  // toward the door rather than a fixed zoomed photo with figures moving on top of it.
-  if (cropEl) cropEl.style.backgroundSize = `${650 + t * 260}% auto`;
+  const scalerEl = document.getElementById("hallwayScaler");
+  // Scale the corridor art (tile canvas + door overlay together) up as the walk progresses — a
+  // dolly-forward, not just the sprites sliding over static art — so it reads as advancing down
+  // the corridor toward the door. Origin pinned to the door (top-center of the portrait corridor)
+  // so the door frames tighter rather than sliding out of view, replacing the old
+  // background-size-driven crop zoom now that the art is a canvas, not a background-image.
+  if (scalerEl) scalerEl.style.transform = `scale(${1 + t * 0.35})`;
   // Director leads (higher/further along), player follows a step behind and to one side —
   // a fixed horizontal/vertical offset the whole walk so the two sprites read as single-file
   // "follow me" rather than converging into an overlapping blob by the time they reach the door.
@@ -3140,6 +3197,7 @@ function render() {
     hallwayWalkStartedAt = null;
     hallwayWalkDone = false;
     hallwayWalkFrame = window.requestAnimationFrame(runHallwayWalk);
+    renderHallwayTiledMap();
   }
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {
