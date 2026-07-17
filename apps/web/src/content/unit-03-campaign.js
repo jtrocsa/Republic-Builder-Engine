@@ -2,10 +2,15 @@
  * Unit 3 — Period 3: 1754–1800, "Revolution and Founding."
  *
  * Structural mirror of unit-02-campaign.js. Real, cited historical content
- * for Case A only (case-007, "The Common Cause") — the flagship field-route
- * case covering CED topics 3.1 through 3.6, from the post–Seven Years' War
- * frontier crisis through the Revolution's unevenly extended ideals. Cases
- * 008/009 are explicit future phases and are deliberately not added here.
+ * for case-007 ("The Common Cause") — the flagship field-route case covering
+ * CED topics 3.1 through 3.6, from the post–Seven Years' War frontier crisis
+ * through the Revolution's unevenly extended ideals — and case-008 ("The
+ * Founding Debate"), a lightweight ledger-mechanic case (structurally
+ * mirroring unit-01-campaign.js's EXCHANGE_RECORDS / case-002) covering the
+ * Founding Era, 1783–1789: the Articles of Confederation's weaknesses, the
+ * Constitutional Convention's compromises, the Federalist/Anti-Federalist
+ * ratification debate, and the Bill of Rights. Case-009 remains an explicit
+ * future phase and is deliberately not added here.
  *
  * This unit is also the vehicle for real "Comparison" content — the
  * SKILL_CATEGORIES taxonomy in
@@ -61,6 +66,20 @@ export const UNIT_03 = {
       route: "field",
       summary:
         "Walk the Chronicle Institute's reconstruction of a Revolutionary-era Philadelphia gathering ground, gather seven records spanning a frontier war to a fragile peace, and weigh how unevenly the era's language of liberty was extended — and to whom.",
+    },
+    {
+      id: "case-008",
+      shortTitle: "Founding Debate",
+      title: "The Founding Debate",
+      date: "1783–1789",
+      mapPosition: { left: "52%", top: "34%" },
+      location: "Philadelphia, Pennsylvania · 1783–1789",
+      question:
+        "What did a bankrupt confederation, a secret convention, a fierce war of pamphlets, and a promised bill of rights reveal about how much power a free people should entrust to a new national government — and how they would decide?",
+      mechanic: "Ratification Ledger",
+      route: "founding",
+      summary:
+        "Build a ratification ledger weighing the Articles of Confederation's failures, the Constitutional Convention's compromises, and the Federalist–Anti-Federalist debate that produced the Bill of Rights.",
     },
   ],
 };
@@ -222,5 +241,105 @@ export const CASE_007_SOURCES = [
       "Abigail Adams to John Adams, 31 March – 5 April 1776, Adams Family Papers, Massachusetts Historical Society.",
     externalUrl: "https://founders.archives.gov/documents/Adams/04-01-02-0241",
     reconstruction: "revolution-and-its-promises",
+  },
+];
+
+// Case-008 ("The Founding Debate," 1783–1789) ledger records — structural
+// mirror of unit-01-campaign.js's EXCHANGE_RECORDS / Case 1.02. Each record
+// pairs one real, cited primary source excerpt with a single MCQ; there is no
+// drag-and-drop or field exploration for this case. Covers the Founding
+// Era's central debate: the Articles of Confederation's weaknesses, the
+// Constitutional Convention's compromises, the Federalist/Anti-Federalist
+// ratification fight, and the Bill of Rights it produced. Records 1 and 2
+// are a deliberate contrasting pair — Federalist No. 10 and Brutus No. I
+// arguing opposite conclusions about the same question: how much power a
+// large, diverse republic can safely hold.
+export const FOUNDING_RECORDS = [
+  {
+    id: "founding-federalist-10",
+    label: "Federalist Argument",
+    icon: "📜",
+    sourceTitle: "Federalist No. 10",
+    sourceMeta: "James Madison, writing as \"Publius\" · The Daily Advertiser (New York) · November 22, 1787",
+    excerpt:
+      "By a faction, I understand a number of citizens, whether amounting to a majority or a minority of the whole, who are united and actuated by some common impulse of passion, or of interest, adverse to the rights of other citizens, or to the permanent and aggregate interests of the community… Extend the sphere, and you take in a greater variety of parties and interests; you make it less probable that a majority of the whole will have a common motive to invade the rights of other citizens.",
+    sourceNote:
+      "Madison wrote as \"Publius,\" one of three authors (with Hamilton and Jay) of a newspaper essay series aimed at persuading New York's ratifying convention. Federalist No. 10 argued that a large, diverse republic — not a small one, as many republican theorists of the time assumed — was the strongest defense against the dangers of factional majorities.",
+    question:
+      "According to Madison's argument in this excerpt, why would an extensive republic like the one proposed by the Constitution better control the dangers of faction than a small one?",
+    choices: [
+      "A large republic would contain so many competing interests that no single faction could easily form a tyrannical majority.",
+      "A large republic could ban political parties entirely once ratified.",
+      "A large republic would need a monarch to prevent factions from forming.",
+      "A large republic would eliminate the causes of faction by guaranteeing economic equality.",
+    ],
+    answer: 0,
+    citation:
+      "James Madison, \"The Union as a Safeguard Against Domestic Faction and Insurrection\" [Federalist No. 10], The Daily Advertiser (New York), November 22, 1787; reprinted in The Federalist, ed. Jacob E. Cooke (Middletown, CT: Wesleyan University Press, 1961).",
+  },
+  {
+    id: "founding-brutus-1",
+    label: "Anti-Federalist Argument",
+    icon: "🛡",
+    sourceTitle: "Brutus, No. I",
+    sourceMeta: "Written under the pseudonym \"Brutus,\" traditionally attributed to Robert Yates · New York Journal · October 18, 1787",
+    excerpt:
+      "In a republic, the manners, sentiments, and interests of the people should be similar. If this be not the case, there will be a constant clashing of opinions; and the representatives of one part will be continually striving against those of the other. This will retard the operations of government, and prevent such conclusions as will promote the public good.",
+    sourceNote:
+      "\"Brutus\" was among the most widely reprinted Anti-Federalist essayists, publishing in New York newspapers to oppose ratification. This essay argued directly against the position Madison would make in Federalist No. 10, warning that a republic spread over as vast a territory as the United States could not stay unified enough to govern well or protect liberty.",
+    question:
+      "Brutus's argument in this excerpt most directly opposes which claim later made by James Madison in Federalist No. 10?",
+    choices: [
+      "That a large, diverse republic would better guard against the dangers of factional majorities than a small one.",
+      "That the Constitution should be ratified only after adding a bill of rights.",
+      "That the Senate should represent states equally regardless of population.",
+      "That Congress should have the exclusive power to declare war.",
+    ],
+    answer: 0,
+    citation:
+      "\"Brutus,\" No. I, New York Journal, October 18, 1787; traditionally attributed to Robert Yates, though authorship is debated among historians; reprinted in The Complete Anti-Federalist, ed. Herbert J. Storing (Chicago: University of Chicago Press, 1981), vol. 2.",
+  },
+  {
+    id: "founding-connecticut-compromise",
+    label: "Convention Debate",
+    icon: "⚖",
+    sourceTitle: "Notes of Debates in the Federal Convention",
+    sourceMeta: "Recorded by James Madison during the Convention's closed-door proceedings · June 11, 1787",
+    excerpt:
+      "Mr. Sherman proposed that the proportion of suffrage in the 1st. branch should be according to the respective numbers of free inhabitants; and that in the 2d. branch or Senate, each State should have one vote and no more.",
+    sourceNote:
+      "The Constitutional Convention met in secrecy and kept no official transcript; Madison's private notes, recording speeches in his own summarized third-person wording rather than verbatim quotation, are historians' fullest surviving record of the debates. Roger Sherman's proposal here — proportional representation in one house, equal state representation in the other — became the basis of the Connecticut (Great) Compromise that broke the Convention's deadlock between large and small states in July 1787.",
+    question:
+      "The proposal recorded here, later adopted as the Great Compromise, resolved which central dispute at the Constitutional Convention?",
+    choices: [
+      "Whether the new Congress should have one legislative house or two.",
+      "Whether representation in Congress should favor large states, small states, or both.",
+      "Whether the president should be elected directly by voters.",
+      "Whether slavery should be abolished immediately under the new Constitution.",
+    ],
+    answer: 1,
+    citation:
+      "James Madison, Notes of Debates in the Federal Convention of 1787, entry for June 11, 1787; published as The Records of the Federal Convention of 1787, ed. Max Farrand (New Haven: Yale University Press, 1911), vol. 1.",
+  },
+  {
+    id: "founding-mason-bill-of-rights",
+    label: "Bill of Rights Origin",
+    icon: "📋",
+    sourceTitle: "Objections to This Constitution of Government",
+    sourceMeta: "George Mason, Constitutional Convention delegate who refused to sign · 1787",
+    excerpt:
+      "There is no Declaration of Rights, and the laws of the general government being paramount to the laws and constitution of the several States, the Declaration of Rights in the separate States are no security.",
+    sourceNote:
+      "Mason helped draft Virginia's 1776 Declaration of Rights but refused to sign the finished Constitution in 1787, chiefly over its lack of a federal bill of rights. His widely circulated Objections became a rallying document for Anti-Federalists during ratification and helped force the compromise that produced the Bill of Rights: several states ratified only after Federalists promised to support amendments in the First Congress.",
+    question: "Mason's objection, and its wide circulation during ratification, most directly contributed to which outcome?",
+    choices: [
+      "Several states ratifying the Constitution only after Federalists promised to support a bill of rights in the First Congress.",
+      "The immediate rejection of the Constitution by the Philadelphia Convention.",
+      "The permanent removal of the amendment process from the Constitution.",
+      "Congress abolishing the Senate in response to Anti-Federalist pressure.",
+    ],
+    answer: 0,
+    citation:
+      "George Mason, \"Objections to This Constitution of Government,\" 1787; reprinted in The Papers of George Mason, 1725–1792, ed. Robert A. Rutland (Chapel Hill: University of North Carolina Press, 1970), vol. 3.",
   },
 ];

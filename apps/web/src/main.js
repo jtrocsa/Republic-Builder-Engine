@@ -15,7 +15,12 @@ import {
   TRIANGLE_CARGO,
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
-import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
+import {
+  UNIT_03,
+  CASE_007_SOURCES,
+  CASE_007_LANES,
+  FOUNDING_RECORDS,
+} from "./content/unit-03-campaign.js";
 import {
   loadProgress,
   saveProgress,
@@ -1342,6 +1347,7 @@ const VALID_SCREENS = new Set([
   "reconstruction",
   "ledger",
   "ledger-success",
+  "founding",
   "empire",
   "upload",
   "return-warp",
@@ -3004,6 +3010,15 @@ function ledgerSuccessScreen() {
   return `${chrome()}<main class="ledger-success-shell"><section class="ledger-success-core" aria-live="polite"><p class="kicker">Evidence ledger verified</p><div class="ledger-success-orbit" aria-hidden="true"><i></i><i></i><i></i><span>✓</span></div><h1>Correct record match.</h1><p>Your source interpretations held together. The Archive has confirmed the ledger and is opening a secure transmission channel.</p><div class="ledger-success-steps"><span>Sources read</span><span>Claims checked</span><span>Route verified</span></div></section></main>`;
 }
 
+function foundingScreen() {
+  const activeCase = caseById("case-008");
+  const answers = progress.foundingLedger.answers || {};
+  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · ${esc(activeCase.date)}</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p></section><section class="ledger-list ledger-list--sources">${FOUNDING_RECORDS.map(
+    (record, index) =>
+      `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="founding-${record.id}" data-founding-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`
+  ).join("")}<button class="btn btn-gold" data-action="check-founding">Validate Founding Ledger →</button><p class="feedback" id="foundingFeedback"></p></section></main>`;
+}
+
 function empireScreen() {
   const order = progress.empireOrder || [];
   const byId = Object.fromEntries(EMPIRE_EVIDENCE.map((card) => [card.id, card]));
@@ -3142,6 +3157,9 @@ function render() {
           save();
           render();
         }, 2300);
+        break;
+      case "founding":
+        html = foundingScreen();
         break;
       case "empire":
         html = empireScreen();
@@ -3862,6 +3880,42 @@ function handlePuzzleScreenClick(target, action) {
     } else
       showFeedback(
         "ledgerFeedback",
+        "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
+        "error"
+      );
+    return true;
+  }
+  if (action === "check-founding") {
+    progress.foundingLedger.answers ??= {};
+    document.querySelectorAll("[data-founding-question]:checked").forEach((s) => {
+      progress.foundingLedger.answers[s.dataset.foundingQuestion] = Number(s.value);
+    });
+    const unanswered = FOUNDING_RECORDS.filter(
+      (r) => progress.foundingLedger.answers[r.id] === undefined
+    );
+    if (unanswered.length) {
+      save();
+      showFeedback(
+        "foundingFeedback",
+        "Read and answer every source record before validating the Ledger.",
+        "error"
+      );
+      return true;
+    }
+    const correct = FOUNDING_RECORDS.every(
+      (r) => progress.foundingLedger.answers[r.id] === r.answer
+    );
+    save();
+    if (correct) {
+      playSfx("secure");
+      unlockNext("case-008");
+      progress.pendingUploadCaseId = "case-008";
+      progress.currentScreen = "ledger-success";
+      save();
+      render();
+    } else
+      showFeedback(
+        "foundingFeedback",
         "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
         "error"
       );

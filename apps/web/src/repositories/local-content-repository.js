@@ -53,6 +53,7 @@ export function loadChronicleContent() {
       unit: unit03Campaign.UNIT_03,
       sources: unit03Campaign.CASE_007_SOURCES,
       lanes: unit03Campaign.CASE_007_LANES,
+      foundingRecords: unit03Campaign.FOUNDING_RECORDS,
       mcqQuests: unit03Quests.UNIT_03_MCQ_QUESTS,
       evidenceOrganizingQuests: unit03Quests.UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit03Quests.UNIT_03_SEQUENCING_QUESTS,

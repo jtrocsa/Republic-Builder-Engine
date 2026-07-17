@@ -13,6 +13,7 @@ export const DEFAULT_PROGRESS = {
   revealedContexts: [],
   reconstruction: {},
   exchangeLedger: {},
+  foundingLedger: {},
   empireConnections: {},
   empireOrder: [],
   pendingUploadCaseId: null,
@@ -45,6 +46,7 @@ export function readProgress() {
       responses: { ...DEFAULT_PROGRESS.responses, ...(saved.responses || {}) },
       reconstruction: { ...DEFAULT_PROGRESS.reconstruction, ...(saved.reconstruction || {}) },
       exchangeLedger: { ...DEFAULT_PROGRESS.exchangeLedger, ...(saved.exchangeLedger || {}) },
+      foundingLedger: { ...DEFAULT_PROGRESS.foundingLedger, ...(saved.foundingLedger || {}) },
       sourceActivities: { ...DEFAULT_PROGRESS.sourceActivities, ...(saved.sourceActivities || {}) },
       archiveChallenges: {
         ...DEFAULT_PROGRESS.archiveChallenges,

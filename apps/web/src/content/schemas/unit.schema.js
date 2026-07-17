@@ -4,7 +4,7 @@ import { z } from "zod";
 // `currentScreen = "travel"`, which self-advances to `caseById(id).route`).
 // Zod can't see main.js's route dispatch, so this list is a second source of
 // truth — update it by hand if a new case route is ever added in main.js.
-const CASE_ROUTES = ["field", "ledger", "empire", "triangle"];
+const CASE_ROUTES = ["field", "ledger", "empire", "triangle", "founding"];
 
 const MapPositionSchema = z.object({
   left: z.string().min(1, "mapPosition.left is required"),

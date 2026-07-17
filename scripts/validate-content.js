@@ -257,6 +257,13 @@ function main() {
       content.unit03.archiveChallengeQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-03-campaign.js: FOUNDING_RECORDS",
+      ExchangeRecordsSchema,
+      content.unit03.foundingRecords
+    )
+  );
 
   // Cross-file checks: main.js's caseById()/unitForCase()/sourceById() all
   // search across every unit, so case ids and source ids must be unique

@@ -25,15 +25,16 @@ Unit 2 ("Colonial Crossroads," Period 2: 1607–1754) has left placeholder statu
 
 All content validated via `npm run validate:content` (25/25 schema groups pass). Unit 2 is feature-complete and ready for classroom use.
 
-## 3. Unit 3+: rough shape only
+## 3. Unit 3: flagship + first companion case (DONE as of 2026-07-17)
 
-Deliberately structural, not historical — no primary-source research happens in this document. APUSH's period sequence puts **Period 3 (1754–1800, Revolution and Founding)** immediately after Unit 2's now-complete Period 2 window, making it the natural next chronological unit.
+Unit 3 ("Revolution and Founding," Period 3: 1754–1800) now ships two cases, following Unit 1's own shape (one flagship case plus lightweight companion badge areas) rather than staying a flat single-case unit:
 
-Suggested shape, matching Unit 1's own structure rather than inventing a new one:
+- `case-007` — **Common Cause** ("The Common Cause," 1763–1783) — the flagship field-route case, CSS-drawn scene (no Period-3-appropriate tileset exists in `apps/web/src/assets/tilesets/`; case-007's own header comment documents why).
+- `case-008` — **Founding Debate** ("The Founding Debate," 1783–1789) — a lightweight "ledger" mechanic companion case (new `route: "founding"`, `foundingScreen()`/`check-founding` in `main.js`, structurally mirroring case-002's Exchange Ledger exactly), covering the Articles of Confederation's failures, the Constitutional Convention (Great/Connecticut Compromise), the Federalist/Anti-Federalist ratification debate (Federalist No. 10 vs. Brutus No. I as a deliberate contrasting pair), and the Bill of Rights (George Mason's Objections). 4 real, cited primary-source records in `FOUNDING_RECORDS` (`unit-03-campaign.js`).
 
-- One flagship playable case (mirroring Case 1.01), plus a small number of locked/future companion badge areas (mirroring Atlantic/Hispaniola) — not a flat single-case unit, and not an open-ended number of cases either.
-- A new badge-area name, chosen at authoring time to fit the Institute Archive/Chronotravel/Preservation Case narrative frame already established — not decided here.
-- Real field art from day one if the case needs explorable space: check `apps/web/src/assets/tilesets/` for a tileset pack that actually fits the setting (the same inspect-before-committing discipline that made the Island survival choice work for Unit 1's tropical scene — don't default to whichever pack Unit 2 happened to use if the setting is a poor visual fit).
+Correction to this document's own prior claim: §5 below said Comparison had no real content anywhere — that gap was actually already closed before this section was written (Prince Hall vs. Abigail Adams, tagged Comparison in `UNIT_03_EVIDENCE_ORGANIZING_QUESTS`, per that file's own header comment — landed in the same overnight catalog-expansion pass `ARCHITECTURE-QUICKREF.md` §5 describes). Case-008 does not add new Comparison-tagged quest content — it deliberately mirrors case-002's footprint exactly (no separate Practice Check quest layer; the ledger records are the whole graded mechanic), matching the model case it was scoped against.
+
+**Remaining, not scheduled:** `case-009` (explicitly flagged as a future phase in `unit-03-campaign.js`'s header comment, not authored); a Period-3-appropriate tileset for case-007 if the CSS-drawn-scene fallback is ever revisited.
 
 ## 4. Regression-prevention: keep future content on the current toolkit
 
@@ -47,7 +48,7 @@ Two things landed this session that future content should build on, not regress 
 `QUEST-TYPE-ARCHITECTURE.md` §5 already named and explicitly deferred four quest types beyond the current set: **Thesis/argument-building**, **Causation-as-node-graph**, **role-play/simulation**, and **SAQ/LEQ-as-quest-format**. Listing them here only to connect them to *future units*, not to commit to building them:
 
 - **Causation-as-node-graph** pairs naturally with a unit whose central question is explicitly causal (a Period 3 revolution-causes unit is a plausible fit).
-- **Thesis/argument-building** pairs naturally with an SAQ/LEQ-heavy unit, and is also the most direct way to give **Comparison** a dedicated interaction shape — none of the four current quest types have a comparison/paired-contrast interaction today, which is part of why Comparison has no real content yet (see `docs/content-guide/skill-taxonomy.md`).
+- **Thesis/argument-building** pairs naturally with an SAQ/LEQ-heavy unit, and is also the most direct way to give **Comparison** a dedicated interaction shape — none of the four current quest types have a comparison/paired-contrast interaction today (Comparison-tagged content today rides inside the generic evidence-organizing quest type — e.g. Unit 3's Hall/Adams quest — rather than having its own purpose-built mechanic; see `docs/content-guide/skill-taxonomy.md`).
 - **Role-play/simulation** and **SAQ/LEQ-as-quest-format** have no obvious unit-specific pull yet; revisit when one emerges, not on a schedule.
 
 None of these are scheduled work. Treat this section as a pointer for whoever plans the unit these might attach to, not a queued task.
