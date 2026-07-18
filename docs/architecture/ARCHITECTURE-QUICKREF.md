@@ -106,7 +106,7 @@ Four confirmed placeholder-stub documents (verbatim "Recovered placeholder file 
 ## 12. Longer documents (consult only when you need the rationale)
 
 - `docs/architecture/CURRENT-REPOSITORY-AUDIT.md` — verified current-state findings.
-- `docs/architecture/art-and-map-style-guide.md` — living reference for canonical tileset-element dictionary (which pack/sheet supplies grass, trees, buildings, etc., per historical setting). Updated during planning passes. Pairs with `docs/decision-log/0031-art-style-unification.md`.
+- `docs/architecture/art-and-map-style-guide.md` — living reference for canonical tileset-element dictionary (which pack/sheet supplies grass, trees, buildings, etc., per historical setting). Updated during planning passes. Pairs with `docs/decision-log/0031-art-style-unification.md` and `docs/decision-log/0032-common-cause-tiled-rebuild.md` (the latter closed the guide's one Gap Register entry — case-007's Common Cause field is now a real `.tmj`, not CSS-drawn).
 - `docs/architecture/THIRD-PARTY-TOOLING-AUDIT.md` — dependency research and verdicts.
 - `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` — the long-term multi-subject-platform design.
 - `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — the binding near-term scope cut; when it disagrees with the proposal on what to build _now_, follow this document.

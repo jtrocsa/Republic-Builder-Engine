@@ -7988,13 +7988,11 @@ button:hover,
 }
 
 /* -------------------------------------------------------------------------
-   Unit 3 field: The Common Cause (case-007) — CSS-drawn scene, no tileset.
-   No pack under assets/tilesets/ fits an 1760s-70s colonial Philadelphia
-   street; this reuses the pre-Tiled, CSS-drawn technique instead of forcing
-   a mismatched tileset (see main.js's UNIT3_FIELD_BLOCKS comment and
-   docs/decision-log/0029-caribbean-tiled-rebuild.md for why Tiled was
-   skipped here). Dry land, not water — suppress the Caribbean's water
-   gradient/ripple layers the same way Unit 2 already does.
+   Unit 3 field: The Common Cause (case-007) — Tiled rebuild, see
+   docs/decision-log/0032-common-cause-tiled-rebuild.md. Dry land, not water —
+   suppress the Caribbean's water gradient/ripple layers the same way Unit 2
+   already does; the flat background color is just a pre-paint fallback
+   behind the canvas.
    ------------------------------------------------------------------------- */
 .field-world--unit-03 {
   background: #8a8062 !important;
@@ -8002,77 +8000,4 @@ button:hover,
 .field-world--unit-03::before,
 .field-world--unit-03::after {
   display: none !important;
-}
-.commoncause-ground {
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 40px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 40px),
-    radial-gradient(circle at 22% 18%, rgba(233, 213, 163, 0.1), transparent 42%),
-    linear-gradient(160deg, #8d8267 0%, #6f6650 55%, #574f3c 100%);
-}
-.commoncause-building {
-  position: absolute;
-  z-index: 3;
-  border: 3px solid #241c14;
-  border-radius: 7px;
-  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: flex-end;
-  padding: 5px 7px;
-}
-.commoncause-building b {
-  display: block;
-  color: #f7e9c4;
-  font:
-    700 10px "Cinzel",
-    serif;
-  line-height: 1.15;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
-  pointer-events: none;
-}
-.commoncause-building--print-shop {
-  background: linear-gradient(180deg, #8a5a3c, #5c3a24);
-}
-.commoncause-building--assembly-hall {
-  background: linear-gradient(180deg, #cdbd8f, #93805a);
-  border-color: #362e1e;
-}
-.commoncause-building--statehouse-steps {
-  background: repeating-linear-gradient(180deg, #a99a76 0 6px, #8e8064 6px 12px);
-  border-style: dashed;
-}
-.commoncause-building--chapel {
-  background: linear-gradient(180deg, #ece2c8, #bcae83);
-}
-.commoncause-building--market-stalls {
-  background: repeating-linear-gradient(90deg, #6d3f22 0 10px, #a9673a 10px 20px);
-}
-.commoncause-building--town-well {
-  border-radius: 50%;
-  background: radial-gradient(circle, #8b9998, #445553);
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.commoncause-building--liberty-pole {
-  background: linear-gradient(180deg, #64492c, #332415);
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.commoncause-building--wharf {
-  background: linear-gradient(180deg, #75613f, #493924);
-}
-.commoncause-building--frontier-dispatch-post {
-  background: linear-gradient(180deg, #5f4e35, #3a2c1c);
-}
-.commoncause-building--family-residence {
-  background: linear-gradient(180deg, #ab6244, #703c28);
-}
-.commoncause-building--town-well b,
-.commoncause-building--liberty-pole b {
-  font-size: 8px;
-  text-align: center;
 }
