@@ -29,7 +29,7 @@ export const UNIT_01 = {
       shortTitle: "Caribbean",
       title: "Case 1.01 — The Atlantic Crossroads",
       date: "1493",
-      mapPosition: { left: "28.5%", top: "64.5%" },
+      mapPosition: { lat: 15.3, lon: -61.4 },
       location: "Caribbean · 1493",
       question: "How did early contact begin to reshape societies on both sides of the Atlantic?",
       mechanic: "Record Reconstruction",
@@ -42,7 +42,7 @@ export const UNIT_01 = {
       shortTitle: "Atlantic Routes",
       title: "Case 1.02 — The Exchange Ledger",
       date: "1493–1540",
-      mapPosition: { left: "48.5%", top: "51%" },
+      mapPosition: { lat: 30, lon: -45 },
       location: "Atlantic Ocean · c. 1493–1540",
       question:
         "How did the movement of crops, diseases, animals, and people transform the Atlantic world?",
@@ -56,7 +56,7 @@ export const UNIT_01 = {
       shortTitle: "Hispaniola",
       title: "Case 1.03 — Empire’s Foundations",
       date: "1502",
-      mapPosition: { left: "31.7%", top: "67.5%" },
+      mapPosition: { lat: 18.48, lon: -69.93 },
       location: "Spanish Caribbean · c. 1502",
       question:
         "How did conquest and colonization create new systems of labor, power, and social hierarchy?",

@@ -17,7 +17,7 @@ const validCase = {
   shortTitle: "Caribbean",
   title: "Case 1.01 — The Atlantic Crossroads",
   date: "1493",
-  mapPosition: { left: "28.5%", top: "64.5%" },
+  mapPosition: { lat: 15.3, lon: -61.4 },
   location: "Caribbean · 1493",
   question: "How did early contact begin to reshape societies?",
   mechanic: "Record Reconstruction",

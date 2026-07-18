@@ -67,6 +67,9 @@ import {
 } from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
+import { landPathD, projectPoint } from "./engine/geo-projection.js";
+import landCoastlines from "./content/maps/land-coastlines.json";
+import { MAP_VIEWS, UNIT_MAP_VIEW, DEFAULT_MAP_VIEW } from "./content/maps/navigation-table-views.js";
 import {
   playSfx,
   playQuestSfx,
@@ -116,7 +119,6 @@ const DIRECTOR_REVEAL_ICONS = {
   Laws: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v14M6 17h8M10 3 4 6M10 3l6 3"/><path d="M4 6 1.5 11a2.7 2.7 0 0 0 5 0L4 6ZM16 6l-2.5 5a2.7 2.7 0 0 0 5 0L16 6Z"/></svg>`,
   Journals: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5c-1.5-1.2-3.5-1.5-6-1.2v10.7c2.5-.3 4.5 0 6 1.2 1.5-1.2 3.5-1.5 6-1.2V3.8c-2.5-.3-4.5 0-6 1.2Z"/><path d="M10 5v10.7"/></svg>`,
 };
-const atlanticTable = new URL("./assets/maps/atlantic-navigation-table.png", import.meta.url).href;
 // Riverbend Tiled tileset proof of concept (see docs/architecture/POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md,
 // 2026-07-10 entry) — replaces the static placeholder PNG above with a composited .tmj map.
 // Scoped to this one map only; not a project-wide Tiled adoption.
@@ -2271,9 +2273,63 @@ function investigationScreen() {
   return `${chrome()}<main class="shell activity-shell quest-practice-shell investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to field</button><p class="kicker">${esc(source.type)} · Investigation Challenge</p><h1>Begin Investigation</h1><p>Predict this record's sourcing before you open its full worksheet.</p></section><section class="activity-board quest-practice-board">${quest ? `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(questType, quest, state)}${feedback}</div>` : '<p class="bank-empty">This record\'s Investigation Challenge is still being cataloged.</p>'}${complete ? `<button class="btn btn-gold" data-action="investigation-continue" data-source="${source.id}">Source Unlocked · Continue →</button>` : ""}</section></main>${authorPanel()}`;
 }
 
-function caseMarker(c) {
+// Fixed SVG coordinate space for the Navigation Table map — roughly matches
+// .atlas-table's ~1.58:1 CSS aspect-ratio. Case markers/labels/route-thread are
+// projected into this same space (as percentages) so they always line up with
+// the coastline regardless of which unit's MAP_VIEWS bounds is active.
+const NAV_TABLE_VIEWPORT = { width: 1000, height: 620 };
+
+function xyToPercent(xy, viewport) {
+  return { left: `${(xy.x / viewport.width) * 100}%`, top: `${(xy.y / viewport.height) * 100}%` };
+}
+
+// Two cases can legitimately share (near-)identical real-world coordinates —
+// e.g. Common Cause and Founding Debate are both Philadelphia — which would
+// otherwise stack their markers exactly on top of each other and make the
+// bottom one unclickable. This nudges only such coincident markers apart in
+// pixel space, purely for map legibility; it never touches mapPosition itself,
+// so the underlying geography stays accurate.
+function declutterMarkerPositions(cases, bounds, viewport) {
+  const CLUSTER_RADIUS = 30;
+  const SPREAD_RADIUS = 20;
+  const projected = cases.map((c) => ({
+    id: c.id,
+    ...projectPoint([c.mapPosition.lon, c.mapPosition.lat], bounds, viewport),
+  }));
+  const positions = new Map();
+  const placed = new Set();
+  for (const p of projected) {
+    if (placed.has(p.id)) continue;
+    const cluster = projected.filter(
+      (q) => !placed.has(q.id) && Math.hypot(q.x - p.x, q.y - p.y) < CLUSTER_RADIUS
+    );
+    cluster.forEach((q) => placed.add(q.id));
+    if (cluster.length === 1) {
+      positions.set(p.id, { x: p.x, y: p.y });
+      continue;
+    }
+    const cx = cluster.reduce((sum, q) => sum + q.x, 0) / cluster.length;
+    const cy = cluster.reduce((sum, q) => sum + q.y, 0) / cluster.length;
+    cluster.forEach((q, i) => {
+      const angle = (i / cluster.length) * Math.PI * 2 - Math.PI / 2;
+      positions.set(q.id, {
+        x: cx + Math.cos(angle) * SPREAD_RADIUS,
+        y: cy + Math.sin(angle) * SPREAD_RADIUS,
+      });
+    });
+  }
+  return positions;
+}
+
+function atlasSvgMarkup(view, viewport, ariaLabel) {
+  const landD = landPathD(landCoastlines.rings, view.bounds, viewport);
+  return `<svg class="atlas-svg" viewBox="0 0 ${viewport.width} ${viewport.height}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${esc(ariaLabel)}"><rect class="atlas-ocean" width="${viewport.width}" height="${viewport.height}" /><path class="atlas-land" d="${landD}" /></svg>`;
+}
+
+function caseMarker(c, xy, viewport) {
   const state = isComplete(c.id) ? "complete" : isUnlocked(c.id) ? "available" : "locked";
-  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${c.mapPosition.left};top:${c.mapPosition.top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(c.title)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
+  const { left, top } = xyToPercent(xy, viewport);
+  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(c.title)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
 }
 
 // Whether every unit-level Archive Challenge (unit.archiveChallenges[] — bonus
@@ -2288,12 +2344,6 @@ const unitArchiveChallengesComplete = (unit) =>
 
 const unitReadyForReview = (unit) =>
   unit.cases.every((c) => isComplete(c.id)) && unitArchiveChallengesComplete(unit);
-
-const UNIT_MAP_ART = {
-  "unit-01": atlanticTable,
-  // Placeholder: reuses the Atlantic table until dedicated Unit 2 navigation art exists.
-  "unit-02": atlanticTable,
-};
 
 function unitTabs(selectedUnit) {
   return `<div class="archive-legend archive-unit-tabs">${UNITS.map((unit) => {
@@ -2318,7 +2368,21 @@ function archiveScreen() {
     selected.route === "field"
       ? `${countEvidence(selected.id)}/${sourcesForCase(selected.id).length || 3} evidence records secured`
       : selected.question;
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the Atlantic world. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map"><img src="${UNIT_MAP_ART[selectedUnit.id] || atlanticTable}" alt="Map of the Atlantic world showing eastern North America, Caribbean, Europe, Africa, and the Atlantic Ocean"><div class="atlas-label label-atlantic">ATLANTIC OCEAN</div>${selectedUnit.cases.filter((c) => c.navigationTableVisible !== false).map(caseMarker).join("")}<div class="route-thread ${progress.selectedCaseId === "case-002" ? "route-thread--atlantic" : ""}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+  const view = MAP_VIEWS[UNIT_MAP_VIEW[selectedUnit.id]] || MAP_VIEWS[DEFAULT_MAP_VIEW];
+  const viewport = NAV_TABLE_VIEWPORT;
+  const labelsMarkup = view.labels
+    .map((l) => {
+      const { x, y } = projectPoint([l.lon, l.lat], view.bounds, viewport);
+      return `<div class="atlas-label" style="left:${(x / viewport.width) * 100}%;top:${(y / viewport.height) * 100}%">${esc(l.text)}</div>`;
+    })
+    .join("");
+  const visibleCases = selectedUnit.cases.filter((c) => c.navigationTableVisible !== false);
+  const markerPositions = declutterMarkerPositions(visibleCases, view.bounds, viewport);
+  const threadXY =
+    markerPositions.get(selected.id) ||
+    projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
+  const { left: threadLeft, top: threadTop } = xyToPercent(threadXY, viewport);
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the map. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
@@ -3003,7 +3067,7 @@ function triangleScreen() {
 function exchangeLedgerScreen() {
   const answers = progress.exchangeLedger.answers || {};
   const allAnswered = EXCHANGE_RECORDS.every((record) => answers[record.id] !== undefined);
-  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>The Exchange Ledger</h1><p>${esc(caseById("case-002").question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini"><img src="${atlanticTable}" alt="Atlantic map used for Exchange Ledger"><div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${EXCHANGE_RECORDS.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`).join("")}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? "" : ""}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
+  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>The Exchange Ledger</h1><p>${esc(caseById("case-002").question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini">${atlasSvgMarkup(MAP_VIEWS["atlantic-wide"], NAV_TABLE_VIEWPORT, "Atlantic map used for Exchange Ledger")}<div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${EXCHANGE_RECORDS.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`).join("")}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? "" : ""}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
 }
 
 function ledgerSuccessScreen() {

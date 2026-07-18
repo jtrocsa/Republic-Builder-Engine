@@ -58,7 +58,7 @@ export const UNIT_03 = {
       shortTitle: "Common Cause",
       title: "The Common Cause",
       date: "1763–1783",
-      mapPosition: { left: "38%", top: "46%" },
+      mapPosition: { lat: 39.95, lon: -75.16 },
       location: "Philadelphia, Pennsylvania · 1763–1783",
       question:
         "What did a frontier war, a farmer's protest, a King's offer of freedom, and rival appeals to liberty reveal about who could claim the Revolution's promise — and who was left still claiming it?",
@@ -72,7 +72,7 @@ export const UNIT_03 = {
       shortTitle: "Founding Debate",
       title: "The Founding Debate",
       date: "1783–1789",
-      mapPosition: { left: "52%", top: "34%" },
+      mapPosition: { lat: 39.95, lon: -75.16 },
       location: "Philadelphia, Pennsylvania · 1783–1789",
       question:
         "What did a bankrupt confederation, a secret convention, a fierce war of pamphlets, and a promised bill of rights reveal about how much power a free people should entrust to a new national government — and how they would decide?",

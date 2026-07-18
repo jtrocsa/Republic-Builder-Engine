@@ -35,7 +35,7 @@ export const UNIT_02 = {
       shortTitle: "Riverbend",
       title: "The Riverbend Settlement",
       date: "1619",
-      mapPosition: { left: "26%", top: "34%" },
+      mapPosition: { lat: 37.24, lon: -76.78 },
       location: "Chesapeake tidewater, Virginia · 1619–1630",
       question:
         "What do a land charter, a servant's letter, and a wharf ledger reveal about who did this settlement's work and who held its power?",
@@ -49,7 +49,7 @@ export const UNIT_02 = {
       shortTitle: "Triangle Ledger",
       title: "The Triangle Ledger",
       date: "1732",
-      mapPosition: { left: "52%", top: "52%" },
+      mapPosition: { lat: 13.1, lon: -59.6 },
       location: "The Atlantic circuit",
       question:
         "What did each leg of the transatlantic trade actually carry, and who bore its human and economic costs?",
@@ -67,7 +67,7 @@ export const UNIT_02 = {
       shortTitle: "Charter & Compact",
       title: "Charter & Compact",
       date: "1607–1754",
-      mapPosition: { left: "30%", top: "20%" },
+      mapPosition: { lat: 42.4, lon: -71.1 },
       location: "The thirteen colonies",
       question:
         "What do a town covenant, a headright grant, an indenture, a liberty-of-conscience clause, a grain manifest, and a school law reveal about the different societies colonists built in British North America?",

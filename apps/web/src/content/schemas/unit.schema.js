@@ -7,8 +7,8 @@ import { z } from "zod";
 const CASE_ROUTES = ["field", "ledger", "empire", "triangle", "founding"];
 
 const MapPositionSchema = z.object({
-  left: z.string().min(1, "mapPosition.left is required"),
-  top: z.string().min(1, "mapPosition.top is required"),
+  lat: z.number().min(-90).max(90),
+  lon: z.number().min(-180).max(180),
 });
 
 // BRAND's own field values are a known, deliberately-untouched cleanup item
