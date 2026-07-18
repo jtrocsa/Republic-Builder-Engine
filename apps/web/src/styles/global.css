@@ -571,15 +571,23 @@ select {
   margin: 0 auto;
   border-radius: 12px;
   clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
+  /* Three repeating-gradient wave bands (near/mid/far) at different angles/tile sizes, layered
+     between the sky-tint and the base water gradient. No `animation` here: background-position
+     is set inline per frame from waveBackgroundPosition() in storm-navigation.js, computed
+     directly from state.elapsedMs — see that module's file-header note on why a CSS keyframe
+     can't survive the per-frame full-innerHTML redraw this mini-game does. */
   background:
     linear-gradient(180deg, rgba(199, 231, 237, 0.4) 0%, rgba(18, 76, 94, 0.1) 16%, transparent 32%),
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.055) 0 3px, transparent 3px 26px),
+    repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 34px),
+    repeating-linear-gradient(122deg, rgba(255, 255, 255, 0.05) 0 3px, transparent 3px 52px),
+    repeating-linear-gradient(105deg, rgba(255, 255, 255, 0.035) 0 4px, transparent 4px 78px),
     linear-gradient(180deg, #0a3747 0%, #124c5e 55%, #0e5871 100%);
   background-size:
     100% 100%,
-    140% 240px,
+    160% 200px,
+    160% 340px,
+    160% 520px,
     100% 100%;
-  animation: stormCurrent 2.6s linear infinite;
 }
 .storm-clouds {
   position: absolute;
@@ -616,19 +624,23 @@ select {
   opacity: 0.7;
   transform: translateX(var(--parallax-px, 0px));
 }
-@keyframes stormCurrent {
-  from {
-    background-position:
-      0 0,
-      0 0,
-      0 0;
-  }
-  to {
-    background-position:
-      0 0,
-      0 240px,
-      0 0;
-  }
+/* Rain and lightning: opacity (and rain's scroll position) are set inline per frame from
+   rainStyle()/lightningOpacity() in storm-navigation.js, both pure functions of state.elapsedMs
+   and the shared stormIntensity() curve — near-absent during the calm opening, building as the
+   storm develops. Both pointer-events:none so they never intercept the Port/Starboard buttons. */
+.storm-rain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(115deg, rgba(220, 235, 240, 0.55) 0 1px, transparent 1px 22px);
+  background-size: 140% 240px;
+}
+.storm-lightning {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #eaf6ff;
+  mix-blend-mode: screen; /* brightens the scene without hiding shapes underneath */
 }
 .storm-horizon {
   position: absolute;
@@ -643,21 +655,14 @@ select {
   position: absolute;
   bottom: 22px;
   /* No transition on `left`: position now comes from steerShip's real per-frame physics
-     (already smooth at 60fps), so re-easing it here would just add lag/overshoot. */
+     (already smooth at 60fps), so re-easing it here would just add lag/overshoot. --bob-px
+     (set inline from shipBobPx(state.elapsedMs) in storm-navigation.js) replaces a CSS bob
+     keyframe for the same reason the water lost its keyframe — see that module's file-header
+     note on the per-frame full-innerHTML redraw. */
   left: calc(50% + var(--lane-offset, 0%));
   width: 84px;
   height: 108px;
-  transform: translateX(-50%);
-  animation: shipBob 1.8s ease-in-out infinite;
-}
-@keyframes shipBob {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  50% {
-    transform: translateX(-50%) translateY(-4px);
-  }
+  transform: translateX(-50%) translateY(var(--bob-px, 0px));
 }
 .storm-ship-wake {
   position: absolute;
@@ -678,15 +683,35 @@ select {
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
   /* --bank (set inline from state.playerVelocityX) banks the ship into a turn and levels out
      as it glides to a stop; lives on this inner element rather than .storm-ship so it doesn't
-     fight that element's own transform (translateX centering + the shipBob idle animation). */
+     fight that element's own transform (translateX centering + the --bob-px idle bob). */
   transform: rotate(var(--bank, 0deg));
   transition: transform 0.12s ease-out;
 }
+/* --bob-px/--sway-deg (set inline from hazardBobSway() in storm-navigation.js, phased per
+   hazard.id so instances don't bob in lockstep) make each hazard read as floating on real
+   water. opacity fades a hazard in over the first quarter of its approach (--p up to 0.25)
+   rather than popping in fully-opaque at the horizon; the danger zone near the ship (p>0.25)
+   is always fully opaque, so reaction time/fairness near the hit boundary is unaffected. */
 .storm-hazard {
   position: absolute;
   left: calc(50% + (var(--lane-offset, 0%) * var(--p, 0)));
   top: calc(4% + (var(--p, 0) * 74%));
-  transform: translate(-50%, -50%) scale(calc(0.3 + (var(--p, 0) * 1)));
+  opacity: clamp(0, calc(var(--p, 0) / 0.25), 1);
+  transform: translate(-50%, calc(-50% + var(--bob-px, 0px))) scale(calc(0.3 + (var(--p, 0) * 1)))
+    rotate(var(--sway-deg, 0deg));
+}
+.storm-hazard-wake {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 46px;
+  height: 20px;
+  transform: translateX(-50%);
+  /* A thin ripple ring, not a solid blob like .storm-ship-wake — rock.svg/wreckage.svg already
+     bake in their own foam ellipse, so a second solid blob would double up; a ring reads as a
+     water-disturbance halo around any hazard kind and doubles as an outer eddy for whirlpools. */
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 255, 255, 0.3) 62%, transparent 75%);
+  border-radius: 50%;
 }
 .storm-hazard-art {
   display: block;
