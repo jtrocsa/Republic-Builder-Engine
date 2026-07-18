@@ -32,17 +32,31 @@ function escapeHtml(value) {
 }
 
 export const DEFAULT_CARGO_HOLDS = [
-  { id: "foodstuffs", label: "Foodstuffs Hold" },
-  { id: "materials-specimens", label: "Raw Materials & Specimens Hold" },
+  { id: "foodstuffs", label: "Food and Crops" },
+  { id: "materials-specimens", label: "Materials and Items" },
 ];
 
 export const DEFAULT_CARGO_GOODS = [
   { id: "maize", label: "🌽 Maize", holdId: "foodstuffs" },
   { id: "cassava", label: "🍠 Cassava", holdId: "foodstuffs" },
   { id: "pineapple", label: "🍍 Pineapple", holdId: "foodstuffs" },
+  { id: "peanuts", label: "🥜 Peanuts", holdId: "foodstuffs" },
+  { id: "chili-peppers", label: "🌶️ Chili peppers", holdId: "foodstuffs" },
+  { id: "cacao-beans", label: "🍫 Cacao beans", holdId: "foodstuffs" },
+  { id: "squash", label: "🎃 Squash", holdId: "foodstuffs" },
+  { id: "common-beans", label: "🫘 Common beans", holdId: "foodstuffs" },
+  { id: "papaya", label: "🥭 Papaya", holdId: "foodstuffs" },
+  { id: "guava", label: "🍈 Guava", holdId: "foodstuffs" },
   { id: "cotton", label: "🧺 Raw cotton", holdId: "materials-specimens" },
   { id: "gold-ore", label: "⛏ Gold ore samples", holdId: "materials-specimens" },
   { id: "tobacco-leaf", label: "🌿 Tobacco leaf", holdId: "materials-specimens" },
+  { id: "cochineal-dye", label: "🔴 Cochineal dye", holdId: "materials-specimens" },
+  { id: "henequen-fiber", label: "🧵 Henequen fiber", holdId: "materials-specimens" },
+  { id: "mahogany-timber", label: "🪵 Mahogany timber", holdId: "materials-specimens" },
+  { id: "tortoiseshell", label: "🐢 Tortoiseshell", holdId: "materials-specimens" },
+  { id: "pearls", label: "🦪 Pearls", holdId: "materials-specimens" },
+  { id: "copper-ore", label: "🔶 Copper ore", holdId: "materials-specimens" },
+  { id: "woven-hammock", label: "🪢 Woven hammock", holdId: "materials-specimens" },
 ];
 
 /**
@@ -51,7 +65,7 @@ export const DEFAULT_CARGO_GOODS = [
 export function createCargoSortingGame({
   goods = DEFAULT_CARGO_GOODS,
   holds = DEFAULT_CARGO_HOLDS,
-  durationMs = 45000,
+  durationMs = 90000,
 } = {}) {
   return {
     goods,
@@ -93,30 +107,39 @@ export function isCargoSortingComplete(state) {
   return state.goods.every((good) => state.placements[good.id] === good.holdId);
 }
 
+function cargoGoodChip(good, { className, placedInHoldId } = {}) {
+  const classes = ["cargo-good", className].filter(Boolean).join(" ");
+  return `<article class="${classes}" draggable="true" data-cargo-good="${escapeHtml(good.id)}"${
+    placedInHoldId ? ` data-placed-in="${escapeHtml(placedInHoldId)}"` : ""
+  }>${escapeHtml(good.label)}</article>`;
+}
+
 /**
  * @param {ReturnType<typeof createCargoSortingGame>} state
  */
 export function renderCargoSortingGame(state) {
   const secondsLeft = Math.ceil(state.remainingMs / 1000);
+  const unplacedGoods = state.goods.filter((good) => !(good.id in state.placements));
 
   return `<section class="mini-game mini-game-cargo-sorting" data-mini-game="cargo-sorting">
   <p class="mini-game-timer">${state.running ? `Time remaining: ${secondsLeft}s` : "Time's up!"}</p>
   <div class="cargo-goods">
-    ${state.goods
-      .map((good) => {
-        const placedHoldId = state.placements[good.id];
-        return `<article class="cargo-good" draggable="true" data-cargo-good="${escapeHtml(good.id)}"${
-          placedHoldId ? ` data-placed-in="${escapeHtml(placedHoldId)}"` : ""
-        }>${escapeHtml(good.label)}</article>`;
-      })
-      .join("")}
+    ${unplacedGoods.map((good) => cargoGoodChip(good)).join("")}
   </div>
   <div class="cargo-holds">
     ${state.holds
-      .map(
-        (hold) =>
-          `<div class="cargo-hold" data-cargo-hold="${escapeHtml(hold.id)}"><h4>${escapeHtml(hold.label)}</h4></div>`,
-      )
+      .map((hold) => {
+        const goodsInHold = state.goods.filter((good) => state.placements[good.id] === hold.id);
+        const items = goodsInHold
+          .map((good) =>
+            cargoGoodChip(good, {
+              className: `cargo-hold-item ${good.holdId === hold.id ? "is-correct" : "is-incorrect"}`,
+              placedInHoldId: hold.id,
+            }),
+          )
+          .join("");
+        return `<div class="cargo-hold" data-cargo-hold="${escapeHtml(hold.id)}"><h4>${escapeHtml(hold.label)}</h4><div class="cargo-hold-items">${items}</div></div>`;
+      })
       .join("")}
   </div>
   <p class="cargo-score">Sorted: ${state.sortedCount} / ${state.goods.length}</p>

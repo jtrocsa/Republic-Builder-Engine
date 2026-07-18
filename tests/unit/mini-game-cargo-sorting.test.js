@@ -15,7 +15,7 @@ describe("createCargoSortingGame", () => {
     expect(state.running).toBe(true);
     expect(state.placements).toEqual({});
     expect(state.sortedCount).toBe(0);
-    expect(state.remainingMs).toBe(45000);
+    expect(state.remainingMs).toBe(90000);
     expect(state.goods).toBe(DEFAULT_CARGO_GOODS);
     expect(state.holds).toBe(DEFAULT_CARGO_HOLDS);
   });
@@ -116,8 +116,31 @@ describe("renderCargoSortingGame", () => {
     for (const good of DEFAULT_CARGO_GOODS) {
       expect(html).toContain(good.label);
     }
-    expect(html).toContain("Foodstuffs Hold");
-    expect(html).toContain("Raw Materials &amp; Specimens Hold");
+    expect(html).toContain("Food and Crops");
+    expect(html).toContain("Materials and Items");
+  });
+
+  it("moves a placed good out of the tray and into its hold's markup (normal case)", () => {
+    const state = placeCargo(createCargoSortingGame(), "maize", "foodstuffs");
+    const html = renderCargoSortingGame(state);
+    const foodHoldMarkup = html.split('data-cargo-hold="foodstuffs"')[1].split("</div>")[0];
+    expect(foodHoldMarkup).toContain("Maize");
+
+    const trayMarkup = html.split('<div class="cargo-goods">')[1].split("</div>")[0];
+    expect(trayMarkup).not.toContain("Maize");
+  });
+
+  it("marks a correctly placed good is-correct and a misplaced one is-incorrect (normal case)", () => {
+    let state = createCargoSortingGame();
+    state = placeCargo(state, "maize", "foodstuffs");
+    state = placeCargo(state, "cotton", "foodstuffs");
+    const html = renderCargoSortingGame(state);
+    expect(html).toContain(
+      'class="cargo-good cargo-hold-item is-correct" draggable="true" data-cargo-good="maize"',
+    );
+    expect(html).toContain(
+      'class="cargo-good cargo-hold-item is-incorrect" draggable="true" data-cargo-good="cotton"',
+    );
   });
 
   it("shows the countdown while running and a time's-up message once stopped (boundary case)", () => {

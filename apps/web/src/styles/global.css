@@ -769,18 +769,18 @@ select {
 }
 .cargo-goods {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   margin-bottom: 18px;
 }
 .cargo-good {
   max-width: 220px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   cursor: grab;
 }
 .cargo-good[data-placed-in] {
@@ -789,27 +789,57 @@ select {
 }
 .cargo-holds {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 .cargo-hold {
-  max-width: 320px;
-  min-height: 90px;
-  padding: 14px;
-  border: 1px dashed rgba(229, 190, 102, 0.4);
+  max-width: 420px;
+  min-height: 220px;
+  padding: 46px 18px 18px;
   border-radius: 14px;
-  background: rgba(5, 39, 55, 0.55);
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'200'%20height%3D'150'%20viewBox%3D'0%200%20200%20150'%3E%3Cdefs%3E%3ClinearGradient%20id%3D'b'%20x1%3D'0'%20y1%3D'0'%20x2%3D'0'%20y2%3D'1'%3E%3Cstop%20stop-color%3D'%23d9a35a'%2F%3E%3Cstop%20offset%3D'1'%20stop-color%3D'%238a5a2b'%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D'M20%2040%20L180%2040%20L160%20145%20L40%20145%20Z'%20fill%3D'url(%23b)'%20stroke%3D'%235c3a1e'%20stroke-width%3D'3'%2F%3E%3Cpath%20d%3D'M28%2055%20L172%2055%20M32%2072%20L168%2072%20M36%2089%20L164%2089%20M40%20106%20L160%20106%20M44%20123%20L156%20123'%20stroke%3D'%235c3a1e'%20stroke-width%3D'2'%20opacity%3D'0.55'%2F%3E%3Cpath%20d%3D'M25%2047%20L175%2047%20M22%2062%20L178%2062'%20stroke%3D'%23f0d488'%20stroke-width%3D'1.4'%20opacity%3D'0.5'%2F%3E%3Cellipse%20cx%3D'100'%20cy%3D'40'%20rx%3D'80'%20ry%3D'14'%20fill%3D'none'%20stroke%3D'%23e1b65d'%20stroke-width%3D'4'%2F%3E%3Cellipse%20cx%3D'100'%20cy%3D'38'%20rx%3D'80'%20ry%3D'14'%20fill%3D'%23f0d488'%20opacity%3D'0.18'%2F%3E%3C%2Fsvg%3E")
+      center bottom / 100% 100% no-repeat,
+    rgba(5, 39, 55, 0.35);
+  border: 1px dashed rgba(229, 190, 102, 0.4);
+  transition: filter 0.15s ease;
+}
+.cargo-hold[data-cargo-hold="materials-specimens"] {
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'200'%20height%3D'150'%20viewBox%3D'0%200%20200%20150'%3E%3Cdefs%3E%3ClinearGradient%20id%3D'c'%20x1%3D'0'%20y1%3D'0'%20x2%3D'0'%20y2%3D'1'%3E%3Cstop%20stop-color%3D'%238a5a34'%2F%3E%3Cstop%20offset%3D'1'%20stop-color%3D'%235c3a1e'%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20x%3D'18'%20y%3D'30'%20width%3D'164'%20height%3D'112'%20rx%3D'4'%20fill%3D'url(%23c)'%20stroke%3D'%233c2510'%20stroke-width%3D'3'%2F%3E%3Cpath%20d%3D'M18%2030%20L182%2030%20M18%20142%20L182%20142'%20stroke%3D'%233c2510'%20stroke-width%3D'4'%2F%3E%3Cpath%20d%3D'M18%2064%20L182%2064%20M18%20108%20L182%20108'%20stroke%3D'%233c2510'%20stroke-width%3D'2.4'%20opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M18%2030%20L182%20142%20M182%2030%20L18%20142'%20stroke%3D'%233c2510'%20stroke-width%3D'1.6'%20opacity%3D'0.35'%2F%3E%3Crect%20x%3D'18'%20y%3D'30'%20width%3D'22'%20height%3D'22'%20fill%3D'%23e1b65d'%20opacity%3D'0.85'%2F%3E%3Crect%20x%3D'160'%20y%3D'30'%20width%3D'22'%20height%3D'22'%20fill%3D'%23e1b65d'%20opacity%3D'0.85'%2F%3E%3Crect%20x%3D'18'%20y%3D'120'%20width%3D'22'%20height%3D'22'%20fill%3D'%23e1b65d'%20opacity%3D'0.85'%2F%3E%3Crect%20x%3D'160'%20y%3D'120'%20width%3D'22'%20height%3D'22'%20fill%3D'%23e1b65d'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E")
+      center bottom / 100% 100% no-repeat,
+    rgba(5, 39, 55, 0.35);
 }
 .cargo-hold h4 {
-  margin: 0;
+  margin: 0 0 10px;
   font:
     700 0.82rem "Cinzel",
     serif;
   color: var(--gold-soft);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
 }
 .cargo-hold.is-over {
+  filter: brightness(1.12);
   border-color: var(--gold);
-  background: rgba(225, 182, 93, 0.12);
+}
+.cargo-hold-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cargo-good.cargo-hold-item {
+  max-width: none;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  background: rgba(5, 25, 35, 0.6);
+  opacity: 1;
+  cursor: grab;
+}
+.cargo-good.cargo-hold-item.is-correct {
+  border-color: var(--gold);
+}
+.cargo-good.cargo-hold-item.is-incorrect {
+  border-color: var(--danger);
 }
 .cargo-score {
   margin: 16px 0 0;
