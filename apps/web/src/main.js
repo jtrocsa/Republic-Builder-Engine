@@ -84,7 +84,7 @@ import hallwayTmjRaw from "./content/maps/hallway.tmj?raw";
 import {
   createStormNavigationGame,
   tickStormNavigationGame,
-  moveShip as moveStormShip,
+  steerShip as steerStormShip,
   renderStormNavigationGame,
 } from "./mini-games/storm-navigation.js";
 import {
@@ -1407,6 +1407,27 @@ let stormNavigationState = null;
 let cargoSortingState = null;
 let miniGameMoveFrame = null;
 let miniGameLastTickAt = 0;
+// Storm Navigation's continuous steering (see steerShip in mini-games/storm-navigation.js)
+// reads held keys/pointer input the same way field/hub movement do (fieldHeldKeys/
+// hubHeldKeys above) rather than moving the ship a fixed amount per keypress/click.
+const stormHeldKeys = new Set();
+const STORM_MOVE_KEYS = {
+  arrowleft: -1,
+  a: -1,
+  arrowright: 1,
+  d: 1,
+  "storm-pointer-left": -1,
+  "storm-pointer-right": 1,
+};
+let activeStormPointerKey = null;
+function stormHeldVector() {
+  let direction = 0;
+  stormHeldKeys.forEach((key) => {
+    const dir = STORM_MOVE_KEYS[key];
+    if (dir !== undefined) direction += dir;
+  });
+  return Math.max(-1, Math.min(1, direction));
+}
 
 function sceneForMusic() {
   if (progress.currentScreen === "field")
@@ -2424,6 +2445,7 @@ function stopMiniGameLoop() {
 }
 function runMiniGameLoop(now) {
   if (progress.currentScreen !== "mini-games" || !activeMiniGame) {
+    stormHeldKeys.clear();
     stopMiniGameLoop();
     return;
   }
@@ -2431,6 +2453,7 @@ function runMiniGameLoop(now) {
   miniGameLastTickAt = now;
   let redraw = false;
   if (activeMiniGame === "storm-navigation" && stormNavigationState?.running) {
+    stormNavigationState = steerStormShip(stormNavigationState, stormHeldVector(), elapsed);
     stormNavigationState = tickStormNavigationGame(stormNavigationState, elapsed);
     if (!stormNavigationState.running) {
       if (stormNavigationState.hazardsDodged > progress.miniGameScores.stormNavigationBest) {
@@ -2467,7 +2490,7 @@ function miniGamesScreen() {
     }
     body = `<div class="mini-game-stage" id="miniGameContainer">${renderMiniGameStage()}</div><button class="text-button" data-action="mini-game-back">← Choose a different mini-game</button>`;
   } else {
-    body = `<div class="mini-game-select"><article class="mini-game-card" data-action="mini-game-open" data-mini-game="storm-navigation"><h3>⛵ Storm Navigation</h3><p>Steer between three lanes and dodge storm hazards for as long as you can. Endless — see how high a score you can post.</p><span class="mini-game-best">Best: ${best} dodged</span></article><article class="mini-game-card" data-action="mini-game-open" data-mini-game="cargo-sorting"><h3>📦 Cargo Sorting</h3><p>Sort Caribbean trade goods into the correct ship hold before the 45-second timer runs out.</p></article></div>`;
+    body = `<div class="mini-game-select"><article class="mini-game-card" data-action="mini-game-open" data-mini-game="storm-navigation"><h3>⛵ Storm Navigation</h3><p>Steer the ship and dodge storm hazards for as long as you can. Endless — see how high a score you can post.</p><span class="mini-game-best">Best: ${best} dodged</span></article><article class="mini-game-card" data-action="mini-game-open" data-mini-game="cargo-sorting"><h3>📦 Cargo Sorting</h3><p>Sort Caribbean trade goods into the correct ship hold before the 45-second timer runs out.</p></article></div>`;
   }
   return `${chrome()}<main class="shell mini-games-shell"><section class="mini-games-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">Institute Archive · Pacing break</p><h1>Mini-Games</h1><p>A short arcade break between cases — not scored, not required for any badge.</p></section>${body}</main>${authorPanel()}`;
 }
@@ -3650,6 +3673,7 @@ function handleHubClick(target, action) {
     activeMiniGame = null;
     stormNavigationState = null;
     cargoSortingState = null;
+    stormHeldKeys.clear();
     render();
     return true;
   }
@@ -4147,18 +4171,12 @@ const CLICK_HANDLER_GROUPS = [
 ];
 
 function handleAppClick(event) {
-  // Mini-game controls (Storm Navigation's lane buttons/restart, Cargo Sorting's wrapper
-  // restart) use their own module-authored data attributes rather than data-action, mirroring
-  // how drag-and-drop already has its own delegated listeners apart from the action dispatch
-  // below. Updated via the lighter updateMiniGameUi() targeted redraw, not a full render(),
-  // since these fire far more often than a normal navigation click.
-  const stormMove = event.target.closest("[data-storm-move]");
-  if (stormMove && activeMiniGame === "storm-navigation" && stormNavigationState) {
-    event.preventDefault();
-    stormNavigationState = moveStormShip(stormNavigationState, Number(stormMove.dataset.stormMove));
-    updateMiniGameUi();
-    return;
-  }
+  // Mini-game controls (Storm Navigation's restart, Cargo Sorting's wrapper restart) use
+  // their own module-authored data attributes rather than data-action, mirroring how
+  // drag-and-drop already has its own delegated listeners apart from the action dispatch
+  // below. Storm Navigation's Port/Starboard buttons are handled as held pointer input (see
+  // handleAppPointerdown/handleAppPointerup) rather than a click, so the on-screen buttons
+  // glide continuously the same way a held keyboard key does.
   const restartControl = event.target.closest("[data-storm-restart], [data-cargo-restart]");
   if (restartControl) {
     event.preventDefault();
@@ -4413,18 +4431,12 @@ function handleWindowKeydown(event) {
     d: [1, 0],
   };
   if (progress.currentScreen === "mini-games" && activeMiniGame === "storm-navigation") {
-    // Discrete one-shot lane switch per keypress, not a held-key loop like field/hub
-    // movement — ignore OS key-repeat so holding the key doesn't skip multiple lanes.
-    if ((key === "arrowleft" || key === "a") && !event.repeat && stormNavigationState) {
+    // Held-key continuous steering (see stormHeldVector/steerShip) — add to the held set on
+    // keydown, remove on keyup (handleWindowKeyup below), same pattern as fieldHeldKeys/
+    // hubHeldKeys. Key-repeat re-adding an already-present entry is harmless.
+    if (STORM_MOVE_KEYS[key] !== undefined && stormNavigationState?.running) {
       event.preventDefault();
-      stormNavigationState = moveStormShip(stormNavigationState, -1);
-      updateMiniGameUi();
-      return;
-    }
-    if ((key === "arrowright" || key === "d") && !event.repeat && stormNavigationState) {
-      event.preventDefault();
-      stormNavigationState = moveStormShip(stormNavigationState, 1);
-      updateMiniGameUi();
+      stormHeldKeys.add(key);
       return;
     }
     if (
@@ -4518,6 +4530,7 @@ function handleWindowKeydown(event) {
 
 function handleWindowKeyup(event) {
   const key = event.key.toLowerCase();
+  if (STORM_MOVE_KEYS[key] !== undefined) stormHeldKeys.delete(key);
   if (!FIELD_MOVE_KEYS[key]) return;
   fieldHeldKeys.delete(key);
   hubHeldKeys.delete(key);
@@ -4526,12 +4539,31 @@ function handleWindowKeyup(event) {
 function handleWindowBlur() {
   fieldHeldKeys.clear();
   hubHeldKeys.clear();
+  stormHeldKeys.clear();
+  activeStormPointerKey = null;
   fieldMovement.moving = false;
   instituteMovement.moving = false;
   stopFieldMovementLoop();
   stopHubMovementLoop();
   updateFieldPlayer();
   updateInstitutePlayer();
+}
+
+// Storm Navigation's Port/Starboard buttons drive the same held-key continuous steering as
+// the keyboard (stormHeldVector/steerShip) rather than a one-shot click, so touch/mouse
+// players get the same glide feel. Listening for pointerup/pointercancel on window (not app)
+// means dragging off the button before releasing still correctly stops steering.
+function handleAppPointerdown(event) {
+  const stormMove = event.target.closest("[data-storm-move]");
+  if (!stormMove || activeMiniGame !== "storm-navigation" || !stormNavigationState) return;
+  event.preventDefault();
+  activeStormPointerKey = Number(stormMove.dataset.stormMove) < 0 ? "storm-pointer-left" : "storm-pointer-right";
+  stormHeldKeys.add(activeStormPointerKey);
+}
+function handleAppPointerup() {
+  if (!activeStormPointerKey) return;
+  stormHeldKeys.delete(activeStormPointerKey);
+  activeStormPointerKey = null;
 }
 
 if (app) {
@@ -4543,6 +4575,9 @@ if (app) {
   app.addEventListener("dragover", handleAppDragover);
   app.addEventListener("dragleave", handleAppDragleave);
   app.addEventListener("drop", handleAppDrop);
+  app.addEventListener("pointerdown", handleAppPointerdown);
+  window.addEventListener("pointerup", handleAppPointerup);
+  window.addEventListener("pointercancel", handleAppPointerup);
   window.addEventListener("keydown", handleWindowKeydown);
   window.addEventListener("keyup", handleWindowKeyup);
   window.addEventListener("blur", handleWindowBlur);

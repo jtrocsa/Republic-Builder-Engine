@@ -88,9 +88,9 @@
         <code>npm run build</code> — reachable only by visiting this file directly under
         <code>npm run dev</code>, matching the existing <code>tiled-preview.html</code>/
         <code>quest-type-preview.html</code> precedent. Click-to-select/click-to-place (Cargo
-        Sorting) and button-based lane movement (Storm Navigation) are test-harness affordances
-        only, not new game UI — the render functions' own markup (<code>draggable="true"</code>
-        cargo cards, etc.) is unchanged from what <code>renderCargoSortingGame()</code>/
+        Sorting) and held-button steering (Storm Navigation) are test-harness affordances only,
+        not new game UI — the render functions' own markup (<code>draggable="true"</code> cargo
+        cards, etc.) is unchanged from what <code>renderCargoSortingGame()</code>/
         <code>renderStormNavigationGame()</code> actually produce.
       </p>
     </header>
@@ -102,7 +102,7 @@
     </section>
 
     <section class="preview-block">
-      <h2>Storm Navigation (Port/Starboard buttons move the ship between lanes)</h2>
+      <h2>Storm Navigation (hold Port/Starboard to steer — continuous, not lane-based)</h2>
       <div id="storm-container"></div>
       <pre class="result" id="storm-result"></pre>
     </section>
@@ -118,7 +118,7 @@
       import {
         createStormNavigationGame,
         tickStormNavigationGame,
-        moveShip,
+        steerShip,
         renderStormNavigationGame,
       } from "./src/mini-games/storm-navigation.js";
 
@@ -157,20 +157,28 @@
 
       // -- Storm Navigation --
       let stormState = createStormNavigationGame();
+      let stormInputDirection = 0; // -1 | 0 | 1, set by holding a Port/Starboard button
       const stormContainer = document.getElementById("storm-container");
       const stormResultEl = document.getElementById("storm-result");
 
       function renderStorm() {
         stormContainer.innerHTML = renderStormNavigationGame(stormState);
         stormContainer.querySelectorAll("[data-storm-move]").forEach((el) => {
-          el.addEventListener("click", () => {
-            stormState = moveShip(stormState, Number(el.dataset.stormMove));
-            renderStorm();
+          const direction = Number(el.dataset.stormMove);
+          el.addEventListener("pointerdown", () => {
+            stormInputDirection = direction;
+          });
+          el.addEventListener("pointerup", () => {
+            stormInputDirection = 0;
+          });
+          el.addEventListener("pointerleave", () => {
+            stormInputDirection = 0;
           });
         });
         stormResultEl.textContent = JSON.stringify(
           {
-            playerLane: stormState.playerLane,
+            playerX: stormState.playerX,
+            playerVelocityX: stormState.playerVelocityX,
             running: stormState.running,
             hazardsDodged: stormState.hazardsDodged,
             hazardsHit: stormState.hazardsHit,
@@ -186,6 +194,7 @@
         const deltaMs = now - lastTick;
         lastTick = now;
         cargoState = tickCargoSortingGame(cargoState, deltaMs);
+        stormState = steerShip(stormState, stormInputDirection, deltaMs);
         stormState = tickStormNavigationGame(stormState, deltaMs);
         renderCargo();
         renderStorm();

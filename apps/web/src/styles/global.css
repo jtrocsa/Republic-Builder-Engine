@@ -592,12 +592,17 @@ select {
   opacity: 0.6;
   animation: stormCloudsDrift 14s linear infinite;
 }
+/* --parallax-px (set inline per-frame from state.playerX in renderStormNavigationGame) is
+   folded into the keyframe's translateX() rather than applied as a separate base transform,
+   since the running "drift" animation would otherwise own the transform property outright and
+   ignore a sibling inline value. Shifting the background opposite the ship's steering offset
+   sells the world sliding past during a turn — the CubeField-style "flying through it" cue. */
 @keyframes stormCloudsDrift {
   from {
-    transform: translateX(0);
+    transform: translateX(var(--parallax-px, 0px));
   }
   to {
-    transform: translateX(-8%);
+    transform: translateX(calc(-8% + var(--parallax-px, 0px)));
   }
 }
 .storm-coastline {
@@ -609,6 +614,7 @@ select {
   object-fit: cover;
   object-position: center bottom;
   opacity: 0.7;
+  transform: translateX(var(--parallax-px, 0px));
 }
 @keyframes stormCurrent {
   from {
@@ -636,11 +642,12 @@ select {
 .storm-ship {
   position: absolute;
   bottom: 22px;
+  /* No transition on `left`: position now comes from steerShip's real per-frame physics
+     (already smooth at 60fps), so re-easing it here would just add lag/overshoot. */
   left: calc(50% + var(--lane-offset, 0%));
   width: 84px;
   height: 108px;
   transform: translateX(-50%);
-  transition: left 0.18s ease;
   animation: shipBob 1.8s ease-in-out infinite;
 }
 @keyframes shipBob {
@@ -669,6 +676,11 @@ select {
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+  /* --bank (set inline from state.playerVelocityX) banks the ship into a turn and levels out
+     as it glides to a stop; lives on this inner element rather than .storm-ship so it doesn't
+     fight that element's own transform (translateX centering + the shipBob idle animation). */
+  transform: rotate(var(--bank, 0deg));
+  transition: transform 0.12s ease-out;
 }
 .storm-hazard {
   position: absolute;

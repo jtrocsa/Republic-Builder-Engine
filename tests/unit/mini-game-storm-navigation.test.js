@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   createStormNavigationGame,
   tickStormNavigationGame,
-  moveShip,
+  steerShip,
   renderStormNavigationGame,
   HAZARD_KINDS,
 } from "../../apps/web/src/mini-games/storm-navigation.js";
@@ -14,11 +14,17 @@ const SPRITES = {
   clouds: "/clouds.svg",
 };
 
+// PLAYER_TRACK_HALF_PERCENT from the module (not exported — mirrored here so render
+// assertions compute their expected percent the same way the module does, rather than
+// hardcoding a value that could silently drift out of sync with the source).
+const TRACK_HALF_PERCENT = 40;
+
 describe("createStormNavigationGame", () => {
   it("produces a fresh running state with default values (normal case)", () => {
     const state = createStormNavigationGame();
     expect(state.running).toBe(true);
-    expect(state.playerLane).toBe(1);
+    expect(state.playerX).toBe(0);
+    expect(state.playerVelocityX).toBe(0);
     expect(state.hazards).toEqual([]);
     expect(state.hazardsDodged).toBe(0);
     expect(state.hazardsHit).toBe(0);
@@ -43,11 +49,11 @@ describe("tickStormNavigationGame", () => {
     expect(ticked.msSinceLastHazard).toBe(500);
   });
 
-  it("spawns exactly one hazard once the tick reaches/exceeds the current hazard interval, in the lane/kind implied by the injected random (normal case)", () => {
+  it("spawns exactly one hazard once the tick reaches/exceeds the current hazard interval, at the continuous position/kind implied by the injected random (normal case)", () => {
     const stateLow = createStormNavigationGame();
     const tickedLow = tickStormNavigationGame(stateLow, 1200, () => 0);
     expect(tickedLow.hazards).toHaveLength(1);
-    expect(tickedLow.hazards[0].lane).toBe(0);
+    expect(tickedLow.hazards[0].x).toBeCloseTo(-1, 8); // random()=0 -> 0*2-1 = -1 (left rail)
     expect(tickedLow.hazards[0].kind).toBe(HAZARD_KINDS[0]);
     expect(tickedLow.hazards[0].progress).toBe(0);
     expect(tickedLow.msSinceLastHazard).toBe(0);
@@ -55,7 +61,7 @@ describe("tickStormNavigationGame", () => {
     const stateHigh = createStormNavigationGame();
     const tickedHigh = tickStormNavigationGame(stateHigh, 1200, () => 0.99);
     expect(tickedHigh.hazards).toHaveLength(1);
-    expect(tickedHigh.hazards[0].lane).toBe(2);
+    expect(tickedHigh.hazards[0].x).toBeCloseTo(0.98, 8); // random()=0.99 -> 0.99*2-1 = 0.98
     expect(tickedHigh.hazards[0].kind).toBe(HAZARD_KINDS[2]);
   });
 
@@ -73,10 +79,11 @@ describe("tickStormNavigationGame", () => {
     expect(midway.hazardsHit).toBe(0);
   });
 
-  it("counts a dodge and keeps running when a completed hazard's lane differs from the player's lane (normal case)", () => {
+  it("counts a dodge and keeps running when a completed hazard's position is outside the player's hit radius (normal case)", () => {
     const state = {
       ...createStormNavigationGame(),
-      hazards: [{ id: 1, lane: 0, progress: 0.9995 }],
+      playerX: 0,
+      hazards: [{ id: 1, x: 0.9, progress: 0.9995 }],
       msSinceLastHazard: 0,
     };
     const resolved = tickStormNavigationGame(state, 5, () => 0.99);
@@ -86,10 +93,11 @@ describe("tickStormNavigationGame", () => {
     expect(resolved.running).toBe(true);
   });
 
-  it("counts a hit and ends the run when a completed hazard's lane matches the player's lane (normal case)", () => {
+  it("counts a hit and ends the run when a completed hazard's position is within the player's hit radius (normal case)", () => {
     const state = {
       ...createStormNavigationGame(),
-      hazards: [{ id: 1, lane: 1, progress: 0.9995 }],
+      playerX: 0,
+      hazards: [{ id: 1, x: 0.02, progress: 0.9995 }],
       msSinceLastHazard: 0,
     };
     const resolved = tickStormNavigationGame(state, 5, () => 0.99);
@@ -99,12 +107,13 @@ describe("tickStormNavigationGame", () => {
     expect(resolved.running).toBe(false);
   });
 
-  it("only ends the run for the hazard in the player's lane when multiple hazards resolve in the same tick (boundary case)", () => {
+  it("only ends the run for the hazard within the player's hit radius when multiple hazards resolve in the same tick (boundary case)", () => {
     const state = {
       ...createStormNavigationGame(),
+      playerX: 0,
       hazards: [
-        { id: 1, lane: 1, progress: 0.9995 },
-        { id: 2, lane: 0, progress: 0.9995 },
+        { id: 1, x: 0.02, progress: 0.9995 },
+        { id: 2, x: 0.9, progress: 0.9995 },
       ],
       msSinceLastHazard: 0,
     };
@@ -193,7 +202,7 @@ describe("speed ramp (hazardSpeedForDodges, exercised indirectly through tick)",
     const state = {
       ...createStormNavigationGame(),
       hazardsDodged: 5,
-      hazards: [{ id: 1, lane: 0, kind: "rock", progress: 0 }],
+      hazards: [{ id: 1, x: 0.5, kind: "rock", progress: 0 }],
       msSinceLastHazard: 0,
     };
     const ticked = tickStormNavigationGame(state, 100, () => 0.99);
@@ -208,36 +217,69 @@ describe("speed ramp (hazardSpeedForDodges, exercised indirectly through tick)",
   });
 });
 
-describe("moveShip", () => {
-  it("changes playerLane by 1 when moving right or left (normal case)", () => {
-    const state = createStormNavigationGame();
-    const right = moveShip(state, 1);
-    expect(right.playerLane).toBe(2);
-    const left = moveShip(state, -1);
-    expect(left.playerLane).toBe(0);
+describe("steerShip", () => {
+  it("accelerates playerVelocityX toward the max steer speed while a direction is held, capping once reached (normal + boundary case)", () => {
+    let state = createStormNavigationGame();
+    state = steerShip(state, 1, 100);
+    expect(state.playerVelocityX).toBeCloseTo(0.55, 5); // 0 + 5.5 * 0.1
+    expect(state.playerX).toBeCloseTo(0.055, 5); // 0 + 0.55 * 0.1
+    state = steerShip(state, 1, 100);
+    expect(state.playerVelocityX).toBeCloseTo(1.1, 5);
+    state = steerShip(state, 1, 100);
+    expect(state.playerVelocityX).toBeCloseTo(1.65, 5);
+    state = steerShip(state, 1, 100);
+    expect(state.playerVelocityX).toBeCloseTo(2.2, 5); // reaches the max steer speed
+    state = steerShip(state, 1, 100); // one more tick must not exceed the cap
+    expect(state.playerVelocityX).toBe(2.2);
   });
 
-  it("clamps rather than going out of bounds at either edge (boundary case)", () => {
-    const atLeftEdge = { ...createStormNavigationGame(), playerLane: 0 };
-    expect(moveShip(atLeftEdge, -1).playerLane).toBe(0);
+  it("decays playerVelocityX toward zero via friction when no direction is held (normal case)", () => {
+    let state = { ...createStormNavigationGame(), playerVelocityX: 2.0 };
+    state = steerShip(state, 0, 100);
+    expect(state.playerVelocityX).toBeCloseTo(0.8, 5); // 2.0 * (1 - 6.0 * 0.1)
+    state = steerShip(state, 0, 100);
+    expect(state.playerVelocityX).toBeCloseTo(0.32, 5);
+  });
 
-    const atRightEdge = { ...createStormNavigationGame(), playerLane: 2 };
-    expect(moveShip(atRightEdge, 1).playerLane).toBe(2);
+  it("snaps playerVelocityX to exactly 0 once friction decays it below a tiny threshold (boundary case)", () => {
+    const state = { ...createStormNavigationGame(), playerVelocityX: 0.0005 };
+    const decayed = steerShip(state, 0, 100);
+    expect(decayed.playerVelocityX).toBe(0);
+  });
+
+  it("integrates playerX using the post-friction/acceleration velocity for that same tick (normal case)", () => {
+    const state = { ...createStormNavigationGame(), playerVelocityX: 1.0 };
+    const moved = steerShip(state, 1, 100);
+    expect(moved.playerVelocityX).toBeCloseTo(1.55, 5); // 1.0 + 5.5 * 0.1
+    expect(moved.playerX).toBeCloseTo(0.155, 5); // 0 + 1.55 * 0.1
+  });
+
+  it("clamps playerX at the +1 rail and zeroes velocity on contact (boundary case)", () => {
+    const state = { ...createStormNavigationGame(), playerX: 0.99, playerVelocityX: 2.2 };
+    const moved = steerShip(state, 1, 100);
+    expect(moved.playerX).toBe(1);
+    expect(moved.playerVelocityX).toBe(0);
+  });
+
+  it("clamps playerX at the -1 rail and zeroes velocity on contact (boundary case)", () => {
+    const state = { ...createStormNavigationGame(), playerX: -0.99, playerVelocityX: -2.2 };
+    const moved = steerShip(state, -1, 100);
+    expect(moved.playerX).toBe(-1);
+    expect(moved.playerVelocityX).toBe(0);
   });
 
   it("is a no-op when running is already false (boundary case)", () => {
-    const state = { ...createStormNavigationGame(), running: false };
-    const moved = moveShip(state, 1);
+    const state = { ...createStormNavigationGame(), running: false, playerX: 0.4, playerVelocityX: 1 };
+    const moved = steerShip(state, 1, 100);
     expect(moved).toBe(state);
-    expect(moved.playerLane).toBe(1);
   });
 });
 
 describe("renderStormNavigationGame", () => {
-  it("renders a single storm-track containing parallax layers, a horizon, one hazard element per hazard with correct data/style/art attributes, and exactly one ship element positioned for the player's lane (normal case)", () => {
+  it("renders a single storm-track containing parallax layers, a horizon, one hazard element per hazard with correct data/style/art attributes, and exactly one ship element positioned for the player's x (normal case)", () => {
     const state = {
       ...createStormNavigationGame(),
-      hazards: [{ id: 1, lane: 2, kind: "whirlpool", progress: 0.5 }],
+      hazards: [{ id: 1, x: 0.6, kind: "whirlpool", progress: 0.5 }],
     };
     const html = renderStormNavigationGame(state, 0, SPRITES);
 
@@ -249,10 +291,10 @@ describe("renderStormNavigationGame", () => {
     const hazardMatches = html.match(/<div class="storm-hazard"[^>]*>/g);
     expect(hazardMatches).toHaveLength(1);
     expect(hazardMatches[0]).toContain('data-storm-hazard="1"');
-    expect(hazardMatches[0]).toContain('data-storm-lane="2"');
+    expect(hazardMatches[0]).toContain('data-storm-x="0.60"');
     expect(hazardMatches[0]).toContain('data-storm-kind="whirlpool"');
     expect(hazardMatches[0]).toContain("--p:0.5");
-    expect(hazardMatches[0]).toContain("--lane-offset:24%");
+    expect(hazardMatches[0]).toContain(`--lane-offset:${0.6 * TRACK_HALF_PERCENT}%`);
     expect(html).toContain('<img class="storm-hazard-art" src="/whirlpool.svg"');
 
     const shipMatches = html.match(/data-storm-ship/g);
@@ -263,56 +305,109 @@ describe("renderStormNavigationGame", () => {
   });
 
   it("falls back to HAZARD_KINDS[0] and an empty art src when a hazard has no kind, and to broken/empty srcs when sprites are omitted (invalid/missing data case)", () => {
-    const state = { ...createStormNavigationGame(), hazards: [{ id: 1, lane: 0, progress: 0.2 }] };
+    const state = { ...createStormNavigationGame(), hazards: [{ id: 1, x: 0, progress: 0.2 }] };
     const html = renderStormNavigationGame(state);
     expect(html).toContain(`data-storm-kind="${HAZARD_KINDS[0]}"`);
     expect(html).toContain('<img class="storm-hazard-art" src=""');
     expect(html).toContain('<img class="storm-ship-art" src=""');
   });
 
-  it("renders zero hazard elements when there are no active hazards, and positions the ship using the lane offset map for each edge lane (boundary case)", () => {
+  it("renders zero hazard elements when there are no active hazards, and positions the ship using the full track-width offset at either rail (boundary case)", () => {
     const noHazardsState = { ...createStormNavigationGame(), hazards: [] };
     const html = renderStormNavigationGame(noHazardsState, 0, SPRITES);
     expect(html.match(/<div class="storm-hazard"/g)).toBeNull();
 
-    const leftLaneHtml = renderStormNavigationGame(
-      { ...createStormNavigationGame(), playerLane: 0 },
+    const leftRailHtml = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerX: -1 },
       0,
       SPRITES
     );
-    expect(leftLaneHtml).toContain('data-storm-ship style="--lane-offset:-24%"');
+    expect(leftRailHtml).toContain(`data-storm-ship style="--lane-offset:${-1 * TRACK_HALF_PERCENT}%"`);
 
-    const rightLaneHtml = renderStormNavigationGame(
-      { ...createStormNavigationGame(), playerLane: 2 },
+    const rightRailHtml = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerX: 1 },
       0,
       SPRITES
     );
-    expect(rightLaneHtml).toContain('data-storm-ship style="--lane-offset:24%"');
+    expect(rightRailHtml).toContain(`data-storm-ship style="--lane-offset:${1 * TRACK_HALF_PERCENT}%"`);
   });
 
-  it("renders one hazard element per hazard in state.hazards, each carrying its own lane/progress/kind-derived attributes (normal case)", () => {
+  it("renders one hazard element per hazard in state.hazards, each carrying its own position/progress/kind-derived attributes (normal case)", () => {
     const state = {
       ...createStormNavigationGame(),
       hazards: [
-        { id: 1, lane: 0, kind: "rock", progress: 0.1 },
-        { id: 2, lane: 1, kind: "wreckage", progress: 0.75 },
+        { id: 1, x: -0.6, kind: "rock", progress: 0.1 },
+        { id: 2, x: 0, kind: "wreckage", progress: 0.75 },
       ],
     };
     const html = renderStormNavigationGame(state, 0, SPRITES);
     const hazardMatches = html.match(/<div class="storm-hazard"[^>]*>/g);
     expect(hazardMatches).toHaveLength(2);
     expect(hazardMatches[0]).toContain('data-storm-hazard="1"');
-    expect(hazardMatches[0]).toContain('data-storm-lane="0"');
+    expect(hazardMatches[0]).toContain('data-storm-x="-0.60"');
     expect(hazardMatches[0]).toContain('data-storm-kind="rock"');
     expect(hazardMatches[0]).toContain("--p:0.1");
-    expect(hazardMatches[0]).toContain("--lane-offset:-24%");
+    expect(hazardMatches[0]).toContain(`--lane-offset:${-0.6 * TRACK_HALF_PERCENT}%`);
     expect(hazardMatches[1]).toContain('data-storm-hazard="2"');
-    expect(hazardMatches[1]).toContain('data-storm-lane="1"');
+    expect(hazardMatches[1]).toContain('data-storm-x="0.00"');
     expect(hazardMatches[1]).toContain('data-storm-kind="wreckage"');
     expect(hazardMatches[1]).toContain("--p:0.75");
     expect(hazardMatches[1]).toContain("--lane-offset:0%");
     expect(html).toContain('<img class="storm-hazard-art" src="/rock.svg"');
     expect(html).toContain('<img class="storm-hazard-art" src="/wreckage.svg"');
+  });
+
+  it("computes the ship's banking tilt from playerVelocityX, clamped to the max bank angle (normal + boundary case)", () => {
+    const atMaxSpeed = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerVelocityX: 2.2 },
+      0,
+      SPRITES
+    );
+    expect(atMaxSpeed).toContain('style="--bank:18.0deg"');
+
+    const atHalfSpeed = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerVelocityX: 1.1 },
+      0,
+      SPRITES
+    );
+    expect(atHalfSpeed).toContain('style="--bank:9.0deg"');
+
+    const steeringLeft = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerVelocityX: -2.2 },
+      0,
+      SPRITES
+    );
+    expect(steeringLeft).toContain('style="--bank:-18.0deg"');
+
+    const stationary = renderStormNavigationGame(createStormNavigationGame(), 0, SPRITES);
+    expect(stationary).toContain('style="--bank:0.0deg"');
+  });
+
+  it("clamps the banking tilt at the max bank angle even if playerVelocityX somehow exceeds the max steer speed (invalid/missing data case)", () => {
+    const html = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerVelocityX: 999 },
+      0,
+      SPRITES
+    );
+    expect(html).toContain('style="--bank:18.0deg"');
+  });
+
+  it("shifts the background parallax layers opposite the ship's playerX, with clouds offset less than the coastline (normal case)", () => {
+    const html = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerX: 0.5 },
+      0,
+      SPRITES
+    );
+    expect(html).toContain('style="--parallax-px:-4.4px"'); // clouds: -(0.5*22) * 0.4
+    expect(html).toContain('style="--parallax-px:-11.0px"'); // coastline: -(0.5*22)
+
+    const mirrored = renderStormNavigationGame(
+      { ...createStormNavigationGame(), playerX: -0.5 },
+      0,
+      SPRITES
+    );
+    expect(mirrored).toContain('style="--parallax-px:4.4px"');
+    expect(mirrored).toContain('style="--parallax-px:11.0px"');
   });
 
   it("shows the elapsed time survived, the dodge tally, and Port/Starboard controls while running (normal case)", () => {
