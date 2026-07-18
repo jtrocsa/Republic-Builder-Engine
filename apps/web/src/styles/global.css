@@ -2036,34 +2036,29 @@ dd {
   image-rendering: pixelated;
   filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.45));
 }
-/* Ambient Archive-rotunda backdrop: a wireframe globe + soft pillar-glow columns, filling the
-   entire scene now rather than a small clipped card. Purely decorative (aria-hidden), CSS/SVG
-   only — no image assets, no word/text content (that's the contextual reveal system's job, see
-   revealCardMarkup()). Negative z-index so it paints behind the scene's normal-flow content
-   (title, sprite, dialogue bar) despite being position:absolute, without needing z-index on
-   every sibling. */
+/* Ambient Institute-archive backdrop: fine letterhead rule lines + soft pillar-glow columns,
+   filling the entire scene rather than a small clipped card. Purely decorative (aria-hidden),
+   CSS/SVG only — no image assets, no word/text content (that's the contextual reveal system's
+   job, see revealCardMarkup(), and the ambient phrase layer's, see .director-scene__phrase).
+   Negative z-index so it paints behind the scene's normal-flow content (title, sprite, dialogue
+   bar) despite being position:absolute, without needing z-index on every sibling. */
 .director-scene__backdrop {
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
 }
-.director-scene__map {
+.director-scene__ledger {
   position: absolute;
-  top: 46%;
-  left: 50%;
-  width: min(55%, 640px);
-  height: auto;
-  transform: translate(-50%, -50%);
-  opacity: 0.16;
-}
-.director-scene__map circle,
-.director-scene__map ellipse,
-.director-scene__map line {
-  fill: none;
-  stroke: var(--gold-soft);
-  stroke-width: 1;
-  stroke-dasharray: 2 4;
+  inset: 0 0 auto 0;
+  height: 34%;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(240, 212, 136, 0.05) 0,
+    rgba(240, 212, 136, 0.05) 1px,
+    transparent 1px,
+    transparent 30px
+  );
 }
 .director-scene__pillar {
   position: absolute;
@@ -2088,6 +2083,114 @@ dd {
 }
 .director-scene__pillar--3 {
   right: 2%;
+}
+/* Technical-instrument seal behind the character sprite — a double ring with cardinal/ordinal
+   tick marks, replacing the old full-viewport dashed "portal" globe. Sized relative to
+   .director-scene__stage (its positioned ancestor) so it reads as roughly the character's own
+   scale rather than spanning the screen. Negative z-index (like .director-scene__backdrop) keeps
+   it behind the sprite regardless of DOM order. */
+.director-scene__seal-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  width: min(78%, 300px);
+  z-index: -1;
+  pointer-events: none;
+}
+.director-scene__seal {
+  width: 100%;
+  height: auto;
+  opacity: 0.2;
+}
+.director-scene__seal circle,
+.director-scene__seal line {
+  fill: none;
+  stroke: var(--gold-soft);
+  stroke-width: 1;
+}
+/* Thin corner-bracket HUD lines marking the stage area, gold accent, low opacity — restrained
+   "instrument panel" framing rather than atmospheric glow. */
+.director-scene__bracket {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(240, 212, 136, 0.28);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.director-scene__bracket--tl {
+  top: 6px;
+  left: 6px;
+  border-right: none;
+  border-bottom: none;
+}
+.director-scene__bracket--tr {
+  top: 6px;
+  right: 6px;
+  border-left: none;
+  border-bottom: none;
+}
+.director-scene__bracket--bl {
+  bottom: 6px;
+  left: 6px;
+  border-right: none;
+  border-top: none;
+}
+.director-scene__bracket--br {
+  bottom: 6px;
+  right: 6px;
+  border-left: none;
+  border-top: none;
+}
+/* Sparse monospace data readouts (record id, link status, running clock) in the stage's corners —
+   system monospace stack, not a webfont import, to reinforce "Archive connection secure" without
+   adding a dependency. */
+.director-scene__readout {
+  position: absolute;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  opacity: 0.4;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.director-scene__readout--record {
+  top: 10px;
+  left: 10px;
+}
+.director-scene__readout--status {
+  top: 10px;
+  right: 10px;
+}
+.director-scene__readout--timer {
+  bottom: 10px;
+  left: 10px;
+}
+/* Continuous ambient phrase layer (see startDirectorSceneDecor() in main.js) — a handful of faint
+   historical-timeline phrases fading in/out at random safe-zone positions, fully independent of
+   dialogue state. Only opacity (plus a static, non-animated transform for centering) is animated,
+   so this stays GPU-cheap even with several phrases active. */
+.director-scene__phrase-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.director-scene__phrase {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: "Cinzel", serif;
+  color: var(--gold-soft);
+  opacity: 0;
+  transition-property: opacity;
+  transition-timing-function: ease;
+  will-change: opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .director-scene__phrase {
+    transition: none;
+  }
 }
 /* Sits directly above the dialogue box (inside .director-scene__bar) rather than floating in
    the stage's top-right corner, so a reveal visually reads as tied to what's being said. */
@@ -2275,7 +2378,9 @@ dd {
 }
 .director-dialogue-box {
   position: relative;
-  padding: 12px 44px 14px 20px;
+  width: min(68%, 620px);
+  margin: 0 auto;
+  padding: 10px 40px 10px 18px;
   border: 2px solid rgba(239, 204, 122, 0.66);
   border-radius: 17px;
   background: rgba(3, 28, 40, 0.98);
@@ -2294,7 +2399,8 @@ dd {
 }
 .director-dialogue-box__text {
   margin: 0;
-  height: 3.4em;
+  min-height: 1.7em;
+  max-height: 6em;
   overflow-y: auto;
   font-size: 1.15rem;
   line-height: 1.5;
@@ -2455,6 +2561,9 @@ dd {
     left: 16px;
     right: 16px;
     bottom: 16px;
+  }
+  .director-dialogue-box {
+    width: 88%;
   }
   .director-extra-content {
     position: static;
