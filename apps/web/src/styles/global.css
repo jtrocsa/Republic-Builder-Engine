@@ -570,7 +570,10 @@ select {
   height: 520px;
   margin: 0 auto;
   border-radius: 12px;
-  clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
+  /* Narrower horizon aperture (was 42%/58%, a 16%-wide opening) for a tighter forward
+     "cockpit" FOV, matching a camera sitting right above/behind the ship. .storm-horizon
+     below has its own left/right that must stay in sync with this. */
+  clip-path: polygon(45% 0%, 55% 0%, 100% 100%, 0% 100%);
   /* Three repeating-gradient wave bands (near/mid/far) at different angles/tile sizes, layered
      between the sky-tint and the base water gradient. No `animation` here: background-position
      is set inline per frame from waveBackgroundPosition() in storm-navigation.js, computed
@@ -644,8 +647,8 @@ select {
 }
 .storm-horizon {
   position: absolute;
-  left: 42%;
-  right: 42%;
+  left: 45%;
+  right: 45%;
   top: 0;
   height: 2px;
   background: rgba(233, 213, 163, 0.5);
@@ -687,17 +690,19 @@ select {
   transform: rotate(var(--bank, 0deg));
   transition: transform 0.12s ease-out;
 }
-/* --bob-px/--sway-deg (set inline from hazardBobSway() in storm-navigation.js, phased per
-   hazard.id so instances don't bob in lockstep) make each hazard read as floating on real
-   water. opacity fades a hazard in over the first quarter of its approach (--p up to 0.25)
-   rather than popping in fully-opaque at the horizon; the danger zone near the ship (p>0.25)
-   is always fully opaque, so reaction time/fairness near the hit boundary is unaffected. */
+/* --screen-t (set inline from perspectiveEase(p) in storm-navigation.js) drives the visual
+   reveal instead of raw --p: real perspective isn't linear, so a hazard stays a barely-visible
+   speck near the horizon for most of its approach, then rushes to full size/position/opacity
+   late — harder to read/predict than a steady linear slide, while --p=1 and --screen-t=1
+   coincide exactly, so the visual "arrival" always lines up with the progress>=1 collision
+   trigger (no fairness mismatch). --bob-px/--sway-deg (phased per hazard.id so instances don't
+   bob in lockstep) make each hazard read as floating on real water. */
 .storm-hazard {
   position: absolute;
-  left: calc(50% + (var(--lane-offset, 0%) * var(--p, 0)));
-  top: calc(4% + (var(--p, 0) * 74%));
-  opacity: clamp(0, calc(var(--p, 0) / 0.25), 1);
-  transform: translate(-50%, calc(-50% + var(--bob-px, 0px))) scale(calc(0.3 + (var(--p, 0) * 1)))
+  left: calc(50% + (var(--lane-offset, 0%) * var(--screen-t, 0)));
+  top: calc(4% + (var(--screen-t, 0) * 74%));
+  opacity: clamp(0, calc(var(--screen-t, 0) / 0.12), 1);
+  transform: translate(-50%, calc(-50% + var(--bob-px, 0px))) scale(calc(0.3 + (var(--screen-t, 0) * 1)))
     rotate(var(--sway-deg, 0deg));
 }
 .storm-hazard-wake {

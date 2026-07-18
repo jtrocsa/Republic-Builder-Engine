@@ -40,9 +40,9 @@
 // just computed in JS instead of delegated to a CSS clock.
 
 const BASE_HAZARD_PROGRESS_PER_MS = 0.00022; // fresh-run hazard crosses in ~4.5s — a calm open
-const MAX_HAZARD_PROGRESS_PER_MS = 0.0007; // top speed: crosses in ~1.4s
+const MAX_HAZARD_PROGRESS_PER_MS = 0.0009; // top speed: crosses in ~1.11s
 const BASE_HAZARD_INTERVAL_MS = 2200;
-const MIN_HAZARD_INTERVAL_MS = 500;
+const MIN_HAZARD_INTERVAL_MS = 380;
 // Visual variety only (see renderStormNavigationGame's `sprites.hazardKinds` lookup) — every
 // kind is resolved identically for collision/timing, so this doesn't touch difficulty. Order
 // matters: it's also the unlock order in eligibleHazardKinds() below (rock, then wreckage,
@@ -220,10 +220,27 @@ export function tickStormNavigationGame(state, deltaMs, random = Math.random) {
 }
 
 // Continuous-x -> horizontal % offset from center, shared by the ship and every hazard so
-// they all converge toward the same vanishing point at the horizon (see --lane-offset/--p
-// usage in the CSS: hazards multiply this by their progress, so a hazard just spawned sits
-// near center-horizon and spreads out to its full x position as it nears the player).
+// they all converge toward the same vanishing point at the horizon (see --lane-offset/
+// --screen-t usage in the CSS: hazards multiply this by their eased screen position, so a
+// hazard just spawned sits near center-horizon and spreads out to its full x position as it
+// nears the player).
 const PLAYER_TRACK_HALF_PERCENT = 40;
+
+// True-perspective reveal: raw hazard.progress (p, 0-1) advances at a constant rate — that's
+// the actual difficulty timing (spawn interval, closing speed) and is left untouched here. But
+// a *linear* mapping from p to screen position/size/opacity makes a hazard's eventual lane and
+// danger level obvious very early in its approach (easy to predict, easy to dodge with time to
+// spare). Real perspective isn't linear: an object approaching at constant real-world speed
+// barely grows for most of the distance, then rushes to full size right at the end — the same
+// "pinprick, then sudden rush" read CubeField's obstacles have. perspectiveEase() reshapes p
+// into that curve for rendering only; perspectiveEase(0)=0 and perspectiveEase(1)=1 always, so
+// the visual "arrival" still coincides exactly with the progress>=1 collision trigger — no
+// fairness mismatch between what's visible and what the game logic decides.
+const HAZARD_PERSPECTIVE_POWER = 2.6; // >1 = compress apparent growth/movement into the final approach
+
+function perspectiveEase(p) {
+  return p ** HAZARD_PERSPECTIVE_POWER;
+}
 
 // Ship banking tilt (CSS --bank, degrees) scales with how fast the ship is currently
 // steering, so it visibly leans into a turn and levels out as it glides to a stop.
@@ -309,9 +326,9 @@ const HAZARD_SWAY_PERIOD_MS = 3400;
 const HAZARD_SWAY_AMPLITUDE_DEG = 4;
 const HAZARD_PHASE_SPACER_MS = 733;
 
-function hazardBobSway(hazard, elapsedMs, p) {
+function hazardBobSway(hazard, elapsedMs, screenT) {
   const phaseMs = (hazard.id * HAZARD_PHASE_SPACER_MS) % HAZARD_BOB_PERIOD_MS;
-  const scale = 0.3 + p; // matches .storm-hazard's existing scale term, so bob shrinks with distance
+  const scale = 0.3 + screenT; // matches .storm-hazard's existing scale term, so bob shrinks with distance
   const bobPx =
     Math.sin((2 * Math.PI * (elapsedMs + phaseMs)) / HAZARD_BOB_PERIOD_MS) * HAZARD_BOB_AMPLITUDE_PX * scale;
   const swayDeg =
@@ -337,10 +354,11 @@ export function renderStormNavigationGame(state, bestScore = 0, sprites = DEFAUL
     .map((hazard) => {
       const offset = hazard.x * PLAYER_TRACK_HALF_PERCENT;
       const p = Math.max(0, Math.min(1, hazard.progress));
+      const screenT = perspectiveEase(p);
       const kind = hazard.kind || HAZARD_KINDS[0];
       const art = sprites.hazardKinds?.[kind] || "";
-      const { bobPx, swayDeg } = hazardBobSway(hazard, state.elapsedMs, p);
-      return `<div class="storm-hazard" data-storm-hazard="${hazard.id}" data-storm-x="${hazard.x.toFixed(2)}" data-storm-kind="${kind}" style="--p:${p};--lane-offset:${offset}%;--bob-px:${bobPx.toFixed(1)}px;--sway-deg:${swayDeg.toFixed(1)}deg"><span class="storm-hazard-wake"></span><img class="storm-hazard-art" src="${art}" alt="" draggable="false"></div>`;
+      const { bobPx, swayDeg } = hazardBobSway(hazard, state.elapsedMs, screenT);
+      return `<div class="storm-hazard" data-storm-hazard="${hazard.id}" data-storm-x="${hazard.x.toFixed(2)}" data-storm-kind="${kind}" style="--p:${p};--screen-t:${screenT.toFixed(4)};--lane-offset:${offset}%;--bob-px:${bobPx.toFixed(1)}px;--sway-deg:${swayDeg.toFixed(1)}deg"><span class="storm-hazard-wake"></span><img class="storm-hazard-art" src="${art}" alt="" draggable="false"></div>`;
     })
     .join("");
 

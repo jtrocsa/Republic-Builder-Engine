@@ -175,16 +175,16 @@ describe("difficulty ramp (stormIntensity / interval, exercised indirectly throu
   it("computes a reduced interval mid-ramp, driven by elapsed survival time (normal case)", () => {
     const state = { ...createStormNavigationGame(), elapsedMs: 49000 - 5 };
     const ticked = tickStormNavigationGame(state, 5, () => 0);
-    // elapsedMs=49000 -> stormIntensity=0.25 -> interval = 2200 - 0.25 * (2200 - 500) = 1775.
-    expect(ticked.hazardIntervalMs).toBe(1775);
+    // elapsedMs=49000 -> stormIntensity=0.25 -> interval = 2200 - 0.25 * (2200 - 380) = 1745.
+    expect(ticked.hazardIntervalMs).toBe(1745);
   });
 
-  it("floors the interval at 500ms once stormIntensity reaches its ceiling (boundary case)", () => {
+  it("floors the interval at 380ms once stormIntensity reaches its ceiling (boundary case)", () => {
     const atCeiling = tickStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 90000 }, 100, () => 0);
-    expect(atCeiling.hazardIntervalMs).toBe(500);
+    expect(atCeiling.hazardIntervalMs).toBe(380);
 
     const wayPast = tickStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 500000 }, 100, () => 0);
-    expect(wayPast.hazardIntervalMs).toBe(500);
+    expect(wayPast.hazardIntervalMs).toBe(380);
   });
 
   it("no longer depends on hazardsDodged at all (invalid/missing data case)", () => {
@@ -214,8 +214,8 @@ describe("speed ramp (stormIntensity / hazard speed, exercised indirectly throug
   it("computes a raised speed mid-ramp, driven by elapsed survival time (normal case)", () => {
     const state = { ...createStormNavigationGame(), elapsedMs: 49000 - 5 };
     const ticked = tickStormNavigationGame(state, 5, () => 0);
-    // elapsedMs=49000 -> stormIntensity=0.25 -> 0.00022 + 0.25 * (0.0007 - 0.00022) = 0.00034.
-    expect(ticked.hazardProgressPerMs).toBeCloseTo(0.00034, 8);
+    // elapsedMs=49000 -> stormIntensity=0.25 -> 0.00022 + 0.25 * (0.0009 - 0.00022) = 0.00039.
+    expect(ticked.hazardProgressPerMs).toBeCloseTo(0.00039, 8);
   });
 
   it("actually advances existing hazards faster once the speed ramp has kicked in (normal case)", () => {
@@ -226,14 +226,14 @@ describe("speed ramp (stormIntensity / hazard speed, exercised indirectly throug
       msSinceLastHazard: 0,
     };
     const ticked = tickStormNavigationGame(state, 5, () => 0.99);
-    // ~0.00034/ms * 5ms = 0.0017, faster than the ~0.0011 (0.00022 * 5) a calm-period run would produce.
-    expect(ticked.hazards.find((h) => h.id === 1).progress).toBeCloseTo(0.0017, 5);
+    // ~0.00039/ms * 5ms = 0.00195, faster than the ~0.0011 (0.00022 * 5) a calm-period run would produce.
+    expect(ticked.hazards.find((h) => h.id === 1).progress).toBeCloseTo(0.00195, 5);
   });
 
-  it("caps the hazard speed at 0.0007/ms once stormIntensity reaches its ceiling (boundary case)", () => {
+  it("caps the hazard speed at 0.0009/ms once stormIntensity reaches its ceiling (boundary case)", () => {
     const state = { ...createStormNavigationGame(), elapsedMs: 500000 };
     const ticked = tickStormNavigationGame(state, 100, () => 0);
-    expect(ticked.hazardProgressPerMs).toBeCloseTo(0.0007, 8);
+    expect(ticked.hazardProgressPerMs).toBeCloseTo(0.0009, 8);
   });
 
   it("no longer depends on hazardsDodged at all (invalid/missing data case)", () => {
@@ -345,6 +345,7 @@ describe("renderStormNavigationGame", () => {
     expect(hazardMatches[0]).toContain('data-storm-x="0.60"');
     expect(hazardMatches[0]).toContain('data-storm-kind="whirlpool"');
     expect(hazardMatches[0]).toContain("--p:0.5");
+    expect(hazardMatches[0]).toContain("--screen-t:0.1649");
     expect(hazardMatches[0]).toContain(`--lane-offset:${0.6 * TRACK_HALF_PERCENT}%`);
     expect(html).toContain('<img class="storm-hazard-art" src="/whirlpool.svg"');
 
@@ -402,11 +403,13 @@ describe("renderStormNavigationGame", () => {
     expect(hazardMatches[0]).toContain('data-storm-x="-0.60"');
     expect(hazardMatches[0]).toContain('data-storm-kind="rock"');
     expect(hazardMatches[0]).toContain("--p:0.1");
+    expect(hazardMatches[0]).toContain("--screen-t:0.0025");
     expect(hazardMatches[0]).toContain(`--lane-offset:${-0.6 * TRACK_HALF_PERCENT}%`);
     expect(hazardMatches[1]).toContain('data-storm-hazard="2"');
     expect(hazardMatches[1]).toContain('data-storm-x="0.00"');
     expect(hazardMatches[1]).toContain('data-storm-kind="wreckage"');
     expect(hazardMatches[1]).toContain("--p:0.75");
+    expect(hazardMatches[1]).toContain("--screen-t:0.4733");
     expect(hazardMatches[1]).toContain("--lane-offset:0%");
     expect(html).toContain('<img class="storm-hazard-art" src="/rock.svg"');
     expect(html).toContain('<img class="storm-hazard-art" src="/wreckage.svg"');
@@ -593,5 +596,36 @@ describe("renderStormNavigationGame", () => {
     const html = renderStormNavigationGame(state);
     expect(html).toContain("Dodged: 2 · Best: 2");
     expect(html).toContain("Final score: 2 — New best!");
+  });
+});
+
+describe("perspective easing (--screen-t, exercised through renderStormNavigationGame)", () => {
+  const screenTOf = (html) => Number(html.match(/--screen-t:(-?\d+\.\d+)/)[1]);
+
+  it("is 0 at the horizon (progress 0) and 1 at the ship (progress 1), matching the collision trigger exactly (boundary case)", () => {
+    const atHorizon = renderStormNavigationGame(
+      { ...createStormNavigationGame(), hazards: [{ id: 1, x: 0, kind: "rock", progress: 0 }] },
+      0,
+      SPRITES
+    );
+    expect(screenTOf(atHorizon)).toBe(0);
+
+    const atShip = renderStormNavigationGame(
+      { ...createStormNavigationGame(), hazards: [{ id: 1, x: 0, kind: "rock", progress: 1 }] },
+      0,
+      SPRITES
+    );
+    expect(screenTOf(atShip)).toBe(1);
+  });
+
+  it("compresses apparent progress well below the raw halfway point, so a hazard is still mostly hidden/small at 50% real travel time (normal case)", () => {
+    const html = renderStormNavigationGame(
+      { ...createStormNavigationGame(), hazards: [{ id: 1, x: 0, kind: "rock", progress: 0.5 }] },
+      0,
+      SPRITES
+    );
+    const screenT = screenTOf(html);
+    expect(screenT).toBeCloseTo(0.1649, 4);
+    expect(screenT).toBeLessThan(0.5);
   });
 });
