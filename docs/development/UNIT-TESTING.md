@@ -61,7 +61,7 @@ This was the smallest change that made `main.js` import-safe. No functions were 
 
 ## Why physical extraction was deferred
 
-`ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` §7 item 5 and §9's risk register are explicit: extracting movement/collision/camera/NPC-patrol code out of `main.js` has no near-term payoff independent of a Phaser adoption that isn't scheduled, and the *only* thing actually blocking unit testing was import-safety, not physical location. Adding `export` in place and a narrow `if (app)` boot guard solved the real problem (main.js wasn't testable at all) without the code-motion risk of a physical extraction — same reasoning CLAUDE.md's "Do not physically extract" instruction already states for this codebase.
+`ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` §7 item 5 and §9's risk register are explicit: extracting movement/collision/camera/NPC-patrol code out of `main.js` has no near-term payoff independent of a Phaser adoption that isn't scheduled, and the _only_ thing actually blocking unit testing was import-safety, not physical location. Adding `export` in place and a narrow `if (app)` boot guard solved the real problem (main.js wasn't testable at all) without the code-motion risk of a physical extraction — same reasoning CLAUDE.md's "Do not physically extract" instruction already states for this codebase.
 
 ## Next phase
 

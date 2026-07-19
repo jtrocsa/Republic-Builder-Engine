@@ -6,10 +6,10 @@ For the short version of "what's current, what's next," read `docs/architecture/
 
 ## Live vs. dead vs. dormant
 
-| Status | Meaning |
-|---|---|
-| **LIVE** | Imported (directly or transitively) by `apps/web/index.html` → `apps/web/src/main.js`, and actually exercised by normal gameplay. |
-| **DEAD** | Present on disk, not imported by anything reachable from `index.html`. Confirmed via a full import-graph trace. |
+| Status      | Meaning                                                                                                                           |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **LIVE**    | Imported (directly or transitively) by `apps/web/index.html` → `apps/web/src/main.js`, and actually exercised by normal gameplay. |
+| **DEAD**    | Present on disk, not imported by anything reachable from `index.html`. Confirmed via a full import-graph trace.                   |
 | **DORMANT** | Not imported by the app, but represents a deliberately-parked future format (e.g. the JSON content pipeline), not abandoned code. |
 
 ## Annotated tree

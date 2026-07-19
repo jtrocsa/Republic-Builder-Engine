@@ -44,7 +44,7 @@ export function renderMcqQuest(quest, state = {}) {
         String(selected) === String(index) ? "checked" : ""
       }>
       <span>${escapeHtml(choice)}</span>
-    </label>`,
+    </label>`
       )
       .join("")}
   </div>

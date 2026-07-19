@@ -87,6 +87,6 @@ since it confirms the exact source tile rather than just "something rendered the
   `.tmj` after any future `UNIT3_FIELD_BLOCKS` change is a
   `node scripts/generate-common-cause-tmj.js apps/web/src/content/maps/common-cause-field.tmj`
   away, not a hand-edit.
-- The stale CSS-drawn-scene comment block in `main.js` (previously explaining *why* no
+- The stale CSS-drawn-scene comment block in `main.js` (previously explaining _why_ no
   tileset existed) and all `.commoncause-ground`/`.commoncause-building*` CSS rules in
   `global.css` were removed as dead code alongside this change.

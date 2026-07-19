@@ -67,11 +67,7 @@ function main() {
   );
   results.push(runSchema("unit-01-campaign.js: REVIEW", ReviewSchema, content.unit01.review));
   results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit01.mcqQuests
-    )
+    runSchema("unit-01-quests.js: UNIT_01_MCQ_QUESTS", McqQuestListSchema, content.unit01.mcqQuests)
   );
   results.push(
     runSchema(
@@ -148,11 +144,7 @@ function main() {
     runSchema("unit-02-campaign.js: UNIT_02_REVIEW", ReviewSchema, content.unit02.review)
   );
   results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit02.mcqQuests
-    )
+    runSchema("unit-02-quests.js: UNIT_02_MCQ_QUESTS", McqQuestListSchema, content.unit02.mcqQuests)
   );
   results.push(
     runSchema(
@@ -209,11 +201,7 @@ function main() {
     )
   );
   results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit03.mcqQuests
-    )
+    runSchema("unit-03-quests.js: UNIT_03_MCQ_QUESTS", McqQuestListSchema, content.unit03.mcqQuests)
   );
   results.push(
     runSchema(
@@ -309,9 +297,18 @@ function main() {
       },
     ],
     sequencing: [
-      { source: "unit-01-quests.js:UNIT_01_SEQUENCING_QUESTS", items: content.unit01.sequencingQuests },
-      { source: "unit-02-quests.js:UNIT_02_SEQUENCING_QUESTS", items: content.unit02.sequencingQuests },
-      { source: "unit-03-quests.js:UNIT_03_SEQUENCING_QUESTS", items: content.unit03.sequencingQuests },
+      {
+        source: "unit-01-quests.js:UNIT_01_SEQUENCING_QUESTS",
+        items: content.unit01.sequencingQuests,
+      },
+      {
+        source: "unit-02-quests.js:UNIT_02_SEQUENCING_QUESTS",
+        items: content.unit02.sequencingQuests,
+      },
+      {
+        source: "unit-03-quests.js:UNIT_03_SEQUENCING_QUESTS",
+        items: content.unit03.sequencingQuests,
+      },
       {
         source: "unit-01-quests.js:UNIT_01_INVESTIGATION_SEQUENCING_QUESTS",
         items: content.unit01.investigationSequencingQuests,
@@ -334,19 +331,40 @@ function main() {
         source: "unit-03-quests.js:UNIT_03_EVIDENCE_ORGANIZING_QUESTS",
         items: content.unit03.evidenceOrganizingQuests,
       },
-      { source: "unit-02-quests.js:UNIT_02_ARCHIVE_CHALLENGE_QUESTS", items: content.unit02.archiveChallengeQuests },
+      {
+        source: "unit-02-quests.js:UNIT_02_ARCHIVE_CHALLENGE_QUESTS",
+        items: content.unit02.archiveChallengeQuests,
+      },
       {
         source: "unit-02-quests.js:UNIT_02_INVESTIGATION_EVIDENCE_QUESTS",
         items: content.unit02.investigationEvidenceQuests,
       },
-      { source: "unit-01-quests.js:UNIT_01_ARCHIVE_EVIDENCE_QUESTS", items: content.unit01.archiveEvidenceQuests },
-      { source: "unit-03-quests.js:UNIT_03_ARCHIVE_CHALLENGE_QUESTS", items: content.unit03.archiveChallengeQuests },
+      {
+        source: "unit-01-quests.js:UNIT_01_ARCHIVE_EVIDENCE_QUESTS",
+        items: content.unit01.archiveEvidenceQuests,
+      },
+      {
+        source: "unit-03-quests.js:UNIT_03_ARCHIVE_CHALLENGE_QUESTS",
+        items: content.unit03.archiveChallengeQuests,
+      },
     ],
     hipp: [
-      { source: "unit-01-quests.js:UNIT_01_SOURCE_ANALYSIS_QUESTS", items: content.unit01.sourceAnalysisQuests },
-      { source: "unit-02-quests.js:UNIT_02_SOURCE_ANALYSIS_QUESTS", items: content.unit02.sourceAnalysisQuests },
-      { source: "unit-03-quests.js:UNIT_03_SOURCE_ANALYSIS_QUESTS", items: content.unit03.sourceAnalysisQuests },
-      { source: "unit-03-quests.js:UNIT_03_INVESTIGATION_QUESTS", items: content.unit03.investigationQuests },
+      {
+        source: "unit-01-quests.js:UNIT_01_SOURCE_ANALYSIS_QUESTS",
+        items: content.unit01.sourceAnalysisQuests,
+      },
+      {
+        source: "unit-02-quests.js:UNIT_02_SOURCE_ANALYSIS_QUESTS",
+        items: content.unit02.sourceAnalysisQuests,
+      },
+      {
+        source: "unit-03-quests.js:UNIT_03_SOURCE_ANALYSIS_QUESTS",
+        items: content.unit03.sourceAnalysisQuests,
+      },
+      {
+        source: "unit-03-quests.js:UNIT_03_INVESTIGATION_QUESTS",
+        items: content.unit03.investigationQuests,
+      },
     ],
   };
   const questsByType = Object.fromEntries(

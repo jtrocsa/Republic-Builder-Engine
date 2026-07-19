@@ -24,14 +24,14 @@ For every candidate: searched static imports, dynamic imports, string-based path
 - **Reference cleanup**: updated `docs/content-guide/naming-and-placement.md` and `docs/content/CONTENT-VALIDATION.md` (marked its "not validated because dead" note as historical — file is now gone, not just unvalidated) and `SKILL.md`.
 - **Discrepancy from audit**: none.
 
-### `apps/web/src/content/cases/case-atlantic-crossroads.preview.js` *(not in the original candidate list — added after re-verification)*
+### `apps/web/src/content/cases/case-atlantic-crossroads.preview.js` _(not in the original candidate list — added after re-verification)_
 
 - **Verification**: grepped for `case-atlantic-crossroads.preview`. Its only importer was `apps/web/src/features/case-player/atlantic-crossroads-preview.js`, itself part of the orphaned island above.
 - **Result**: sole caller was dead code being deleted in this same pass; zero live callers.
 - **Deleted**: yes (as part of removing the `features/` island's dependency chain).
 - **Discrepancy from audit**: the audit already named this file as dead (`CURRENT-REPOSITORY-AUDIT.md` §2, §20) but the user's candidate list for this pass didn't repeat it explicitly. Included it anyway per the task's "any other import-graph-confirmed-unreachable code named in the audit" scope — leaving it in place would have meant deleting the `features/` island while leaving one of its two dependencies orphaned in the tree.
 
-### `apps/web/src/engine/content/author-content-store.js` *(not in the original candidate list — added after re-verification)*
+### `apps/web/src/engine/content/author-content-store.js` _(not in the original candidate list — added after re-verification)_
 
 - **Verification**: grepped for `author-content-store`. Its only two importers were `features/chronicle-institute/chronicle-institute.js` and `features/chronicle-identity/chronicle-identity.js`, both part of the orphaned island above.
 - **Result**: sole callers were dead code being deleted in this same pass; zero live callers.

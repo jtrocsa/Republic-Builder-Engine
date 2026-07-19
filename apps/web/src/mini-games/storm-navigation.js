@@ -64,7 +64,10 @@ const RAMP_CEILING_MS = 90000; // intensity reaches 1.0 (full storm) at 90s elap
  */
 export function stormIntensity(elapsedMs) {
   if (elapsedMs <= RAMP_GRACE_MS) return 0;
-  const t = Math.max(0, Math.min(1, (elapsedMs - RAMP_GRACE_MS) / (RAMP_CEILING_MS - RAMP_GRACE_MS)));
+  const t = Math.max(
+    0,
+    Math.min(1, (elapsedMs - RAMP_GRACE_MS) / (RAMP_CEILING_MS - RAMP_GRACE_MS))
+  );
   return t * t;
 }
 
@@ -75,7 +78,10 @@ function hazardIntervalForElapsed(elapsedMs) {
 
 function hazardSpeedForElapsed(elapsedMs) {
   const intensity = stormIntensity(elapsedMs);
-  return BASE_HAZARD_PROGRESS_PER_MS + intensity * (MAX_HAZARD_PROGRESS_PER_MS - BASE_HAZARD_PROGRESS_PER_MS);
+  return (
+    BASE_HAZARD_PROGRESS_PER_MS +
+    intensity * (MAX_HAZARD_PROGRESS_PER_MS - BASE_HAZARD_PROGRESS_PER_MS)
+  );
 }
 
 // Hazard-kind variety unlocks as the storm builds (elapsedMs) — a run opens with rocks only,
@@ -289,7 +295,8 @@ const RAIN_MAX_OPACITY = 0.5;
 const RAIN_MIN_INTENSITY = 0.05;
 
 function rainStyle(elapsedMs, intensity) {
-  const opacity = intensity <= RAIN_MIN_INTENSITY ? 0 : Number((RAIN_MAX_OPACITY * intensity).toFixed(2));
+  const opacity =
+    intensity <= RAIN_MIN_INTENSITY ? 0 : Number((RAIN_MAX_OPACITY * intensity).toFixed(2));
   const posPx = (-(elapsedMs * RAIN_SPEED_PX_PER_MS * (0.6 + intensity)) % RAIN_TILE_PX).toFixed(1);
   return `opacity:${opacity};background-position:0 ${posPx}px`;
 }
@@ -306,13 +313,15 @@ const LIGHTNING_MAX_OPACITY = 0.5;
 
 function lightningOpacity(elapsedMs, intensity) {
   if (intensity < LIGHTNING_MIN_INTENSITY) return 0;
-  const cycleMs = LIGHTNING_MAX_CYCLE_MS - intensity * (LIGHTNING_MAX_CYCLE_MS - LIGHTNING_MIN_CYCLE_MS);
+  const cycleMs =
+    LIGHTNING_MAX_CYCLE_MS - intensity * (LIGHTNING_MAX_CYCLE_MS - LIGHTNING_MIN_CYCLE_MS);
   const phase = elapsedMs % cycleMs;
   if (phase >= LIGHTNING_FLASH_DURATION_MS) return 0;
   const envelope =
     phase < LIGHTNING_FLASH_RISE_MS
       ? phase / LIGHTNING_FLASH_RISE_MS
-      : 1 - (phase - LIGHTNING_FLASH_RISE_MS) / (LIGHTNING_FLASH_DURATION_MS - LIGHTNING_FLASH_RISE_MS);
+      : 1 -
+        (phase - LIGHTNING_FLASH_RISE_MS) / (LIGHTNING_FLASH_DURATION_MS - LIGHTNING_FLASH_RISE_MS);
   return Number((envelope * LIGHTNING_MAX_OPACITY * intensity).toFixed(2));
 }
 
@@ -330,9 +339,12 @@ function hazardBobSway(hazard, elapsedMs, screenT) {
   const phaseMs = (hazard.id * HAZARD_PHASE_SPACER_MS) % HAZARD_BOB_PERIOD_MS;
   const scale = 0.3 + screenT; // matches .storm-hazard's existing scale term, so bob shrinks with distance
   const bobPx =
-    Math.sin((2 * Math.PI * (elapsedMs + phaseMs)) / HAZARD_BOB_PERIOD_MS) * HAZARD_BOB_AMPLITUDE_PX * scale;
+    Math.sin((2 * Math.PI * (elapsedMs + phaseMs)) / HAZARD_BOB_PERIOD_MS) *
+    HAZARD_BOB_AMPLITUDE_PX *
+    scale;
   const swayDeg =
-    Math.sin((2 * Math.PI * (elapsedMs + phaseMs * 1.3)) / HAZARD_SWAY_PERIOD_MS) * HAZARD_SWAY_AMPLITUDE_DEG;
+    Math.sin((2 * Math.PI * (elapsedMs + phaseMs * 1.3)) / HAZARD_SWAY_PERIOD_MS) *
+    HAZARD_SWAY_AMPLITUDE_DEG;
   return { bobPx, swayDeg };
 }
 

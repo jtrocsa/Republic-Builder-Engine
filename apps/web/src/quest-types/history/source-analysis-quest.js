@@ -54,10 +54,16 @@ export const HippPromptSchema = z
     }),
     argument: z
       .string()
-      .min(1, "hippPrompt.argument is required — the specific argument this HIPP dimension should connect to"),
+      .min(
+        1,
+        "hippPrompt.argument is required — the specific argument this HIPP dimension should connect to"
+      ),
     options: z
       .array(HippOptionSchema)
-      .min(3, "hippPrompt.options needs at least 3 candidate statements (correct + identification-only distractor + at least one other distractor)"),
+      .min(
+        3,
+        "hippPrompt.options needs at least 3 candidate statements (correct + identification-only distractor + at least one other distractor)"
+      ),
   })
   .superRefine((hippPrompt, ctx) => {
     const correctCount = hippPrompt.options.filter((option) => option.correct).length;
@@ -69,7 +75,7 @@ export const HippPromptSchema = z
       });
     }
     const hasIdentificationOnlyDistractor = hippPrompt.options.some(
-      (option) => option.identificationOnly && !option.correct,
+      (option) => option.identificationOnly && !option.correct
     );
     if (!hasIdentificationOnlyDistractor) {
       ctx.addIssue({
@@ -103,7 +109,7 @@ export const SourceAnalysisQuestSchema = z
       .min(1, "hippPrompts must tag at least one HIPP dimension")
       .max(
         2,
-        "tag only the 1-2 HIPP dimensions that are actually meaningfully arguable for this document — don't force all four onto every source",
+        "tag only the 1-2 HIPP dimensions that are actually meaningfully arguable for this document — don't force all four onto every source"
       ),
   })
   .superRefine((quest, ctx) => {
@@ -155,7 +161,9 @@ export function renderSourceAnalysisQuest(quest, state = {}) {
   <div class="quest-hipp-prompts">
     ${quest.hippPrompts
       .map(
-        (hippPrompt) => `<fieldset class="hipp-prompt" data-hipp-prompt="${escapeHtml(hippPrompt.id)}" data-hipp-dimension="${escapeHtml(hippPrompt.dimension)}">
+        (
+          hippPrompt
+        ) => `<fieldset class="hipp-prompt" data-hipp-prompt="${escapeHtml(hippPrompt.id)}" data-hipp-dimension="${escapeHtml(hippPrompt.dimension)}">
       <legend>${escapeHtml(hippPrompt.dimension)}: ${escapeHtml(hippPrompt.argument)}</legend>
       ${hippPrompt.options
         .map(
@@ -164,10 +172,10 @@ export function renderSourceAnalysisQuest(quest, state = {}) {
           selected[hippPrompt.id] === option.id ? "checked" : ""
         }>
         <span>${escapeHtml(option.text)}</span>
-      </label>`,
+      </label>`
         )
         .join("")}
-    </fieldset>`,
+    </fieldset>`
       )
       .join("")}
   </div>

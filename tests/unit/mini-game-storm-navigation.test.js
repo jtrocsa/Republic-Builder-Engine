@@ -180,10 +180,18 @@ describe("difficulty ramp (stormIntensity / interval, exercised indirectly throu
   });
 
   it("floors the interval at 380ms once stormIntensity reaches its ceiling (boundary case)", () => {
-    const atCeiling = tickStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 90000 }, 100, () => 0);
+    const atCeiling = tickStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 90000 },
+      100,
+      () => 0
+    );
     expect(atCeiling.hazardIntervalMs).toBe(380);
 
-    const wayPast = tickStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 500000 }, 100, () => 0);
+    const wayPast = tickStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 500000 },
+      100,
+      () => 0
+    );
     expect(wayPast.hazardIntervalMs).toBe(380);
   });
 
@@ -245,7 +253,11 @@ describe("speed ramp (stormIntensity / hazard speed, exercised indirectly throug
 
 describe("progressive hazard-kind unlock (eligibleHazardKinds, exercised indirectly through tick)", () => {
   it("only spawns rock hazards during the calm grace period, regardless of hazardsDodged (normal case)", () => {
-    const state = { ...createStormNavigationGame(), hazardsDodged: 100000, msSinceLastHazard: 999999 };
+    const state = {
+      ...createStormNavigationGame(),
+      hazardsDodged: 100000,
+      msSinceLastHazard: 999999,
+    };
     const ticked = tickStormNavigationGame(state, 5, () => 0.99);
     expect(ticked.hazards).toHaveLength(1);
     expect(ticked.hazards[0].kind).toBe("rock");
@@ -320,7 +332,12 @@ describe("steerShip", () => {
   });
 
   it("is a no-op when running is already false (boundary case)", () => {
-    const state = { ...createStormNavigationGame(), running: false, playerX: 0.4, playerVelocityX: 1 };
+    const state = {
+      ...createStormNavigationGame(),
+      running: false,
+      playerX: 0.4,
+      playerVelocityX: 1,
+    };
     const moved = steerShip(state, 1, 100);
     expect(moved).toBe(state);
   });
@@ -351,7 +368,9 @@ describe("renderStormNavigationGame", () => {
 
     const shipMatches = html.match(/data-storm-ship/g);
     expect(shipMatches).toHaveLength(1);
-    expect(html).toContain('<div class="storm-ship" data-storm-ship style="--lane-offset:0%;--bob-px:0.0px">');
+    expect(html).toContain(
+      '<div class="storm-ship" data-storm-ship style="--lane-offset:0%;--bob-px:0.0px">'
+    );
     expect(html).toContain('<span class="storm-ship-wake"></span>');
     expect(html).toContain('<img class="storm-ship-art" src="/ship.svg"');
   });
@@ -477,24 +496,46 @@ describe("renderStormNavigationGame", () => {
 
   it("advances the wave background position as elapsedMs increases (normal case)", () => {
     const extractPos = (html) => html.match(/storm-track" style="background-position:([^"]+)"/)[1];
-    const early = renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 1000 }, 0, SPRITES);
-    const later = renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 5000 }, 0, SPRITES);
+    const early = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 1000 },
+      0,
+      SPRITES
+    );
+    const later = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 5000 },
+      0,
+      SPRITES
+    );
     expect(extractPos(early)).not.toBe(extractPos(later));
   });
 
   it("keeps rain fully transparent through the calm grace period, and builds it in as the storm intensifies (normal + boundary case)", () => {
     const calm = renderStormNavigationGame(createStormNavigationGame(), 0, SPRITES);
-    expect(calm).toContain('<div class="storm-rain" style="opacity:0;background-position:0 0.0px"></div>');
+    expect(calm).toContain(
+      '<div class="storm-rain" style="opacity:0;background-position:0 0.0px"></div>'
+    );
 
-    const fullStorm = renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 90000 }, 0, SPRITES);
+    const fullStorm = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 90000 },
+      0,
+      SPRITES
+    );
     expect(fullStorm).toContain("opacity:0.5;background-position:0 0.0px");
   });
 
   it("keeps lightning off below the minimum intensity, and flashes with a bounded opacity once the storm has built (normal + boundary case)", () => {
-    const calm = renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 8000 }, 0, SPRITES);
+    const calm = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 8000 },
+      0,
+      SPRITES
+    );
     expect(calm).toContain('<div class="storm-lightning" style="opacity:0"></div>');
 
-    const flashing = renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 92020 }, 0, SPRITES);
+    const flashing = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 92020 },
+      0,
+      SPRITES
+    );
     expect(flashing).toContain('<div class="storm-lightning" style="opacity:0.25"></div>');
   });
 
@@ -502,7 +543,11 @@ describe("renderStormNavigationGame", () => {
     const atStart = renderStormNavigationGame(createStormNavigationGame(), 0, SPRITES);
     expect(atStart).toContain("--bob-px:0.0px");
 
-    const quarterPeriod = renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs: 450 }, 0, SPRITES);
+    const quarterPeriod = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 450 },
+      0,
+      SPRITES
+    );
     expect(quarterPeriod).toContain("--bob-px:4.0px");
 
     const threeQuarterPeriod = renderStormNavigationGame(

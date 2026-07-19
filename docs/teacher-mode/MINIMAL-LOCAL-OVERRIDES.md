@@ -4,18 +4,18 @@ Status: complete. Per `docs/architecture/ARCHITECTURE-QUICKREF.md` §6 / `docs/a
 
 ## What was actually broken
 
-Two Author Mode content-edit fields rendered in `authorPanel()` in `main.js` (previously at `main.js:1134-1136`, before this fix's edits shifted line numbers) with correct-looking current values, but had **no event listener wired to `[data-copy]` at all** — confirmed by grepping `main.js` for `data-copy` and `data-profile`. The sibling `data-profile="name"` field (student name) *does* have a working `change` listener (`app.addEventListener("change", ...)` → `progress.profile[...]  = field.value; save();`), which is why it was not part of this fix — it already worked and already persists through the existing progress store.
+Two Author Mode content-edit fields rendered in `authorPanel()` in `main.js` (previously at `main.js:1134-1136`, before this fix's edits shifted line numbers) with correct-looking current values, but had **no event listener wired to `[data-copy]` at all** — confirmed by grepping `main.js` for `data-copy` and `data-profile`. The sibling `data-profile="name"` field (student name) _does_ have a working `change` listener (`app.addEventListener("change", ...)` → `progress.profile[...]  = field.value; save();`), which is why it was not part of this fix — it already worked and already persists through the existing progress store.
 
-| Field | `data-copy` value | Backing content | Default value | Save behavior before this fix | Render behavior before this fix |
-| --- | --- | --- | --- | --- | --- |
-| Unit title | `unit-title` | `UNIT_01.title` | `"The Atlantic World"` | None — no listener matched `[data-copy]` | Always rendered the live `UNIT_01.title` import, never a saved edit |
-| Unit question | `unit-question` | `UNIT_01.centralQuestion` | `"How did contact among Europe, Africa, and the Americas reshape societies on both sides of the Atlantic?"` | None | Always rendered the live `UNIT_01.centralQuestion` import |
+| Field         | `data-copy` value | Backing content           | Default value                                                                                               | Save behavior before this fix            | Render behavior before this fix                                     |
+| ------------- | ----------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| Unit title    | `unit-title`      | `UNIT_01.title`           | `"The Atlantic World"`                                                                                      | None — no listener matched `[data-copy]` | Always rendered the live `UNIT_01.title` import, never a saved edit |
+| Unit question | `unit-question`   | `UNIT_01.centralQuestion` | `"How did contact among Europe, Africa, and the Americas reshape societies on both sides of the Atlantic?"` | None                                     | Always rendered the live `UNIT_01.centralQuestion` import           |
 
 No more than these two fields were affected. `data-profile="name"` was already working and was not touched.
 
 ## The store
 
-`apps/web/src/repositories/local-teacher-override-store.js` — a flat field-path-patch blob in `localStorage`, the `TeacherOverride` *shape* from `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` with none of the surrounding `TeacherWorld`/`PublicationVersion`/`ClassroomPublication`/publish-pipeline machinery.
+`apps/web/src/repositories/local-teacher-override-store.js` — a flat field-path-patch blob in `localStorage`, the `TeacherOverride` _shape_ from `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` with none of the surrounding `TeacherWorld`/`PublicationVersion`/`ClassroomPublication`/publish-pipeline machinery.
 
 **Storage key:** `republic-builder.chronicle.teacher-overrides.v1` (follows the existing `republic-builder.chronicle.<subject>.v<n>` convention from `chronicle-progress-store.js`'s `republic-builder.chronicle.unit-01.v2`).
 
@@ -34,14 +34,14 @@ No more than these two fields were affected. `data-profile="name"` was already w
 
 ## Public API
 
-| Function | Behavior |
-| --- | --- |
-| `getOverride(contentId, fieldName)` | Returns the stored override value, or `undefined` if none exists. |
-| `hasOverride(contentId, fieldName)` | Boolean convenience wrapper around `getOverride`. |
-| `resolveField(contentId, fieldName, officialValue)` | The one function render code should call: override if present, else `officialValue`. Never mutates `officialValue`. |
-| `setOverride(contentId, fieldName, value)` | Writes one field's override. Silently no-ops (returns the store unchanged) if `fieldName` isn't in the allow-list or `value` fails the Zod string schema — this is the write-side half of the malformed-data guarantee. |
-| `clearOverride(contentId, fieldName)` | Removes one field's override. Removes the whole `contentId` entry once its last field is cleared, so the store never accumulates empty `{}` entries. |
-| `clearAllOverrides(contentId)` | Removes every override for one content id at once — backs the panel's single reset button. |
+| Function                                            | Behavior                                                                                                                                                                                                                |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getOverride(contentId, fieldName)`                 | Returns the stored override value, or `undefined` if none exists.                                                                                                                                                       |
+| `hasOverride(contentId, fieldName)`                 | Boolean convenience wrapper around `getOverride`.                                                                                                                                                                       |
+| `resolveField(contentId, fieldName, officialValue)` | The one function render code should call: override if present, else `officialValue`. Never mutates `officialValue`.                                                                                                     |
+| `setOverride(contentId, fieldName, value)`          | Writes one field's override. Silently no-ops (returns the store unchanged) if `fieldName` isn't in the allow-list or `value` fails the Zod string schema — this is the write-side half of the malformed-data guarantee. |
+| `clearOverride(contentId, fieldName)`               | Removes one field's override. Removes the whole `contentId` entry once its last field is cleared, so the store never accumulates empty `{}` entries.                                                                    |
+| `clearAllOverrides(contentId)`                      | Removes every override for one content id at once — backs the panel's single reset button.                                                                                                                              |
 
 ## Resolution behavior
 
@@ -58,7 +58,7 @@ function resolvedUnitCentralQuestion(unit) {
 
 These are called everywhere the unit's title or central question is already shown to a student, so an edit is consistent across every screen rather than half-applied:
 
-- `authorPanel()` — both input/textarea default values (so editing shows the *current* resolved value, not always the official one)
+- `authorPanel()` — both input/textarea default values (so editing shows the _current_ resolved value, not always the official one)
 - `instituteScreen()` — the "Unit 1 · {title}" hub-meta line
 - `archiveScreen()` — the atlas `aria-label`, and a new one-line "Guiding question" paragraph in the archive copy section (see below)
 - `reviewScreen()` — the `<h1>`
@@ -78,10 +78,12 @@ This is not a new editable field and not new Teacher Mode surface area — it's 
 
 ## Reset behavior
 
-The author panel had no reset control for content fields before this fix (only a *progress* reset button, "Reset Unit 1 demo," which resets gameplay save state and does not touch content overrides — verified these are independent). One button was added, shown only when at least one of the two fields has an active override:
+The author panel had no reset control for content fields before this fix (only a _progress_ reset button, "Reset Unit 1 demo," which resets gameplay save state and does not touch content overrides — verified these are independent). One button was added, shown only when at least one of the two fields has an active override:
 
 ```html
-<button class="text-button" data-action="reset-author-overrides">Reset content overrides to official text</button>
+<button class="text-button" data-action="reset-author-overrides">
+  Reset content overrides to official text
+</button>
 ```
 
 Clicking it calls `clearAllOverrides(UNIT_01.id)` and re-renders. Both fields snap back to the official `unit-01-campaign.js` values. Each overridden label also shows a small "edited" flag (`.author-override-flag`) so it's visible which fields currently differ from official content, without needing to open dev tools or diff localStorage by hand.
@@ -118,7 +120,7 @@ Kept "Author Mode" as the UI label (unchanged) — the task's own guidance was t
 3. Confirm "Unit title" shows `The Atlantic World` and "Unit question" shows the existing central question, with no "edited" flag and no reset button visible.
 4. Edit the unit title, tab/click away to blur the field (fires `change`). Confirm the panel re-renders with an "edited" flag next to "Unit title" and the reset button appears.
 5. Navigate to the Institute hub screen behind the panel — confirm the "Unit 1 · …" line now shows the edited title.
-6. Open the Navigation Table (Archive screen) — confirm the edited title appears in the atlas `aria-label` (inspect via devtools or a screen reader) and that the new "Guiding question" line reflects the *official* central question (since only the title was edited in this step).
+6. Open the Navigation Table (Archive screen) — confirm the edited title appears in the atlas `aria-label` (inspect via devtools or a screen reader) and that the new "Guiding question" line reflects the _official_ central question (since only the title was edited in this step).
 7. Edit the unit question field too, blur it. Confirm the Archive screen's "Guiding question" line now shows the edited text.
 8. Refresh the browser (full reload). Reopen Author Mode. Confirm both edited values are still shown, still flagged "edited," and the Archive/Institute screens still show the edited text — this is the persistence check.
 9. Click "Reset content overrides to official text." Confirm both fields snap back to the original official strings, the "edited" flags and the reset button disappear, and the Institute/Archive screens revert to official text.

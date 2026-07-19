@@ -20,7 +20,8 @@ export const UNIT_01_MCQ_QUESTS = [
   },
   {
     id: "case-001-mcq-columbus-audience",
-    prompt: "Columbus's 1493 letter to Rafael Sánchez most directly reflects the influence of which factor?",
+    prompt:
+      "Columbus's 1493 letter to Rafael Sánchez most directly reflects the influence of which factor?",
     choices: [
       "His audience: a royal treasurer whose support could shape future voyages",
       "His training as a professional cartographer",
@@ -333,14 +334,16 @@ export const UNIT_01_ARCHIVE_EVIDENCE_QUESTS = [
         id: "maize-claim-evidence",
         label: "Maize",
         attribution: "José de Acosta, Natural and Moral History of the Indies, 1590",
-        excerpt: "“The principal grain of the Indies is maize … whereof the Indians make their bread.”",
+        excerpt:
+          "“The principal grain of the Indies is maize … whereof the Indians make their bread.”",
         skillCategory: "Continuity and Change",
         correctSlotId: "agriculture-diet",
       },
       {
         id: "smallpox-claim-evidence",
         label: "Smallpox",
-        attribution: "Toribio de Benavente “Motolinía,” History of the Indians of New Spain, c. 1541",
+        attribution:
+          "Toribio de Benavente “Motolinía,” History of the Indians of New Spain, c. 1541",
         excerpt: "“In the year 1520 came the smallpox … and a very great many Indians died of it.”",
         skillCategory: "Causation",
         correctSlotId: "demographic-catastrophe",
@@ -348,7 +351,8 @@ export const UNIT_01_ARCHIVE_EVIDENCE_QUESTS = [
       {
         id: "horses-claim-evidence",
         label: "Horses",
-        attribution: "Bernal Díaz del Castillo, True History of the Conquest of New Spain, completed c. 1568",
+        attribution:
+          "Bernal Díaz del Castillo, True History of the Conquest of New Spain, completed c. 1568",
         excerpt: "“The sight of the horses caused them great wonder.”",
         skillCategory: "Contextualization",
         correctSlotId: "mobility-warfare",
@@ -368,7 +372,8 @@ export const UNIT_01_ARCHIVE_EVIDENCE_QUESTS = [
     rubric: {
       skillCategories: ["Continuity and Change", "Causation", "Contextualization", "Sourcing"],
       pointsTotal: 4,
-      description: "Earn 1 point per record correctly matched to the claim its evidence best supports.",
+      description:
+        "Earn 1 point per record correctly matched to the claim its evidence best supports.",
     },
   },
 ];
@@ -379,8 +384,7 @@ export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [
     prompt:
       "Analyze Columbus's 1493 letter to Rafael Sánchez using HIPP reasoning. For each dimension below, choose the option that explains how or why it shapes the letter's argument — not the option that merely names the correct answer.",
     document: {
-      text:
-        "Since I know you will be pleased at the great victory our Lord has given me in this voyage, I write to tell you that in thirty-three days I passed from the Canary Islands to the Indies, where I found very many islands, and took possession of all of them for their Highnesses. The people of these islands are so guileless and generous with all they possess that no one would believe it without seeing it; whatever is asked of them, they never refuse, and they show as much love as if they gave their hearts. I have found gold in some rivers, and on the island they call Hispaniola there are mines of metal in great quantity. I am confident that, with a little more help from Your Highnesses, I shall bring back as much gold as is needed, and as much spice and cotton as their ships can carry, together with people to be converted to our holy faith.",
+      text: "Since I know you will be pleased at the great victory our Lord has given me in this voyage, I write to tell you that in thirty-three days I passed from the Canary Islands to the Indies, where I found very many islands, and took possession of all of them for their Highnesses. The people of these islands are so guileless and generous with all they possess that no one would believe it without seeing it; whatever is asked of them, they never refuse, and they show as much love as if they gave their hearts. I have found gold in some rivers, and on the island they call Hispaniola there are mines of metal in great quantity. I am confident that, with a little more help from Your Highnesses, I shall bring back as much gold as is needed, and as much spice and cotton as their ships can carry, together with people to be converted to our holy faith.",
       attribution: "Christopher Columbus, Letter to Rafael Sánchez, 1493",
     },
     hippPrompts: [
@@ -392,27 +396,23 @@ export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [
         options: [
           {
             id: "audience-explained",
-            text:
-              "Because Sánchez was the treasurer overseeing crown funds for exploration, Columbus foregrounds gold, valuable goods, and easily governed peoples to reassure the official most able to authorize further voyages.",
+            text: "Because Sánchez was the treasurer overseeing crown funds for exploration, Columbus foregrounds gold, valuable goods, and easily governed peoples to reassure the official most able to authorize further voyages.",
             correct: true,
           },
           {
             id: "audience-named-only",
-            text:
-              "Rafael Sánchez was the treasurer to the Spanish crown, the official responsible for managing the monarchy's finances.",
+            text: "Rafael Sánchez was the treasurer to the Spanish crown, the official responsible for managing the monarchy's finances.",
             identificationOnly: true,
             correct: false,
           },
           {
             id: "audience-wrong-sailor",
-            text:
-              "Sánchez had sailed on the voyage himself, so Columbus wrote informally about hardships they had shared at sea.",
+            text: "Sánchez had sailed on the voyage himself, so Columbus wrote informally about hardships they had shared at sea.",
             correct: false,
           },
           {
             id: "audience-wrong-public",
-            text:
-              "The letter was written for a general Spanish public readership from its first draft, with no connection to any crown official.",
+            text: "The letter was written for a general Spanish public readership from its first draft, with no connection to any crown official.",
             correct: false,
           },
         ],
@@ -425,14 +425,12 @@ export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [
         options: [
           {
             id: "purpose-explained",
-            text:
-              "By foregrounding gold, valuable goods, and peaceable, convertible peoples, Columbus frames the voyage as a profitable investment, building the case for the crown to fund additional expeditions.",
+            text: "By foregrounding gold, valuable goods, and peaceable, convertible peoples, Columbus frames the voyage as a profitable investment, building the case for the crown to fund additional expeditions.",
             correct: true,
           },
           {
             id: "purpose-named-only",
-            text:
-              "Columbus wrote the letter to inform the Spanish crown of his voyage and describe the lands and people he had encountered.",
+            text: "Columbus wrote the letter to inform the Spanish crown of his voyage and describe the lands and people he had encountered.",
             identificationOnly: true,
             correct: false,
           },
@@ -443,8 +441,7 @@ export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [
           },
           {
             id: "purpose-wrong-navigation",
-            text:
-              "The letter's purpose was to record precise longitude measurements for training future navigators.",
+            text: "The letter's purpose was to record precise longitude measurements for training future navigators.",
             correct: false,
           },
         ],

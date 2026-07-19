@@ -282,7 +282,8 @@ export const TRIANGLE_CARGO = [
     label: "Sugar & molasses",
     icon: "🛢",
     leg: "homeward",
-    sourceTitle: "Plantation accounts recorded hogsheads of sugar and puncheons of molasses shipped to England",
+    sourceTitle:
+      "Plantation accounts recorded hogsheads of sugar and puncheons of molasses shipped to England",
     sourceMeta: "Representative Caribbean plantation account · c. 1730",
     consequence:
       "Caribbean plantation accounts compiled from the period typically list hogsheads of sugar and puncheons of molasses shipped to England or the northern colonies against the planter's account, with the proceeds used to buy more enslaved laborers, provisions, and manufactured goods — sugar wealth circulating back into the labor system that produced it.",
@@ -382,7 +383,7 @@ export const UNIT_02_REVIEW = {
     },
     {
       prompt:
-        "The Dedham Covenant's requirement that new residents be admitted only if they were \"probably of one heart\" with existing members best illustrates which feature of New England town founding?",
+        'The Dedham Covenant\'s requirement that new residents be admitted only if they were "probably of one heart" with existing members best illustrates which feature of New England town founding?',
       choices: [
         "Towns were organized as self-governing, covenanted communities that screened membership around shared religious commitment",
         "New England towns admitted all settlers equally regardless of religious belief",

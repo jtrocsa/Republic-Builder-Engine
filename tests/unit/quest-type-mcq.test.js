@@ -31,7 +31,7 @@ describe("McqQuestSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues.some((issue) => issue.message.includes("out of range"))).toBe(
-        true,
+        true
       );
     }
   });
@@ -49,9 +49,9 @@ describe("McqQuestListSchema", () => {
     const result = McqQuestListSchema.safeParse([validQuest, { ...validQuest }]);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.message.includes("Duplicate mcq quest id"))).toBe(
-        true,
-      );
+      expect(
+        result.error.issues.some((issue) => issue.message.includes("Duplicate mcq quest id"))
+      ).toBe(true);
     }
   });
 

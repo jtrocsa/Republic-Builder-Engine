@@ -135,7 +135,7 @@ export function renderCargoSortingGame(state) {
             cargoGoodChip(good, {
               className: `cargo-hold-item ${good.holdId === hold.id ? "is-correct" : "is-incorrect"}`,
               placedInHoldId: hold.id,
-            }),
+            })
           )
           .join("");
         return `<div class="cargo-hold" data-cargo-hold="${escapeHtml(hold.id)}"><h4>${escapeHtml(hold.label)}</h4><div class="cargo-hold-items">${items}</div></div>`;

@@ -24,6 +24,7 @@ export default [
         structuredClone: "readonly",
         Blob: "readonly",
         URL: "readonly",
+        URLSearchParams: "readonly",
         CSS: "readonly",
         performance: "readonly",
         alert: "readonly",
@@ -44,6 +45,15 @@ export default [
   {
     // scripts/ runs under plain Node (npm run validate:content), not the browser
     files: ["scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+  {
+    // api/ runs as Vercel serverless functions under Node, not the browser
+    files: ["api/**/*.js"],
     languageOptions: {
       globals: {
         process: "readonly",

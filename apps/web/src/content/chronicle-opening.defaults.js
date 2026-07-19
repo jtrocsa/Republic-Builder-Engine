@@ -29,10 +29,7 @@ export const CHRONICLE_OPENING_DEFAULTS = {
       eyebrow: "Republic Builder Engine",
       title: "Chronicle",
       subtitle: "An AP U.S. History Adventure",
-      body: [
-        { text: "Welcome, Chronicler." },
-        { text: "The Institute has been waiting for you." },
-      ],
+      body: [{ text: "Welcome, Chronicler." }, { text: "The Institute has been waiting for you." }],
       action: "Begin Orientation",
       secondary: "What is Chronicle?",
     },

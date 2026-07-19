@@ -136,10 +136,10 @@ describe("renderCargoSortingGame", () => {
     state = placeCargo(state, "cotton", "foodstuffs");
     const html = renderCargoSortingGame(state);
     expect(html).toContain(
-      'class="cargo-good cargo-hold-item is-correct" draggable="true" data-cargo-good="maize"',
+      'class="cargo-good cargo-hold-item is-correct" draggable="true" data-cargo-good="maize"'
     );
     expect(html).toContain(
-      'class="cargo-good cargo-hold-item is-incorrect" draggable="true" data-cargo-good="cotton"',
+      'class="cargo-good cargo-hold-item is-incorrect" draggable="true" data-cargo-good="cotton"'
     );
   });
 

@@ -14,8 +14,8 @@
         padding: 0.5rem 1rem;
       }
       #stage {
-        width: 1920px;
-        height: 1152px;
+        width: 576px;
+        height: 480px;
         image-rendering: pixelated;
       }
     </style>
@@ -23,28 +23,41 @@
   <body>
     <header>
       <p>
-        Dev-only preview of <code>caribbean-field.tmj</code> (data point #3, see
-        POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md). Not linked from the game, not part of
-        <code>npm run build</code> — reachable only by visiting this file directly under
-        <code>npm run dev</code>.
+        Dev-only preview of <code>sandy-island-demo.tmj</code> — a test scene for the "Sandy Island"
+        pack, resized from a ChatGPT-generated sprite sheet via
+        <code>scripts/resize-sandy-island-spritesheet.ps1</code> (see
+        <code>docs/decision-log/</code> for the write-up). Not linked from the game, not tied to any
+        real case, not part of <code>npm run build</code> — reachable only by visiting this file
+        directly under <code>npm run dev</code>.
       </p>
     </header>
     <canvas id="stage"></canvas>
     <script type="module">
       import { renderTiledMap, createTilesetImageResolver } from "./src/engine/tiled-map-loader.js";
-      import tmjRaw from "./src/content/maps/caribbean-field.tmj?raw";
+      import tmjRaw from "./src/content/maps/sandy-island-demo.tmj?raw";
 
       const tmj = JSON.parse(tmjRaw);
       const resolve = createTilesetImageResolver(
-        import.meta.glob("./src/assets/tilesets/Medieval harbor/**", {
+        import.meta.glob("./src/assets/tilesets/Sandy Island/sand.png", {
           eager: true,
           import: "default",
         }),
-        import.meta.glob("./src/assets/tilesets/Medieval Fantasy Town/**", {
+        import.meta.glob("./src/assets/tilesets/Sandy Island/water.png", {
           eager: true,
           import: "default",
         }),
-        import.meta.glob("./src/assets/tilesets/farm/**", { eager: true, import: "default" })
+        import.meta.glob("./src/assets/tilesets/Sandy Island/dirt-path.png", {
+          eager: true,
+          import: "default",
+        }),
+        import.meta.glob("./src/assets/tilesets/Sandy Island/palm-tree.png", {
+          eager: true,
+          import: "default",
+        }),
+        import.meta.glob("./src/assets/tilesets/Sandy Island/fire.png", {
+          eager: true,
+          import: "default",
+        })
       );
       renderTiledMap(document.getElementById("stage"), tmj, resolve);
     </script>

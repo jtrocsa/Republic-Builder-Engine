@@ -15,7 +15,7 @@ Per `docs/content-guide/source-asset-contract.md`:
 
 - a readable excerpt, transcription, or locally bundled image/scan (never an external-link-only source);
 - title, creator, date, source type, provenance, and citation;
-- a student prompt that appears *before* explanatory feedback;
+- a student prompt that appears _before_ explanatory feedback;
 - an optional external archive link for verification, never the only way to access the evidence.
 
 Interpretive visuals must be labeled as interpretive, never presented as primary sources. Secondary context is labeled and revealed after a student's initial response when used as feedback (see `docs/content-guide/unit-01-source-and-activity-records.md`).

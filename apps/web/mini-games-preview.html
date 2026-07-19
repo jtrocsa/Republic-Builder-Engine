@@ -88,9 +88,9 @@
         <code>npm run build</code> — reachable only by visiting this file directly under
         <code>npm run dev</code>, matching the existing <code>tiled-preview.html</code>/
         <code>quest-type-preview.html</code> precedent. Click-to-select/click-to-place (Cargo
-        Sorting) and held-button steering (Storm Navigation) are test-harness affordances only,
-        not new game UI — the render functions' own markup (<code>draggable="true"</code> cargo
-        cards, etc.) is unchanged from what <code>renderCargoSortingGame()</code>/
+        Sorting) and held-button steering (Storm Navigation) are test-harness affordances only, not
+        new game UI — the render functions' own markup (<code>draggable="true"</code> cargo cards,
+        etc.) is unchanged from what <code>renderCargoSortingGame()</code>/
         <code>renderStormNavigationGame()</code> actually produce.
       </p>
     </header>
@@ -150,7 +150,7 @@
         cargoResultEl.textContent = JSON.stringify(
           { sortedCount: cargoState.sortedCount, complete: isCargoSortingComplete(cargoState) },
           null,
-          2,
+          2
         );
       }
       renderCargo();
@@ -184,7 +184,7 @@
             hazardsHit: stormState.hazardsHit,
           },
           null,
-          2,
+          2
         );
       }
       renderStorm();

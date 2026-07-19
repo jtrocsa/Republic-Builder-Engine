@@ -35,15 +35,15 @@ just work.
   image resolver is scoped per pack folder (see "why" below) rather than globbing all of
   `assets/tilesets/`, so a brand-new folder needs one line added where the map is wired up in
   `main.js`. Reusing an already-referenced pack folder needs no code change at all.
-  - *Why scoped, not automatic-for-everything:* `assets/tilesets/` also holds downloaded packs
+  - _Why scoped, not automatic-for-everything:_ `assets/tilesets/` also holds downloaded packs
     that aren't used by any real map yet. An unscoped "bundle anything in this folder" glob
     pulled all of them into the production build — 117MB of unused art in one measurement during
     this work — so the loader only bundles the pack folders a map's wiring actually globs.
 
 ## 3. Animated tiles (optional)
 
-- Use Tiled's built-in Tile Animation Editor (right-click a tile in the tileset view → *Tile
-  Animation Editor*) to add frames and per-frame durations. No special naming or per-tile code
+- Use Tiled's built-in Tile Animation Editor (right-click a tile in the tileset view → _Tile
+  Animation Editor_) to add frames and per-frame durations. No special naming or per-tile code
   is needed — the loader reads the standard `tiles[].animation` array Tiled writes and animates
   any tile that has one, generically.
 - A map with zero animated tiles renders exactly as before: one static draw, no extra

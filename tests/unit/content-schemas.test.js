@@ -92,7 +92,10 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
           ...validCase,
           route: null,
           navigationTableVisible: false,
-          archiveChallenge: { questType: "evidence-organizing", questId: "unit-02-charter-compact" },
+          archiveChallenge: {
+            questType: "evidence-organizing",
+            questId: "unit-02-charter-compact",
+          },
         },
       ],
     };

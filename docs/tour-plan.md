@@ -7,7 +7,8 @@ Today, right after the player confirms their Chronicler identity, the transition
 The codebase already has an unused `progress.tutorial` field sitting in `DEFAULT_PROGRESS` (`{ step: "not-started", completed: false, skipped: false }`), explicitly scaffolded in an earlier commit "ahead of a future guided-tutorial pass" — this is that pass. It also already has a full typewriter/click-through dialogue engine built for the Director's pre-character-creation briefing screens, which this feature reuses wholesale rather than building a second dialogue system.
 
 **Decisions already made with the user:**
-- No new art assets. The "hallway" is built by cropping/zooming the *existing* `chronicle-institute-hub.png` background via CSS to frame the door already visible at the bottom of that art — not a new scene image.
+
+- No new art assets. The "hallway" is built by cropping/zooming the _existing_ `chronicle-institute-hub.png` background via CSS to frame the door already visible at the bottom of that art — not a new scene image.
 - The in-hub tour is **click-through captions with movement locked**, not "walk to each target." Simpler, matches the user's own description ("once the player clicks through those, then the player is free to move around").
 
 ## Flow being built
@@ -27,7 +28,7 @@ identityScreen (confirm-identity)
        → "complete" — movement unlocks, tour never shows again.
 ```
 
-Returning players / any save with prior keys are retroactively treated as `tutorial.step: "complete"` by the *existing* merge logic in `readProgress()` (chronicle-progress-store.js:78-85) — that logic is not touched, so this never re-triggers for existing saves.
+Returning players / any save with prior keys are retroactively treated as `tutorial.step: "complete"` by the _existing_ merge logic in `readProgress()` (chronicle-progress-store.js:78-85) — that logic is not touched, so this never re-triggers for existing saves.
 
 ## Implementation
 
@@ -56,22 +57,24 @@ Returning players / any save with prior keys are retroactively treated as `tutor
   1. The `institute`-screen keydown handler (main.js ~4100-4114): early-return before both the E-interact and movement-key branches when `isTutorialTourActive()`.
   2. `runHubMovementLoop()` (main.js:1862-1904): fold `isTutorialTourActive()` into its existing `progress.currentScreen !== "institute"` early-return check.
   3. `interactWithHubTarget(id)` (main.js:1905-1950): early-return at the top when `isTutorialTourActive()` — needed because clicks route here independently of the keydown gate via `handleHubClick`'s `"hub-interact"` action.
-- **Highlight rendering** — reuse the existing `.hub-table.is-near`/`.hub-trophy.is-near` gold pulse CSS (global.css ~3691-3696, ~3911-3917), don't invent new glow CSS. Two spots need the *same* combined condition (`real proximity OR isTourHighlighted(id)`), not just one, because `updateHubProximityUi()` runs after every render and will otherwise strip a highlight that only the initial markup applied:
+- **Highlight rendering** — reuse the existing `.hub-table.is-near`/`.hub-trophy.is-near` gold pulse CSS (global.css ~3691-3696, ~3911-3917), don't invent new glow CSS. Two spots need the _same_ combined condition (`real proximity OR isTourHighlighted(id)`), not just one, because `updateHubProximityUi()` runs after every render and will otherwise strip a highlight that only the initial markup applied:
   1. `instituteMainRoomScreen()`'s inline `is-near` ternaries for `trophy`/`table`/`archiveDoor` (main.js:1972).
   2. `updateHubProximityUi()`'s class-toggle condition (main.js:1814-1826).
-  Factor a shared `isHubTargetNear(id)` helper used at both sites to avoid drift.
+     Factor a shared `isHubTargetNear(id)` helper used at both sites to avoid drift.
 - **Caption panel**: reuse the existing `.hub-dialogue` panel structure/styling (the same one `hubDialogueId` already renders, main.js:1972) rather than inventing new UI — a `tourCalloutMarkup()` function rendered whenever `isTutorialTourActive()`, with a "Next"/"Got it" button (`data-action="tutorial-tour-next"`) instead of a close button.
 - **Advance handler**: `"tutorial-tour-next"` action (in `handleHubClick()`, main.js ~3293 onward) steps `progress.tutorial.step` through `TUTORIAL_TOUR_STEPS`; on the last step, sets `progress.tutorial = { step: "complete", completed: true, skipped: false }`.
 - **Director patrol pause**: `updateInstituteNpcs()` (main.js:1177-1240) already freezes an NPC's patrol when `hubDialogueId === id` (main.js:1187) — extend that same guard so the Director also freezes for the whole tour (`isTutorialTourActive()`), so he isn't visibly wandering off while narrating. Amani/Julian keep patrolling normally.
 - Because the caption/highlight markup is a pure function of the persisted `progress.tutorial.step`, a mid-tour page refresh resumes at the correct step automatically — no extra reload handling needed.
 
 ### Files touched
+
 - `apps/web/src/main.js` — all logic/markup changes above.
 - `apps/web/src/content/chronicle-opening.defaults.js` — `scenes.hallway` + `tour` content.
 - `apps/web/src/styles/global.css` — `.hallway-viewport`/`.hallway-crop`/`.hallway-sprite`/`.scene-fade` (new), reusing existing `.hub-dialogue`/`.is-near`/pulse-glow rules everywhere else.
 - No changes needed to `chronicle-progress-store.js` — `progress.tutorial` already exists and its retroactive-completion merge logic is left as-is.
 
 ### Explicitly not building
+
 - No general-purpose cutscene/scripted-movement engine — the hallway walk is bespoke, one-off animation code.
 - No dimming/scrim/spotlight masking system — reuses the existing pulse-glow treatment.
 - No "skip tutorial" control (the `skipped` field stays unused) — not requested; flagged as a trivial future add if wanted.

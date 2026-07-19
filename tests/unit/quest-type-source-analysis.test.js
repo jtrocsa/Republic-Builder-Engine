@@ -60,8 +60,8 @@ describe("HippOptionSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("cannot be both correct and identificationOnly"),
-        ),
+          issue.message.includes("cannot be both correct and identificationOnly")
+        )
       ).toBe(true);
     }
   });
@@ -82,8 +82,8 @@ describe("HippPromptSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("must contain exactly one correct, explanation-linked option"),
-        ),
+          issue.message.includes("must contain exactly one correct, explanation-linked option")
+        )
       ).toBe(true);
     }
   });
@@ -101,8 +101,8 @@ describe("HippPromptSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("must contain exactly one correct, explanation-linked option"),
-        ),
+          issue.message.includes("must contain exactly one correct, explanation-linked option")
+        )
       ).toBe(true);
     }
   });
@@ -116,8 +116,8 @@ describe("HippPromptSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("must include at least one identification-only distractor"),
-        ),
+          issue.message.includes("must include at least one identification-only distractor")
+        )
       ).toBe(true);
     }
   });
@@ -130,7 +130,9 @@ describe("HippPromptSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(
-        result.error.issues.some((issue) => issue.message.includes("needs at least 3 candidate statements")),
+        result.error.issues.some((issue) =>
+          issue.message.includes("needs at least 3 candidate statements")
+        )
       ).toBe(true);
     }
   });
@@ -146,9 +148,9 @@ describe("HippPromptSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.message.includes("Duplicate option id"))).toBe(
-        true,
-      );
+      expect(
+        result.error.issues.some((issue) => issue.message.includes("Duplicate option id"))
+      ).toBe(true);
     }
   });
 });
@@ -172,8 +174,8 @@ describe("SourceAnalysisQuestSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("tag only the 1-2 HIPP dimensions"),
-        ),
+          issue.message.includes("tag only the 1-2 HIPP dimensions")
+        )
       ).toBe(true);
     }
   });
@@ -186,9 +188,7 @@ describe("SourceAnalysisQuestSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(
-        result.error.issues.some((issue) =>
-          issue.message.includes("Duplicate HIPP dimension"),
-        ),
+        result.error.issues.some((issue) => issue.message.includes("Duplicate HIPP dimension"))
       ).toBe(true);
     }
   });
@@ -201,8 +201,8 @@ describe("SourceAnalysisQuestListSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("Duplicate source-analysis quest id"),
-        ),
+          issue.message.includes("Duplicate source-analysis quest id")
+        )
       ).toBe(true);
     }
   });
@@ -236,7 +236,7 @@ describe("renderSourceAnalysisQuest", () => {
   it("escapes HTML in document text containing an XSS payload (invalid/missing data)", () => {
     const html = renderSourceAnalysisQuest({
       ...validQuest,
-      document: { ...validQuest.document, text: '<img src=x onerror=alert(1)>' },
+      document: { ...validQuest.document, text: "<img src=x onerror=alert(1)>" },
     });
     expect(html).not.toContain("<img");
     expect(html).toContain("&lt;img");
@@ -245,8 +245,12 @@ describe("renderSourceAnalysisQuest", () => {
 
 describe("gradeSourceAnalysisQuest", () => {
   const shippedQuest = UNIT_01_SOURCE_ANALYSIS_QUESTS[0];
-  const audiencePrompt = shippedQuest.hippPrompts.find((prompt) => prompt.id === "columbus-audience");
-  const identificationOnlyOption = audiencePrompt.options.find((option) => option.identificationOnly);
+  const audiencePrompt = shippedQuest.hippPrompts.find(
+    (prompt) => prompt.id === "columbus-audience"
+  );
+  const identificationOnlyOption = audiencePrompt.options.find(
+    (option) => option.identificationOnly
+  );
   const explanationLinkedOption = audiencePrompt.options.find((option) => option.correct);
 
   it("scores an identification-only distractor as zero for that dimension (invalid/missing data)", () => {
@@ -273,7 +277,9 @@ describe("gradeSourceAnalysisQuest", () => {
   });
 
   it("is complete only when pointsEarned equals pointsPossible (normal case)", () => {
-    const purposePrompt = shippedQuest.hippPrompts.find((prompt) => prompt.id === "columbus-purpose");
+    const purposePrompt = shippedQuest.hippPrompts.find(
+      (prompt) => prompt.id === "columbus-purpose"
+    );
     const purposeCorrectOption = purposePrompt.options.find((option) => option.correct);
 
     const partial = gradeSourceAnalysisQuest(shippedQuest, {

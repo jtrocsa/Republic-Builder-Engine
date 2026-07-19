@@ -580,7 +580,12 @@ select {
      directly from state.elapsedMs — see that module's file-header note on why a CSS keyframe
      can't survive the per-frame full-innerHTML redraw this mini-game does. */
   background:
-    linear-gradient(180deg, rgba(199, 231, 237, 0.4) 0%, rgba(18, 76, 94, 0.1) 16%, transparent 32%),
+    linear-gradient(
+      180deg,
+      rgba(199, 231, 237, 0.4) 0%,
+      rgba(18, 76, 94, 0.1) 16%,
+      transparent 32%
+    ),
     repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 34px),
     repeating-linear-gradient(122deg, rgba(255, 255, 255, 0.05) 0 3px, transparent 3px 52px),
     repeating-linear-gradient(105deg, rgba(255, 255, 255, 0.035) 0 4px, transparent 4px 78px),
@@ -635,7 +640,11 @@ select {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: repeating-linear-gradient(115deg, rgba(220, 235, 240, 0.55) 0 1px, transparent 1px 22px);
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(220, 235, 240, 0.55) 0 1px,
+    transparent 1px 22px
+  );
   background-size: 140% 240px;
 }
 .storm-lightning {
@@ -702,8 +711,8 @@ select {
   left: calc(50% + (var(--lane-offset, 0%) * var(--screen-t, 0)));
   top: calc(4% + (var(--screen-t, 0) * 74%));
   opacity: clamp(0, calc(var(--screen-t, 0) / 0.12), 1);
-  transform: translate(-50%, calc(-50% + var(--bob-px, 0px))) scale(calc(0.3 + (var(--screen-t, 0) * 1)))
-    rotate(var(--sway-deg, 0deg));
+  transform: translate(-50%, calc(-50% + var(--bob-px, 0px)))
+    scale(calc(0.3 + (var(--screen-t, 0) * 1))) rotate(var(--sway-deg, 0deg));
 }
 .storm-hazard-wake {
   position: absolute;
@@ -715,7 +724,12 @@ select {
   /* A thin ripple ring, not a solid blob like .storm-ship-wake — rock.svg/wreckage.svg already
      bake in their own foam ellipse, so a second solid blob would double up; a ring reads as a
      water-disturbance halo around any hazard kind and doubles as an outer eddy for whirlpools. */
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 255, 255, 0.3) 62%, transparent 75%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(255, 255, 255, 0.3) 62%,
+    transparent 75%
+  );
   border-radius: 50%;
 }
 .storm-hazard-art {
@@ -8000,4 +8014,130 @@ button:hover,
 .field-world--unit-03::before,
 .field-world--unit-03::after {
   display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   Real accounts/classrooms: join/login/teacher-dashboard/grading screens.
+   Form fields mirror .author-panel's existing label/input treatment so
+   these new screens stay in the same parchment/gold language rather than
+   rendering as unstyled browser-default form controls.
+   ------------------------------------------------------------------------- */
+.completion-shell label {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  color: #f0cf77;
+  font:
+    700 0.68rem "Cinzel",
+    serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.completion-shell input,
+.completion-shell textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(239, 204, 122, 0.35);
+  border-radius: 7px;
+  color: #18313b;
+  background: #f5ecd8;
+  font:
+    500 0.9rem "DM Sans",
+    sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.completion-shell textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+.completion-shell .completion-actions {
+  margin: 14px 0;
+}
+.roster-table {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.roster-table th,
+.roster-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(239, 204, 122, 0.18);
+  text-align: left;
+  color: #d5e1dd;
+}
+.roster-table th {
+  color: var(--gold-soft);
+  font:
+    700 0.68rem "Cinzel",
+    serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.archive-evaluator {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(239, 204, 122, 0.18);
+}
+.archive-feedback {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(239, 204, 122, 0.25);
+  border-radius: 10px;
+  background: rgba(239, 204, 122, 0.06);
+}
+.archive-feedback h2 {
+  margin: 0 0 8px;
+  color: var(--gold-soft);
+  font-size: 1rem;
+}
+.archive-feedback-item {
+  margin: 10px 0;
+}
+.archive-feedback-item h3 {
+  margin: 0 0 4px;
+  color: var(--gold-soft);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.archive-feedback-item p {
+  margin: 0;
+  color: #d5e1dd;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.archive-feedback-gap {
+  margin-top: 4px !important;
+  color: #f0cf77 !important;
+}
+.archive-feedback-forward {
+  margin: 10px 0 0 !important;
+  color: #e2f3e1;
+}
+.archive-feedback-readiness {
+  margin: 6px 0 0 !important;
+  color: var(--gold-soft) !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.manual-grade-entry {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--gold);
+  background: rgba(239, 204, 122, 0.06);
+}
+.manual-grade-entry h3 {
+  margin: 2px 0;
+  color: var(--gold-soft);
+}
+.student-response-text {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(4, 26, 38, 0.35);
+  color: #d5e1dd;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }

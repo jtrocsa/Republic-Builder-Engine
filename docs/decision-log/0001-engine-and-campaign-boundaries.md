@@ -12,11 +12,11 @@ This rule exists so that Chronicle's AP U.S. History content is not structurally
 
 ## Canonical split (intent)
 
-| Layer | Owns | Must not contain |
-|---|---|---|
-| Engine (`apps/web/src/engine/`) | Save/load, generic state-machine primitives | Any historical fact, NPC name, or quest ID |
-| Content (`apps/web/src/content/`) | Historical people, places, documents, dates, prompts, rewards | Movement/collision/rendering logic |
-| `main.js` (today, transitional) | Currently mixes both — see below | — |
+| Layer                             | Owns                                                          | Must not contain                           |
+| --------------------------------- | ------------------------------------------------------------- | ------------------------------------------ |
+| Engine (`apps/web/src/engine/`)   | Save/load, generic state-machine primitives                   | Any historical fact, NPC name, or quest ID |
+| Content (`apps/web/src/content/`) | Historical people, places, documents, dates, prompts, rewards | Movement/collision/rendering logic         |
+| `main.js` (today, transitional)   | Currently mixes both — see below                              | —                                          |
 
 ## Current compliance
 

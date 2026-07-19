@@ -54,14 +54,8 @@ function stamp(anchorCol, anchorRow, block) {
   });
 }
 
-const RECORD_SHELF_LEFT = [
-  [gidB03(2, 8)],
-  [gidB03(3, 8)],
-];
-const RECORD_RACK_RIGHT = [
-  [gidB03(2, 10)],
-  [gidB03(3, 10)],
-];
+const RECORD_SHELF_LEFT = [[gidB03(2, 8)], [gidB03(3, 8)]];
+const RECORD_RACK_RIGHT = [[gidB03(2, 10)], [gidB03(3, 10)]];
 const WALL_TORCH = gidB03(1, 9);
 
 // Left edge: shelving at two points down the corridor. Right edge: wine-rack-style record racks,

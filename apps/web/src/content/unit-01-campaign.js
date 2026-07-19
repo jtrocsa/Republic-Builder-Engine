@@ -92,6 +92,10 @@ export const CASE_001_SOURCES = [
       "The largest group of people living in the islands of the Caribbean were the Taínos. Their villages were governed by chieftains, or caciques. Related families lived together in large houses built of poles, mats, and thatch.",
     prompt:
       "What does this record establish about Caribbean societies before contact? Use one specific detail.",
+    // Which HIPP elements the AI Archive Evaluator should score for this
+    // source's initial-reading response — see api/_lib/rubrics.js's HIPP
+    // rubric, which explicitly evaluates only the elements a prompt asks for.
+    hippElementsAsked: ["historical_situation"],
     feedback:
       "The record establishes that Caribbean societies were organized and longstanding before European arrival. It is useful context, but it is not a Taíno-authored primary source.",
     citation:
@@ -111,6 +115,7 @@ export const CASE_001_SOURCES = [
     excerpt:
       "“They are so ingenuous and free with all they have, that no one would believe it without seeing it.”",
     prompt: "How do the creator and intended audience shape what this letter emphasizes?",
+    hippElementsAsked: ["intended_audience", "purpose", "point_of_view"],
     feedback:
       "Columbus wrote as the leader of a Spanish expedition reporting to a royal official. His word choices and claims can reveal his goals, assumptions, and effort to justify further support.",
     citation:
@@ -137,6 +142,7 @@ export const CASE_001_SOURCES = [
       "A printed European world map made after early Atlantic voyages. It depicts a separate Western Hemisphere and labels the new lands “America.”",
     prompt:
       "What does this map reveal about changing European geographic knowledge after early Atlantic voyages?",
+    hippElementsAsked: ["historical_situation"],
     feedback:
       "The map helps show that European geographic knowledge was changing after contact. It should not be treated as a direct picture of Caribbean life in 1493.",
     citation:

@@ -67,7 +67,7 @@ their responsive/`!important` override blocks were kept intact.
 
 - Bundle-size regression check: the `import.meta.glob` for the new tileset is scoped to the
   two sheets actually referenced (`tile-B-01.png`, `tile-B-02.png`), not the whole `Island
-  survival/**` folder — an unscoped glob would have bundled all 13 sheets (many MB) into
+survival/**` folder — an unscoped glob would have bundled all 13 sheets (many MB) into
   production regardless of use, the exact regression `tiled-map-import-checklist.md` warns
   about. (Separately, and pre-existing: Unit 2's own `Medieval Fishing Village/**` glob is
   itself unscoped and bundles a few files its `.tmj` doesn't reference — not touched here,

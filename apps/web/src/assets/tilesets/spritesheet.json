@@ -1,0 +1,140 @@
+{
+  "frames": {
+    "Sand": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "dirt-path-6c1f-41e8-80a3-fce4e93e8e47": {
+      "frame": {
+        "x": 1254,
+        "y": 0,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "grass-ff11-4cbf-b58b-97ef2afd5f51": {
+      "frame": {
+        "x": 2508,
+        "y": 0,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "water-218e-4b25-a30d-3994294b1516": {
+      "frame": {
+        "x": 0,
+        "y": 1254,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "stone-56fc-4248-94d1-007b95877c26": {
+      "frame": {
+        "x": 1254,
+        "y": 1254,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "wood-7522-49ad-87c5-b0a51ebfc1b1": {
+      "frame": {
+        "x": 2508,
+        "y": 1254,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "tall-grass-6242-4e5e-a42d-9350b913b27b": {
+      "frame": {
+        "x": 0,
+        "y": 2508,
+        "w": 1254,
+        "h": 1254
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1254,
+        "h": 1254
+      }
+    },
+    "palm-tree": {
+      "frame": {
+        "x": 1254,
+        "y": 2508,
+        "w": 1024,
+        "h": 1024
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1024,
+        "h": 1024
+      }
+    },
+    "0950cca1-c1e2-4c4d-bbea-09193deea2ef": {
+      "frame": {
+        "x": 2278,
+        "y": 2508,
+        "w": 1024,
+        "h": 1024
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 1024,
+        "h": 1024
+      }
+    }
+  },
+  "meta": {
+    "app": "https://codeshack.io/images-sprite-sheet-generator/",
+    "image": "spritesheet.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 3762,
+      "h": 3762
+    },
+    "scale": "1"
+  }
+}

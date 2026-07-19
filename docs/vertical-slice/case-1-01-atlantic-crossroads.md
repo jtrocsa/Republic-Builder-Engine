@@ -22,7 +22,7 @@ The case does not treat a European written account as a transparent account of I
 
 ## Source-asset contract
 
-Every source record must provide, in-game: a readable excerpt/transcription/locally-bundled scan; title, creator, date, source type, provenance, and citation; a student prompt shown *before* explanatory feedback; and an optional external archive link for verification only, never as the sole access path. Interpretive visuals are always labeled as interpretive, never presented as primary sources.
+Every source record must provide, in-game: a readable excerpt/transcription/locally-bundled scan; title, creator, date, source type, provenance, and citation; a student prompt shown _before_ explanatory feedback; and an optional external archive link for verification only, never as the sole access path. Interpretive visuals are always labeled as interpretive, never presented as primary sources.
 
 ## APUSH alignment
 

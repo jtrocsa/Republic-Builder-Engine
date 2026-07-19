@@ -154,7 +154,7 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
           ${quest.slots
             .map(
               (slot) =>
-                `<option value="${escapeHtml(slot.id)}" ${placedSlotId === slot.id ? "selected" : ""}>${escapeHtml(slot.label)}</option>`,
+                `<option value="${escapeHtml(slot.id)}" ${placedSlotId === slot.id ? "selected" : ""}>${escapeHtml(slot.label)}</option>`
             )
             .join("")}
         </select>
@@ -174,7 +174,7 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
           ? placed
               .map(
                 (source) =>
-                  `<p class="evidence-slot-filled" data-evidence-slot-filled="${escapeHtml(source.id)}">${escapeHtml(source.label)}</p>`,
+                  `<p class="evidence-slot-filled" data-evidence-slot-filled="${escapeHtml(source.id)}">${escapeHtml(source.label)}</p>`
               )
               .join("")
           : `<p class="evidence-slot-empty">Drop evidence here</p>`
@@ -201,12 +201,13 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
 export function gradeEvidenceOrganizingQuest(quest, state = {}) {
   const placements = state.placements || {};
   const allPlacedCorrectly = quest.sources.every(
-    (source) => placements[source.id] === source.correctSlotId,
+    (source) => placements[source.id] === source.correctSlotId
   );
   const reflectionRequired = Boolean(quest.reflectionPrompt);
   const reflectionOk =
     !reflectionRequired ||
-    (typeof state.reflection === "string" && state.reflection.trim().length >= REFLECTION_MIN_LENGTH);
+    (typeof state.reflection === "string" &&
+      state.reflection.trim().length >= REFLECTION_MIN_LENGTH);
   return {
     allPlacedCorrectly,
     reflectionOk,

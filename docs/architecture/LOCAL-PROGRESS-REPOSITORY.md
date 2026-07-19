@@ -19,13 +19,13 @@ Chronicle has exactly one thing worth persisting today: `progress`, the single f
 
 ## Public functions
 
-| Function | Wraps | Behavior change |
-| --- | --- | --- |
-| `loadProgress()` | `readProgress()` | Adds `schemaVersion` if missing (see below); otherwise identical |
-| `saveProgress(next)` | `saveProgress(next)` | Stamps `schemaVersion` onto `next` before persisting; otherwise identical |
-| `resetProgress()` | `resetProgress()` | Adds `schemaVersion` to the returned in-memory defaults; otherwise identical |
-| `hasSavedProgress()` | `hasSavedProgress()` | Pass-through, no change |
-| `migrateProgress(saved)` | — (new) | Internal migration seam; exported for testability. Real caller: `loadProgress()`/`saveProgress()`/`resetProgress()` call it internally. |
+| Function                 | Wraps                | Behavior change                                                                                                                         |
+| ------------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadProgress()`         | `readProgress()`     | Adds `schemaVersion` if missing (see below); otherwise identical                                                                        |
+| `saveProgress(next)`     | `saveProgress(next)` | Stamps `schemaVersion` onto `next` before persisting; otherwise identical                                                               |
+| `resetProgress()`        | `resetProgress()`    | Adds `schemaVersion` to the returned in-memory defaults; otherwise identical                                                            |
+| `hasSavedProgress()`     | `hasSavedProgress()` | Pass-through, no change                                                                                                                 |
+| `migrateProgress(saved)` | — (new)              | Internal migration seam; exported for testability. Real caller: `loadProgress()`/`saveProgress()`/`resetProgress()` call it internally. |
 
 Only these five functions were added. No speculative methods (no `subscribeToProgress`, no `exportProgress`, no batching/debouncing) were added — none has a real caller today.
 

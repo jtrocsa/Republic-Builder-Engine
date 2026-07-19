@@ -10,7 +10,7 @@ Several things exist that current documentation does not mention at all:
 
 - **A live, fully-wired Unit 2 placeholder campaign** (`content/unit-02-campaign.js`, "Riverbend Settlement") is reachable in the running app today, with roughly 90 instances of literal `"Placeholder"` text throughout its content and matching placeholder dialogue in `main.js`.
 - **A second, complete, but entirely orphaned implementation** of the onboarding → field-arrival → case-player loop exists under `apps/web/src/features/` (three real files plus two supporting `engine/` stores), confirmed unreachable from `index.html` via a full import-graph trace. It contains **two more independent Author Mode implementations** — three total in the repo, only one live.
-- **An undocumented AI-grading serverless backend** exists at `api/evaluate.js` + `api/_lib/rubrics.js`: a complete Claude-Haiku-backed HIPP/SAQ/LEQ/DBQ evaluator with real APUSH rubrics. It explains why `@anthropic-ai/sdk` is a *production* dependency in `package.json` despite the frontend being pure client-side code — but nothing in `main.js` calls it, and neither `README.md` nor `CLAUDE.md` mentions `api/` at all.
+- **An undocumented AI-grading serverless backend** exists at `api/evaluate.js` + `api/_lib/rubrics.js`: a complete Claude-Haiku-backed HIPP/SAQ/LEQ/DBQ evaluator with real APUSH rubrics. It explains why `@anthropic-ai/sdk` is a _production_ dependency in `package.json` despite the frontend being pure client-side code — but nothing in `main.js` calls it, and neither `README.md` nor `CLAUDE.md` mentions `api/` at all.
 - **Four distinct localStorage keys** exist for overlapping player-identity/progress data; only one is live.
 - **Three incompatible field-name schemas** describe the same three Case 1.01 primary sources, across the live content file, one dead content file, and the dormant JSON content pipeline under `content/campaigns/` + `content/library/`.
 - The decision log has a **duplicate `0006`** (two different files share that number) and **no `0020`** (silently skipped).
@@ -127,17 +127,17 @@ stateDiagram-v2
 
 ## 5. State ownership map
 
-| State container | Persisted? | Owner | Notes |
-|---|---|---|---|
-| `progress` (whole object) | Yes — `localStorage` key `republic-builder.chronicle.unit-01.v2` | `chronicle-progress-store.js` | Single source of truth for all save state |
-| `fieldMovement`, `instituteMovement` | No | module-level `let` in `main.js` | Player's live x/y/facing; reset every reload |
-| `fieldCamera` | No | module-level `let` | Pure function of `fieldMovement`, recomputed every `updateFieldPlayer()` call |
-| `fieldNpcRuntime`, `hubNpcRuntime` | No | module-level `let` | Live NPC patrol position/facing/animation state |
-| `hubDialogueId` | No (inconsistent — see §19) | module-level `let` | Unlike `progress.activeFieldNpc`, this is **not** in `progress` at all |
-| `progress.activeFieldNpc` | Yes (but cleared on boot, `main.js:855-859`) | `progress` | Explicitly documented in-code as "moment-to-moment UI, not save-state" despite living in `progress` |
-| `authorMode`, `authorPanelOpen` | No | module-level `let` | Resets every reload — Author Mode is always off on a fresh load |
-| `showMainMenu`, `briefingStep`, `openSourceId`, `sourceOrigin` | No | module-level `let` | Transient UI navigation state |
-| `audioContext`, `audioEnabled` | `audioEnabled` only, via a **separate** localStorage key `republic-builder.audio.enabled` (`main.js:902,1092`) | module-level | Second, ungoverned persistence convention outside the progress store |
+| State container                                                | Persisted?                                                                                                     | Owner                           | Notes                                                                                               |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `progress` (whole object)                                      | Yes — `localStorage` key `republic-builder.chronicle.unit-01.v2`                                               | `chronicle-progress-store.js`   | Single source of truth for all save state                                                           |
+| `fieldMovement`, `instituteMovement`                           | No                                                                                                             | module-level `let` in `main.js` | Player's live x/y/facing; reset every reload                                                        |
+| `fieldCamera`                                                  | No                                                                                                             | module-level `let`              | Pure function of `fieldMovement`, recomputed every `updateFieldPlayer()` call                       |
+| `fieldNpcRuntime`, `hubNpcRuntime`                             | No                                                                                                             | module-level `let`              | Live NPC patrol position/facing/animation state                                                     |
+| `hubDialogueId`                                                | No (inconsistent — see §19)                                                                                    | module-level `let`              | Unlike `progress.activeFieldNpc`, this is **not** in `progress` at all                              |
+| `progress.activeFieldNpc`                                      | Yes (but cleared on boot, `main.js:855-859`)                                                                   | `progress`                      | Explicitly documented in-code as "moment-to-moment UI, not save-state" despite living in `progress` |
+| `authorMode`, `authorPanelOpen`                                | No                                                                                                             | module-level `let`              | Resets every reload — Author Mode is always off on a fresh load                                     |
+| `showMainMenu`, `briefingStep`, `openSourceId`, `sourceOrigin` | No                                                                                                             | module-level `let`              | Transient UI navigation state                                                                       |
+| `audioContext`, `audioEnabled`                                 | `audioEnabled` only, via a **separate** localStorage key `republic-builder.audio.enabled` (`main.js:902,1092`) | module-level                    | Second, ungoverned persistence convention outside the progress store                                |
 
 ## 6. Data flow map
 
@@ -202,12 +202,12 @@ flowchart TD
 
 ## 10. Content-system audit
 
-| Source | Status | Notes |
-|---|---|---|
-| `apps/web/src/content/unit-01-campaign.js` (371 lines) | **LIVE** | 7 exports: `BRAND`, `UNIT_01` (3 cases), `CASE_001_SOURCES` (3 sources), `EXCHANGE_RECORDS` (4 MCQ), `EMPIRE_EVIDENCE` (6 cards), `EMPIRE_CONNECTIONS` (5 edges — **imported but never referenced in `main.js` body**, dead import), `REVIEW` (6 MCQ + 1 SAQ set) |
-| `apps/web/src/content/unit-02-campaign.js` (417 lines) | **LIVE, but placeholder content** | 8 exports mirroring Unit 1's shapes; self-documented as "structural mirror... shapes are final, the historical copy is not"; ~90 occurrences of literal `"Placeholder"` across MCQ prompts, excerpts, citations, SAQ stimuli. Fully wired into `render()`, `VALID_SCREENS`, and the click-action table — reachable in the running app today |
-| `apps/web/src/content/chronicle-case-001.js` | **DEAD** | Orphaned; a *third* schema for the same 3 Case-1.01 sources, incompatible field names (`signalLabel`, `sourceType`, `provenance`, `sourceQuestion`, `sourceUrl` vs. the live file's `type`, `title`, `record`, `prompt`, `externalUrl`) |
-| `content/campaigns/chronicle/units/unit-01/...json` + `content/library/*.template.json` | **DORMANT** | A *fourth*, JSON-native schema (`sourceType`, `historicalContext`, `studentContext`, `rightsNotes`, `mediaPath`, `campaignIds`) — confirmed via grep that `apps/web/src` never references `content/campaigns` or `content/library` anywhere. Every status field present reads `"vertical-slice"`, `"content-placeholder"`, or `"authoring-placeholder"` |
+| Source                                                                                  | Status                            | Notes                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/content/unit-01-campaign.js` (371 lines)                                  | **LIVE**                          | 7 exports: `BRAND`, `UNIT_01` (3 cases), `CASE_001_SOURCES` (3 sources), `EXCHANGE_RECORDS` (4 MCQ), `EMPIRE_EVIDENCE` (6 cards), `EMPIRE_CONNECTIONS` (5 edges — **imported but never referenced in `main.js` body**, dead import), `REVIEW` (6 MCQ + 1 SAQ set)                                                                                       |
+| `apps/web/src/content/unit-02-campaign.js` (417 lines)                                  | **LIVE, but placeholder content** | 8 exports mirroring Unit 1's shapes; self-documented as "structural mirror... shapes are final, the historical copy is not"; ~90 occurrences of literal `"Placeholder"` across MCQ prompts, excerpts, citations, SAQ stimuli. Fully wired into `render()`, `VALID_SCREENS`, and the click-action table — reachable in the running app today             |
+| `apps/web/src/content/chronicle-case-001.js`                                            | **DEAD**                          | Orphaned; a _third_ schema for the same 3 Case-1.01 sources, incompatible field names (`signalLabel`, `sourceType`, `provenance`, `sourceQuestion`, `sourceUrl` vs. the live file's `type`, `title`, `record`, `prompt`, `externalUrl`)                                                                                                                 |
+| `content/campaigns/chronicle/units/unit-01/...json` + `content/library/*.template.json` | **DORMANT**                       | A _fourth_, JSON-native schema (`sourceType`, `historicalContext`, `studentContext`, `rightsNotes`, `mediaPath`, `campaignIds`) — confirmed via grep that `apps/web/src` never references `content/campaigns` or `content/library` anywhere. Every status field present reads `"vertical-slice"`, `"content-placeholder"`, or `"authoring-placeholder"` |
 
 Three incompatible field-name vocabularies for the same three historical sources is a concrete risk if any dormant pipeline is ever activated without reconciliation (see Risk Register, §22).
 
@@ -256,6 +256,7 @@ Three incompatible field-name vocabularies for the same three historical sources
 ## 15. Dependency inventory
 
 Full `package.json`:
+
 ```json
 {
   "name": "republic-builder-engine",
@@ -283,6 +284,7 @@ Full `package.json`:
   }
 }
 ```
+
 - Single package, no workspace/monorepo tooling anywhere (no `pnpm-workspace.yaml`, `turbo.json`, `lerna.json`, `nx.json`).
 - No TypeScript anywhere in the project's own source (`.ts`/`.tsx` glob matches are exclusively inside `node_modules`); no `tsconfig.json`/`jsconfig.json` exists.
 - `@anthropic-ai/sdk` is the one production dependency, and it's only reachable from the completely disconnected `api/evaluate.js` serverless function (see §20) — the shipped frontend bundle has no runtime dependency on it today.
@@ -336,25 +338,25 @@ Confirmed via a full import-graph trace from `index.html` → `main.js`'s actual
 
 ## 21. Republic Builder reference inventory
 
-| File:Line | Snippet | User-facing? | History-specific? | Disposition judgment |
-|---|---|---|---|---|
-| `package.json:2`, `package-lock.json:2,8` | `"name": "republic-builder-engine"` | No | No | Platform-generic identifier — needs a rename decision |
-| Repo root folder name | `Republic-Builder-Engine` (disk/GitHub slug) | No | No | Purely cosmetic disk-level naming, not a code change |
-| `README.md:1,3` | `# Republic Builder Engine — Foundation v0.1` / "...a reusable historical RPG engine" | No (doc only) | No | Platform-generic branding framing |
-| `CLAUDE.md:7,42,104` | Project overview + persistence-key documentation | No (doc only) | No | Documents the real localStorage key; needs updating alongside any rename |
-| `apps/web/index.html:6` | `<title>Republic Builder Engine · Chronicle</title>` | **Yes** — browser tab title | No | User-facing; a history-specific product should likely read "Chronicle" here |
-| `apps/web/src/content/unit-01-campaign.js:2` (`BRAND.engine`) | `engine: "Republic Builder Engine"` | Feeds live UI | No | See next row — this is the most-visible occurrence |
-| `apps/web/src/main.js:1131` | `chrome()` header — renders `BRAND.engine` above "Chronicle" on **every screen** | **Yes**, constantly rendered | No | The single most user-visible occurrence in the running app |
-| `apps/web/src/main.js:1155` | Completion screen kicker, same pattern | **Yes** | No | |
-| `apps/web/src/content/chronicle-opening.defaults.js:10,29` | `engineName`/`eyebrow: "Republic Builder Engine"` | **Yes** — welcome/briefing scenes | No | |
-| `content/campaigns/chronicle/campaign.json:4` | `"engine": "republic-builder"` | No (dormant pipeline) | No | Not live; would need updating only if this pipeline is ever activated |
-| `apps/web/src/content/chronicle-case-001.js:3` | `engine: "Republic Builder Engine"` | No (dead code) | No | |
-| `apps/web/src/features/chronicle-institute/chronicle-institute.js:371` | `aria-label="Republic Builder Engine: Chronicle"` | No (dead code) | No | |
-| `republic-builder.chronicle.unit-01.v2` (localStorage key) | `engine/chronicle-progress-store.js:1` | Indirect (invisible to users) | No | **Live** — the real save key |
-| `republic-builder.audio.enabled` | `main.js:902,1092` | Indirect | No | **Live** |
-| `republic-builder.chronicle.identity.author-content.v1` | `features/chronicle-identity/chronicle-identity.js:14` | Indirect | No | Dead |
-| `republic-builder.chronicle.opening.author-content.v1` | `features/chronicle-institute/chronicle-institute.js:14` | Indirect | No | Dead |
-| `republic-builder.chronicle.player-profile.v1` | `engine/player/player-profile-store.js:1` | Indirect | No | Dead |
+| File:Line                                                              | Snippet                                                                               | User-facing?                      | History-specific? | Disposition judgment                                                        |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| `package.json:2`, `package-lock.json:2,8`                              | `"name": "republic-builder-engine"`                                                   | No                                | No                | Platform-generic identifier — needs a rename decision                       |
+| Repo root folder name                                                  | `Republic-Builder-Engine` (disk/GitHub slug)                                          | No                                | No                | Purely cosmetic disk-level naming, not a code change                        |
+| `README.md:1,3`                                                        | `# Republic Builder Engine — Foundation v0.1` / "...a reusable historical RPG engine" | No (doc only)                     | No                | Platform-generic branding framing                                           |
+| `CLAUDE.md:7,42,104`                                                   | Project overview + persistence-key documentation                                      | No (doc only)                     | No                | Documents the real localStorage key; needs updating alongside any rename    |
+| `apps/web/index.html:6`                                                | `<title>Republic Builder Engine · Chronicle</title>`                                  | **Yes** — browser tab title       | No                | User-facing; a history-specific product should likely read "Chronicle" here |
+| `apps/web/src/content/unit-01-campaign.js:2` (`BRAND.engine`)          | `engine: "Republic Builder Engine"`                                                   | Feeds live UI                     | No                | See next row — this is the most-visible occurrence                          |
+| `apps/web/src/main.js:1131`                                            | `chrome()` header — renders `BRAND.engine` above "Chronicle" on **every screen**      | **Yes**, constantly rendered      | No                | The single most user-visible occurrence in the running app                  |
+| `apps/web/src/main.js:1155`                                            | Completion screen kicker, same pattern                                                | **Yes**                           | No                |                                                                             |
+| `apps/web/src/content/chronicle-opening.defaults.js:10,29`             | `engineName`/`eyebrow: "Republic Builder Engine"`                                     | **Yes** — welcome/briefing scenes | No                |                                                                             |
+| `content/campaigns/chronicle/campaign.json:4`                          | `"engine": "republic-builder"`                                                        | No (dormant pipeline)             | No                | Not live; would need updating only if this pipeline is ever activated       |
+| `apps/web/src/content/chronicle-case-001.js:3`                         | `engine: "Republic Builder Engine"`                                                   | No (dead code)                    | No                |                                                                             |
+| `apps/web/src/features/chronicle-institute/chronicle-institute.js:371` | `aria-label="Republic Builder Engine: Chronicle"`                                     | No (dead code)                    | No                |                                                                             |
+| `republic-builder.chronicle.unit-01.v2` (localStorage key)             | `engine/chronicle-progress-store.js:1`                                                | Indirect (invisible to users)     | No                | **Live** — the real save key                                                |
+| `republic-builder.audio.enabled`                                       | `main.js:902,1092`                                                                    | Indirect                          | No                | **Live**                                                                    |
+| `republic-builder.chronicle.identity.author-content.v1`                | `features/chronicle-identity/chronicle-identity.js:14`                                | Indirect                          | No                | Dead                                                                        |
+| `republic-builder.chronicle.opening.author-content.v1`                 | `features/chronicle-institute/chronicle-institute.js:14`                              | Indirect                          | No                | Dead                                                                        |
+| `republic-builder.chronicle.player-profile.v1`                         | `engine/player/player-profile-store.js:1`                                             | Indirect                          | No                | Dead                                                                        |
 
 **Zero occurrences** of "RBE" anywhere in the repository. No file or folder on disk (besides the repo root itself) contains "republic" or "builder" in its name.
 
@@ -362,22 +364,23 @@ Confirmed via a full import-graph trace from `index.html` → `main.js`'s actual
 
 ## 22. Risk register
 
-| Risk | Where | Severity | Notes |
-|---|---|---|---|
-| Case-ID literals hard-coded into movement/interaction-gating code | `main.js:1756-1759`, `:2401-2411`, `:2944-2951` | Medium | Triplicated logic; a change to one site without the others silently breaks prerequisite gating |
-| Duplicate source-of-truth for "correct" evidence ordering | `main.js:2749` vs. `EMPIRE_EVIDENCE` content array order | Medium | Reordering content without updating the literal silently breaks the check |
-| Zero automated test coverage | `tests/` (empty) | High | Against a 2,927-line file with a documented history of 15 hotfix milestones for movement/camera/dialogue/NPC regressions |
-| Unthrottled synchronous save-on-every-action | `chronicle-progress-store.js:63-66`, ~60+ call sites | Low today | Not a current perf problem at this data size; would need addressing before it grows |
-| Three/four incompatible schemas for the same source content | `unit-01-campaign.js` vs. `chronicle-case-001.js` vs. `content/campaigns` JSON tree | Medium | Data-integrity risk if any dormant pipeline is ever activated without reconciliation |
-| Broken/inert Author Mode content-edit fields | `main.js:1134-1136` (`[data-copy]` inputs, no matching listener) | Low | Product-quality issue, not a technical risk, but visibly broken if a user (author) tries it |
-| Duplicate `0006` / missing `0020` decision-log entries | `docs/decision-log/` | Low | Documentation-integrity risk; affects citation reliability |
-| Stale onboarding docs | `CLAUDE.md` (line count, "no linter" claim), `README.md` (asset-location table) | Low–Medium | Increases risk of future agents/contributors building on wrong assumptions |
-| Undocumented, unwired AI-grading backend with real production dependency | `api/evaluate.js`, `api/_lib/rubrics.js`, `@anthropic-ai/sdk` in `package.json` | Medium | Represents real prior investment and real APUSH rubric content that's currently invisible to anyone reading only README/CLAUDE.md |
-| Three parallel Author Mode implementations | `main.js`, `features/chronicle-institute.js`, `features/chronicle-identity.js` | Low (dead code doesn't run) | Represents real design/engineering effort that's currently duplicated and orphaned |
+| Risk                                                                     | Where                                                                               | Severity                    | Notes                                                                                                                             |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Case-ID literals hard-coded into movement/interaction-gating code        | `main.js:1756-1759`, `:2401-2411`, `:2944-2951`                                     | Medium                      | Triplicated logic; a change to one site without the others silently breaks prerequisite gating                                    |
+| Duplicate source-of-truth for "correct" evidence ordering                | `main.js:2749` vs. `EMPIRE_EVIDENCE` content array order                            | Medium                      | Reordering content without updating the literal silently breaks the check                                                         |
+| Zero automated test coverage                                             | `tests/` (empty)                                                                    | High                        | Against a 2,927-line file with a documented history of 15 hotfix milestones for movement/camera/dialogue/NPC regressions          |
+| Unthrottled synchronous save-on-every-action                             | `chronicle-progress-store.js:63-66`, ~60+ call sites                                | Low today                   | Not a current perf problem at this data size; would need addressing before it grows                                               |
+| Three/four incompatible schemas for the same source content              | `unit-01-campaign.js` vs. `chronicle-case-001.js` vs. `content/campaigns` JSON tree | Medium                      | Data-integrity risk if any dormant pipeline is ever activated without reconciliation                                              |
+| Broken/inert Author Mode content-edit fields                             | `main.js:1134-1136` (`[data-copy]` inputs, no matching listener)                    | Low                         | Product-quality issue, not a technical risk, but visibly broken if a user (author) tries it                                       |
+| Duplicate `0006` / missing `0020` decision-log entries                   | `docs/decision-log/`                                                                | Low                         | Documentation-integrity risk; affects citation reliability                                                                        |
+| Stale onboarding docs                                                    | `CLAUDE.md` (line count, "no linter" claim), `README.md` (asset-location table)     | Low–Medium                  | Increases risk of future agents/contributors building on wrong assumptions                                                        |
+| Undocumented, unwired AI-grading backend with real production dependency | `api/evaluate.js`, `api/_lib/rubrics.js`, `@anthropic-ai/sdk` in `package.json`     | Medium                      | Represents real prior investment and real APUSH rubric content that's currently invisible to anyone reading only README/CLAUDE.md |
+| Three parallel Author Mode implementations                               | `main.js`, `features/chronicle-institute.js`, `features/chronicle-identity.js`      | Low (dead code doesn't run) | Represents real design/engineering effort that's currently duplicated and orphaned                                                |
 
 ## 23. Missing-information list
 
 Static code inspection alone could not determine:
+
 - Whether `api/evaluate.js` has ever actually been deployed or exercised in practice (no deployment config found; git history of this endpoint was not investigated in this pass).
 - Whether the dormant `content/campaigns`/`content/library` JSON pipeline was ever consumed by an earlier version of the app (would require git-log archaeology, out of scope for a current-state audit).
 - Actual runtime/interactive behavior or in-browser bugs — this audit is static-code-only, not a play-test; per the project's own workflow expectations, browser verification is a separate required step before any code change is considered complete.

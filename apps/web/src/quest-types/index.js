@@ -65,7 +65,7 @@ function requireQuestType(questType) {
   const type = QUEST_TYPES[questType];
   if (!type) {
     throw new Error(
-      `Unknown quest type "${questType}" — known types: ${Object.keys(QUEST_TYPES).join(", ")}`,
+      `Unknown quest type "${questType}" — known types: ${Object.keys(QUEST_TYPES).join(", ")}`
     );
   }
   return type;

@@ -109,7 +109,11 @@
         const resultEl = document.getElementById(resultId);
 
         function updateResult() {
-          resultEl.textContent = JSON.stringify(gradeQuest(questType, quest, state[questType]), null, 2);
+          resultEl.textContent = JSON.stringify(
+            gradeQuest(questType, quest, state[questType]),
+            null,
+            2
+          );
         }
 
         function wireEvents() {
@@ -184,12 +188,17 @@
       }
 
       mount("mcq", UNIT_01_MCQ_QUESTS[0], "mcq-container", "mcq-result");
-      mount("sequencing", UNIT_01_SEQUENCING_QUESTS[0], "sequencing-container", "sequencing-result");
+      mount(
+        "sequencing",
+        UNIT_01_SEQUENCING_QUESTS[0],
+        "sequencing-container",
+        "sequencing-result"
+      );
       mount(
         "evidence-organizing",
         UNIT_01_EVIDENCE_ORGANIZING_QUESTS[0],
         "evidence-container",
-        "evidence-result",
+        "evidence-result"
       );
       mount("hipp", UNIT_01_SOURCE_ANALYSIS_QUESTS[0], "hipp-container", "hipp-result");
     </script>

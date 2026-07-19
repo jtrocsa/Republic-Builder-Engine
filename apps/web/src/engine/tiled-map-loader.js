@@ -98,7 +98,11 @@ function animationIndexByTileset(tmj) {
 // tilesets the map has) and source rect, and picks the animated frame active at elapsedMs.
 // Exported so this logic — the actual hardening in this module — can be unit-tested without
 // a real 2D canvas context, which the jsdom test environment doesn't provide.
-export function tilesForFrame(tmj, elapsedMs = 0, animationByTileset = animationIndexByTileset(tmj)) {
+export function tilesForFrame(
+  tmj,
+  elapsedMs = 0,
+  animationByTileset = animationIndexByTileset(tmj)
+) {
   const tiles = [];
   for (const layer of tmj.layers) {
     if (layer.type !== "tilelayer" || !layer.visible) continue;

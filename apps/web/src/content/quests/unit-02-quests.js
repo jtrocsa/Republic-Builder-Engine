@@ -200,7 +200,7 @@ export const UNIT_02_ARCHIVE_CHALLENGE_QUESTS = [
       {
         id: "school-law",
         label: "Common school law",
-        attribution: "Massachusetts Bay, \"The Old Deluder Satan Act\" (1647)",
+        attribution: 'Massachusetts Bay, "The Old Deluder Satan Act" (1647)',
         excerpt:
           "“Every township in this jurisdiction, after the Lord hath increased them to the number of fifty householders, shall then forthwith appoint one within their town to teach all such children as shall resort to him to write and read.”",
         skillCategory: "Comparison",
@@ -292,7 +292,13 @@ export const UNIT_02_ARCHIVE_CHALLENGE_QUESTS = [
     reflectionPrompt:
       "In 2–3 sentences, explain how one leg's cargo directly depended on or enabled what another leg of the circuit carried.",
     rubric: {
-      skillCategories: ["Causation", "Contextualization", "Sourcing", "Comparison", "Continuity and Change"],
+      skillCategories: [
+        "Causation",
+        "Contextualization",
+        "Sourcing",
+        "Comparison",
+        "Continuity and Change",
+      ],
       pointsTotal: 6,
       description:
         "Earn 1 point per cargo record correctly returned to the leg of the triangular trade that carried it.",
@@ -431,8 +437,7 @@ export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
     prompt:
       "Analyze Richard Frethorne's 1623 letter using HIPP reasoning. For each dimension below, choose the option that explains how or why it shapes the letter's argument — not the option that merely names the correct answer.",
     document: {
-      text:
-        "Loving and kind father and mother, my most humble duty remembered to you, hoping in God of your good health. This is to let you understand that I your child am in a most heavy case by reason of the country, which causeth much sickness, as the scurvy and the bloody flux, and diverse other diseases. And I have nothing to comfort me, nor is there nothing to be gotten here but sickness and death, except that one had money to lay out in some things for profit. But I have nothing at all — no, not a shirt to my back but two rags, nor no clothes but one poor suit. People cry out day and night — Oh, that they were in England without their limbs — and would not care to lose any limb to be in England again, yea, though they beg from door to door. I have nothing to eat but a mouthful of bread and beef, a mouthful of bread must serve four men a day. I pray you to remember my love to all my friends and kindred. I humbly desire you to send me some cheese and butter and anything else you think fitting for me, for you cannot imagine the misery that I endure in this miserable kind of life. If you love me, you will not forget me, but if you forget me, then I am like never to see England again.",
+      text: "Loving and kind father and mother, my most humble duty remembered to you, hoping in God of your good health. This is to let you understand that I your child am in a most heavy case by reason of the country, which causeth much sickness, as the scurvy and the bloody flux, and diverse other diseases. And I have nothing to comfort me, nor is there nothing to be gotten here but sickness and death, except that one had money to lay out in some things for profit. But I have nothing at all — no, not a shirt to my back but two rags, nor no clothes but one poor suit. People cry out day and night — Oh, that they were in England without their limbs — and would not care to lose any limb to be in England again, yea, though they beg from door to door. I have nothing to eat but a mouthful of bread and beef, a mouthful of bread must serve four men a day. I pray you to remember my love to all my friends and kindred. I humbly desire you to send me some cheese and butter and anything else you think fitting for me, for you cannot imagine the misery that I endure in this miserable kind of life. If you love me, you will not forget me, but if you forget me, then I am like never to see England again.",
       attribution: "Richard Frethorne, letter to his father and mother, March 20, 1623",
     },
     hippPrompts: [
@@ -444,8 +449,7 @@ export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
         options: [
           {
             id: "audience-explained",
-            text:
-              "Because his parents were the people most able to send him money, food, or help toward securing his release, Frethorne describes his hunger and suffering in stark, unflattering detail rather than reassuring them that all is well.",
+            text: "Because his parents were the people most able to send him money, food, or help toward securing his release, Frethorne describes his hunger and suffering in stark, unflattering detail rather than reassuring them that all is well.",
             correct: true,
           },
           {
@@ -456,8 +460,7 @@ export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
           },
           {
             id: "audience-wrong-investor",
-            text:
-              "Frethorne wrote to a Virginia Company investor who needed reassurance that the colony was profitable.",
+            text: "Frethorne wrote to a Virginia Company investor who needed reassurance that the colony was profitable.",
             correct: false,
           },
           {
@@ -475,8 +478,7 @@ export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
         options: [
           {
             id: "purpose-explained",
-            text:
-              "By emphasizing hunger, sickness, and fear rather than any opportunity Virginia offered, Frethorne builds the case that his parents must act — sending food, money, or help ending his indenture — or he may not survive to see them again.",
+            text: "By emphasizing hunger, sickness, and fear rather than any opportunity Virginia offered, Frethorne builds the case that his parents must act — sending food, money, or help ending his indenture — or he may not survive to see them again.",
             correct: true,
           },
           {
@@ -487,8 +489,7 @@ export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
           },
           {
             id: "purpose-wrong-recruit",
-            text:
-              "Frethorne's purpose was to recruit his parents to join him as fellow indentured servants in Virginia.",
+            text: "Frethorne's purpose was to recruit his parents to join him as fellow indentured servants in Virginia.",
             correct: false,
           },
           {

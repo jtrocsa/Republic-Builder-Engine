@@ -95,7 +95,8 @@ export const UNIT_03_EVIDENCE_ORGANIZING_QUESTS = [
       {
         id: "commoncause-henry-speech",
         label: "Give Me Liberty, or Give Me Death",
-        attribution: "Patrick Henry, reconstructed by William Wirt, 1817 (of a March 23, 1775 speech)",
+        attribution:
+          "Patrick Henry, reconstructed by William Wirt, 1817 (of a March 23, 1775 speech)",
         excerpt:
           "Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! … give me liberty, or give me death!",
         skillCategory: "Sourcing",
@@ -112,7 +113,7 @@ export const UNIT_03_EVIDENCE_ORGANIZING_QUESTS = [
       },
       {
         id: "commoncause-adams-letter",
-        label: "Letter to John Adams, \"Remember the Ladies\"",
+        label: 'Letter to John Adams, "Remember the Ladies"',
         attribution: "Abigail Adams, March 31 – April 5, 1776",
         excerpt:
           "I desire you would Remember the Ladies… Remember all Men would be tyrants if they could… we are determined to foment a Rebellion, and will not hold ourselves bound by any Laws in which we have no voice, or Representation.",
@@ -123,7 +124,13 @@ export const UNIT_03_EVIDENCE_ORGANIZING_QUESTS = [
     reflectionPrompt:
       "In 3–4 sentences, compare Prince Hall's petition and Abigail Adams's letter: what claim does each make using the Revolution's own language of rights and consent, and how differently was each received by the institutions it addressed?",
     rubric: {
-      skillCategories: ["Contextualization", "Causation", "Continuity and Change", "Sourcing", "Comparison"],
+      skillCategories: [
+        "Contextualization",
+        "Causation",
+        "Continuity and Change",
+        "Sourcing",
+        "Comparison",
+      ],
       pointsTotal: 6,
       description:
         "Earn 1 point per record correctly matched to the historical-thinking skill it best demonstrates.",
@@ -188,8 +195,7 @@ export const UNIT_03_INVESTIGATION_QUESTS = [
     prompt:
       "Before you open the full record, read Lord Dunmore's proclamation and predict its Point of view and Purpose from the wording alone. You'll compare your prediction with Institute Context once the record unlocks.",
     document: {
-      text:
-        "I do require every person capable of bearing arms, to resort to his Majesty's STANDARD, or be looked upon as traitors… and I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops as soon as may be, for the more speedily reducing this Colony to a proper sense of their duty, to His Majesty's crown and dignity.",
+      text: "I do require every person capable of bearing arms, to resort to his Majesty's STANDARD, or be looked upon as traitors… and I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops as soon as may be, for the more speedily reducing this Colony to a proper sense of their duty, to His Majesty's crown and dignity.",
       attribution:
         "John Murray, Earl of Dunmore, Royal Governor of Virginia, proclamation, November 7, 1775",
     },
@@ -202,8 +208,7 @@ export const UNIT_03_INVESTIGATION_QUESTS = [
         options: [
           {
             id: "pov-explained",
-            text:
-              "As a royal governor loyal to the Crown who had just been driven from power by Patriot militia, Dunmore writes as an official punishing rebellion and shoring up British military strength — not as someone opposed to slavery itself.",
+            text: "As a royal governor loyal to the Crown who had just been driven from power by Patriot militia, Dunmore writes as an official punishing rebellion and shoring up British military strength — not as someone opposed to slavery itself.",
             correct: true,
           },
           {
@@ -232,8 +237,7 @@ export const UNIT_03_INVESTIGATION_QUESTS = [
         options: [
           {
             id: "purpose-explained",
-            text:
-              "By limiting the offer to able-bodied men willing to fight and excluding anyone held by Loyalists, Dunmore's purpose was to weaken the rebellion's labor force and build an armed force for the Crown — a wartime military strategy, not an antislavery measure.",
+            text: "By limiting the offer to able-bodied men willing to fight and excluding anyone held by Loyalists, Dunmore's purpose was to weaken the rebellion's labor force and build an armed force for the Crown — a wartime military strategy, not an antislavery measure.",
             correct: true,
           },
           {
@@ -332,7 +336,7 @@ export const UNIT_03_ARCHIVE_CHALLENGE_QUESTS = [
       },
       {
         id: "adams-letter-appeal-form",
-        label: "Letter to John Adams, \"Remember the Ladies\"",
+        label: 'Letter to John Adams, "Remember the Ladies"',
         attribution: "Abigail Adams, March 31 – April 5, 1776",
         excerpt:
           "I desire you would Remember the Ladies… Remember all Men would be tyrants if they could… we are determined to foment a Rebellion, and will not hold ourselves bound by any Laws in which we have no voice, or Representation.",
@@ -356,8 +360,7 @@ export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
     prompt:
       "Analyze Patrick Henry's 1775 speech using HIPP reasoning. For each dimension below, choose the option that explains how or why it shapes the speech's argument — not the option that merely names the correct answer.",
     document: {
-      text:
-        "It is in vain, sir, to extenuate the matter. Gentlemen may cry, Peace, Peace — but there is no peace. The war is actually begun! The next gale that sweeps from the north will bring to our ears the clash of resounding arms! Our brethren are already in the field! Why stand we here idle? What is it that gentlemen wish? What would they have? Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! I know not what course others may take; but as for me, give me liberty, or give me death!",
+      text: "It is in vain, sir, to extenuate the matter. Gentlemen may cry, Peace, Peace — but there is no peace. The war is actually begun! The next gale that sweeps from the north will bring to our ears the clash of resounding arms! Our brethren are already in the field! Why stand we here idle? What is it that gentlemen wish? What would they have? Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! I know not what course others may take; but as for me, give me liberty, or give me death!",
       attribution:
         "Patrick Henry, speech to the Second Virginia Convention, Richmond, Virginia, March 23, 1775 (as reconstructed by biographer William Wirt, 1817)",
     },
@@ -370,8 +373,7 @@ export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
         options: [
           {
             id: "situation-explained",
-            text:
-              "Because this text was reconstructed decades after 1775 from witnesses' memories rather than transcribed at the time, historians can trust the speech's broader argument and impact but should be cautious about treating any single phrase as Henry's exact, verbatim wording.",
+            text: "Because this text was reconstructed decades after 1775 from witnesses' memories rather than transcribed at the time, historians can trust the speech's broader argument and impact but should be cautious about treating any single phrase as Henry's exact, verbatim wording.",
             correct: true,
           },
           {
@@ -400,8 +402,7 @@ export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
         options: [
           {
             id: "purpose-explained",
-            text:
-              "By declaring that war was already underway and framing continued inaction as choosing 'chains and slavery,' Henry aimed to push wavering delegates past debate and toward voting to arm Virginia's militia immediately.",
+            text: "By declaring that war was already underway and framing continued inaction as choosing 'chains and slavery,' Henry aimed to push wavering delegates past debate and toward voting to arm Virginia's militia immediately.",
             correct: true,
           },
           {

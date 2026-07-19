@@ -26,13 +26,16 @@ import {
   saveProgress,
   resetProgress,
   hasSavedProgress,
-} from "./repositories/local-progress-repository.js";
+  hydrateRemoteProgress,
+} from "./repositories/progress-repository.js";
 import {
   resolveField as resolveTeacherOverride,
   hasOverride as hasTeacherOverride,
   setOverride as setTeacherOverride,
   clearAllOverrides as clearTeacherOverrides,
-} from "./repositories/local-teacher-override-store.js";
+  initForCurrentUser as initTeacherOverridesForCurrentUser,
+  setActiveClassroom as setActiveOverrideClassroom,
+} from "./repositories/teacher-override-repository.js";
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
 import { renderQuest, gradeQuest } from "./quest-types/index.js";
@@ -69,7 +72,11 @@ import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-l
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
 import landCoastlines from "./content/maps/land-coastlines.json";
-import { MAP_VIEWS, UNIT_MAP_VIEW, DEFAULT_MAP_VIEW } from "./content/maps/navigation-table-views.js";
+import {
+  MAP_VIEWS,
+  UNIT_MAP_VIEW,
+  DEFAULT_MAP_VIEW,
+} from "./content/maps/navigation-table-views.js";
 import {
   playSfx,
   playQuestSfx,
@@ -95,6 +102,38 @@ import {
   isCargoSortingComplete,
   renderCargoSortingGame,
 } from "./mini-games/cargo-sorting.js";
+import {
+  getSession,
+  onAuthStateChange,
+  getProfile,
+  signInWithPassword,
+  signUpTeacher,
+  signOut,
+  getSelectedClassroomId,
+  setSelectedClassroomId,
+  getCurrentClassroomId,
+} from "./repositories/remote-auth-repository.js";
+import {
+  createClassroom,
+  listMyClassrooms,
+  getRoster,
+  provisionSlots,
+  claimSlot,
+  resetStudentPassword,
+  resolveStudentEmail,
+} from "./repositories/remote-classroom-repository.js";
+import {
+  recordSubmission,
+  listForClassroom,
+  getSubmissionWithGrades,
+  recordManualGrade,
+} from "./repositories/remote-submission-repository.js";
+import { validateJoinCode, validateStudentIdCode, validatePassword } from "./engine/auth-flows.js";
+import {
+  buildHippEvaluationRequest,
+  buildSaqEvaluationRequest,
+} from "./engine/evaluator-requests.js";
+import { evaluateSubmission } from "./engine/evaluator-client.js";
 
 const app = document.querySelector("#app");
 const chroniclerPreviewA = new URL("./assets/chronicle-sprites/chronicler-a.png", import.meta.url)
@@ -1153,8 +1192,7 @@ const ARCHIVE_ROOM_TARGETS = {
     y: 3.7,
     name: "Archive Terminal",
     role: "Archive Challenges interface",
-    dialogue: () =>
-      "Archive Challenges for this unit are still being cataloged. Check back soon.",
+    dialogue: () => "Archive Challenges for this unit are still being cataloged. Check back soon.",
     action: "archive-challenges",
   },
   exitDoor: {
@@ -1387,6 +1425,10 @@ const VALID_SCREENS = new Set([
   "identity",
   "intro-registration",
   "intro-hallway",
+  "join",
+  "login",
+  "teacher-dashboard",
+  "grading",
 ]);
 if (
   !VALID_SCREENS.has(progress.currentScreen) ||
@@ -1400,7 +1442,84 @@ let sourceOrigin = "field";
 let openSourceId = null;
 let authorMode = false;
 let authorPanelOpen = false;
+
+// --- Real accounts/classrooms (see docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md
+// §8 for the long-term data model this is the "Now" slice of). currentProfile
+// is populated asynchronously after boot — never awaited here, since
+// progress = loadProgress() above must stay synchronous. Odysso (the
+// separate marketing site) links directly into "join"/"login" via ?entry=.
+let currentProfile = null;
+const authUiState = { studentTab: "claim", teacherTab: "signin", error: "", pending: false };
+let teacherUiState = {
+  classrooms: [],
+  selectedClassroomId: null,
+  roster: [],
+  submissions: [],
+  newClassroomName: "",
+  lastProvisioned: null,
+  lastReissuedPassword: null,
+  error: "",
+  pending: false,
+};
+// Per-taskId pending/error state for the AI Archive Evaluator calls kicked
+// off from sourceReader()/reviewScreen() — see runEvaluation() below.
+const evaluatorPendingTaskIds = new Set();
+const evaluatorErrors = {};
+let gradingUiState = {
+  submissionId: null,
+  submission: null,
+  gradeLabel: "",
+  teacherFeedback: "",
+  error: "",
+};
+
+onAuthStateChange((_event, session) => {
+  if (!session) {
+    currentProfile = null;
+    return;
+  }
+  getProfile().then((profile) => {
+    currentProfile = profile;
+    if (profile?.role === "teacher") {
+      loadTeacherDashboardData();
+    } else {
+      hydrateRemoteProgress(progress).then((resolved) => {
+        if (resolved) {
+          progress = resolved;
+          render();
+        }
+      });
+      initTeacherOverridesForCurrentUser().then(() => render());
+      render();
+    }
+  });
+});
+getSession().then((session) => {
+  if (!session) return;
+  getProfile().then((profile) => {
+    currentProfile = profile;
+    if (profile?.role === "teacher") {
+      loadTeacherDashboardData();
+    } else {
+      hydrateRemoteProgress(progress).then((resolved) => {
+        if (resolved) {
+          progress = resolved;
+          render();
+        }
+      });
+      initTeacherOverridesForCurrentUser().then(() => render());
+      render();
+    }
+  });
+});
 let showMainMenu = true;
+
+const bootEntryParam = new URLSearchParams(window.location.search).get("entry");
+if (bootEntryParam === "join" || bootEntryParam === "teacher-login") {
+  showMainMenu = false;
+  progress.currentScreen = bootEntryParam === "join" ? "join" : "login";
+  saveProgress(progress);
+}
 let briefingStep = 0;
 let activeTravelTimeout = null;
 // Director intro scene (intro-welcome/intro-briefing/intro-protocol) typewriter state.
@@ -1561,7 +1680,8 @@ function challengeQuestHint(questType, result) {
       ? "All records restored to the right slot. Add a reflection of at least a sentence to complete this challenge."
       : 'Drag each record into the slot it belongs in (or use the "Place in" menu on each card).';
   }
-  if (questType === "sequencing") return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
+  if (questType === "sequencing")
+    return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
   if (questType === "hipp")
     return "Choose the option that explains how or why this shapes the source's argument, not just names it.";
   return "Choose the option that best explains why, not just the option that names the correct answer.";
@@ -1631,6 +1751,18 @@ const MAIN_MENU_ITEMS = [
     enabled: () => hasSavedProgress(),
     disabledHint: "No saved Chronicle found yet.",
   },
+  {
+    action: "open-join-screen",
+    label: "Join a Classroom",
+    variant: "btn-outline",
+    enabled: () => true,
+  },
+  {
+    action: "open-teacher-login",
+    label: "Teacher Sign In",
+    variant: "btn-outline",
+    enabled: () => true,
+  },
 ];
 
 function mainMenuScreen() {
@@ -1639,6 +1771,202 @@ function mainMenuScreen() {
     return `<div class="main-menu-item"><button class="btn ${item.variant}" data-action="${item.action}" ${enabled ? "" : "disabled"}>${esc(item.label)}</button>${!enabled && item.disabledHint ? `<p class="kicker">${esc(item.disabledHint)}</p>` : ""}</div>`;
   }).join("");
   return `<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="completion-actions">${items}</div></section></main>`;
+}
+
+// --- Real accounts screens (join/login/teacher-dashboard/grading) ---------
+// Additive to the existing screen-routing pattern: each is a normal
+// VALID_SCREENS entry rendered by render()'s switch, dispatched by a normal
+// CLICK_HANDLER_GROUPS entry (handleAuthScreenClick, below). None of this
+// touches movement/collision/camera/dialogue code.
+
+function joinScreen() {
+  const isClaim = authUiState.studentTab !== "signin";
+  return `${chrome()}<main class="shell completion-shell"><section>
+<p class="kicker">${esc(BRAND.engine)}</p>
+<h1>Join a Classroom</h1>
+<p>${
+    isClaim
+      ? "First time joining? Your teacher gave you a classroom code and a student ID — claim your seat and set a password."
+      : "Already claimed your seat? Sign back in with your classroom code, student ID, and password."
+  }</p>
+<div class="completion-actions">
+<button class="btn ${isClaim ? "btn-gold" : "btn-outline"}" data-action="student-tab-claim" type="button">First time</button>
+<button class="btn ${!isClaim ? "btn-gold" : "btn-outline"}" data-action="student-tab-signin" type="button">Returning</button>
+</div>
+<label>Classroom code<input id="join-classroom-code" placeholder="e.g. FOX7K2" autocomplete="off"></label>
+<label>Your student ID<input id="join-student-id" placeholder="e.g. 07" autocomplete="off"></label>
+${isClaim ? `<label>Display name (optional)<input id="join-display-name" placeholder="How your teacher sees you" autocomplete="off"></label>` : ""}
+<label>Password<input id="join-password" type="password" placeholder="••••••••" autocomplete="off"></label>
+${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+<button class="btn btn-gold" data-action="${isClaim ? "submit-join-claim" : "submit-join-signin"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isClaim ? "Claim my seat →" : "Sign in →"}</button>
+<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+</section></main>${authorPanel()}`;
+}
+
+function loginScreen() {
+  const isSignIn = authUiState.teacherTab !== "signup";
+  return `${chrome()}<main class="shell completion-shell"><section>
+<p class="kicker">${esc(BRAND.engine)}</p>
+<h1>Teacher Sign In</h1>
+<div class="completion-actions">
+<button class="btn ${isSignIn ? "btn-gold" : "btn-outline"}" data-action="teacher-tab-signin" type="button">Sign In</button>
+<button class="btn ${!isSignIn ? "btn-gold" : "btn-outline"}" data-action="teacher-tab-signup" type="button">Create Account</button>
+</div>
+${!isSignIn ? `<label>Your name<input id="teacher-display-name" placeholder="Ms. Rivera" autocomplete="off"></label>` : ""}
+<label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" autocomplete="off"></label>
+<label>Password<input id="teacher-password" type="password" placeholder="••••••••" autocomplete="off"></label>
+${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+<button class="btn btn-gold" data-action="${isSignIn ? "submit-teacher-signin" : "submit-teacher-signup"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isSignIn ? "Sign In →" : "Create Account →"}</button>
+<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+</section></main>${authorPanel()}`;
+}
+
+function teacherDashboardScreen() {
+  if (!currentProfile || currentProfile.role !== "teacher") {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
+  }
+  const classroomButtons = teacherUiState.classrooms
+    .map(
+      (c) =>
+        `<button class="btn ${c.id === teacherUiState.selectedClassroomId ? "btn-gold" : "btn-outline"}" data-action="select-classroom" data-classroom-id="${esc(c.id)}" type="button">${esc(c.name)} (${esc(c.join_code)})</button>`
+    )
+    .join("");
+  const rosterRows = teacherUiState.roster
+    .map(
+      (slot) =>
+        `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${esc(slot.status)}</td><td>${
+          slot.status === "claimed"
+            ? `<button class="text-button" data-action="reset-student-password" data-roster-slot-id="${esc(slot.id)}" type="button">Reset password</button>`
+            : ""
+        }</td></tr>`
+    )
+    .join("");
+  const submissionRows = teacherUiState.submissions
+    .map(
+      (sub) =>
+        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(sub.taskType)}</td><td>${esc(sub.taskId)}</td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
+    )
+    .join("");
+  return `${chrome()}<main class="shell completion-shell"><section>
+<p class="kicker">${esc(BRAND.engine)}</p>
+<h1>Teacher Dashboard</h1>
+<p>Signed in as ${esc(currentProfile.displayName)}.</p>
+<div class="completion-actions">${classroomButtons}</div>
+<label>New classroom name<input id="new-classroom-name" placeholder="e.g. APUSH Period 4" autocomplete="off"></label>
+<button class="btn btn-outline" data-action="create-classroom" type="button">Create classroom</button>
+${
+  teacherUiState.selectedClassroomId
+    ? `<label>Add N students<input id="provision-count" type="number" min="1" max="200" value="5"></label><button class="btn btn-outline" data-action="provision-roster" type="button">Add roster slots</button>`
+    : ""
+}
+${
+  teacherUiState.lastProvisioned
+    ? `<p class="feedback success">Added seats: ${teacherUiState.lastProvisioned.map((s) => esc(s.student_id_code)).join(", ")}</p>`
+    : ""
+}
+${
+  teacherUiState.lastReissuedPassword
+    ? `<p class="feedback success">Temporary password (shown once — write it down now): <strong>${esc(teacherUiState.lastReissuedPassword)}</strong></p>`
+    : ""
+}
+${teacherUiState.error ? `<p class="feedback error">${esc(teacherUiState.error)}</p>` : ""}
+${
+  teacherUiState.selectedClassroomId
+    ? `<table class="roster-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>`
+    : ""
+}
+${
+  teacherUiState.selectedClassroomId
+    ? `<h2>Submissions to review</h2>${submissionRows ? `<table class="roster-table"><thead><tr><th>Student</th><th>Type</th><th>Task</th><th>Readiness</th><th></th></tr></thead><tbody>${submissionRows}</tbody></table>` : "<p>No submissions yet for this classroom.</p>"}`
+    : ""
+}
+<button class="btn btn-outline" data-action="teacher-sign-out" type="button">Sign out</button>
+<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+</section></main>${authorPanel()}`;
+}
+
+function gradingScreen() {
+  if (!currentProfile || currentProfile.role !== "teacher") {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1><p>Sign in as a teacher to review submissions.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+  }
+  const submission = gradingUiState.submission;
+  if (!submission) {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1><p>${gradingUiState.error ? esc(gradingUiState.error) : "Loading submission…"}</p><button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button></section></main>${authorPanel()}`;
+  }
+  const grades =
+    submission.grades
+      .map(
+        (g) =>
+          `<article class="manual-grade-entry"><p class="kicker">${esc(new Date(g.created_at).toLocaleString())}</p><h3>${esc(g.grade_label)}</h3>${g.teacher_feedback ? `<p>${esc(g.teacher_feedback)}</p>` : ""}</article>`
+      )
+      .join("") || "<p>No grade entered yet.</p>";
+  return `${chrome()}<main class="shell review-shell"><section class="review-copy">
+<button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
+<p class="kicker">${esc(submission.taskType)} · ${esc(submission.taskId)}</p>
+<h1>${esc(submission.studentDisplayName)}</h1>
+${submission.stimulus ? `<blockquote>${esc(submission.stimulus)}</blockquote>` : ""}
+<p><b>Prompt:</b> ${esc(submission.prompt)}</p>
+</section>
+<section class="review-work">
+<h2>Student response</h2>
+<p class="student-response-text">${esc(submission.studentResponse)}</p>
+${archiveFeedbackMarkup(submission.feedback)}
+<h2>Manual grade</h2>
+${grades}
+<label>Grade<input id="grade-label" placeholder="e.g. 3/3 or Meets expectations" autocomplete="off"></label>
+<label>Feedback to student (optional)<textarea id="grade-teacher-feedback" placeholder="Additional notes for the student"></textarea></label>
+${gradingUiState.error ? `<p class="feedback error">${esc(gradingUiState.error)}</p>` : ""}
+<button class="btn btn-gold" data-action="save-manual-grade" type="button">Save grade</button>
+</section></main>${authorPanel()}`;
+}
+
+// --- Async data loaders for the teacher dashboard/grading screens ---------
+async function loadTeacherDashboardData() {
+  if (!currentProfile || currentProfile.role !== "teacher") return;
+  try {
+    teacherUiState.classrooms = await listMyClassrooms();
+    let selected = getSelectedClassroomId();
+    if (!selected || !teacherUiState.classrooms.some((c) => c.id === selected)) {
+      selected = teacherUiState.classrooms[0]?.id || null;
+      if (selected) setSelectedClassroomId(selected);
+    }
+    teacherUiState.selectedClassroomId = selected;
+    await loadSelectedClassroomDetails();
+    await setActiveOverrideClassroom(selected);
+    teacherUiState.error = "";
+  } catch (err) {
+    teacherUiState.error = err.message || "Could not load your classrooms.";
+  }
+  render();
+}
+
+async function loadSelectedClassroomDetails() {
+  if (!teacherUiState.selectedClassroomId) {
+    teacherUiState.roster = [];
+    teacherUiState.submissions = [];
+    return;
+  }
+  teacherUiState.roster = await getRoster(teacherUiState.selectedClassroomId);
+  teacherUiState.submissions = await listForClassroom(teacherUiState.selectedClassroomId);
+}
+
+async function openGradingScreen(submissionId) {
+  gradingUiState = {
+    submissionId,
+    submission: null,
+    gradeLabel: "",
+    teacherFeedback: "",
+    error: "",
+  };
+  progress.currentScreen = "grading";
+  save();
+  render();
+  try {
+    gradingUiState.submission = await getSubmissionWithGrades(submissionId);
+  } catch (err) {
+    gradingUiState.error = err.message || "Could not load this submission.";
+  }
+  render();
 }
 
 // Static, content-free background layer (letterhead rule lines + pillar glows) evoking an
@@ -2382,14 +2710,22 @@ function archiveRoomScreen() {
 // case, so there's nothing to unlock via onComplete). A case-level challenge
 // already in progress.completedCases from before its migration is shown as
 // complete without replay, preserving old-save completion (alreadyComplete).
-function archiveChallengeCard(kicker, questType, questId, { alreadyComplete = false, onComplete } = {}) {
+function archiveChallengeCard(
+  kicker,
+  questType,
+  questId,
+  { alreadyComplete = false, onComplete } = {}
+) {
   const quest = archiveChallengeQuestFor(questType, questId);
   if (!quest) return "";
   const state = progress.questResponses[questId] || {};
   const result = alreadyComplete ? { complete: true } : gradeQuest(questType, quest, state);
   const complete = alreadyComplete || isChallengeQuestComplete(questType, result);
   if (complete && progress.archiveChallenges[questId]?.status !== "complete") {
-    progress.archiveChallenges[questId] = { status: "complete", completedAt: new Date().toISOString() };
+    progress.archiveChallenges[questId] = {
+      status: "complete",
+      completedAt: new Date().toISOString(),
+    };
     if (!alreadyComplete) playSfx("upload");
     onComplete?.();
   }
@@ -2422,7 +2758,10 @@ function archiveChallengesScreen() {
         `${c.shortTitle} · Archive Challenge`,
         c.archiveChallenge.questType,
         c.archiveChallenge.questId,
-        { alreadyComplete: progress.completedCases.includes(c.id), onComplete: () => unlockNext(c.id) }
+        {
+          alreadyComplete: progress.completedCases.includes(c.id),
+          onComplete: () => unlockNext(c.id),
+        }
       )
     );
   const bonusCards = (unit.archiveChallenges || []).map((challenge) =>
@@ -2847,7 +3186,10 @@ function sourceInvestigationComplete(source) {
   const quest = investigationQuestFor(source.investigationMode, source.investigationQuestId);
   if (!quest) return true;
   const state = progress.questResponses[source.investigationQuestId] || {};
-  return isChallengeQuestComplete(source.investigationMode, gradeQuest(source.investigationMode, quest, state));
+  return isChallengeQuestComplete(
+    source.investigationMode,
+    gradeQuest(source.investigationMode, quest, state)
+  );
 }
 // Shared destination-screen resolver for a not-yet-secured source, used by both the
 // click ("start-source-activity") and keyboard (field "E" interact) entry points so
@@ -3090,57 +3432,63 @@ function practiceCheckScreen() {
     })
     .join("");
 
-  const sequencingCards = questSet.sequencing.map((quest) => {
-    const state = progress.questResponses[quest.id] || {};
-    const result = gradeQuest("sequencing", quest, state);
-    overallTotal += 1;
-    if (result.answered) overallComplete += 1;
-    const status = !result.answered ? "unanswered" : result.correct ? "correct" : "incorrect";
-    const feedback = result.answered
-      ? `<p class="activity-feedback ${result.correct ? "success" : "error"}" role="status" aria-live="polite">${
-          result.correct ? "Correct order." : "Not quite the strongest order yet."
-        } ${esc(quest.explanation || "")}</p>`
-      : `<p class="activity-feedback" role="status" aria-live="polite">Drag the entries into order (or use the ↑/↓ buttons), then check your sequence.</p>`;
-    return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
-  }).join("");
+  const sequencingCards = questSet.sequencing
+    .map((quest) => {
+      const state = progress.questResponses[quest.id] || {};
+      const result = gradeQuest("sequencing", quest, state);
+      overallTotal += 1;
+      if (result.answered) overallComplete += 1;
+      const status = !result.answered ? "unanswered" : result.correct ? "correct" : "incorrect";
+      const feedback = result.answered
+        ? `<p class="activity-feedback ${result.correct ? "success" : "error"}" role="status" aria-live="polite">${
+            result.correct ? "Correct order." : "Not quite the strongest order yet."
+          } ${esc(quest.explanation || "")}</p>`
+        : `<p class="activity-feedback" role="status" aria-live="polite">Drag the entries into order (or use the ↑/↓ buttons), then check your sequence.</p>`;
+      return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
+    })
+    .join("");
 
-  const evidenceCards = questSet.evidenceOrganizing.map((quest) => {
-    const state = progress.questResponses[quest.id] || {};
-    const result = gradeQuest("evidence-organizing", quest, state);
-    overallTotal += 1;
-    if (result.complete) overallComplete += 1;
-    const anyPlaced = Object.keys(state.placements || {}).length > 0;
-    const status = result.complete ? "correct" : anyPlaced ? "in-progress" : "unanswered";
-    const feedback = result.allPlacedCorrectly
-      ? `<p class="activity-feedback success" role="status" aria-live="polite">All records matched to the right skill.${
-          result.reflectionOk
-            ? ""
-            : " Add a reflection of at least a sentence to complete this practice."
-        }</p>`
-      : `<p class="activity-feedback" role="status" aria-live="polite">Drag each record into the historical-thinking skill it best demonstrates (or use the "Place in" menu on each card).</p>`;
-    return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("evidence-organizing", quest, state)}${feedback}</div>`;
-  }).join("");
+  const evidenceCards = questSet.evidenceOrganizing
+    .map((quest) => {
+      const state = progress.questResponses[quest.id] || {};
+      const result = gradeQuest("evidence-organizing", quest, state);
+      overallTotal += 1;
+      if (result.complete) overallComplete += 1;
+      const anyPlaced = Object.keys(state.placements || {}).length > 0;
+      const status = result.complete ? "correct" : anyPlaced ? "in-progress" : "unanswered";
+      const feedback = result.allPlacedCorrectly
+        ? `<p class="activity-feedback success" role="status" aria-live="polite">All records matched to the right skill.${
+            result.reflectionOk
+              ? ""
+              : " Add a reflection of at least a sentence to complete this practice."
+          }</p>`
+        : `<p class="activity-feedback" role="status" aria-live="polite">Drag each record into the historical-thinking skill it best demonstrates (or use the "Place in" menu on each card).</p>`;
+      return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("evidence-organizing", quest, state)}${feedback}</div>`;
+    })
+    .join("");
 
-  const hippCards = questSet.hipp.map((quest) => {
-    const state = progress.questResponses[quest.id] || {};
-    const result = gradeQuest("hipp", quest, state);
-    overallTotal += 1;
-    if (result.complete) overallComplete += 1;
-    const answeredAny = Object.keys(state.selected || {}).length > 0;
-    const status = !answeredAny
-      ? "unanswered"
-      : result.complete
-        ? "correct"
-        : result.pointsEarned > 0
-          ? "partial"
-          : "incorrect";
-    const feedbackClass =
-      status === "correct" ? "success" : status === "partial" ? "partial" : "error";
-    const feedback = answeredAny
-      ? `<p class="activity-feedback ${feedbackClass}" role="status" aria-live="polite">${result.pointsEarned}/${result.pointsPossible} HIPP points earned.</p>`
-      : `<p class="activity-feedback" role="status" aria-live="polite">Choose the option that explains how or why this HIPP element shapes the source's argument — not just names it.</p>`;
-    return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("hipp", quest, state)}${feedback}</div>`;
-  }).join("");
+  const hippCards = questSet.hipp
+    .map((quest) => {
+      const state = progress.questResponses[quest.id] || {};
+      const result = gradeQuest("hipp", quest, state);
+      overallTotal += 1;
+      if (result.complete) overallComplete += 1;
+      const answeredAny = Object.keys(state.selected || {}).length > 0;
+      const status = !answeredAny
+        ? "unanswered"
+        : result.complete
+          ? "correct"
+          : result.pointsEarned > 0
+            ? "partial"
+            : "incorrect";
+      const feedbackClass =
+        status === "correct" ? "success" : status === "partial" ? "partial" : "error";
+      const feedback = answeredAny
+        ? `<p class="activity-feedback ${feedbackClass}" role="status" aria-live="polite">${result.pointsEarned}/${result.pointsPossible} HIPP points earned.</p>`
+        : `<p class="activity-feedback" role="status" aria-live="polite">Choose the option that explains how or why this HIPP element shapes the source's argument — not just names it.</p>`;
+      return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("hipp", quest, state)}${feedback}</div>`;
+    })
+    .join("");
 
   return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(activeCase.title)} interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(activeCase.title)}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
@@ -3153,6 +3501,76 @@ function sourceVisual(source) {
   return `<figure class="document-image"><img src="${waldseemuller}" alt="Local course copy of Martin Waldseemüller’s 1507 world map"><figcaption>Local course copy of a Library of Congress scan. Zoom is intentionally preserved in the reader; students do not need to leave Chronicle to view it.</figcaption></figure>`;
 }
 
+const READINESS_LABELS = {
+  ready_to_revise: "Ready to revise",
+  on_track: "On track",
+  needs_fresh_attempt: "Try a fresh attempt",
+};
+
+// Renders one Archive Evaluator response — reused by sourceReader(),
+// reviewScreen(), and gradingScreen() so a teacher sees exactly the feedback
+// the student saw.
+function archiveFeedbackMarkup(feedbackPayload) {
+  if (!feedbackPayload) return "";
+  const items = feedbackPayload.elements
+    ? feedbackPayload.elements.map(
+        (el) =>
+          `<article class="archive-feedback-item"><h3>${esc(el.element.replaceAll("_", " "))}</h3><p>${esc(el.mirror)}</p>${el.gap ? `<p class="archive-feedback-gap">${esc(el.gap)}</p>` : ""}</article>`
+      )
+    : (feedbackPayload.rows || []).map(
+        (row) =>
+          `<article class="archive-feedback-item"><h3>${esc(row.row.replaceAll("-", " "))} — ${esc(row.met)}</h3><p>${esc(row.mirror)}</p>${row.gap ? `<p class="archive-feedback-gap">${esc(row.gap)}</p>` : ""}</article>`
+      );
+  const readinessLabel = READINESS_LABELS[feedbackPayload.readiness] || feedbackPayload.readiness;
+  return `<section class="archive-feedback"><h2>Archive Evaluator feedback</h2>${items.join("")}<p class="archive-feedback-forward"><b>Forward:</b> ${esc(feedbackPayload.forward)}</p><p class="archive-feedback-readiness">${esc(readinessLabel)}</p></section>`;
+}
+
+// Kicks off one POST /api/evaluate call. Fire-and-forget from the click
+// handler's perspective (per the async convention this feature introduces —
+// main.js has no prior async handlers): sets a pending flag, renders
+// immediately to show a loading state, then renders again on
+// success/failure. Stores the result at progress.submissions[taskId] — the
+// exact shape api/_lib/rubrics.js's own header comment anticipates — and
+// mirrors it to the backend (no-op if signed out/offline).
+async function runEvaluation(taskId, requestBody) {
+  evaluatorPendingTaskIds.add(taskId);
+  delete evaluatorErrors[taskId];
+  render();
+  try {
+    const { feedback, model } = await evaluateSubmission(requestBody);
+    progress.submissions[taskId] = {
+      taskType: requestBody.taskType,
+      prompt: requestBody.prompt,
+      studentResponse: requestBody.studentResponse,
+      feedback: { payload: feedback, model },
+      isRevision: requestBody.isRevision,
+      requestedAt: Date.now(),
+    };
+    save();
+    getCurrentClassroomId().then((classroomId) => {
+      if (!classroomId) return;
+      recordSubmission({
+        classroomId,
+        taskType: requestBody.taskType,
+        taskId,
+        prompt: requestBody.prompt,
+        stimulus: requestBody.stimulus,
+        sourceMetadata: requestBody.sourceMetadata,
+        elementsAsked: requestBody.elementsAsked,
+        studentResponse: requestBody.studentResponse,
+        isRevision: requestBody.isRevision,
+        feedback,
+        model,
+      }).catch((err) => console.error("recordSubmission failed", err));
+    });
+  } catch (err) {
+    evaluatorErrors[taskId] = err.message || "The Archive Evaluator could not respond. Try again.";
+  } finally {
+    evaluatorPendingTaskIds.delete(taskId);
+    render();
+  }
+}
+
 function sourceReader() {
   const source = sourceById(openSourceId);
   if (!source) {
@@ -3163,7 +3581,11 @@ function sourceReader() {
   const response = progress.responses[source.id] || "";
   const revealed = progress.revealedContexts.includes(source.id);
   const secured = hasEvidence(activeFieldCaseId(), source.id);
-  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1><dl><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.record)}</dd></div></dl><section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label><button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.</p></div></section>`}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Secured in Codex ✓" : "Secure in Codex →"}</button></section></main>`;
+  const existingSubmission = progress.submissions[source.id];
+  const evaluatorSection = revealed
+    ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-source" data-source="${source.id}" ${evaluatorPendingTaskIds.has(source.id) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(source.id) ? "Consulting the Archive Evaluator…" : existingSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[source.id] ? `<p class="feedback error">${esc(evaluatorErrors[source.id])}</p>` : ""}${archiveFeedbackMarkup(existingSubmission?.feedback?.payload)}</section>`
+    : "";
+  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1><dl><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.record)}</dd></div></dl><section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label><button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Secured in Codex ✓" : "Secure in Codex →"}</button></section></main>`;
 }
 
 function codexScreen() {
@@ -3272,7 +3694,9 @@ function foundingScreen() {
   return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · ${esc(activeCase.date)}</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p></section><section class="ledger-list ledger-list--sources">${FOUNDING_RECORDS.map(
     (record, index) =>
       `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="founding-${record.id}" data-founding-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`
-  ).join("")}<button class="btn btn-gold" data-action="check-founding">Validate Founding Ledger →</button><p class="feedback" id="foundingFeedback"></p></section></main>`;
+  ).join(
+    ""
+  )}<button class="btn btn-gold" data-action="check-founding">Validate Founding Ledger →</button><p class="feedback" id="foundingFeedback"></p></section></main>`;
 }
 
 function empireScreen() {
@@ -3307,7 +3731,13 @@ function reviewScreen() {
   const state = reviewStateFor(unit.id);
   const answers = state.answers || {};
   const saq = state.saq || {};
-  return `${chrome()}<main class="shell review-shell"><section class="review-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(unit.period)} Archive Review</p><h1>${esc(resolvedUnitTitle(unit))}</h1><p>Practice with AP-style historical thinking: source analysis, causation, and evidence-based explanation.</p><div class="rubric-note"><b>Structured SAQ practice · ${review.saq.prompts.length} points total</b><p>${esc(review.saq.rubric)}</p></div></section><section class="review-work"><div class="mcq-block"><h2>Multiple-choice checkpoint</h2>${review.mcq.map((q, qi) => `<article><p><b>${qi + 1}.</b> ${esc(q.prompt)}</p>${q.choices.map((choice, ci) => `<label class="choice"><input type="radio" name="mcq-${qi}" data-mcq="${qi}" value="${ci}" ${String(answers[qi]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</article>`).join("")}</div><div class="saq-block"><h2>Short Answer Question</h2><blockquote>${esc(review.saq.stimulus)}</blockquote>${review.saq.prompts.map((prompt, index) => `<label>${esc(prompt)}<textarea data-saq="${index}" placeholder="Write an evidence-based response…">${esc(saq[index] || "")}</textarea></label>`).join("")}</div><button class="btn btn-gold" data-action="submit-review">Submit Archive Review →</button><p class="feedback" id="reviewFeedback"></p></section></main>`;
+  const saqTaskId = `saq-${unit.id}`;
+  const saqComplete = review.saq.prompts.every((_, index) => (saq[index] || "").trim().length > 0);
+  const existingSaqSubmission = progress.submissions[saqTaskId];
+  const saqEvaluatorSection = saqComplete
+    ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-saq" ${evaluatorPendingTaskIds.has(saqTaskId) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(saqTaskId) ? "Consulting the Archive Evaluator…" : existingSaqSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[saqTaskId] ? `<p class="feedback error">${esc(evaluatorErrors[saqTaskId])}</p>` : ""}${archiveFeedbackMarkup(existingSaqSubmission?.feedback?.payload)}</section>`
+    : "";
+  return `${chrome()}<main class="shell review-shell"><section class="review-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(unit.period)} Archive Review</p><h1>${esc(resolvedUnitTitle(unit))}</h1><p>Practice with AP-style historical thinking: source analysis, causation, and evidence-based explanation.</p><div class="rubric-note"><b>Structured SAQ practice · ${review.saq.prompts.length} points total</b><p>${esc(review.saq.rubric)}</p></div></section><section class="review-work"><div class="mcq-block"><h2>Multiple-choice checkpoint</h2>${review.mcq.map((q, qi) => `<article><p><b>${qi + 1}.</b> ${esc(q.prompt)}</p>${q.choices.map((choice, ci) => `<label class="choice"><input type="radio" name="mcq-${qi}" data-mcq="${qi}" value="${ci}" ${String(answers[qi]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</article>`).join("")}</div><div class="saq-block"><h2>Short Answer Question</h2><blockquote>${esc(review.saq.stimulus)}</blockquote>${review.saq.prompts.map((prompt, index) => `<label>${esc(prompt)}<textarea data-saq="${index}" placeholder="Write an evidence-based response…">${esc(saq[index] || "")}</textarea></label>`).join("")}${saqEvaluatorSection}</div><button class="btn btn-gold" data-action="submit-review">Submit Archive Review →</button><p class="feedback" id="reviewFeedback"></p></section></main>`;
 }
 
 function completionScreen() {
@@ -3445,6 +3875,18 @@ function render() {
         break;
       case "completion":
         html = completionScreen();
+        break;
+      case "join":
+        html = joinScreen();
+        break;
+      case "login":
+        html = loginScreen();
+        break;
+      case "teacher-dashboard":
+        html = teacherDashboardScreen();
+        break;
+      case "grading":
+        html = gradingScreen();
         break;
       default:
         html = instituteScreen();
@@ -4335,6 +4777,301 @@ function handleReviewClick(target, action) {
   return false;
 }
 
+function handleAuthScreenClick(target, action) {
+  if (action === "open-join-screen") {
+    progress.currentScreen = "join";
+    showMainMenu = false;
+    authUiState.error = "";
+    save();
+    render();
+    return true;
+  }
+  if (action === "open-teacher-login") {
+    progress.currentScreen = "login";
+    showMainMenu = false;
+    authUiState.error = "";
+    save();
+    render();
+    return true;
+  }
+  if (action === "student-tab-claim" || action === "student-tab-signin") {
+    authUiState.studentTab = action === "student-tab-claim" ? "claim" : "signin";
+    authUiState.error = "";
+    render();
+    return true;
+  }
+  if (action === "teacher-tab-signin" || action === "teacher-tab-signup") {
+    authUiState.teacherTab = action === "teacher-tab-signin" ? "signin" : "signup";
+    authUiState.error = "";
+    render();
+    return true;
+  }
+  if (action === "submit-join-claim") {
+    const joinCode = document.getElementById("join-classroom-code")?.value.trim() || "";
+    const studentIdCode = document.getElementById("join-student-id")?.value.trim() || "";
+    const displayName = document.getElementById("join-display-name")?.value.trim() || "";
+    const password = document.getElementById("join-password")?.value || "";
+    if (!validateJoinCode(joinCode) || !validateStudentIdCode(studentIdCode)) {
+      authUiState.error = "Enter your classroom code and student ID.";
+      render();
+      return true;
+    }
+    if (!validatePassword(password)) {
+      authUiState.error = "Password must be at least 8 characters.";
+      render();
+      return true;
+    }
+    authUiState.pending = true;
+    authUiState.error = "";
+    render();
+    claimSlot({ joinCode, studentIdCode, password, displayName })
+      .then(({ email }) => signInWithPassword(email, password))
+      .then(() => {
+        progress.currentScreen = "institute";
+        save();
+      })
+      .catch((err) => {
+        authUiState.error = err.message || "Could not claim this seat.";
+      })
+      .finally(() => {
+        authUiState.pending = false;
+        render();
+      });
+    return true;
+  }
+  if (action === "submit-join-signin") {
+    const joinCode = document.getElementById("join-classroom-code")?.value.trim() || "";
+    const studentIdCode = document.getElementById("join-student-id")?.value.trim() || "";
+    const password = document.getElementById("join-password")?.value || "";
+    if (!validateJoinCode(joinCode) || !validateStudentIdCode(studentIdCode) || !password) {
+      authUiState.error = "Enter your classroom code, student ID, and password.";
+      render();
+      return true;
+    }
+    authUiState.pending = true;
+    authUiState.error = "";
+    render();
+    resolveStudentEmail({ joinCode, studentIdCode })
+      .then(({ email }) => signInWithPassword(email, password))
+      .then(() => {
+        progress.currentScreen = "institute";
+        save();
+      })
+      .catch((err) => {
+        authUiState.error = err.message || "Could not sign in.";
+      })
+      .finally(() => {
+        authUiState.pending = false;
+        render();
+      });
+    return true;
+  }
+  if (action === "submit-teacher-signin") {
+    const email = document.getElementById("teacher-email")?.value.trim() || "";
+    const password = document.getElementById("teacher-password")?.value || "";
+    if (!email || !password) {
+      authUiState.error = "Enter your email and password.";
+      render();
+      return true;
+    }
+    authUiState.pending = true;
+    authUiState.error = "";
+    render();
+    signInWithPassword(email, password)
+      .then(() => getProfile())
+      .then((profile) => {
+        currentProfile = profile;
+        progress.currentScreen = "teacher-dashboard";
+        save();
+        return loadTeacherDashboardData();
+      })
+      .catch((err) => {
+        authUiState.error = err.message || "Could not sign in.";
+      })
+      .finally(() => {
+        authUiState.pending = false;
+        render();
+      });
+    return true;
+  }
+  if (action === "submit-teacher-signup") {
+    const displayName = document.getElementById("teacher-display-name")?.value.trim() || "";
+    const email = document.getElementById("teacher-email")?.value.trim() || "";
+    const password = document.getElementById("teacher-password")?.value || "";
+    if (!email || !validatePassword(password)) {
+      authUiState.error = "Enter a valid email and a password of at least 8 characters.";
+      render();
+      return true;
+    }
+    authUiState.pending = true;
+    authUiState.error = "";
+    render();
+    signUpTeacher(email, password, displayName)
+      .then(() => getProfile())
+      .then((profile) => {
+        currentProfile = profile;
+        progress.currentScreen = "teacher-dashboard";
+        save();
+        return loadTeacherDashboardData();
+      })
+      .catch((err) => {
+        authUiState.error = err.message || "Could not create your account.";
+      })
+      .finally(() => {
+        authUiState.pending = false;
+        render();
+      });
+    return true;
+  }
+  if (action === "select-classroom") {
+    teacherUiState.selectedClassroomId = target.dataset.classroomId;
+    setSelectedClassroomId(target.dataset.classroomId);
+    teacherUiState.lastProvisioned = null;
+    teacherUiState.lastReissuedPassword = null;
+    render();
+    Promise.all([
+      loadSelectedClassroomDetails(),
+      setActiveOverrideClassroom(target.dataset.classroomId),
+    ])
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not load this classroom.";
+      })
+      .finally(() => render());
+    return true;
+  }
+  if (action === "create-classroom") {
+    const name = document.getElementById("new-classroom-name")?.value.trim() || "";
+    if (!name) {
+      teacherUiState.error = "Enter a classroom name.";
+      render();
+      return true;
+    }
+    teacherUiState.error = "";
+    createClassroom(name)
+      .then((classroom) => {
+        teacherUiState.selectedClassroomId = classroom.id;
+        setSelectedClassroomId(classroom.id);
+        return loadTeacherDashboardData();
+      })
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not create classroom.";
+        render();
+      });
+    return true;
+  }
+  if (action === "provision-roster") {
+    const count = Number(document.getElementById("provision-count")?.value || 0);
+    if (!teacherUiState.selectedClassroomId || !Number.isInteger(count) || count < 1) {
+      teacherUiState.error = "Enter how many students to add.";
+      render();
+      return true;
+    }
+    teacherUiState.error = "";
+    provisionSlots(teacherUiState.selectedClassroomId, { count })
+      .then(({ slots }) => {
+        teacherUiState.lastProvisioned = slots;
+        return loadSelectedClassroomDetails();
+      })
+      .then(() => render())
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not add roster slots.";
+        render();
+      });
+    return true;
+  }
+  if (action === "reset-student-password") {
+    const rosterSlotId = target.dataset.rosterSlotId;
+    teacherUiState.error = "";
+    resetStudentPassword(rosterSlotId)
+      .then((tempPassword) => {
+        teacherUiState.lastReissuedPassword = tempPassword;
+        render();
+      })
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not reset this student's password.";
+        render();
+      });
+    return true;
+  }
+  if (action === "teacher-sign-out") {
+    signOut().then(() => {
+      currentProfile = null;
+      teacherUiState = {
+        classrooms: [],
+        selectedClassroomId: null,
+        roster: [],
+        submissions: [],
+        newClassroomName: "",
+        lastProvisioned: null,
+        lastReissuedPassword: null,
+        error: "",
+        pending: false,
+      };
+      progress.currentScreen = "institute";
+      save();
+      render();
+    });
+    return true;
+  }
+  return false;
+}
+
+function handleGradingScreenClick(target, action) {
+  if (action === "open-grading") {
+    openGradingScreen(target.dataset.submissionId);
+    return true;
+  }
+  if (action === "back-to-teacher-dashboard") {
+    progress.currentScreen = "teacher-dashboard";
+    save();
+    render();
+    return true;
+  }
+  if (action === "save-manual-grade") {
+    const gradeLabel = document.getElementById("grade-label")?.value.trim() || "";
+    const teacherFeedback = document.getElementById("grade-teacher-feedback")?.value.trim() || "";
+    if (!gradeLabel || !gradingUiState.submission?.evaluationId) {
+      gradingUiState.error = "Enter a grade before saving.";
+      render();
+      return true;
+    }
+    gradingUiState.error = "";
+    recordManualGrade(gradingUiState.submission.evaluationId, gradeLabel, teacherFeedback)
+      .then(() => getSubmissionWithGrades(gradingUiState.submissionId))
+      .then((submission) => {
+        gradingUiState.submission = submission;
+        render();
+      })
+      .catch((err) => {
+        gradingUiState.error = err.message || "Could not save this grade.";
+        render();
+      });
+    return true;
+  }
+  return false;
+}
+
+function handleEvaluatorClick(target, action) {
+  if (action === "evaluate-source") {
+    const source = sourceById(target.dataset.source);
+    if (!source) return true;
+    const studentResponse = progress.responses[source.id] || "";
+    const prior = progress.submissions[source.id];
+    runEvaluation(source.id, buildHippEvaluationRequest(source, studentResponse, prior));
+    return true;
+  }
+  if (action === "evaluate-saq") {
+    const unit = unitById(progress.selectedUnitId) || UNIT_01;
+    const review = UNIT_REVIEWS[unit.id] || REVIEW;
+    const state = reviewStateFor(unit.id);
+    const taskId = `saq-${unit.id}`;
+    const prior = progress.submissions[taskId];
+    runEvaluation(taskId, buildSaqEvaluationRequest(unit, review, state.saq || {}, prior));
+    return true;
+  }
+  return false;
+}
+
 const CLICK_HANDLER_GROUPS = [
   handleChromeClick,
   handleOnboardingClick,
@@ -4343,6 +5080,9 @@ const CLICK_HANDLER_GROUPS = [
   handleSourceReaderClick,
   handlePuzzleScreenClick,
   handleReviewClick,
+  handleAuthScreenClick,
+  handleGradingScreenClick,
+  handleEvaluatorClick,
 ];
 
 function handleAppClick(event) {
@@ -4492,8 +5232,7 @@ function handleAppDragover(event) {
   const sequenceItem = event.target.closest("[data-sequence-item]");
   const evidenceSlot = event.target.closest("[data-evidence-slot]");
   const cargoHold = event.target.closest("[data-cargo-hold]");
-  const dropTarget =
-    mapSlot || zone || legDrop || sequenceItem || evidenceSlot || cargoHold;
+  const dropTarget = mapSlot || zone || legDrop || sequenceItem || evidenceSlot || cargoHold;
   if (dropTarget) {
     event.preventDefault();
     dropTarget.classList.add("is-over");
@@ -4534,9 +5273,9 @@ function handleAppDrop(event) {
     // click handler), so the unscoped selector triples every id and
     // produces a corrupted order that can never satisfy
     // order.length === quest.items.length.
-    const currentOrder = Array.from(list.querySelectorAll("li.sequence-item[data-sequence-item]")).map(
-      (el) => el.dataset.sequenceItem
-    );
+    const currentOrder = Array.from(
+      list.querySelectorAll("li.sequence-item[data-sequence-item]")
+    ).map((el) => el.dataset.sequenceItem);
     const withoutSource = currentOrder.filter((id) => id !== sourceItemId);
     const targetIndex = withoutSource.indexOf(targetItemId);
     withoutSource.splice(targetIndex, 0, sourceItemId);
@@ -4732,7 +5471,8 @@ function handleAppPointerdown(event) {
   const stormMove = event.target.closest("[data-storm-move]");
   if (!stormMove || activeMiniGame !== "storm-navigation" || !stormNavigationState) return;
   event.preventDefault();
-  activeStormPointerKey = Number(stormMove.dataset.stormMove) < 0 ? "storm-pointer-left" : "storm-pointer-right";
+  activeStormPointerKey =
+    Number(stormMove.dataset.stormMove) < 0 ? "storm-pointer-left" : "storm-pointer-right";
   stormHeldKeys.add(activeStormPointerKey);
 }
 function handleAppPointerup() {

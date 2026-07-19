@@ -46,9 +46,7 @@ describe("reloading an override", () => {
     setOverride(UNIT_01.id, "centralQuestion", "A teacher-edited guiding question?");
     // Re-read directly from localStorage rather than an in-memory cache, the
     // way a fresh page load would.
-    expect(getOverride(UNIT_01.id, "centralQuestion")).toBe(
-      "A teacher-edited guiding question?"
-    );
+    expect(getOverride(UNIT_01.id, "centralQuestion")).toBe("A teacher-edited guiding question?");
   });
 });
 

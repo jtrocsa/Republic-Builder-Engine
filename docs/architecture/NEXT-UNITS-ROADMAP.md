@@ -45,7 +45,7 @@ Two things landed this session that future content should build on, not regress 
 
 ## 5. Candidate future quest types — not committed scope
 
-`QUEST-TYPE-ARCHITECTURE.md` §5 already named and explicitly deferred four quest types beyond the current set: **Thesis/argument-building**, **Causation-as-node-graph**, **role-play/simulation**, and **SAQ/LEQ-as-quest-format**. Listing them here only to connect them to *future units*, not to commit to building them:
+`QUEST-TYPE-ARCHITECTURE.md` §5 already named and explicitly deferred four quest types beyond the current set: **Thesis/argument-building**, **Causation-as-node-graph**, **role-play/simulation**, and **SAQ/LEQ-as-quest-format**. Listing them here only to connect them to _future units_, not to commit to building them:
 
 - **Causation-as-node-graph** pairs naturally with a unit whose central question is explicitly causal (a Period 3 revolution-causes unit is a plausible fit).
 - **Thesis/argument-building** pairs naturally with an SAQ/LEQ-heavy unit, and is also the most direct way to give **Comparison** a dedicated interaction shape — none of the four current quest types have a comparison/paired-contrast interaction today (Comparison-tagged content today rides inside the generic evidence-organizing quest type — e.g. Unit 3's Hall/Adams quest — rather than having its own purpose-built mechanic; see `docs/content-guide/skill-taxonomy.md`).

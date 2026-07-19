@@ -14,9 +14,7 @@ describe("tilesForFrame", () => {
       tilewidth: 48,
       tileheight: 48,
       tilesets: [tileset({ firstgid: 1 })],
-      layers: [
-        { type: "tilelayer", visible: true, width: 2, height: 1, data: [0, 5] },
-      ],
+      layers: [{ type: "tilelayer", visible: true, width: 2, height: 1, data: [0, 5] }],
     };
     const tiles = tilesForFrame(tmj);
     expect(tiles).toHaveLength(1);
@@ -134,8 +132,8 @@ describe("createTilesetImageResolver", () => {
 
   it("throws a clear, actionable error when the image isn't in any globbed folder (edge case)", () => {
     const resolve = createTilesetImageResolver(fakeGlob);
-    expect(() =>
-      resolve({ image: "../../assets/tilesets/Nonexistent/ghost.png" })
-    ).toThrow(/no bundled asset/);
+    expect(() => resolve({ image: "../../assets/tilesets/Nonexistent/ghost.png" })).toThrow(
+      /no bundled asset/
+    );
   });
 });

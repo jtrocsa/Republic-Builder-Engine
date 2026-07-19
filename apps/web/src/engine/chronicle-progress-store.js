@@ -30,6 +30,10 @@ export const DEFAULT_PROGRESS = {
   settings: { miniGamesEnabled: true },
   miniGameScores: { stormNavigationBest: 0 },
   tutorial: { step: "not-started", completed: false, skipped: false },
+  // Stamped on every save — the seam progress-repository.js's
+  // resolveProgressConflict() compares against a remote copy's updated_at to
+  // decide which is newer. Not itself synced anywhere; purely local metadata.
+  lastSavedAt: null,
 };
 export function readProgress() {
   try {
@@ -91,6 +95,7 @@ export function readProgress() {
   }
 }
 export function saveProgress(next) {
+  next.lastSavedAt = Date.now();
   localStorage.setItem(KEY, JSON.stringify(next));
   return next;
 }

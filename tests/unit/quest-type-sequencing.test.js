@@ -63,7 +63,7 @@ describe("SequencingQuestSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(
-        result.error.issues.some((issue) => issue.message.includes("must form a complete 0..")),
+        result.error.issues.some((issue) => issue.message.includes("must form a complete 0.."))
       ).toBe(true);
     }
   });
@@ -80,7 +80,7 @@ describe("SequencingQuestSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(
-        result.error.issues.some((issue) => issue.message.includes("must form a complete 0..")),
+        result.error.issues.some((issue) => issue.message.includes("must form a complete 0.."))
       ).toBe(true);
     }
   });
@@ -97,7 +97,7 @@ describe("SequencingQuestSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues.some((issue) => issue.message.includes("Duplicate item id"))).toBe(
-        true,
+        true
       );
     }
   });
@@ -109,7 +109,7 @@ describe("SequencingQuestListSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(
-        result.error.issues.some((issue) => issue.message.includes("Duplicate sequencing quest id")),
+        result.error.issues.some((issue) => issue.message.includes("Duplicate sequencing quest id"))
       ).toBe(true);
     }
   });
@@ -130,8 +130,8 @@ describe("renderSequencingQuest", () => {
 
   it("falls back to the quest's authored item order when no state.order is given (normal case)", () => {
     const html = renderSequencingQuest(validQuest);
-    const labelOrder = ["First development", "Second development", "Third development"].map((label) =>
-      html.indexOf(label),
+    const labelOrder = ["First development", "Second development", "Third development"].map(
+      (label) => html.indexOf(label)
     );
     expect(labelOrder).toEqual([...labelOrder].sort((a, b) => a - b));
   });

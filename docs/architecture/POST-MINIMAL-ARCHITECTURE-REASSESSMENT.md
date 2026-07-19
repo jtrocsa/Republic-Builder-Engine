@@ -4,14 +4,14 @@ Status: complete. This is the "stop and reassess based on real usage" step named
 
 ## 1. Completed phases
 
-| Phase | Summary | Status |
-| --- | --- | --- |
-| Documentation housekeeping | Corrected stale `CLAUDE.md` claims, repaired 4 placeholder-stub docs, fixed decision-log numbering (duplicate `0006`, missing `0020`) | Complete |
-| Phase 2 — Vitest setup | Added Vitest + jsdom, exported 6 `main.js` functions for testing, added a boot guard, 24 initial tests | Complete |
-| Phase 3 — Zod content validation | Added Zod, 6 schema files, `local-content-repository.js`, made `scripts/validate-content.js` real | Complete |
-| Phase 4 — local progress repository | Added `local-progress-repository.js` thin wrapper around `chronicle-progress-store.js`, added `schemaVersion` + `migrateProgress()` | Complete |
-| Phase 5 — dead-code removal | Deleted `apps/web/src/features/*` island, `chronicle-case-001.js`, the dormant JSON content pipeline, and the placeholder root `assets/` tree | Complete |
-| Phase 6 — minimal Author Mode overrides | Created `local-teacher-override-store.js`, fixed the two broken content-edit fields, added display + reset UI | Complete |
+| Phase                                   | Summary                                                                                                                                       | Status   |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Documentation housekeeping              | Corrected stale `CLAUDE.md` claims, repaired 4 placeholder-stub docs, fixed decision-log numbering (duplicate `0006`, missing `0020`)         | Complete |
+| Phase 2 — Vitest setup                  | Added Vitest + jsdom, exported 6 `main.js` functions for testing, added a boot guard, 24 initial tests                                        | Complete |
+| Phase 3 — Zod content validation        | Added Zod, 6 schema files, `local-content-repository.js`, made `scripts/validate-content.js` real                                             | Complete |
+| Phase 4 — local progress repository     | Added `local-progress-repository.js` thin wrapper around `chronicle-progress-store.js`, added `schemaVersion` + `migrateProgress()`           | Complete |
+| Phase 5 — dead-code removal             | Deleted `apps/web/src/features/*` island, `chronicle-case-001.js`, the dormant JSON content pipeline, and the placeholder root `assets/` tree | Complete |
+| Phase 6 — minimal Author Mode overrides | Created `local-teacher-override-store.js`, fixed the two broken content-edit fields, added display + reset UI                                 | Complete |
 
 ## 2. Verification status
 
@@ -108,15 +108,15 @@ No second subject is in active development, and no reusable activity-template or
 
 ## 6. Decision for each deferred system
 
-| System | Decision | Evidence |
-| --- | --- | --- |
-| Phaser | Continue deferring | No perf problem, no authoring bottleneck, second map is placeholder |
-| Tiled | Continue deferring | Same as Phaser — no real second map complexity yet |
-| Playwright | Partially active — scoped to agent UI verification, full e2e still deferred | See 2026-07-10 update note in §5 |
-| inkjs | Continue deferring | Dialogue is static; no approved branching quest design exists |
-| Subject-pack extraction (`packs/<subject>/`) | Continue deferring | Only one real subject exists; Unit 2 is placeholder |
-| PlatformCore / accounts / classrooms | Continue deferring | Zero account/classroom code; no real second user |
-| WorldComposition / AI generation | Continue deferring | No second subject in development, no template system exists |
+| System                                       | Decision                                                                    | Evidence                                                            |
+| -------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Phaser                                       | Continue deferring                                                          | No perf problem, no authoring bottleneck, second map is placeholder |
+| Tiled                                        | Continue deferring                                                          | Same as Phaser — no real second map complexity yet                  |
+| Playwright                                   | Partially active — scoped to agent UI verification, full e2e still deferred | See 2026-07-10 update note in §5                                    |
+| inkjs                                        | Continue deferring                                                          | Dialogue is static; no approved branching quest design exists       |
+| Subject-pack extraction (`packs/<subject>/`) | Continue deferring                                                          | Only one real subject exists; Unit 2 is placeholder                 |
+| PlatformCore / accounts / classrooms         | Continue deferring                                                          | Zero account/classroom code; no real second user                    |
+| WorldComposition / AI generation             | Continue deferring                                                          | No second subject in development, no template system exists         |
 
 No system here rises even to "conduct a small proof of concept" — the evidence bar the task set wasn't met for any of them, and per its own instruction ("default to continued deferral when evidence is weak"), a POC would be manufacturing work rather than responding to a real signal.
 
@@ -125,12 +125,13 @@ No system here rises even to "conduct a small proof of concept" — the evidence
 **Expand real Unit 1 content — build out the next badge area (Atlantic or Hispaniola).** Case 1.01/Caribbean is currently the only fully playable case; Atlantic and Hispaniola are defined in `unitOneBadgeRecords()` but locked/future. This is where the game actually grows in player-facing value right now, and it's squarely product work rather than architecture work — no new engine capability is implied, it reuses the same field/hub/dialogue/collision systems Case 1.01 already exercises.
 
 Separately-scoped, optional, trivial hygiene items surfaced by this review (not bundled into the content work, and not requiring their own phase):
+
 - Confirm whether `moveInstitutePlayer` / `moveFieldPlayer` are truly dead code or a naming collision worth resolving, before the next time movement code is touched.
 - Refresh `docs/development/UNIT-TESTING.md`'s test count and `CLAUDE.md`'s `main.js` line count.
 
 ## 8. Recommended next architecture milestone
 
-**None.** No new architecture phase is scheduled coming out of this reassessment. One condition is worth watching *during* the recommended content work rather than pre-building for: if building out the next badge area's map turns out to require real terrain/collision complexity the current hand-coded-array approach can't reasonably handle, that observation is itself the Phaser/Tiled forcing function named in §5 — it should trigger picking this document back up, not a silent decision to start Phaser mid-content-work.
+**None.** No new architecture phase is scheduled coming out of this reassessment. One condition is worth watching _during_ the recommended content work rather than pre-building for: if building out the next badge area's map turns out to require real terrain/collision complexity the current hand-coded-array approach can't reasonably handle, that observation is itself the Phaser/Tiled forcing function named in §5 — it should trigger picking this document back up, not a silent decision to start Phaser mid-content-work.
 
 ## 9. Systems that remain explicitly deferred
 
@@ -158,11 +159,11 @@ Owner-directed scoped POC (explicit override of §6/§9's continued-deferral ver
 
 **Part 3 evaluation:**
 
-- *Was authoring in Tiled meaningfully easier/faster than hand-coding a `FIELD_BLOCKS`-style array?* Not in this pass — but the comparison isn't clean. No live Tiled application exists in this environment, so "authoring" here meant hand-deriving GIDs from cropped screenshots and writing a Node script to emit the JSON, which is strictly *more* work than a hand-coded rectangle array (which needs no asset comprehension at all). A genuine early misread of one sheet (`tile-B-02.png` was assumed, from a full-thumbnail glance, to be a composed building/dock scene; a precise pixel crop later showed it's actually a loose crate/rope/icon sheet, and the real scene sheet was `tile-B-04.png`) cost a full rebuild cycle and was only caught by rendering and screenshotting the result, not by inspecting the source more carefully. That failure mode is specific to authoring blind; a human using Tiled's actual GUI — click a tile in a visible palette, see it placed immediately, use the built-in terrain/autotile brush these RPG-Maker-style sheets are designed for — would very plausibly not hit it. **This POC did not validate the thing it set out to validate**, because the tool under test was never actually used as a GUI.
-- *Does the result look more consistent with a defined art direction than the current Unit 1 vs Unit 2 mismatch?* Partially. The map now shows real, legible buildings/water/dock/field art instead of a flat placeholder PNG, which reads as more "finished." But it's a hand-glued composite of three visually distinct packs, has at least one visible rendering artifact (a faint blue color bleed around the tobacco crop tiles, not yet root-caused), and the grass/dirt-path fill uses single hand-picked "safe" cells rather than real terrain-blended edges — so it doesn't yet demonstrate a *solved* art-direction problem, just that assembling something coherent-looking from these packs is possible.
-- *Friction worth recording:* (1) no Tiled GUI available to actually test the authoring workflow this POC exists to evaluate; (2) these packs are RPG-Maker-autotile-convention sheets meant for a terrain-brush tool, and hand-placing individual GIDs to fake flat fills produces visible seams; (3) the 48px/96px tile-size mismatch required a non-obvious Tiled convention (bottom-left-anchored oversized tiles) that had to be derived and debugged rather than looked up; (4) zero license documentation for any pack is a real ship-blocking gap, independent of the Tiled question; (5) on the positive side, the runtime side worked cleanly — the compositor is small and generic, and because Unit 2's field was already "one full-bleed background image inside a camera-transformed container," swapping the `<img>` for a `<canvas>` touched nothing else in `main.js`, confirming the engine-integration risk is low regardless of how maps get authored.
+- _Was authoring in Tiled meaningfully easier/faster than hand-coding a `FIELD_BLOCKS`-style array?_ Not in this pass — but the comparison isn't clean. No live Tiled application exists in this environment, so "authoring" here meant hand-deriving GIDs from cropped screenshots and writing a Node script to emit the JSON, which is strictly _more_ work than a hand-coded rectangle array (which needs no asset comprehension at all). A genuine early misread of one sheet (`tile-B-02.png` was assumed, from a full-thumbnail glance, to be a composed building/dock scene; a precise pixel crop later showed it's actually a loose crate/rope/icon sheet, and the real scene sheet was `tile-B-04.png`) cost a full rebuild cycle and was only caught by rendering and screenshotting the result, not by inspecting the source more carefully. That failure mode is specific to authoring blind; a human using Tiled's actual GUI — click a tile in a visible palette, see it placed immediately, use the built-in terrain/autotile brush these RPG-Maker-style sheets are designed for — would very plausibly not hit it. **This POC did not validate the thing it set out to validate**, because the tool under test was never actually used as a GUI.
+- _Does the result look more consistent with a defined art direction than the current Unit 1 vs Unit 2 mismatch?_ Partially. The map now shows real, legible buildings/water/dock/field art instead of a flat placeholder PNG, which reads as more "finished." But it's a hand-glued composite of three visually distinct packs, has at least one visible rendering artifact (a faint blue color bleed around the tobacco crop tiles, not yet root-caused), and the grass/dirt-path fill uses single hand-picked "safe" cells rather than real terrain-blended edges — so it doesn't yet demonstrate a _solved_ art-direction problem, just that assembling something coherent-looking from these packs is possible.
+- _Friction worth recording:_ (1) no Tiled GUI available to actually test the authoring workflow this POC exists to evaluate; (2) these packs are RPG-Maker-autotile-convention sheets meant for a terrain-brush tool, and hand-placing individual GIDs to fake flat fills produces visible seams; (3) the 48px/96px tile-size mismatch required a non-obvious Tiled convention (bottom-left-anchored oversized tiles) that had to be derived and debugged rather than looked up; (4) zero license documentation for any pack is a real ship-blocking gap, independent of the Tiled question; (5) on the positive side, the runtime side worked cleanly — the compositor is small and generic, and because Unit 2's field was already "one full-bleed background image inside a camera-transformed container," swapping the `<img>` for a `<canvas>` touched nothing else in `main.js`, confirming the engine-integration risk is low regardless of how maps get authored.
 
-**Recommendation: inconclusive, need a second data point — specifically, one where an actual Tiled GUI is used.** This pass validates that the `.tmj` *runtime format and engine integration* are low-risk and reusable (worth keeping in mind next time a real second map is needed), but it does not validate or refute Tiled's *authoring* value, because the authoring here was done blind, by hand, without the tool this POC was supposed to be testing. §6/§9's continued-deferral verdict for Tiled stands; this addendum doesn't overturn it. If Tiled adoption is revisited, the next test should be a human (or an agent with actual GUI/MCP access to Tiled) doing the authoring, not another blind-JSON pass like this one.
+**Recommendation: inconclusive, need a second data point — specifically, one where an actual Tiled GUI is used.** This pass validates that the `.tmj` _runtime format and engine integration_ are low-risk and reusable (worth keeping in mind next time a real second map is needed), but it does not validate or refute Tiled's _authoring_ value, because the authoring here was done blind, by hand, without the tool this POC was supposed to be testing. §6/§9's continued-deferral verdict for Tiled stands; this addendum doesn't overturn it. If Tiled adoption is revisited, the next test should be a human (or an agent with actual GUI/MCP access to Tiled) doing the authoring, not another blind-JSON pass like this one.
 
 ### 2026-07-10, later same day: loader hardening + data points #2 and #3
 
@@ -190,7 +191,7 @@ owner already anticipated needing for a hand-built map:
 
 **A real regression caught before it shipped:** the first version of the generic image resolver
 used one unscoped `import.meta.glob("../assets/tilesets/**/*.png", { eager: true })` inside the
-loader, so *any* map's tileset would resolve with zero code changes anywhere. Building confirmed
+loader, so _any_ map's tileset would resolve with zero code changes anywhere. Building confirmed
 this bundled **every** file under `assets/tilesets/` into every production build — 117MB across
 85 PNGs, most belonging to packs not referenced by any real map — versus ~22MB for only the packs
 Riverbend actually uses. Fixed by scoping the glob to specific pack folders at the call site

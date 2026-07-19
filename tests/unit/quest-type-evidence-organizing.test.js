@@ -56,12 +56,15 @@ describe("EvidenceOrganizingQuestSchema", () => {
   it("rejects a source whose correctSlotId is not one of the quest's own slots (invalid/missing data)", () => {
     const result = EvidenceOrganizingQuestSchema.safeParse({
       ...validQuest,
-      sources: [{ ...validQuest.sources[0], correctSlotId: "slot-nonexistent" }, validQuest.sources[1]],
+      sources: [
+        { ...validQuest.sources[0], correctSlotId: "slot-nonexistent" },
+        validQuest.sources[1],
+      ],
     });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(
-        result.error.issues.some((issue) => issue.message.includes("correctSlotId must be one of")),
+        result.error.issues.some((issue) => issue.message.includes("correctSlotId must be one of"))
       ).toBe(true);
     }
   });
@@ -73,9 +76,9 @@ describe("EvidenceOrganizingQuestSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.message.includes("Duplicate source id"))).toBe(
-        true,
-      );
+      expect(
+        result.error.issues.some((issue) => issue.message.includes("Duplicate source id"))
+      ).toBe(true);
     }
   });
 
@@ -95,8 +98,8 @@ describe("EvidenceOrganizingQuestListSchema", () => {
     if (!result.success) {
       expect(
         result.error.issues.some((issue) =>
-          issue.message.includes("Duplicate evidence-organizing quest id"),
-        ),
+          issue.message.includes("Duplicate evidence-organizing quest id")
+        )
       ).toBe(true);
     }
   });
@@ -117,7 +120,9 @@ describe("renderEvidenceOrganizingQuest", () => {
   });
 
   it("shows a placed source's label inside its slot (normal case)", () => {
-    const html = renderEvidenceOrganizingQuest(validQuest, { placements: { "source-1": "slot-a" } });
+    const html = renderEvidenceOrganizingQuest(validQuest, {
+      placements: { "source-1": "slot-a" },
+    });
     expect(html).toContain('data-evidence-slot-filled="source-1"');
   });
 
@@ -146,7 +151,10 @@ describe("renderEvidenceOrganizingQuest", () => {
   it("escapes HTML in source excerpt text (invalid/missing data)", () => {
     const html = renderEvidenceOrganizingQuest({
       ...validQuest,
-      sources: [{ ...validQuest.sources[0], excerpt: '<img src=x onerror=alert(1)>' }, validQuest.sources[1]],
+      sources: [
+        { ...validQuest.sources[0], excerpt: "<img src=x onerror=alert(1)>" },
+        validQuest.sources[1],
+      ],
     });
     expect(html).not.toContain("<img");
   });
@@ -185,7 +193,9 @@ describe("gradeEvidenceOrganizingQuest", () => {
   it("does not require a reflection when the quest defines none (boundary case)", () => {
     const withoutReflection = { ...validQuest };
     delete withoutReflection.reflectionPrompt;
-    const result = gradeEvidenceOrganizingQuest(withoutReflection, { placements: correctPlacements });
+    const result = gradeEvidenceOrganizingQuest(withoutReflection, {
+      placements: correctPlacements,
+    });
     expect(result.reflectionOk).toBe(true);
     expect(result.complete).toBe(true);
   });

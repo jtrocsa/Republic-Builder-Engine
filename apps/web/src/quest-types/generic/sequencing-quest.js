@@ -54,20 +54,22 @@ export const SequencingQuestSchema = z
     }
   });
 
-export const SequencingQuestListSchema = z.array(SequencingQuestSchema).superRefine((items, ctx) => {
-  const firstSeenAt = new Map();
-  items.forEach((item, index) => {
-    if (firstSeenAt.has(item.id)) {
-      ctx.addIssue({
-        code: "custom",
-        path: [index, "id"],
-        message: `Duplicate sequencing quest id "${item.id}" (first seen at index ${firstSeenAt.get(item.id)}).`,
-      });
-    } else {
-      firstSeenAt.set(item.id, index);
-    }
+export const SequencingQuestListSchema = z
+  .array(SequencingQuestSchema)
+  .superRefine((items, ctx) => {
+    const firstSeenAt = new Map();
+    items.forEach((item, index) => {
+      if (firstSeenAt.has(item.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [index, "id"],
+          message: `Duplicate sequencing quest id "${item.id}" (first seen at index ${firstSeenAt.get(item.id)}).`,
+        });
+      } else {
+        firstSeenAt.set(item.id, index);
+      }
+    });
   });
-});
 
 /**
  * @param {import("zod").infer<typeof SequencingQuestSchema>} quest

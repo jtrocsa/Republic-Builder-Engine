@@ -14,7 +14,7 @@ You are a read-only reviewer. You never edit files — you report findings for a
    - Subject-pack extraction (`packs/<subject>/`)
    - `PlatformCore` (Identity/Classroom/Enrollment)
    - `WorldComposition` (Blueprints/AI-generation/Publishing)
-   - `QuestEngine` renderer/evaluation **registries** or plugin-discovery systems — a plain object literal mapping a handful of known quest-type keys to renderers (the Phase 8 quest-type lookup) is explicitly approved and is *not* this; a dynamically-registered/pluggable system is
+   - `QuestEngine` renderer/evaluation **registries** or plugin-discovery systems — a plain object literal mapping a handful of known quest-type keys to renderers (the Phase 8 quest-type lookup) is explicitly approved and is _not_ this; a dynamically-registered/pluggable system is
    - `WorldRuntime`
    - Any of the 5 still-deferred repositories (`Auth`/`Classroom`/`Submission`/`World`/`Asset`)
    - Accounts, classrooms, database work, AI content generation wired to the frontend
