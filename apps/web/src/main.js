@@ -1543,6 +1543,10 @@ let teacherUiState = {
   // selected source ids } | undefined (not yet loaded).
   sourcePoolByUnit: {},
   sourcesExpandedUnit: null,
+  // Which pool rows currently have their full source content expanded —
+  // keyed by `${kind}:${id}` since text/visual ids aren't guaranteed unique
+  // against each other.
+  sourcesPreviewKeys: new Set(),
 };
 // Manage Content (Teacher Mode's source/MCQ-quest swap editor) state —
 // separate from teacherUiState since it's a distinct screen family with its
@@ -2170,13 +2174,46 @@ function lockedSourcesForUnitNumber(unitNumber) {
   );
 }
 
+// Full-content preview for a Sources-tab pool row — schema-matched to
+// apps/web/src/content/schemas/primary-source-library.schema.js (text vs.
+// visual entries have different fields), not the gameplay Source schema
+// (see sourcePreviewCardMarkup below, which is a different shape).
+function sourcePoolPreviewMarkup(item, kind) {
+  const externalLink = item.externalUrl
+    ? `<a class="btn btn-outline" href="${esc(item.externalUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>`
+    : "";
+  if (kind === "text") {
+    return `<div class="source-pool-preview">
+<dl>
+<div><dt>APUSH use</dt><dd>${esc(item.apushUse)}</dd></div>
+<div><dt>Excerpt</dt><dd>${esc(item.excerpt)}</dd></div>
+<div><dt>Citation</dt><dd>${esc(item.citation)}</dd></div>
+</dl>
+${externalLink}
+</div>`;
+  }
+  return `<div class="source-pool-preview">
+<dl>
+<div><dt>Description</dt><dd>${esc(item.description)}</dd></div>
+<div><dt>Citation</dt><dd>${esc(item.citation)}</dd></div>
+</dl>
+${externalLink}
+</div>`;
+}
+
 function sourcesPoolListMarkup(unitNumber, textSources, visualSources, pool) {
   const row = (item, kind) => {
     const selected = pool.has(item.id);
     const metaLine = kind === "text" ? `${esc(item.creator)} · ${esc(item.date)}` : "Visual source";
-    return `<li class="source-pool-row ${selected ? "is-selected" : ""}">
+    const key = `${kind}:${item.id}`;
+    const expanded = teacherUiState.sourcesPreviewKeys.has(key);
+    return `<li class="source-pool-row ${selected ? "is-selected" : ""} ${expanded ? "is-expanded" : ""}">
+<div class="source-pool-row-main">
 <button class="btn ${selected ? "btn-gold" : "btn-outline"}" data-action="toggle-source-pool" data-unit="${unitNumber}" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button">${selected ? "✓ In pool" : "+ Add"}</button>
+<button class="btn btn-plain" data-action="toggle-source-preview" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button" aria-expanded="${expanded}">${expanded ? "View ▾" : "View ▸"}</button>
 <span class="source-pool-row-copy"><strong>${esc(item.title)}</strong><span class="kicker">${metaLine}</span></span>
+</div>
+${expanded ? sourcePoolPreviewMarkup(item, kind) : ""}
 </li>`;
   };
   const rows = [
@@ -6821,6 +6858,15 @@ function handleAuthScreenClick(target, action) {
         teacherUiState.error = err.message || "Could not update this source's pool status.";
         render();
       });
+    return true;
+  }
+  if (action === "toggle-source-preview") {
+    const sourceId = target.dataset.sourceId;
+    const sourceKind = target.dataset.sourceKind;
+    const key = `${sourceKind}:${sourceId}`;
+    if (teacherUiState.sourcesPreviewKeys.has(key)) teacherUiState.sourcesPreviewKeys.delete(key);
+    else teacherUiState.sourcesPreviewKeys.add(key);
+    render();
     return true;
   }
   if (action === "teacher-sign-out") {
