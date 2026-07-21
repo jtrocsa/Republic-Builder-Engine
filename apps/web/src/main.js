@@ -1469,6 +1469,22 @@ let authorPanelOpen = false;
 // progress = loadProgress() above must stay synchronous. Odysso (the
 // separate marketing site) links directly into "join"/"login" via ?entry=.
 let currentProfile = null;
+// Dev-only shortcut (see "dev-fake-teacher" click action below) — a single
+// fixed, reusable credential so repeated testing signs into the same
+// classrooms/roster instead of spawning a fresh account every click. Gated
+// behind import.meta.env.DEV; never reachable in the deployed build.
+const DEV_FAKE_TEACHER = {
+  // Supabase's live signup validator rejects addresses on domains that don't
+  // resolve at all (fabricated domains like "chronicle.test" 400 with
+  // email_address_invalid), so this uses a real, resolvable mail domain
+  // instead — no inbox is expected to exist at this specific address. If the
+  // project requires email confirmation, the confirmation link will simply
+  // never be delivered (see the needsEmailConfirmation branch below).
+  email: "chronicle-dev-teacher@gmail.com",
+  password: "DevTeacherPass123!",
+  displayName: "Dev Test Teacher",
+  schoolName: "Dev Test School",
+};
 const authUiState = {
   studentTab: "claim",
   teacherTab: "signin",
@@ -1887,6 +1903,7 @@ ${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
 ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
 <button class="btn btn-gold" data-action="submit-teacher-signin" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Sign In →"}</button>
 <button class="btn btn-outline" data-action="continue-with-google" type="button" ${authUiState.pending ? "disabled" : ""}>Continue with Google</button>
+${import.meta.env.DEV ? `<button class="btn btn-outline" data-action="dev-fake-teacher" type="button" ${authUiState.pending ? "disabled" : ""}>🧪 Dev: Fake Teacher</button>` : ""}
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
   }
@@ -5297,6 +5314,44 @@ function handleAuthScreenClick(target, action) {
       })
       .catch((err) => {
         authUiState.error = err.message || "Could not sign in.";
+      })
+      .finally(() => {
+        authUiState.pending = false;
+        render();
+      });
+    return true;
+  }
+  if (action === "dev-fake-teacher" && import.meta.env.DEV) {
+    authUiState.pending = true;
+    authUiState.error = "";
+    authUiState.info = "";
+    render();
+    const enterDashboard = () =>
+      getProfile().then((profile) => {
+        currentProfile = profile;
+        progress.currentScreen = "teacher-dashboard";
+        save();
+        return loadTeacherDashboardData();
+      });
+    signInWithPassword(DEV_FAKE_TEACHER.email, DEV_FAKE_TEACHER.password)
+      .then(enterDashboard)
+      .catch(() =>
+        signUpTeacher(
+          DEV_FAKE_TEACHER.email,
+          DEV_FAKE_TEACHER.password,
+          DEV_FAKE_TEACHER.displayName,
+          DEV_FAKE_TEACHER.schoolName
+        ).then(({ needsEmailConfirmation }) => {
+          if (needsEmailConfirmation) {
+            authUiState.info =
+              "This Supabase project requires email confirmation. In the Supabase dashboard, go to Authentication → Users, find chronicle-dev-teacher@gmail.com, and confirm it manually (or disable \"Confirm email\" under Authentication → Providers → Email for local dev). Then click this button again.";
+            return null;
+          }
+          return enterDashboard();
+        })
+      )
+      .catch((err) => {
+        authUiState.error = err.message || "Could not create the dev teacher account.";
       })
       .finally(() => {
         authUiState.pending = false;
