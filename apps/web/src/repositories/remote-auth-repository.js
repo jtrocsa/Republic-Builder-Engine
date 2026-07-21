@@ -38,24 +38,43 @@ export async function signInWithPassword(email, password) {
 // system (student accounts are always teacher-provisioned, see
 // remote-classroom-repository.js's claimSlot). Uses the anon-key browser
 // client only; no privileged operation is involved. The `profiles` row is
-// created by a database trigger (see migration 0003) from the metadata
+// created by a database trigger (see migrations 0003/0005) from the metadata
 // passed here, not by a client-side insert — a client insert would have no
 // auth.uid() to satisfy RLS with whenever email confirmation is pending.
 // Returns `{ session, needsEmailConfirmation }`: session is null and
 // needsEmailConfirmation is true when the project requires confirming the
 // address before it's usable.
-export async function signUpTeacher(email, password, displayName) {
+export async function signUpTeacher(email, password, displayName, schoolName) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { role: "teacher", display_name: displayName?.trim() || "Teacher" },
+      data: {
+        role: "teacher",
+        display_name: displayName?.trim() || "Teacher",
+        school_name: schoolName?.trim() || null,
+      },
     },
   });
   if (error) throw error;
   if (!data.user) throw new Error("Sign-up did not return a user.");
 
   return { session: data.session, needsEmailConfirmation: !data.session };
+}
+
+// Google OAuth entry point for teachers only (see main.js's loginScreen()/"Continue with
+// Google" — students always join via a teacher-provisioned roster slot, never this path).
+// No Google provider is configured in any Supabase project yet, so this is expected to
+// reject with a Supabase-thrown error until that's set up in the Supabase dashboard — the
+// caller (handleAuthScreenClick's "continue-with-google" branch) surfaces that as a normal
+// authUiState.error rather than an unhandled rejection.
+export async function signInWithOAuthGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${window.location.origin}${window.location.pathname}` },
+  });
+  if (error) throw error;
+  return data;
 }
 
 export async function signOut() {

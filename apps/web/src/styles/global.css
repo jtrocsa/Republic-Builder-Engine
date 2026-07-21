@@ -1999,6 +1999,33 @@ dd {
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Landing screen (mainMenuScreen()) — narrower/tighter card than the standard
+   .completion-shell, same border/gradient treatment (overrides just max-width/padding). */
+.landing-shell > section {
+  max-width: 560px;
+  padding: 40px 36px;
+}
+.landing-choice-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.landing-choice-row .btn {
+  flex: 1 1 160px;
+}
+.landing-option-group {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.landing-option-group > .kicker {
+  margin: 0 0 10px;
+}
+.landing-option-group .completion-actions {
+  margin: 0;
+}
 /* Full-bleed Pokémon-"meet the Professor" presentation for the 3 director-scene screens
    (welcome/briefing/protocol) — the scene fills the whole stage below the chrome bar instead of
    a small bordered card floating on the page background; main-menu title screen keeps the
@@ -8053,6 +8080,46 @@ button:hover,
 }
 .completion-shell .completion-actions {
   margin: 14px 0;
+}
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 3.4rem;
+}
+.password-toggle {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  padding: 4px;
+  color: #4a6b76;
+  font:
+    700 0.65rem "Cinzel",
+    serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.classroom-setup-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.roster-progress-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid rgba(239, 204, 122, 0.28);
+  border-radius: 999px;
+  color: #d8e3de;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.text-button.is-danger {
+  color: var(--danger);
 }
 .roster-table {
   width: 100%;

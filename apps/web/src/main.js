@@ -108,6 +108,7 @@ import {
   getProfile,
   signInWithPassword,
   signUpTeacher,
+  signInWithOAuthGoogle,
   signOut,
   getSelectedClassroomId,
   setSelectedClassroomId,
@@ -121,6 +122,9 @@ import {
   claimSlot,
   resetStudentPassword,
   resolveStudentEmail,
+  createClassroomsWithRoster,
+  disableStudentSlot,
+  getClassroomProgressSummaries,
 } from "./repositories/remote-classroom-repository.js";
 import {
   recordSubmission,
@@ -1455,6 +1459,12 @@ const authUiState = {
   error: "",
   info: "",
   pending: false,
+  // Teacher signup wizard (step 1: account fields, step 2: bulk classroom/roster setup).
+  // signupDraft holds step 1's values so Back/Continue round-trips without re-reading the
+  // DOM (step 1's inputs no longer exist once step 2 is showing).
+  signupStep: 1,
+  signupDraft: null,
+  classroomRows: [],
 };
 let teacherUiState = {
   classrooms: [],
@@ -1464,6 +1474,7 @@ let teacherUiState = {
   newClassroomName: "",
   lastProvisioned: null,
   lastReissuedPassword: null,
+  progressByStudent: {},
   error: "",
   pending: false,
 };
@@ -1519,6 +1530,9 @@ getSession().then((session) => {
   });
 });
 let showMainMenu = true;
+// "root" | "student" — sub-state within the landing screen only; Teacher routes straight
+// into the existing "login" screen via open-teacher-login, so it needs no landing sub-state.
+let landingMode = "root";
 
 const bootEntryParam = new URLSearchParams(window.location.search).get("entry");
 if (bootEntryParam === "join" || bootEntryParam === "teacher-login") {
@@ -1748,7 +1762,7 @@ function authorPanel() {
   return `<aside class="author-panel"><button class="close-author" data-action="close-author-panel" aria-label="Close Author Mode panel">×</button><p class="kicker">Development-only controls</p><h2>Author Mode</h2><p>Adjust front-facing copy without touching route rules, answer keys, historical metadata, or progression.</p><p class="author-note">Design navigation: while Author Mode is on, every unit and case is unlocked on the Navigation Table so you can move between them freely. Your save is not modified. Closing this panel keeps Author Mode on — click the header button again to exit it.</p><label class="author-panel-toggle"><input type="checkbox" data-setting="mini-games" ${progress.settings.miniGamesEnabled ? "checked" : ""}><span>Show Practice Check mini games in the field</span></label><label>Unit title${hasTeacherOverride(UNIT_01.id, "title") ? ' <span class="author-override-flag">edited</span>' : ""}<input data-copy="unit-title" value="${esc(resolvedUnitTitle(UNIT_01))}"></label><label>Unit question${hasTeacherOverride(UNIT_01.id, "centralQuestion") ? ' <span class="author-override-flag">edited</span>' : ""}<textarea data-copy="unit-question">${esc(resolvedUnitCentralQuestion(UNIT_01))}</textarea></label><label>Student name<input data-profile="name" value="${esc(progress.profile.name)}"></label>${anyOverride ? '<button class="text-button" type="button" data-action="reset-author-overrides">Reset content overrides to official text</button>' : ""}<p class="author-note">Content edits save to this browser and are restored on refresh. Exportable content management comes later; the permanent source records live in <code>src/content</code>.</p></aside>`;
 }
 
-const MAIN_MENU_ITEMS = [
+const STUDENT_SOLO_ITEMS = [
   { action: "start-new-game", label: "Start New Game", variant: "btn-gold", enabled: () => true },
   {
     action: "continue-game",
@@ -1757,26 +1771,30 @@ const MAIN_MENU_ITEMS = [
     enabled: () => hasSavedProgress(),
     disabledHint: "No saved Chronicle found yet.",
   },
-  {
-    action: "open-join-screen",
-    label: "Join a Classroom",
-    variant: "btn-outline",
-    enabled: () => true,
-  },
-  {
-    action: "open-teacher-login",
-    label: "Teacher Sign In",
-    variant: "btn-outline",
-    enabled: () => true,
-  },
 ];
 
+function mainMenuItemMarkup(item) {
+  const enabled = item.enabled();
+  return `<div class="main-menu-item"><button class="btn ${item.variant}" data-action="${item.action}" ${enabled ? "" : "disabled"}>${esc(item.label)}</button>${!enabled && item.disabledHint ? `<p class="kicker">${esc(item.disabledHint)}</p>` : ""}</div>`;
+}
+
 function mainMenuScreen() {
-  const items = MAIN_MENU_ITEMS.map((item) => {
-    const enabled = item.enabled();
-    return `<div class="main-menu-item"><button class="btn ${item.variant}" data-action="${item.action}" ${enabled ? "" : "disabled"}>${esc(item.label)}</button>${!enabled && item.disabledHint ? `<p class="kicker">${esc(item.disabledHint)}</p>` : ""}</div>`;
-  }).join("");
-  return `<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="completion-actions">${items}</div></section></main>`;
+  if (landingMode === "student") {
+    return `<main class="shell completion-shell landing-shell"><section>
+<p class="kicker">${esc(BRAND.engine)}</p>
+<h1>${esc(BRAND.campaign)}</h1>
+<div class="landing-option-group">
+<p class="kicker">Have a classroom code?</p>
+<button class="btn btn-gold" data-action="open-join-screen" type="button">Join a Classroom →</button>
+</div>
+<div class="landing-option-group">
+<p class="kicker">Just playing on your own?</p>
+<div class="completion-actions">${STUDENT_SOLO_ITEMS.map(mainMenuItemMarkup).join("")}</div>
+</div>
+<button class="btn btn-outline" data-action="landing-back" type="button">← Back</button>
+</section></main>`;
+  }
+  return `<main class="shell completion-shell landing-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div></section></main>`;
 }
 
 // --- Real accounts screens (join/login/teacher-dashboard/grading) ---------
@@ -1784,6 +1802,15 @@ function mainMenuScreen() {
 // VALID_SCREENS entry rendered by render()'s switch, dispatched by a normal
 // CLICK_HANDLER_GROUPS entry (handleAuthScreenClick, below). None of this
 // touches movement/collision/camera/dialogue code.
+
+// Reusable show/hide password field. The toggle button mutates the input's `type`
+// directly (see handleAuthScreenClick's "toggle-password-visibility" branch) rather than
+// going through render(), since these auth fields are uncontrolled inputs read via
+// document.getElementById(...).value at submit time — a render() here would wipe
+// whatever the user has already typed.
+function passwordFieldMarkup(id, placeholder, value = "") {
+  return `<div class="password-field"><input id="${esc(id)}" type="password" placeholder="${esc(placeholder)}" value="${esc(value)}" autocomplete="off"><button class="password-toggle" type="button" data-action="toggle-password-visibility" data-target="${esc(id)}" aria-pressed="false">Show</button></div>`;
+}
 
 function joinScreen() {
   const isClaim = authUiState.studentTab !== "signin";
@@ -1802,7 +1829,7 @@ function joinScreen() {
 <label>Classroom code<input id="join-classroom-code" placeholder="e.g. FOX7K2" autocomplete="off"></label>
 <label>Your student ID<input id="join-student-id" placeholder="e.g. 07" autocomplete="off"></label>
 ${isClaim ? `<label>Display name (optional)<input id="join-display-name" placeholder="How your teacher sees you" autocomplete="off"></label>` : ""}
-<label>Password<input id="join-password" type="password" placeholder="••••••••" autocomplete="off"></label>
+<label>Password${passwordFieldMarkup("join-password", "••••••••")}</label>
 ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
 <button class="btn btn-gold" data-action="${isClaim ? "submit-join-claim" : "submit-join-signin"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isClaim ? "Claim my seat →" : "Sign in →"}</button>
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
@@ -1811,19 +1838,60 @@ ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` 
 
 function loginScreen() {
   const isSignIn = authUiState.teacherTab !== "signup";
-  return `${chrome()}<main class="shell completion-shell"><section>
+  if (isSignIn) {
+    return `${chrome()}<main class="shell completion-shell"><section>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Teacher Sign In</h1>
 <div class="completion-actions">
-<button class="btn ${isSignIn ? "btn-gold" : "btn-outline"}" data-action="teacher-tab-signin" type="button">Sign In</button>
-<button class="btn ${!isSignIn ? "btn-gold" : "btn-outline"}" data-action="teacher-tab-signup" type="button">Create Account</button>
+<button class="btn btn-gold" data-action="teacher-tab-signin" type="button">Sign In</button>
+<button class="btn btn-outline" data-action="teacher-tab-signup" type="button">Create Account</button>
 </div>
-${!isSignIn ? `<label>Your name<input id="teacher-display-name" placeholder="Ms. Rivera" autocomplete="off"></label>` : ""}
 <label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" autocomplete="off"></label>
-<label>Password<input id="teacher-password" type="password" placeholder="••••••••" autocomplete="off"></label>
+<label>Password${passwordFieldMarkup("teacher-password", "••••••••")}</label>
 ${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
 ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
-<button class="btn btn-gold" data-action="${isSignIn ? "submit-teacher-signin" : "submit-teacher-signup"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isSignIn ? "Sign In →" : "Create Account →"}</button>
+<button class="btn btn-gold" data-action="submit-teacher-signin" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Sign In →"}</button>
+<button class="btn btn-outline" data-action="continue-with-google" type="button" ${authUiState.pending ? "disabled" : ""}>Continue with Google</button>
+<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+</section></main>${authorPanel()}`;
+  }
+  if (authUiState.signupStep === 2) {
+    const rows = authUiState.classroomRows
+      .map(
+        (row, i) => `<div class="classroom-setup-row">
+<label>Classroom ${i + 1} name<input data-classroom-row-name data-row-index="${i}" value="${esc(row.name)}" autocomplete="off"></label>
+<label>Students<input data-classroom-row-count data-row-index="${i}" type="number" min="1" max="200" value="${row.studentCount}"></label>
+</div>`
+      )
+      .join("");
+    return `${chrome()}<main class="shell completion-shell"><section>
+<p class="kicker">${esc(BRAND.engine)} · Step 2 of 2</p>
+<h1>Set Up Classrooms</h1>
+<p>Choose how many classrooms to create now — you can always add more later from your dashboard.</p>
+<label>How many classrooms?<input id="signup-classroom-count" data-classroom-count type="number" min="1" max="20" value="${authUiState.classroomRows.length}"></label>
+${rows}
+${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+<button class="btn btn-gold" data-action="submit-teacher-signup" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Create Account & Classrooms →"}</button>
+<button class="btn btn-outline" data-action="teacher-signup-back" type="button">← Back</button>
+</section></main>${authorPanel()}`;
+  }
+  const draft = authUiState.signupDraft;
+  return `${chrome()}<main class="shell completion-shell"><section>
+<p class="kicker">${esc(BRAND.engine)} · Step 1 of 2</p>
+<h1>Create Teacher Account</h1>
+<div class="completion-actions">
+<button class="btn btn-outline" data-action="teacher-tab-signin" type="button">Sign In</button>
+<button class="btn btn-gold" data-action="teacher-tab-signup" type="button">Create Account</button>
+</div>
+<label>Your name<input id="teacher-display-name" placeholder="Ms. Rivera" value="${esc(draft?.displayName || "")}" autocomplete="off"></label>
+<label>School / organization<input id="teacher-school-name" placeholder="e.g. Lincoln High School" value="${esc(draft?.schoolName || "")}" autocomplete="off"></label>
+<label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" value="${esc(draft?.email || "")}" autocomplete="off"></label>
+<label>Password${passwordFieldMarkup("teacher-password", "••••••••", draft?.password || "")}</label>
+<label>Confirm password${passwordFieldMarkup("teacher-confirm-password", "••••••••")}</label>
+${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
+${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+<button class="btn btn-gold" data-action="teacher-signup-continue" type="button" ${authUiState.pending ? "disabled" : ""}>Continue →</button>
+<button class="btn btn-outline" data-action="continue-with-google" type="button" ${authUiState.pending ? "disabled" : ""}>Continue with Google</button>
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
 }
@@ -1839,14 +1907,24 @@ function teacherDashboardScreen() {
     )
     .join("");
   const rosterRows = teacherUiState.roster
-    .map(
-      (slot) =>
-        `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${esc(slot.status)}</td><td>${
-          slot.status === "claimed"
-            ? `<button class="text-button" data-action="reset-student-password" data-roster-slot-id="${esc(slot.id)}" type="button">Reset password</button>`
-            : ""
-        }</td></tr>`
-    )
+    .map((slot) => {
+      const summary = slot.auth_user_id ? teacherUiState.progressByStudent[slot.auth_user_id] : null;
+      const progressLabel = summary
+        ? `${summary.completedCount} case${summary.completedCount === 1 ? "" : "s"} complete`
+        : "Not started";
+      const actions =
+        slot.status === "disabled"
+          ? "Disabled"
+          : [
+              slot.status === "claimed"
+                ? `<button class="text-button" data-action="reset-student-password" data-roster-slot-id="${esc(slot.id)}" type="button">Reset password</button>`
+                : "",
+              `<button class="text-button is-danger" data-action="disable-student" data-roster-slot-id="${esc(slot.id)}" type="button">Remove</button>`,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+      return `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${esc(slot.status)}</td><td><span class="roster-progress-pill">${esc(progressLabel)}</span></td><td>${actions}</td></tr>`;
+    })
     .join("");
   const submissionRows = teacherUiState.submissions
     .map(
@@ -1879,7 +1957,7 @@ ${
 ${teacherUiState.error ? `<p class="feedback error">${esc(teacherUiState.error)}</p>` : ""}
 ${
   teacherUiState.selectedClassroomId
-    ? `<table class="roster-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>`
+    ? `<table class="roster-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Progress</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>`
     : ""
 }
 ${
@@ -1951,10 +2029,14 @@ async function loadSelectedClassroomDetails() {
   if (!teacherUiState.selectedClassroomId) {
     teacherUiState.roster = [];
     teacherUiState.submissions = [];
+    teacherUiState.progressByStudent = {};
     return;
   }
   teacherUiState.roster = await getRoster(teacherUiState.selectedClassroomId);
   teacherUiState.submissions = await listForClassroom(teacherUiState.selectedClassroomId);
+  teacherUiState.progressByStudent = await getClassroomProgressSummaries(
+    teacherUiState.selectedClassroomId
+  );
 }
 
 async function openGradingScreen(submissionId) {
@@ -4105,6 +4187,7 @@ function handleChromeClick(target, action) {
   }
   if (action === "open-main-menu") {
     showMainMenu = true;
+    landingMode = "root";
     render();
     return true;
   }
@@ -4147,6 +4230,20 @@ function handleChromeClick(target, action) {
       authorMode = false;
       authorPanelOpen = false;
     }
+    render();
+    return true;
+  }
+  return false;
+}
+
+function handleLandingClick(target, action) {
+  if (action === "landing-student") {
+    landingMode = "student";
+    render();
+    return true;
+  }
+  if (action === "landing-back") {
+    landingMode = "root";
     render();
     return true;
   }
@@ -4814,7 +4911,36 @@ function handleAuthScreenClick(target, action) {
     authUiState.teacherTab = action === "teacher-tab-signin" ? "signin" : "signup";
     authUiState.error = "";
     authUiState.info = "";
+    authUiState.signupStep = 1;
+    authUiState.signupDraft = null;
+    authUiState.classroomRows = [];
     render();
+    return true;
+  }
+  if (action === "toggle-password-visibility") {
+    const input = document.getElementById(target.dataset.target);
+    if (input) {
+      input.type = input.type === "password" ? "text" : "password";
+      target.textContent = input.type === "password" ? "Show" : "Hide";
+      target.setAttribute("aria-pressed", input.type === "text" ? "true" : "false");
+    }
+    // Deliberately no render() — these are uncontrolled inputs; re-rendering would wipe
+    // whatever the user has already typed.
+    return true;
+  }
+  if (action === "continue-with-google") {
+    authUiState.pending = true;
+    authUiState.error = "";
+    authUiState.info = "";
+    render();
+    signInWithOAuthGoogle()
+      .catch((err) => {
+        authUiState.error = err.message || "Google sign-in isn't available yet.";
+      })
+      .finally(() => {
+        authUiState.pending = false;
+        render();
+      });
     return true;
   }
   if (action === "submit-join-claim") {
@@ -4908,12 +5034,52 @@ function handleAuthScreenClick(target, action) {
       });
     return true;
   }
-  if (action === "submit-teacher-signup") {
+  if (action === "teacher-signup-continue") {
     const displayName = document.getElementById("teacher-display-name")?.value.trim() || "";
+    const schoolName = document.getElementById("teacher-school-name")?.value.trim() || "";
     const email = document.getElementById("teacher-email")?.value.trim() || "";
     const password = document.getElementById("teacher-password")?.value || "";
+    const confirmPassword = document.getElementById("teacher-confirm-password")?.value || "";
     if (!email || !validatePassword(password)) {
       authUiState.error = "Enter a valid email and a password of at least 8 characters.";
+      render();
+      return true;
+    }
+    if (!schoolName) {
+      authUiState.error = "Enter your school or organization name.";
+      render();
+      return true;
+    }
+    if (password !== confirmPassword) {
+      authUiState.error = "Passwords don't match.";
+      render();
+      return true;
+    }
+    authUiState.error = "";
+    authUiState.signupDraft = { displayName, schoolName, email, password };
+    if (authUiState.classroomRows.length === 0) {
+      authUiState.classroomRows = [{ name: "Classroom 1", studentCount: 5 }];
+    }
+    authUiState.signupStep = 2;
+    render();
+    return true;
+  }
+  if (action === "teacher-signup-back") {
+    authUiState.signupStep = 1;
+    authUiState.error = "";
+    render();
+    return true;
+  }
+  if (action === "submit-teacher-signup") {
+    const draft = authUiState.signupDraft;
+    if (!draft) {
+      authUiState.signupStep = 1;
+      render();
+      return true;
+    }
+    const rows = authUiState.classroomRows;
+    if (rows.length === 0 || rows.some((row) => !row.name.trim() || row.studentCount < 1)) {
+      authUiState.error = "Give each classroom a name and at least 1 student.";
       render();
       return true;
     }
@@ -4921,18 +5087,31 @@ function handleAuthScreenClick(target, action) {
     authUiState.error = "";
     authUiState.info = "";
     render();
-    signUpTeacher(email, password, displayName)
+    signUpTeacher(draft.email, draft.password, draft.displayName, draft.schoolName)
       .then(({ needsEmailConfirmation }) => {
         if (needsEmailConfirmation) {
+          // No session yet, so the classroom-creation calls below (RLS-gated on auth.uid())
+          // can't run. Defer classroom setup to the teacher's first sign-in — they add
+          // classrooms from the dashboard the same way teachers already do today.
           authUiState.teacherTab = "signin";
-          authUiState.info = "Account created — check your email to confirm it, then sign in.";
+          authUiState.signupStep = 1;
+          authUiState.signupDraft = null;
+          authUiState.classroomRows = [];
+          authUiState.info = "Account created — check your email to confirm it, then sign in and add your classrooms.";
           return null;
         }
-        return getProfile().then((profile) => {
-          currentProfile = profile;
-          progress.currentScreen = "teacher-dashboard";
-          save();
-          return loadTeacherDashboardData();
+        return createClassroomsWithRoster(rows).then((results) => {
+          const failures = results.filter((r) => !r.ok);
+          return getProfile().then((profile) => {
+            currentProfile = profile;
+            progress.currentScreen = "teacher-dashboard";
+            save();
+            return loadTeacherDashboardData().then(() => {
+              if (failures.length > 0) {
+                teacherUiState.error = `Some classrooms could not be created: ${failures.map((f) => f.name).join(", ")}.`;
+              }
+            });
+          });
         });
       })
       .catch((err) => {
@@ -5014,6 +5193,18 @@ function handleAuthScreenClick(target, action) {
       });
     return true;
   }
+  if (action === "disable-student") {
+    const rosterSlotId = target.dataset.rosterSlotId;
+    teacherUiState.error = "";
+    disableStudentSlot(rosterSlotId)
+      .then(() => loadSelectedClassroomDetails())
+      .then(() => render())
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not remove this student.";
+        render();
+      });
+    return true;
+  }
   if (action === "teacher-sign-out") {
     signOut().then(() => {
       currentProfile = null;
@@ -5025,9 +5216,13 @@ function handleAuthScreenClick(target, action) {
         newClassroomName: "",
         lastProvisioned: null,
         lastReissuedPassword: null,
+        progressByStudent: {},
         error: "",
         pending: false,
       };
+      authUiState.signupStep = 1;
+      authUiState.signupDraft = null;
+      authUiState.classroomRows = [];
       progress.currentScreen = "institute";
       save();
       render();
@@ -5095,6 +5290,7 @@ function handleEvaluatorClick(target, action) {
 
 const CLICK_HANDLER_GROUPS = [
   handleChromeClick,
+  handleLandingClick,
   handleOnboardingClick,
   handleHubClick,
   handleFieldClick,
@@ -5184,6 +5380,23 @@ function handleAppChange(event) {
     progress.questResponses[questId] = { ...state, reflection: field.value };
     save();
     render();
+  } else if (field.matches("[data-classroom-count]")) {
+    const count = Math.min(20, Math.max(1, Number(field.value) || 1));
+    const rows = authUiState.classroomRows;
+    if (count > rows.length) {
+      for (let i = rows.length; i < count; i += 1) {
+        rows.push({ name: `Classroom ${i + 1}`, studentCount: 5 });
+      }
+    } else if (count < rows.length) {
+      rows.length = count;
+    }
+    render();
+  } else if (field.matches("[data-classroom-row-name]")) {
+    const row = authUiState.classroomRows[Number(field.dataset.rowIndex)];
+    if (row) row.name = field.value;
+  } else if (field.matches("[data-classroom-row-count]")) {
+    const row = authUiState.classroomRows[Number(field.dataset.rowIndex)];
+    if (row) row.studentCount = Math.min(200, Math.max(1, Number(field.value) || 1));
   } else if (field.matches("[data-evidence-select]")) {
     const sourceId = field.dataset.evidenceSelect;
     const questId = field.dataset.questId;
