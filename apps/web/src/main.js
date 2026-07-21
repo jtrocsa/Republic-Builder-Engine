@@ -39,7 +39,10 @@ import {
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
 import { renderQuest, gradeQuest } from "./quest-types/index.js";
-import { REFLECTION_MIN_LENGTH, SKILL_CATEGORIES } from "./quest-types/history/evidence-organizing-quest.js";
+import {
+  REFLECTION_MIN_LENGTH,
+  SKILL_CATEGORIES,
+} from "./quest-types/history/evidence-organizing-quest.js";
 import {
   UNIT_01_MCQ_QUESTS,
   UNIT_01_SEQUENCING_QUESTS,
@@ -136,6 +139,15 @@ import {
   getClassroomUnitFloor,
   advanceClassroomUnit,
 } from "./repositories/remote-classroom-unit-repository.js";
+import {
+  getUnitSourcePool,
+  setSourceInPool,
+} from "./repositories/remote-source-pool-repository.js";
+import {
+  PRIMARY_SOURCE_LIBRARY_UNITS,
+  getPrimarySourcesForUnit,
+  getVisualSourcesForUnit,
+} from "./content/primary-source-library/index.js";
 import {
   loadSelectionsForResolution,
   resolveSourceSlot,
@@ -1462,7 +1474,6 @@ const VALID_SCREENS = new Set([
   "login",
   "teacher-dashboard",
   "grading",
-  "manage-content",
   "manage-content-case",
 ]);
 if (
@@ -1514,6 +1525,7 @@ const authUiState = {
   classroomRows: [],
 };
 let teacherUiState = {
+  activeTab: "classrooms",
   classrooms: [],
   selectedClassroomId: null,
   roster: [],
@@ -1525,6 +1537,12 @@ let teacherUiState = {
   enabledUnitIndex: 0,
   error: "",
   pending: false,
+  // Sources tab (Teacher Dashboard) — a classroom's curated pool of
+  // candidate sources per unit, lazy-loaded per unit the first time its
+  // accordion section is opened. sourcePoolByUnit: { [unitNumber]: Set of
+  // selected source ids } | undefined (not yet loaded).
+  sourcePoolByUnit: {},
+  sourcesExpandedUnit: null,
 };
 // Manage Content (Teacher Mode's source/MCQ-quest swap editor) state —
 // separate from teacherUiState since it's a distinct screen family with its
@@ -1743,7 +1761,9 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
   mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
 };
 function archiveChallengeQuestFor(questType, questId) {
-  const official = (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+  const official = (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find(
+    (quest) => quest.id === questId
+  );
   return official ? resolveQuestSlot(questType, official) : undefined;
 }
 // Investigation Challenge quest content, resolved by (questType, questId) from a
@@ -2003,19 +2023,26 @@ ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` 
 </section></main>${authorPanel()}`;
 }
 
-function teacherDashboardScreen() {
-  if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
-  }
-  const classroomButtons = teacherUiState.classrooms
-    .map(
-      (c) =>
-        `<button class="btn ${c.id === teacherUiState.selectedClassroomId ? "btn-gold" : "btn-outline"}" data-action="select-classroom" data-classroom-id="${esc(c.id)}" type="button">${esc(c.name)} (${esc(c.join_code)})</button>`
-    )
-    .join("");
+const TEACHER_DASHBOARD_TABS = [
+  { id: "classrooms", label: "Classrooms" },
+  { id: "assignments", label: "Assignments" },
+  { id: "sources", label: "Sources" },
+  { id: "units", label: "Units" },
+];
+
+function teacherDashboardTabsMarkup() {
+  return `<div class="archive-legend archive-unit-tabs">${TEACHER_DASHBOARD_TABS.map(
+    (tab) =>
+      `<button class="text-button unit-tab ${teacherUiState.activeTab === tab.id ? "is-selected" : ""}" data-action="select-teacher-tab" data-tab="${tab.id}" type="button">${esc(tab.label)}</button>`
+  ).join("")}</div>`;
+}
+
+function teacherClassroomsTabMarkup() {
   const rosterRows = teacherUiState.roster
     .map((slot) => {
-      const summary = slot.auth_user_id ? teacherUiState.progressByStudent[slot.auth_user_id] : null;
+      const summary = slot.auth_user_id
+        ? teacherUiState.progressByStudent[slot.auth_user_id]
+        : null;
       const progressLabel = summary
         ? `${summary.completedCount} case${summary.completedCount === 1 ? "" : "s"} complete`
         : "Not started";
@@ -2033,17 +2060,7 @@ function teacherDashboardScreen() {
       return `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${esc(slot.status)}</td><td><span class="roster-progress-pill">${esc(progressLabel)}</span></td><td>${actions}</td></tr>`;
     })
     .join("");
-  const submissionRows = teacherUiState.submissions
-    .map(
-      (sub) =>
-        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(sub.taskType)}</td><td>${esc(sub.taskId)}</td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
-    )
-    .join("");
-  return `${chrome()}<main class="shell completion-shell"><section>
-<p class="kicker">${esc(BRAND.engine)}</p>
-<h1>Teacher Dashboard</h1>
-<p>Signed in as ${esc(currentProfile.displayName)}.</p>
-<div class="completion-actions">${classroomButtons}</div>
+  return `
 <label>New classroom name<input id="new-classroom-name" placeholder="e.g. APUSH Period 4" autocomplete="off"></label>
 <button class="btn btn-outline" data-action="create-classroom" type="button">Create classroom</button>
 ${
@@ -2061,23 +2078,61 @@ ${
     ? `<p class="feedback success">Temporary password (shown once — write it down now): <strong>${esc(teacherUiState.lastReissuedPassword)}</strong></p>`
     : ""
 }
-${teacherUiState.error ? `<p class="feedback error">${esc(teacherUiState.error)}</p>` : ""}
 ${
   teacherUiState.selectedClassroomId
     ? `<table class="roster-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Progress</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>`
-    : ""
+    : "<p>Create a classroom above to add students.</p>"
+}`;
 }
-${
-  teacherUiState.selectedClassroomId
-    ? `<h2>Submissions to review</h2>${submissionRows ? `<table class="roster-table"><thead><tr><th>Student</th><th>Type</th><th>Task</th><th>Readiness</th><th></th></tr></thead><tbody>${submissionRows}</tbody></table>` : "<p>No submissions yet for this classroom.</p>"}`
-    : ""
+
+function teacherAssignmentsTabMarkup() {
+  if (!teacherUiState.selectedClassroomId)
+    return "<p>Select or create a classroom to review its submissions.</p>";
+  const submissionRows = teacherUiState.submissions
+    .map(
+      (sub) =>
+        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(sub.taskType)}</td><td>${esc(sub.taskId)}</td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
+    )
+    .join("");
+  return submissionRows
+    ? `<table class="roster-table"><thead><tr><th>Student</th><th>Type</th><th>Task</th><th>Readiness</th><th></th></tr></thead><tbody>${submissionRows}</tbody></table>`
+    : "<p>No submissions yet for this classroom.</p>";
 }
+
+function teacherUnitsTabMarkup() {
+  const unitSections = UNITS.map(manageContentUnitSectionMarkup).join("");
+  return `
 ${teacherUiState.selectedClassroomId ? teacherUnitAccessMarkup() : ""}
-${
-  teacherUiState.selectedClassroomId
-    ? `<button class="btn btn-outline" data-action="open-manage-content" type="button">Manage Content →</button>`
-    : ""
+<h2>Missions</h2>
+<p>Pick a unit to see its missions, then open one to review its intent, preview its content, and swap its practice questions — and, for non-map missions, its sources — for this classroom.</p>
+${unitSections}`;
 }
+
+function teacherDashboardScreen() {
+  if (!currentProfile || currentProfile.role !== "teacher") {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
+  }
+  const classroomButtons = teacherUiState.classrooms
+    .map(
+      (c) =>
+        `<button class="btn ${c.id === teacherUiState.selectedClassroomId ? "btn-gold" : "btn-outline"}" data-action="select-classroom" data-classroom-id="${esc(c.id)}" type="button">${esc(c.name)} (${esc(c.join_code)})</button>`
+    )
+    .join("");
+  const tabBodies = {
+    classrooms: teacherClassroomsTabMarkup,
+    assignments: teacherAssignmentsTabMarkup,
+    sources: teacherSourcesTabMarkup,
+    units: teacherUnitsTabMarkup,
+  };
+  const activeTabBody = (tabBodies[teacherUiState.activeTab] || teacherClassroomsTabMarkup)();
+  return `${chrome()}<main class="shell completion-shell"><section>
+<p class="kicker">${esc(BRAND.engine)}</p>
+<h1>Teacher Dashboard</h1>
+<p>Signed in as ${esc(currentProfile.displayName)}.</p>
+<div class="completion-actions">${classroomButtons}</div>
+${teacherUiState.error ? `<p class="feedback error">${esc(teacherUiState.error)}</p>` : ""}
+${teacherDashboardTabsMarkup()}
+${activeTabBody}
 <button class="btn btn-outline" data-action="teacher-sign-out" type="button">Sign out</button>
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
@@ -2094,6 +2149,89 @@ ${
     ? `<button class="btn btn-outline" data-action="advance-classroom-unit" type="button">Advance to ${esc(resolvedUnitTitle(nextUnit))} →</button>`
     : `<p class="kicker">All units are already available.</p>`
 }`;
+}
+
+// --- Teacher Dashboard "Sources" tab ---------------------------------------
+// Browsing + curation only in this pass — pre-selecting a source here saves
+// it to this classroom's pool (classroom_unit_source_pool) but does not yet
+// make it a real mission source-swap choice (that needs per-case
+// activityRoute/reconstruction authoring, tracked as a followup). See
+// docs/content-guide/primary-source-library.md.
+
+// UNITS[unitNumber - 1] relies on UNITS = [UNIT_01, UNIT_02, UNIT_03] being
+// ordered/numbered the same way primary-source-library's units 1-9 are —
+// true today (Period 1/2/3 both places), and simplest to keep true rather
+// than adding a lookup table for 3 entries.
+function lockedSourcesForUnitNumber(unitNumber) {
+  const unit = UNITS[unitNumber - 1];
+  if (!unit) return [];
+  return unit.cases.flatMap((c) =>
+    (UNIT_SOURCES[c.id] || []).map((source) => ({ source, caseTitle: c.title }))
+  );
+}
+
+function sourcesPoolListMarkup(unitNumber, textSources, visualSources, pool) {
+  const row = (item, kind) => {
+    const selected = pool.has(item.id);
+    const metaLine = kind === "text" ? `${esc(item.creator)} · ${esc(item.date)}` : "Visual source";
+    return `<li class="source-pool-row ${selected ? "is-selected" : ""}">
+<button class="btn ${selected ? "btn-gold" : "btn-outline"}" data-action="toggle-source-pool" data-unit="${unitNumber}" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button">${selected ? "✓ In pool" : "+ Add"}</button>
+<span class="source-pool-row-copy"><strong>${esc(item.title)}</strong><span class="kicker">${metaLine}</span></span>
+</li>`;
+  };
+  const rows = [
+    ...textSources.map((s) => row(s, "text")),
+    ...visualSources.map((s) => row(s, "visual")),
+  ].join("");
+  return `<ul class="source-pool-list">${rows}</ul>`;
+}
+
+function teacherSourcesUnitSectionMarkup(meta) {
+  const unitNumber = meta.unit;
+  const isOpen = teacherUiState.sourcesExpandedUnit === unitNumber;
+  let body = "";
+  if (isOpen) {
+    const locked = lockedSourcesForUnitNumber(unitNumber);
+    const lockedMarkup = locked.length
+      ? `<h4>Locked (official)</h4><ul class="source-pool-list">${locked
+          .map(
+            ({ source, caseTitle }) =>
+              `<li class="source-pool-row"><span class="case-kind-badge">Locked</span><span class="source-pool-row-copy"><strong>${esc(source.title)}</strong><span class="kicker">Required by ${esc(caseTitle)}</span></span></li>`
+          )
+          .join("")}</ul>`
+      : "";
+    const pool = teacherUiState.sourcePoolByUnit[unitNumber];
+    const poolMarkup =
+      pool === undefined
+        ? "<p>Loading…</p>"
+        : sourcesPoolListMarkup(
+            unitNumber,
+            getPrimarySourcesForUnit(unitNumber),
+            getVisualSourcesForUnit(unitNumber),
+            pool
+          );
+    body = `<div class="manage-content-unit-body">
+${lockedMarkup}
+<h4>Available pool</h4>
+<p class="case-summary-note">Pre-select the sources and images available for this classroom in this unit. This doesn't yet change what shows up in a mission's swap dropdown — that comes in a later update.</p>
+${poolMarkup}
+</div>`;
+  }
+  return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
+<button class="manage-content-unit-toggle" data-action="toggle-sources-unit" data-unit="${unitNumber}" type="button" aria-expanded="${isOpen}">
+<span class="manage-content-unit-chevron" aria-hidden="true">${isOpen ? "▾" : "▸"}</span>
+<span class="manage-content-unit-heading"><span class="manage-content-unit-title">${esc(meta.label)}</span><span class="kicker">${esc(meta.period)} · ${esc(meta.years)}</span></span>
+</button>
+${body}
+</section>`;
+}
+
+function teacherSourcesTabMarkup() {
+  if (!teacherUiState.selectedClassroomId)
+    return "<p>Select or create a classroom to curate its sources.</p>";
+  return `
+<p>Review every researched source for each unit, see which ones are already locked into a built mission, and pre-select the ones you want available for this classroom.</p>
+${PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta }) => teacherSourcesUnitSectionMarkup(meta)).join("")}`;
 }
 
 function gradingScreen() {
@@ -2227,9 +2365,13 @@ function officialQuestSlotsForCase(caseId) {
     : [];
   const challenge = caseById(caseId)?.archiveChallenge;
   const challengeQuest = challenge
-    ? (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[challenge.questType] || []).find((q) => q.id === challenge.questId)
+    ? (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[challenge.questType] || []).find(
+        (q) => q.id === challenge.questId
+      )
     : undefined;
-  return challengeQuest ? [...practiceSlots, { questType: challenge.questType, quest: challengeQuest }] : practiceSlots;
+  return challengeQuest
+    ? [...practiceSlots, { questType: challenge.questType, quest: challengeQuest }]
+    : practiceSlots;
 }
 
 const QUEST_SLOT_LABELS = {
@@ -2321,19 +2463,10 @@ ${body}
 </section>`;
 }
 
-function manageContentScreen() {
-  if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
-  }
-  const unitSections = UNITS.map(manageContentUnitSectionMarkup).join("");
-  return `${chrome()}<main class="shell manage-content-shell"><section>
-<button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
-<p class="kicker">${esc(BRAND.engine)}</p>
-<h1>Manage Content</h1>
-<p>Pick a unit to see its missions, then open one to review its intent, preview its content, and swap its practice questions — and, for non-map missions, its sources — for this classroom.</p>
-${unitSections}
-</section></main>${authorPanel()}`;
-}
+// manageContentScreen() (the old standalone unit/mission listing) was
+// folded into the Teacher Dashboard's Units tab (teacherUnitsTabMarkup()) —
+// manageContentUnitSectionMarkup()/manageContentMissionCardMarkup() are now
+// called from there instead.
 
 // Which real source document (if any) a question is grouped under —
 // resolved from UNIT_SOURCES for the summary line and the editable
@@ -2345,7 +2478,9 @@ function resolvedSourceTitle(caseId, sourceId) {
 
 function isCardBeingEdited(auth, entry) {
   if (!auth) return false;
-  return entry.officialId !== undefined ? auth.editingOfficialId === entry.officialId : auth.editingCustomId === entry.id;
+  return entry.officialId !== undefined
+    ? auth.editingOfficialId === entry.officialId
+    : auth.editingCustomId === entry.id;
 }
 
 // Collapsed-by-default summary row for one question/source card — official
@@ -2357,12 +2492,21 @@ function manageContentCardSummaryMarkup(entry) {
   const isOfficial = entry.officialId !== undefined;
   const slotKind = entry.slotKind;
   const kindLabel = slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slotKind] || slotKind;
-  const promptText = isOfficial ? entry.officialLabel : entry.content.prompt || entry.content.title || "";
+  const promptText = isOfficial
+    ? entry.officialLabel
+    : entry.content.prompt || entry.content.title || "";
   const truncatedPrompt = promptText.length > 140 ? `${promptText.slice(0, 140)}…` : promptText;
   const sourceLabel =
-    resolvedSourceTitle(contentUiState.selectedCaseId, entry.relatedSourceId) || "No linked source — general question";
-  const isDraftUnpublished = isOfficial ? entry.draftAltId !== entry.publishedAltId : entry.status !== "published";
-  const editAction = isOfficial ? (slotKind === "source" ? "start-edit-source" : "start-edit-question") : "start-edit-addition";
+    resolvedSourceTitle(contentUiState.selectedCaseId, entry.relatedSourceId) ||
+    "No linked source — general question";
+  const isDraftUnpublished = isOfficial
+    ? entry.draftAltId !== entry.publishedAltId
+    : entry.status !== "published";
+  const editAction = isOfficial
+    ? slotKind === "source"
+      ? "start-edit-source"
+      : "start-edit-question"
+    : "start-edit-addition";
   const editDataAttrs = isOfficial
     ? `data-slot-kind="${esc(slotKind)}" data-official-id="${esc(entry.officialId)}" data-related-source-id="${esc(entry.relatedSourceId || "")}"`
     : `data-custom-id="${esc(entry.id)}"`;
@@ -2432,8 +2576,10 @@ function manageContentGroupBodyMarkup(group, questions) {
   // even though it shares this group's relatedSourceId.
   const showAddForm =
     manageContentAuthoring &&
-    ((manageContentAuthoring.formMode === "add" && manageContentAuthoring.relatedSourceId === group.id) ||
-      (manageContentAuthoring.slotKind === "source" && manageContentAuthoring.editingOfficialId === group.source.id));
+    ((manageContentAuthoring.formMode === "add" &&
+      manageContentAuthoring.relatedSourceId === group.id) ||
+      (manageContentAuthoring.slotKind === "source" &&
+        manageContentAuthoring.editingOfficialId === group.source.id));
   return `<div class="manage-content-source-preview-wrap">${sourcePreview}${editSourceBtn}</div>
 <h4 class="manage-content-questions-heading">Questions about this source</h4>
 ${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No questions about this source yet.</p>`}
@@ -2446,7 +2592,10 @@ ${
 
 function manageContentGeneralGroupBodyMarkup(questions) {
   const cards = questions.map(manageContentQuestionEntryMarkup).join("");
-  const showAddForm = manageContentAuthoring && manageContentAuthoring.formMode === "add" && !manageContentAuthoring.relatedSourceId;
+  const showAddForm =
+    manageContentAuthoring &&
+    manageContentAuthoring.formMode === "add" &&
+    !manageContentAuthoring.relatedSourceId;
   return `${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No general questions yet.</p>`}
 ${
   showAddForm
@@ -2484,7 +2633,8 @@ function linkedSourceFieldMarkup(auth) {
   const options = [
     `<option value="">No linked source — general question</option>`,
     ...caseSources.map(
-      (s) => `<option value="${esc(s.id)}" ${auth.relatedSourceId === s.id ? "selected" : ""}>${esc(s.title)}</option>`
+      (s) =>
+        `<option value="${esc(s.id)}" ${auth.relatedSourceId === s.id ? "selected" : ""}>${esc(s.title)}</option>`
     ),
   ].join("");
   return `<label>Linked source<select data-authoring-field="relatedSourceId">${options}</select></label>`;
@@ -2511,7 +2661,12 @@ function mcqFieldsMarkup(fields) {
 function sequencingFieldsMarkup(fields) {
   const items = fields.items || [];
   const positionOptions = (currentPosition) =>
-    items.map((_, p) => `<option value="${p}" ${currentPosition === p ? "selected" : ""}>${p + 1}</option>`).join("");
+    items
+      .map(
+        (_, p) =>
+          `<option value="${p}" ${currentPosition === p ? "selected" : ""}>${p + 1}</option>`
+      )
+      .join("");
   const rows = items
     .map(
       (item, i) => `<div class="manage-content-sequence-row">
@@ -2547,7 +2702,10 @@ function evidenceOrganizingFieldsMarkup(fields) {
       })
       .join("");
   const skillOptions = (currentSkill) =>
-    SKILL_CATEGORIES.map((cat) => `<option value="${esc(cat)}" ${currentSkill === cat ? "selected" : ""}>${esc(cat)}</option>`).join("");
+    SKILL_CATEGORIES.map(
+      (cat) =>
+        `<option value="${esc(cat)}" ${currentSkill === cat ? "selected" : ""}>${esc(cat)}</option>`
+    ).join("");
   const sourceRows = sources
     .map(
       (source, i) => `<div class="manage-content-evidence-source-row">
@@ -2573,7 +2731,10 @@ function evidenceOrganizingFieldsMarkup(fields) {
 function hippFieldsMarkup(fields) {
   const prompts = fields.hippPrompts || [];
   const dimensionOptions = (currentDimension) =>
-    HIPP_DIMENSIONS.map((d) => `<option value="${esc(d)}" ${currentDimension === d ? "selected" : ""}>${esc(d)}</option>`).join("");
+    HIPP_DIMENSIONS.map(
+      (d) =>
+        `<option value="${esc(d)}" ${currentDimension === d ? "selected" : ""}>${esc(d)}</option>`
+    ).join("");
   const promptBlocks = prompts
     .map((prompt, pi) => {
       const options = prompt.options || [];
@@ -2619,7 +2780,8 @@ function authoringFieldsMarkup(auth) {
   const linkedSource = linkedSourceFieldMarkup(auth);
   if (slotKind === "mcq") return linkedSource + mcqFieldsMarkup(fields);
   if (slotKind === "sequencing") return linkedSource + sequencingFieldsMarkup(fields);
-  if (slotKind === "evidence-organizing") return linkedSource + evidenceOrganizingFieldsMarkup(fields);
+  if (slotKind === "evidence-organizing")
+    return linkedSource + evidenceOrganizingFieldsMarkup(fields);
   return linkedSource + hippFieldsMarkup(fields);
 }
 
@@ -2660,7 +2822,7 @@ function manageContentCaseScreen() {
   }
   const activeCase = caseById(contentUiState.selectedCaseId);
   if (!activeCase) {
-    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-manage-content" type="button">← All cases</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← All cases</button></section></main>${authorPanel()}`;
   }
   const isMapCase = activeCase.route === "field";
   const groups = manageContentSourceGroups(activeCase);
@@ -2668,11 +2830,15 @@ function manageContentCaseScreen() {
   const questionSlots = contentUiState.slots.filter((s) => s.slotKind !== "source");
   const generalQuestions = [
     ...questionSlots.filter((s) => !s.relatedSourceId || !groupIds.has(s.relatedSourceId)),
-    ...contentUiState.additionSlots.filter((a) => !a.relatedSourceId || !groupIds.has(a.relatedSourceId)),
+    ...contentUiState.additionSlots.filter(
+      (a) => !a.relatedSourceId || !groupIds.has(a.relatedSourceId)
+    ),
   ];
-  const hasEditableContent = groups.length > 0 || questionSlots.length > 0 || contentUiState.additionSlots.length > 0;
+  const hasEditableContent =
+    groups.length > 0 || questionSlots.length > 0 || contentUiState.additionSlots.length > 0;
   const ledgerRecords = LEDGER_PREVIEW_RECORDS_BY_CASE[activeCase.id];
-  const ledgerPreviewCards = !hasEditableContent && ledgerRecords ? ledgerRecords.map(ledgerPreviewCardMarkup).join("") : "";
+  const ledgerPreviewCards =
+    !hasEditableContent && ledgerRecords ? ledgerRecords.map(ledgerPreviewCardMarkup).join("") : "";
   const hasUnpublishedDraft =
     contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId) ||
     contentUiState.additionSlots.some((a) => a.status === "draft");
@@ -2702,7 +2868,7 @@ function manageContentCaseScreen() {
       : "";
 
   return `${chrome()}<main class="shell manage-content-shell"><section>
-<button class="back-link" data-action="back-to-manage-content">← All cases</button>
+<button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>
 <p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
 <h1>${esc(activeCase.title)}</h1>
 <p>${esc(activeCase.summary)}</p>
@@ -2735,7 +2901,10 @@ async function loadManageContentCaseData(caseId) {
     const bySlot = {};
     for (const row of rows) {
       const key = `${row.slot_kind}:${row.slot_content_id}`;
-      (bySlot[key] ??= {})[row.status] = { id: row.alt_content_id, kind: row.alt_kind || "curated" };
+      (bySlot[key] ??= {})[row.status] = {
+        id: row.alt_content_id,
+        kind: row.alt_kind || "curated",
+      };
     }
     const customById = new Map(customItems.map((item) => [item.id, item]));
     const customReplacementsBySlot = {};
@@ -2841,20 +3010,30 @@ function syncAuthoringFieldsFromDom(slotKind, formEl) {
     fields[el.dataset.authoringField] = el.value;
   });
   if (slotKind === "mcq") {
-    fields.choices = [...formEl.querySelectorAll('[data-authoring-rows="choices"] .manage-content-mcq-row')].map((row) => ({
+    fields.choices = [
+      ...formEl.querySelectorAll('[data-authoring-rows="choices"] .manage-content-mcq-row'),
+    ].map((row) => ({
       text: row.querySelector("[data-mcq-text]").value,
       correct: row.querySelector("[data-mcq-correct]").checked,
     }));
   } else if (slotKind === "sequencing") {
-    fields.items = [...formEl.querySelectorAll('[data-authoring-rows="items"] .manage-content-sequence-row')].map((row) => ({
+    fields.items = [
+      ...formEl.querySelectorAll('[data-authoring-rows="items"] .manage-content-sequence-row'),
+    ].map((row) => ({
       label: row.querySelector("[data-sequence-text]").value,
       position: Number(row.querySelector("[data-sequence-position-select]").value),
     }));
   } else if (slotKind === "evidence-organizing") {
-    fields.slots = [...formEl.querySelectorAll('[data-authoring-rows="slots"] .manage-content-evidence-slot-row')].map((row) => ({
+    fields.slots = [
+      ...formEl.querySelectorAll('[data-authoring-rows="slots"] .manage-content-evidence-slot-row'),
+    ].map((row) => ({
       label: row.querySelector("[data-slot-label]").value,
     }));
-    fields.sources = [...formEl.querySelectorAll('[data-authoring-rows="sources"] .manage-content-evidence-source-row')].map((row) => ({
+    fields.sources = [
+      ...formEl.querySelectorAll(
+        '[data-authoring-rows="sources"] .manage-content-evidence-source-row'
+      ),
+    ].map((row) => ({
       label: row.querySelector("[data-source-label]").value,
       attribution: row.querySelector("[data-source-attribution]").value,
       excerpt: row.querySelector("[data-source-excerpt]").value,
@@ -2862,17 +3041,19 @@ function syncAuthoringFieldsFromDom(slotKind, formEl) {
       correctSlotId: row.querySelector("[data-source-slot]").value,
     }));
   } else if (slotKind === "hipp") {
-    fields.hippPrompts = [...formEl.querySelectorAll('[data-authoring-rows="hippPrompts"] > .manage-content-hipp-prompt-block')].map(
-      (row) => ({
-        dimension: row.querySelector("[data-hipp-dimension]").value,
-        argument: row.querySelector("[data-hipp-argument]").value,
-        options: [...row.querySelectorAll(".manage-content-hipp-option-row")].map((optionRow) => ({
-          text: optionRow.querySelector("[data-hipp-option-text]").value,
-          correct: optionRow.querySelector("[data-hipp-correct]").checked,
-          identificationOnly: optionRow.querySelector("[data-hipp-identification]").checked,
-        })),
-      })
-    );
+    fields.hippPrompts = [
+      ...formEl.querySelectorAll(
+        '[data-authoring-rows="hippPrompts"] > .manage-content-hipp-prompt-block'
+      ),
+    ].map((row) => ({
+      dimension: row.querySelector("[data-hipp-dimension]").value,
+      argument: row.querySelector("[data-hipp-argument]").value,
+      options: [...row.querySelectorAll(".manage-content-hipp-option-row")].map((optionRow) => ({
+        text: optionRow.querySelector("[data-hipp-option-text]").value,
+        correct: optionRow.querySelector("[data-hipp-correct]").checked,
+        identificationOnly: optionRow.querySelector("[data-hipp-identification]").checked,
+      })),
+    }));
   }
   return fields;
 }
@@ -2917,7 +3098,18 @@ function handleSaveAuthoring() {
         content: result.content,
       });
   persist
-    .then((row) => (isReplacement ? setDraftSelection(classroomId, caseId, auth.slotKind, auth.editingOfficialId, row.id, "custom") : null))
+    .then((row) =>
+      isReplacement
+        ? setDraftSelection(
+            classroomId,
+            caseId,
+            auth.slotKind,
+            auth.editingOfficialId,
+            row.id,
+            "custom"
+          )
+        : null
+    )
     .then(() => {
       manageContentAuthoring = null;
       return loadManageContentCaseData(caseId);
@@ -3002,17 +3194,18 @@ function handleManageContentClick(target, action) {
     loadManageContentCaseData(target.dataset.caseId);
     return true;
   }
-  if (action === "back-to-manage-content") {
-    progress.currentScreen = "manage-content";
-    save();
-    render();
-    return true;
-  }
   if (action === "publish-case-content") {
-    const slotIds = contentUiState.slots.map((s) => ({ slotKind: s.slotKind, slotContentId: s.officialId }));
+    const slotIds = contentUiState.slots.map((s) => ({
+      slotKind: s.slotKind,
+      slotContentId: s.officialId,
+    }));
     const draftAdditions = contentUiState.additionSlots.filter((a) => a.status === "draft");
     Promise.all([
-      publishCaseSelections(teacherUiState.selectedClassroomId, contentUiState.selectedCaseId, slotIds),
+      publishCaseSelections(
+        teacherUiState.selectedClassroomId,
+        contentUiState.selectedCaseId,
+        slotIds
+      ),
       ...draftAdditions.map((a) => updateCustomContent(a.id, { status: "published" })),
     ])
       .then(() => loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published"))
@@ -3041,7 +3234,9 @@ function handleManageContentClick(target, action) {
   if (action === "start-add-question") {
     const relatedSourceId = target.dataset.relatedSourceId || null;
     const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId) : null;
+    const group = activeCase
+      ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId)
+      : null;
     manageContentAuthoring = {
       formMode: "add",
       slotKind: null,
@@ -3072,10 +3267,14 @@ function handleManageContentClick(target, action) {
     const slotKind = target.dataset.slotKind;
     const officialId = target.dataset.officialId;
     const relatedSourceId = target.dataset.relatedSourceId || null;
-    const slot = contentUiState.slots.find((s) => s.slotKind === slotKind && s.officialId === officialId);
+    const slot = contentUiState.slots.find(
+      (s) => s.slotKind === slotKind && s.officialId === officialId
+    );
     if (!slot) return true;
     const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId) : null;
+    const group = activeCase
+      ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId)
+      : null;
     manageContentAuthoring = {
       formMode: "edit",
       slotKind,
@@ -3092,8 +3291,12 @@ function handleManageContentClick(target, action) {
   }
   if (action === "start-edit-source") {
     const officialId = target.dataset.officialId;
-    const slot = contentUiState.slots.find((s) => s.slotKind === "source" && s.officialId === officialId);
-    const officialSource = (UNIT_SOURCES[contentUiState.selectedCaseId] || []).find((s) => s.id === officialId);
+    const slot = contentUiState.slots.find(
+      (s) => s.slotKind === "source" && s.officialId === officialId
+    );
+    const officialSource = (UNIT_SOURCES[contentUiState.selectedCaseId] || []).find(
+      (s) => s.id === officialId
+    );
     if (!slot || !officialSource) return true;
     // eslint-disable-next-line no-unused-vars -- destructuring-to-omit: these 7 fields are the teacher-editable ones, `wiring` is everything else
     const { type, title, creator, date, record, excerpt, prompt, ...wiring } = officialSource;
@@ -3116,7 +3319,9 @@ function handleManageContentClick(target, action) {
     const item = contentUiState.additionSlots.find((a) => a.id === customId);
     if (!item) return true;
     const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase ? manageContentSourceGroups(activeCase).find((g) => g.id === item.relatedSourceId) : null;
+    const group = activeCase
+      ? manageContentSourceGroups(activeCase).find((g) => g.id === item.relatedSourceId)
+      : null;
     manageContentAuthoring = {
       formMode: "edit",
       slotKind: item.slotKind,
@@ -3174,7 +3379,8 @@ function handleManageContentClick(target, action) {
     if (fields.choices.length > 2) {
       const removedWasCorrect = fields.choices[index].correct;
       fields.choices.splice(index, 1);
-      if (removedWasCorrect && !fields.choices.some((c) => c.correct)) fields.choices[0].correct = true;
+      if (removedWasCorrect && !fields.choices.some((c) => c.correct))
+        fields.choices[0].correct = true;
     }
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
@@ -3215,7 +3421,9 @@ function handleManageContentClick(target, action) {
       fields.slots.splice(index, 1);
       const fallbackSlotId = slugify(fields.slots[0].label);
       fields.sources = fields.sources.map((source) =>
-        source.correctSlotId === removedSlotId ? { ...source, correctSlotId: fallbackSlotId } : source
+        source.correctSlotId === removedSlotId
+          ? { ...source, correctSlotId: fallbackSlotId }
+          : source
       );
     }
     manageContentAuthoring = { ...manageContentAuthoring, fields };
@@ -3272,7 +3480,11 @@ function handleManageContentClick(target, action) {
     const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
     const promptIndex = Number(target.dataset.promptIndex);
     if (fields.hippPrompts[promptIndex].options.length < 6) {
-      fields.hippPrompts[promptIndex].options.push({ text: "", correct: false, identificationOnly: false });
+      fields.hippPrompts[promptIndex].options.push({
+        text: "",
+        correct: false,
+        identificationOnly: false,
+      });
     }
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
@@ -5218,9 +5430,6 @@ function render() {
       case "grading":
         html = gradingScreen();
         break;
-      case "manage-content":
-        html = manageContentScreen();
-        break;
       case "manage-content-case":
         html = manageContentCaseScreen();
         break;
@@ -5321,7 +5530,10 @@ function hydrateClassroomUnitFloor(enabledUnitIndex) {
 function hydrateTeacherModeForStudent() {
   getCurrentClassroomId().then((classroomId) => {
     if (!classroomId) return;
-    Promise.all([loadSelectionsForResolution(classroomId, "published"), getClassroomUnitFloor(classroomId)])
+    Promise.all([
+      loadSelectionsForResolution(classroomId, "published"),
+      getClassroomUnitFloor(classroomId),
+    ])
       .then(([, enabledUnitIndex]) => {
         hydrateClassroomUnitFloor(enabledUnitIndex);
         render();
@@ -6357,7 +6569,7 @@ function handleAuthScreenClick(target, action) {
         ).then(({ needsEmailConfirmation }) => {
           if (needsEmailConfirmation) {
             authUiState.info =
-              "This Supabase project requires email confirmation. In the Supabase dashboard, go to Authentication → Users, find chronicle-dev-teacher@gmail.com, and confirm it manually (or disable \"Confirm email\" under Authentication → Providers → Email for local dev). Then click this button again.";
+              'This Supabase project requires email confirmation. In the Supabase dashboard, go to Authentication → Users, find chronicle-dev-teacher@gmail.com, and confirm it manually (or disable "Confirm email" under Authentication → Providers → Email for local dev). Then click this button again.';
             return null;
           }
           return enterDashboard();
@@ -6435,7 +6647,8 @@ function handleAuthScreenClick(target, action) {
           authUiState.signupStep = 1;
           authUiState.signupDraft = null;
           authUiState.classroomRows = [];
-          authUiState.info = "Account created — check your email to confirm it, then sign in and add your classrooms.";
+          authUiState.info =
+            "Account created — check your email to confirm it, then sign in and add your classrooms.";
           return null;
         }
         return createClassroomsWithRoster(rows).then((results) => {
@@ -6557,17 +6770,64 @@ function handleAuthScreenClick(target, action) {
       });
     return true;
   }
-  if (action === "open-manage-content") {
-    manageContentExpandedUnitId = null;
-    progress.currentScreen = "manage-content";
-    save();
+  if (action === "select-teacher-tab") {
+    teacherUiState.activeTab = target.dataset.tab;
     render();
+    return true;
+  }
+  if (action === "toggle-sources-unit") {
+    const unitNumber = Number(target.dataset.unit);
+    const wasOpen = teacherUiState.sourcesExpandedUnit === unitNumber;
+    teacherUiState.sourcesExpandedUnit = wasOpen ? null : unitNumber;
+    render();
+    if (
+      !wasOpen &&
+      teacherUiState.selectedClassroomId &&
+      teacherUiState.sourcePoolByUnit[unitNumber] === undefined
+    ) {
+      getUnitSourcePool(teacherUiState.selectedClassroomId, unitNumber)
+        .then((ids) => {
+          teacherUiState.sourcePoolByUnit[unitNumber] = ids;
+          render();
+        })
+        .catch((err) => {
+          teacherUiState.error = err.message || "Could not load this unit's source pool.";
+          render();
+        });
+    }
+    return true;
+  }
+  if (action === "toggle-source-pool") {
+    const unitNumber = Number(target.dataset.unit);
+    const sourceId = target.dataset.sourceId;
+    const sourceKind = target.dataset.sourceKind;
+    const pool = teacherUiState.sourcePoolByUnit[unitNumber];
+    if (!teacherUiState.selectedClassroomId || !pool) return true;
+    const nowSelected = !pool.has(sourceId);
+    teacherUiState.error = "";
+    setSourceInPool(
+      teacherUiState.selectedClassroomId,
+      unitNumber,
+      sourceId,
+      sourceKind,
+      nowSelected
+    )
+      .then(() => {
+        if (nowSelected) pool.add(sourceId);
+        else pool.delete(sourceId);
+        render();
+      })
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not update this source's pool status.";
+        render();
+      });
     return true;
   }
   if (action === "teacher-sign-out") {
     signOut().then(() => {
       currentProfile = null;
       teacherUiState = {
+        activeTab: "classrooms",
         classrooms: [],
         selectedClassroomId: null,
         roster: [],
@@ -6579,8 +6839,16 @@ function handleAuthScreenClick(target, action) {
         enabledUnitIndex: 0,
         error: "",
         pending: false,
+        sourcePoolByUnit: {},
+        sourcesExpandedUnit: null,
       };
-      contentUiState = { selectedCaseId: null, slots: [], lockedSources: [], error: "", pending: false };
+      contentUiState = {
+        selectedCaseId: null,
+        slots: [],
+        lockedSources: [],
+        error: "",
+        pending: false,
+      };
       previewSession = { active: false, snapshot: null };
       authUiState.signupStep = 1;
       authUiState.signupDraft = null;
@@ -6600,6 +6868,13 @@ function handleGradingScreenClick(target, action) {
     return true;
   }
   if (action === "back-to-teacher-dashboard") {
+    // Manage Content's per-case editor uses this same action (its own
+    // standalone list screen was folded into the dashboard's Units tab —
+    // see teacherUnitsTabMarkup()) — restore whichever tab makes sense for
+    // the screen we're leaving, since progress.currentScreen still holds
+    // that value at this point.
+    teacherUiState.activeTab =
+      progress.currentScreen === "manage-content-case" ? "units" : "assignments";
     progress.currentScreen = "teacher-dashboard";
     save();
     render();

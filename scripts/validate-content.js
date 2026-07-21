@@ -8,7 +8,10 @@
  */
 import { loadChronicleContent } from "../apps/web/src/repositories/local-content-repository.js";
 import { BrandSchema, UnitSchema } from "../apps/web/src/content/schemas/unit.schema.js";
-import { buildSourceSchema, buildSourcesSchema } from "../apps/web/src/content/schemas/source.schema.js";
+import {
+  buildSourceSchema,
+  buildSourcesSchema,
+} from "../apps/web/src/content/schemas/source.schema.js";
 import { ExchangeRecordsSchema } from "../apps/web/src/content/schemas/exchange-record.schema.js";
 import {
   EmpireEvidenceListSchema,
@@ -27,7 +30,10 @@ import {
   checkAlternateReferences,
 } from "../apps/web/src/content/schemas/cross-reference.js";
 import { z } from "zod";
-import { McqQuestSchema, McqQuestListSchema } from "../apps/web/src/quest-types/generic/mcq-quest.js";
+import {
+  McqQuestSchema,
+  McqQuestListSchema,
+} from "../apps/web/src/quest-types/generic/mcq-quest.js";
 import {
   SequencingQuestSchema,
   SequencingQuestListSchema,
@@ -41,6 +47,12 @@ import {
   SourceAnalysisQuestListSchema,
 } from "../apps/web/src/quest-types/history/source-analysis-quest.js";
 import { QUEST_TYPES } from "../apps/web/src/quest-types/index.js";
+import {
+  buildPrimarySourcesSchema,
+  buildVisualSourcesSchema,
+  UnitMetaSchema,
+} from "../apps/web/src/content/schemas/primary-source-library.schema.js";
+import { PRIMARY_SOURCE_LIBRARY_UNITS } from "../apps/web/src/content/primary-source-library/index.js";
 
 function main() {
   const content = loadChronicleContent();
@@ -341,6 +353,22 @@ function main() {
     )
   );
 
+  // Primary source reference library (apps/web/src/content/primary-source-library/)
+  // — syllabus-wide research reference for Units 1-9, not gameplay content.
+  // See docs/content-guide/primary-source-library.md.
+  const primarySourcesSchema = buildPrimarySourcesSchema();
+  const visualSourcesSchema = buildVisualSourcesSchema();
+  for (const { meta, sources, visualSources } of PRIMARY_SOURCE_LIBRARY_UNITS) {
+    const label = `unit-0${meta.unit}-source-library.js`;
+    results.push(
+      runSchema(`${label}: UNIT_0${meta.unit}_SOURCE_LIBRARY_META`, UnitMetaSchema, meta)
+    );
+    results.push(runSchema(`${label}: UNIT_0${meta.unit}_SOURCES`, primarySourcesSchema, sources));
+    results.push(
+      runSchema(`${label}: UNIT_0${meta.unit}_VISUAL_SOURCES`, visualSourcesSchema, visualSources)
+    );
+  }
+
   // Cross-file checks: main.js's caseById()/unitForCase()/sourceById() all
   // search across every unit, so case ids and source ids must be unique
   // globally, not just within their own unit's array.
@@ -358,6 +386,8 @@ function main() {
     "cross-reference: sequencing alternate references",
     "cross-reference: evidence-organizing alternate references",
     "cross-reference: hipp alternate references",
+    "cross-reference: primary source library ids",
+    "cross-reference: primary source library visual ids",
   ];
 
   // Every quest id, grouped by QUEST_TYPES key, across all three units — the resolution set
@@ -562,17 +592,21 @@ function main() {
       "cross-reference: evidence-organizing alternate references",
       [
         ...content.unit01.evidenceOrganizingAlternates.map((entry) => ({
-          source: "case-001-evidence-organizing-alternates.js:CASE_001_EVIDENCE_ORGANIZING_ALTERNATES",
+          source:
+            "case-001-evidence-organizing-alternates.js:CASE_001_EVIDENCE_ORGANIZING_ALTERNATES",
           replacesId: entry.replacesQuestId,
           altId: entry.quest.id,
         })),
         ...content.unit02.evidenceOrganizingAlternates.map((entry) => ({
-          source: "case-006-evidence-organizing-alternates.js:CASE_006_EVIDENCE_ORGANIZING_ALTERNATES",
+          source:
+            "case-006-evidence-organizing-alternates.js:CASE_006_EVIDENCE_ORGANIZING_ALTERNATES",
           replacesId: entry.replacesQuestId,
           altId: entry.quest.id,
         })),
       ],
-      [...content.unit01.evidenceOrganizingQuests, ...content.unit02.archiveChallengeQuests].map((q) => q.id)
+      [...content.unit01.evidenceOrganizingQuests, ...content.unit02.archiveChallengeQuests].map(
+        (q) => q.id
+      )
     ),
     ...checkAlternateReferences(
       "cross-reference: hipp alternate references",
@@ -582,6 +616,20 @@ function main() {
         altId: entry.quest.id,
       })),
       content.unit01.sourceAnalysisQuests.map((q) => q.id)
+    ),
+    ...checkUniqueGlobalIds(
+      "cross-reference: primary source library ids",
+      PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta, sources }) => ({
+        source: `unit-0${meta.unit}-source-library.js:UNIT_0${meta.unit}_SOURCES`,
+        items: sources,
+      }))
+    ),
+    ...checkUniqueGlobalIds(
+      "cross-reference: primary source library visual ids",
+      PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta, visualSources }) => ({
+        source: `unit-0${meta.unit}-source-library.js:UNIT_0${meta.unit}_VISUAL_SOURCES`,
+        items: visualSources,
+      }))
     ),
   ];
 

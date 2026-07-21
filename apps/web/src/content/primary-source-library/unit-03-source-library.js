@@ -1,0 +1,480 @@
+/**
+ * Primary source reference library — Unit 3 / Period 3, 1754-1800.
+ * Revolution, the Constitution, and the early republic.
+ * See docs/content-guide/primary-source-library.md for how this reference
+ * layer differs from the live gameplay Source records in
+ * apps/web/src/content/unit-03-campaign.js.
+ */
+
+export const UNIT_03_SOURCE_LIBRARY_META = {
+  unit: 3,
+  period: "Period 3",
+  years: "1754-1800",
+  label: "Revolution, the Constitution, and the early republic",
+  testableComparisons: [
+    "Patriot vs. Loyalist arguments",
+    "Federalist No. 10 vs. Brutus No. 1",
+    "Hamiltonian vs. Jeffersonian visions",
+    "Revolutionary ideals vs. slavery and women's status",
+  ],
+};
+
+export const UNIT_03_SOURCES = [
+  {
+    id: "u03-albany-plan-of-union",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Albany Plan of Union",
+    creator: "Benjamin Franklin and colonial delegates",
+    date: "1754",
+    apushUse: "Colonial unity and the French and Indian War",
+    excerpt:
+      "Proposed at the Albany Congress amid the outbreak of the French and Indian War, Franklin's plan would have created an intercolonial council with power to raise troops and taxes for common defense — rejected by both colonial assemblies and the Crown, but an early model for later union.",
+    citation: "Albany Plan of Union, adopted by the Albany Congress, July 1754.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/albany.asp",
+  },
+  {
+    id: "u03-proclamation-of-1763",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Proclamation of 1763",
+    creator: "King George III / British Crown",
+    date: "1763",
+    apushUse: "Imperial control and restriction of western settlement",
+    excerpt:
+      "Issued after Britain's victory in the Seven Years' War, the proclamation forbade colonial settlement west of the Appalachian divide, intending to stabilize relations with Native nations — a restriction many colonists resented and widely ignored.",
+    citation: "Royal Proclamation of 1763, issued by King George III, October 7, 1763.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/proc1763.asp",
+  },
+  {
+    id: "u03-stamp-act",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Stamp Act",
+    creator: "British Parliament",
+    date: "1765",
+    apushUse: "Taxation and colonial resistance",
+    excerpt:
+      'The first direct internal tax Parliament levied on the colonies, requiring a purchased stamp on printed materials and legal documents, sparked "no taxation without representation" protests, boycotts, and the formation of the Sons of Liberty before its repeal in 1766.',
+    citation: "Stamp Act, British Parliament, 1765.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-stamp-act-congress-declaration",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Virginia Resolves / Stamp Act Congress Declaration",
+    creator: "Virginia House of Burgesses (Patrick Henry's resolves); Stamp Act Congress",
+    date: "1765",
+    apushUse: "Rights of English colonists",
+    excerpt:
+      "Colonial assemblies and an intercolonial congress asserted that only representatives colonists themselves elected could tax them, framing Parliamentary taxation as a violation of their rights as Englishmen rather than a rejection of royal authority itself.",
+    citation:
+      "Virginia Resolves, May 1765; Declaration of Rights and Grievances, Stamp Act Congress, October 1765.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-dickinson-letters-from-a-farmer",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Letters from a Farmer in Pennsylvania",
+    creator: "John Dickinson",
+    date: "1767-1768",
+    apushUse: "Opposition to parliamentary taxation",
+    excerpt:
+      "Writing under a pseudonymous farmer persona, Dickinson argued Parliament could regulate colonial trade but had no right to tax colonists for revenue (as the new Townshend duties did), since colonists lacked representation in Parliament.",
+    citation: 'John Dickinson, "Letters from a Farmer in Pennsylvania," published 1767-1768.',
+    externalUrl: null,
+  },
+  {
+    id: "u03-common-sense",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 9,
+    title: "Common Sense",
+    creator: "Thomas Paine",
+    date: "1776",
+    apushUse: "Republicanism and the case for independence",
+    excerpt:
+      "Paine's widely read pamphlet attacked hereditary monarchy itself as absurd and argued in plain language that America had every practical and moral reason to declare full independence from Britain rather than seek reconciliation.",
+    citation: "Thomas Paine, Common Sense, published anonymously, January 1776.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/paine/pain-com.asp",
+  },
+  {
+    id: "u03-declaration-of-independence",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 10,
+    title: "Declaration of Independence",
+    creator: "Thomas Jefferson and the Second Continental Congress",
+    date: "1776",
+    apushUse: "Natural rights and revolutionary ideology",
+    excerpt:
+      'The Declaration asserts that "all men are created equal" and endowed with unalienable rights to "Life, Liberty and the pursuit of Happiness," lists grievances against King George III, and formally announces the united colonies\' separation from Britain.',
+    citation:
+      "Declaration of Independence, adopted by the Second Continental Congress, July 4, 1776.",
+    externalUrl: "https://www.archives.gov/founding-docs/declaration-transcript",
+  },
+  {
+    id: "u03-abigail-adams-remember-the-ladies",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: '"Remember the Ladies" letter',
+    creator: "Abigail Adams",
+    date: "1776",
+    apushUse: "Women, republican ideals, and the limits of the Revolution",
+    excerpt:
+      'Writing to her husband John Adams during the Continental Congress, Abigail Adams urged him to "remember the ladies" in any new legal code and warned that women would not hold themselves bound by laws in which they had no voice or representation.',
+    citation: "Abigail Adams, letter to John Adams, March 31, 1776.",
+    externalUrl: "https://founders.archives.gov/documents/Adams/04-01-02-0241",
+  },
+  {
+    id: "u03-articles-of-confederation",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 11,
+    title: "Articles of Confederation",
+    creator: "Second Continental Congress",
+    date: "drafted 1777, ratified 1781",
+    apushUse: "Weak central government",
+    excerpt:
+      "The first American governing charter created a loose confederation of sovereign states with a weak central Congress lacking power to tax, regulate interstate commerce, or enforce its own laws — a design later blamed for problems like Shays' Rebellion.",
+    citation: "Articles of Confederation, drafted 1777, ratified by all thirteen states by 1781.",
+    externalUrl: "https://www.archives.gov/milestone-documents/articles-of-confederation",
+  },
+  {
+    id: "u03-northwest-ordinance",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Northwest Ordinance",
+    creator: "Confederation Congress",
+    date: "1787",
+    apushUse: "Western settlement and the restriction of slavery",
+    excerpt:
+      "The ordinance established an orderly process for organizing new territories north of the Ohio River into states on equal footing with existing ones, funded public education, and prohibited slavery in the territory — while providing no lasting protection for Native land claims.",
+    citation: "Northwest Ordinance, Confederation Congress, July 13, 1787.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/nworder.asp",
+  },
+  {
+    id: "u03-united-states-constitution",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 12,
+    title: "United States Constitution",
+    creator: "Constitutional Convention delegates",
+    date: "1787",
+    apushUse: "Federalism, separation of powers, and the founding compromises",
+    excerpt:
+      "Drafted at Philadelphia to replace the Articles of Confederation, the Constitution creates a stronger federal government of separated legislative, executive, and judicial powers, built on compromises over representation (the Great Compromise) and slavery (the Three-Fifths Compromise).",
+    citation: "United States Constitution, signed September 17, 1787; ratified 1788.",
+    externalUrl: "https://www.archives.gov/founding-docs/constitution-transcript",
+  },
+  {
+    id: "u03-federalist-no-10",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 13,
+    title: "Federalist No. 10",
+    creator: "James Madison",
+    date: "1787",
+    apushUse: "Factions and the case for an extended republic",
+    excerpt:
+      'Madison argues that a large, diverse republic is better able to control the "mischiefs of faction" than a small direct democracy, since no single interest group can easily dominate a nation spanning many competing interests.',
+    citation:
+      "James Madison, Federalist No. 10, published in The Federalist Papers, November 22, 1787.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/fed10.asp",
+  },
+  {
+    id: "u03-federalist-no-51",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: null,
+    title: "Federalist No. 51",
+    creator: "James Madison",
+    date: "1788",
+    apushUse: "Checks and balances",
+    excerpt:
+      'Madison explains that ambition must be made "to counteract ambition" through separated powers and checks and balances among branches of government, famously observing that "if men were angels, no government would be necessary."',
+    citation:
+      "James Madison, Federalist No. 51, published in The Federalist Papers, February 6, 1788.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/fed51.asp",
+  },
+  {
+    id: "u03-brutus-no-1",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 14,
+    title: "Brutus No. 1",
+    creator: '"Brutus" (widely attributed to Robert Yates)',
+    date: "1787",
+    apushUse: "Anti-Federalist fears of centralized power",
+    excerpt:
+      'Writing against ratification, "Brutus" warns that the proposed Constitution\'s broad federal powers and "necessary and proper" clause would inevitably swallow state sovereignty, and that a republic as large and diverse as the United States could not preserve liberty under one consolidated government.',
+    citation: '"Brutus," Brutus No. 1, published in the New York Journal, October 18, 1787.',
+    externalUrl: "https://avalon.law.yale.edu/18th_century/brutus01.asp",
+  },
+  {
+    id: "u03-bill-of-rights",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 15,
+    title: "Bill of Rights",
+    creator: "First Congress (principally drafted by James Madison)",
+    date: "1791",
+    apushUse: "Individual liberties and Anti-Federalist influence",
+    excerpt:
+      "The first ten amendments to the Constitution, added largely to satisfy Anti-Federalist demands during ratification, guarantee individual liberties including speech, religion, and the press, and reserve powers not delegated to the federal government to the states or the people.",
+    citation: "Bill of Rights, ratified December 15, 1791.",
+    externalUrl: "https://www.archives.gov/founding-docs/bill-of-rights-transcript",
+  },
+  {
+    id: "u03-washington-farewell-address",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 16,
+    title: "Farewell Address",
+    creator: "George Washington",
+    date: "1796",
+    apushUse: "Political parties and permanent foreign alliances",
+    excerpt:
+      "Declining a third term, Washington warns against the dangers of political parties dividing the nation and against permanent foreign alliances, urging the young republic to pursue its own interests rather than being drawn into European conflicts.",
+    citation: "George Washington, Farewell Address, published September 19, 1796.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/washing.asp",
+  },
+  {
+    id: "u03-alien-and-sedition-acts",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 17,
+    title: "Alien and Sedition Acts",
+    creator: "Federalist-controlled Congress under President John Adams",
+    date: "1798",
+    apushUse: "Federalist power and civil liberties",
+    excerpt:
+      'Passed amid tensions with France, the acts lengthened the naturalization period, empowered the president to deport noncitizens deemed dangerous, and criminalized "false, scandalous, and malicious" writing against the federal government — used chiefly against Jeffersonian Republican critics.',
+    citation: "Alien and Sedition Acts, June-July 1798.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-virginia-and-kentucky-resolutions",
+    unit: 3,
+    priority: "essential",
+    topPriorityRank: 18,
+    title: "Virginia and Kentucky Resolutions",
+    creator: "Thomas Jefferson (Kentucky) and James Madison (Virginia)",
+    date: "1798-1799",
+    apushUse: "States' rights and nullification",
+    excerpt:
+      'Written anonymously in response to the Alien and Sedition Acts, the resolutions argue that states have the authority to judge the constitutionality of federal laws and, in Kentucky\'s version, even to "nullify" laws they deem unconstitutional.',
+    citation:
+      "Kentucky Resolutions, 1798 (Jefferson); Virginia Resolutions, 1798 (Madison); further Kentucky Resolution, 1799.",
+    externalUrl: "https://avalon.law.yale.edu/18th_century/kenres.asp",
+  },
+  {
+    id: "u03-patrick-henry-give-me-liberty",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: '"Give Me Liberty or Give Me Death"',
+    creator: "Patrick Henry",
+    date: "1775",
+    apushUse: "Revolutionary mobilization",
+    excerpt:
+      'Addressing the Second Virginia Convention, Henry argued the time for petition and negotiation with Britain had passed, closing with the famous declaration: "Give me liberty, or give me death!"',
+    citation: "Patrick Henry, speech to the Second Virginia Convention, March 23, 1775.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-olive-branch-petition",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Olive Branch Petition",
+    creator: "Second Continental Congress",
+    date: "1775",
+    apushUse: "Colonial reluctance to separate from Britain",
+    excerpt:
+      "Adopted even after fighting had begun at Lexington and Concord, the petition affirmed colonial loyalty to King George III and asked him to intervene against Parliament's policies — rejected by the king, who instead declared the colonies in rebellion.",
+    citation: "Olive Branch Petition, adopted by the Second Continental Congress, July 5, 1775.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-loyalist-writings",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Loyalist writings",
+    creator: "Various Loyalist colonists (e.g. Thomas Hutchinson, Samuel Seabury)",
+    date: "1770s",
+    apushUse: "Opposition to independence",
+    excerpt:
+      "Loyalist pamphleteers argued that rebellion violated colonists' duty to a lawful sovereign, that independence would bring anarchy and mob rule, and that reconciliation and continued membership in the British Empire best protected colonists' property and liberties.",
+    citation:
+      'Loyalist pamphlets of the 1770s, e.g. Samuel Seabury\'s "Letters of a Westchester Farmer," 1774-1775.',
+    externalUrl: null,
+  },
+  {
+    id: "u03-haudenosaunee-statements",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Joseph Brant and other Haudenosaunee statements",
+    creator: "Joseph Brant (Thayendanegea) and other Haudenosaunee (Iroquois) leaders",
+    date: "1770s-1790s",
+    apushUse: "Native diplomacy during and after the Revolution",
+    excerpt:
+      "Brant, a Mohawk leader allied with the British, argued that the Revolution's outcome ignored Native sovereignty and land rights entirely, as the Confederacy split along wartime alliances and faced continued dispossession regardless of which side it supported.",
+    citation:
+      "Joseph Brant, correspondence and statements to British and American officials, 1770s-1790s.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-petitions-by-enslaved-people-for-freedom",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Petitions by enslaved people for freedom",
+    creator: "Enslaved petitioners (e.g. the 1777 Massachusetts petitioners)",
+    date: "1770s-1780s",
+    apushUse: "Revolutionary ideals and the persistence of slavery",
+    excerpt:
+      "Enslaved petitioners in Massachusetts and elsewhere invoked the Revolution's own language of natural rights and liberty to argue that slavery was inconsistent with the principles colonists claimed to be fighting for, pressing courts and legislatures for emancipation.",
+    citation:
+      "E.g. petition of Prince Hall and others to the Massachusetts legislature, January 1777.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-judith-sargent-murray-equality-of-the-sexes",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "On the Equality of the Sexes",
+    creator: "Judith Sargent Murray",
+    date: "1790",
+    apushUse: "Republican Motherhood and women's education",
+    excerpt:
+      "Murray argued that apparent differences in male and female intellect resulted from unequal education rather than innate ability, and that women deserved the same educational opportunities and self-respect as men within the new republic.",
+    citation:
+      'Judith Sargent Murray, "On the Equality of the Sexes," Massachusetts Magazine, 1790.',
+    externalUrl: null,
+  },
+  {
+    id: "u03-hamilton-report-on-public-credit",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Report on Public Credit",
+    creator: "Alexander Hamilton",
+    date: "1790",
+    apushUse: "Federal economic policy",
+    excerpt:
+      "As Treasury Secretary, Hamilton proposed the federal government assume state Revolutionary War debts and fund the national debt at full value, arguing this would establish public credit and tie wealthy creditors' interests to the new federal government's success.",
+    citation:
+      "Alexander Hamilton, Report on the Public Credit, submitted to Congress, January 1790.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-hamilton-report-on-manufactures",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Report on Manufactures",
+    creator: "Alexander Hamilton",
+    date: "1791",
+    apushUse: "Industrial development and implied powers",
+    excerpt:
+      "Hamilton urged federal support for domestic manufacturing through tariffs and subsidies, arguing a diversified, self-sufficient economy would strengthen national independence, and defending broad federal power to act for the general welfare.",
+    citation: "Alexander Hamilton, Report on Manufactures, submitted to Congress, December 1791.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-washington-neutrality-proclamation",
+    unit: 3,
+    priority: "very_common",
+    topPriorityRank: null,
+    title: "Neutrality Proclamation",
+    creator: "George Washington",
+    date: "1793",
+    apushUse: "Early foreign policy",
+    excerpt:
+      "Amid war between Britain and revolutionary France, Washington declared the United States would remain neutral and that citizens aiding either belligerent would be prosecuted — a policy that strained the 1778 alliance with France and divided Federalists and Jeffersonian Republicans.",
+    citation: "George Washington, Neutrality Proclamation, April 22, 1793.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-shays-rebellion-accounts",
+    unit: 3,
+    priority: "useful",
+    topPriorityRank: null,
+    title: "Shays' Rebellion accounts",
+    creator: "Contemporary Massachusetts newspapers and officials",
+    date: "1786-1787",
+    apushUse: "Weaknesses of the Articles of Confederation",
+    excerpt:
+      "Debt-burdened Massachusetts farmers, led by Daniel Shays, forcibly closed courts to stop foreclosures; the Confederation government's inability to fund a response alarmed nationalists and helped build momentum for the Constitutional Convention.",
+    citation: "Contemporary accounts of Shays' Rebellion, Massachusetts, 1786-1787.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-whiskey-rebellion-proclamations",
+    unit: 3,
+    priority: "useful",
+    topPriorityRank: null,
+    title: "Whiskey Rebellion proclamations",
+    creator: "George Washington",
+    date: "1794",
+    apushUse: "Federal authority under the Constitution",
+    excerpt:
+      "When western Pennsylvania farmers violently resisted Hamilton's federal excise tax on whiskey, Washington personally led federalized militia to suppress the rebellion, demonstrating the new Constitution's government could enforce its laws where the Confederation had failed.",
+    citation:
+      "George Washington, proclamations and militia orders concerning the Whiskey Rebellion, 1794.",
+    externalUrl: null,
+  },
+];
+
+export const UNIT_03_VISUAL_SOURCES = [
+  {
+    id: "u03-visual-paul-revere-boston-massacre",
+    unit: 3,
+    title: "Paul Revere's Boston Massacre engraving",
+    description:
+      "A widely circulated (and historically inaccurate) 1770 engraving depicting British soldiers firing in an organized line on an unarmed crowd, used as effective anti-British propaganda in the lead-up to the Revolution.",
+    citation: 'Paul Revere, "The Bloody Massacre," engraving, 1770.',
+    externalUrl: "https://www.loc.gov/item/2008661585",
+  },
+  {
+    id: "u03-visual-join-or-die-cartoon",
+    unit: 3,
+    title: '"Join, or Die" cartoon',
+    description:
+      "Benjamin Franklin's 1754 segmented-snake woodcut, originally urging colonial unity during the French and Indian War and later revived as a symbol of colonial unity against Britain.",
+    citation: 'Benjamin Franklin, "Join, or Die," Pennsylvania Gazette, May 9, 1754.',
+    externalUrl: "https://www.loc.gov/item/2002695523",
+  },
+  {
+    id: "u03-visual-revolutionary-propaganda",
+    unit: 3,
+    title: "Revolutionary propaganda",
+    description:
+      "Broadsides, cartoons, and prints from both Patriot and Loyalist presses used to mobilize public opinion during the imperial crisis and the war itself.",
+    citation: "Various colonial-era broadsides and engravings, 1760s-1780s.",
+    externalUrl: null,
+  },
+  {
+    id: "u03-visual-proclamation-and-northwest-territory-maps",
+    unit: 3,
+    title: "Proclamation Line and Northwest Territory maps",
+    description:
+      "Maps showing the 1763 Proclamation Line along the Appalachian divide and the later Northwest Territory survey grid, used to illustrate changing federal policy toward western land and settlement.",
+    citation:
+      "Standard AP U.S. History textbook maps of the Proclamation Line and Northwest Ordinance survey system.",
+    externalUrl: null,
+  },
+];
