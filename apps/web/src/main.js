@@ -132,6 +132,20 @@ import {
   getSubmissionWithGrades,
   recordManualGrade,
 } from "./repositories/remote-submission-repository.js";
+import {
+  getClassroomUnitFloor,
+  advanceClassroomUnit,
+} from "./repositories/remote-classroom-unit-repository.js";
+import {
+  loadSelectionsForResolution,
+  resolveSourceSlot,
+  resolveMcqQuestSlot,
+  alternativesForSourceSlot,
+  alternativesForMcqSlot,
+  listSelectionsForCase,
+  setDraftSelection,
+  publishCaseSelections,
+} from "./repositories/remote-content-selection-repository.js";
 import { validateJoinCode, validateStudentIdCode, validatePassword } from "./engine/auth-flows.js";
 import {
   buildHippEvaluationRequest,
@@ -1433,6 +1447,8 @@ const VALID_SCREENS = new Set([
   "login",
   "teacher-dashboard",
   "grading",
+  "manage-content",
+  "manage-content-case",
 ]);
 if (
   !VALID_SCREENS.has(progress.currentScreen) ||
@@ -1475,6 +1491,17 @@ let teacherUiState = {
   lastProvisioned: null,
   lastReissuedPassword: null,
   progressByStudent: {},
+  enabledUnitIndex: 0,
+  error: "",
+  pending: false,
+};
+// Manage Content (Teacher Mode's source/MCQ-quest swap editor) state —
+// separate from teacherUiState since it's a distinct screen family with its
+// own loader/click-handler group, mirroring how gradingUiState is split out.
+let contentUiState = {
+  selectedCaseId: null,
+  slots: [], // [{slotKind, officialId, officialLabel, draftAltId, publishedAltId, alternatives: [{id,label}]}]
+  previewing: false,
   error: "",
   pending: false,
 };
@@ -1507,6 +1534,7 @@ onAuthStateChange((_event, session) => {
         }
       });
       initTeacherOverridesForCurrentUser().then(() => render());
+      hydrateTeacherModeForStudent();
       render();
     }
   });
@@ -1525,6 +1553,7 @@ getSession().then((session) => {
         }
       });
       initTeacherOverridesForCurrentUser().then(() => render());
+      hydrateTeacherModeForStudent();
       render();
     }
   });
@@ -1715,11 +1744,17 @@ const caseById = (id) => {
   }
   return undefined;
 };
-const sourcesForCase = (caseId) => UNIT_SOURCES[caseId] || [];
-const sourceById = (id) =>
-  CASE_001_SOURCES.find((item) => item.id === id) ||
-  CASE_004_SOURCES.find((item) => item.id === id) ||
-  CASE_007_SOURCES.find((item) => item.id === id);
+// Teacher Mode swap resolution: resolveSourceSlot is a no-op whenever no
+// classroom customization is active, so official content renders unchanged
+// by default — see remote-content-selection-repository.js.
+export const sourcesForCase = (caseId) => (UNIT_SOURCES[caseId] || []).map(resolveSourceSlot);
+export const sourceById = (id) => {
+  const official =
+    CASE_001_SOURCES.find((item) => item.id === id) ||
+    CASE_004_SOURCES.find((item) => item.id === id) ||
+    CASE_007_SOURCES.find((item) => item.id === id);
+  return official ? resolveSourceSlot(official) : undefined;
+};
 // Author Mode unlocks every unit/case for design navigation without touching the save.
 const isUnlocked = (id) => authorMode || progress.unlocked.includes(id);
 const isComplete = (id) => progress.completedCases.includes(id);
@@ -1965,9 +2000,28 @@ ${
     ? `<h2>Submissions to review</h2>${submissionRows ? `<table class="roster-table"><thead><tr><th>Student</th><th>Type</th><th>Task</th><th>Readiness</th><th></th></tr></thead><tbody>${submissionRows}</tbody></table>` : "<p>No submissions yet for this classroom.</p>"}`
     : ""
 }
+${teacherUiState.selectedClassroomId ? teacherUnitAccessMarkup() : ""}
+${
+  teacherUiState.selectedClassroomId
+    ? `<button class="btn btn-outline" data-action="open-manage-content" type="button">Manage Content →</button>`
+    : ""
+}
 <button class="btn btn-outline" data-action="teacher-sign-out" type="button">Sign out</button>
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
+}
+
+function teacherUnitAccessMarkup() {
+  const index = teacherUiState.enabledUnitIndex;
+  const currentUnit = UNITS[index];
+  const nextUnit = UNITS[index + 1];
+  return `<h2>Unit access</h2>
+<p>Students can currently reach: <strong>${esc(resolvedUnitTitle(currentUnit))}</strong> and everything before it.</p>
+${
+  nextUnit
+    ? `<button class="btn btn-outline" data-action="advance-classroom-unit" type="button">Advance to ${esc(resolvedUnitTitle(nextUnit))} →</button>`
+    : `<p class="kicker">All units are already available.</p>`
+}`;
 }
 
 function gradingScreen() {
@@ -2030,6 +2084,7 @@ async function loadSelectedClassroomDetails() {
     teacherUiState.roster = [];
     teacherUiState.submissions = [];
     teacherUiState.progressByStudent = {};
+    teacherUiState.enabledUnitIndex = 0;
     return;
   }
   teacherUiState.roster = await getRoster(teacherUiState.selectedClassroomId);
@@ -2037,6 +2092,7 @@ async function loadSelectedClassroomDetails() {
   teacherUiState.progressByStudent = await getClassroomProgressSummaries(
     teacherUiState.selectedClassroomId
   );
+  teacherUiState.enabledUnitIndex = await getClassroomUnitFloor(teacherUiState.selectedClassroomId);
 }
 
 async function openGradingScreen(submissionId) {
@@ -2056,6 +2112,174 @@ async function openGradingScreen(submissionId) {
     gradingUiState.error = err.message || "Could not load this submission.";
   }
   render();
+}
+
+// --- Manage Content (Teacher Mode's source/MCQ-quest swap editor) --------
+// Cases with a curated swap pool today — proof-of-pipeline scope is Case
+// 1.01 only (see apps/web/src/content/case-001-source-alternates.js), but
+// this stays a general filter (any case with a source/mcq array) so adding
+// more cases' alternates later needs no main.js change.
+function manageableCases() {
+  return UNITS.flatMap((unit) => unit.cases).filter((c) => UNIT_SOURCES[c.id] || PRACTICE_CHECK_QUESTS[c.id]?.mcq);
+}
+
+function manageContentScreen() {
+  if (!currentProfile || currentProfile.role !== "teacher") {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+  }
+  const caseRows = manageableCases()
+    .map(
+      (c) =>
+        `<tr><td>${esc(c.shortTitle)}</td><td>${esc(c.title)}</td><td><button class="text-button" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit sources &amp; quests →</button></td></tr>`
+    )
+    .join("");
+  return `${chrome()}<main class="shell completion-shell"><section>
+<button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
+<p class="kicker">${esc(BRAND.engine)}</p>
+<h1>Manage Content</h1>
+<p>Pick a case to review or swap its primary sources and practice-check questions for this classroom.</p>
+<table class="roster-table"><thead><tr><th>Case</th><th>Title</th><th></th></tr></thead><tbody>${caseRows}</tbody></table>
+</section></main>${authorPanel()}`;
+}
+
+function manageContentCaseScreen() {
+  if (!currentProfile || currentProfile.role !== "teacher") {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+  }
+  const activeCase = caseById(contentUiState.selectedCaseId);
+  if (!activeCase) {
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-manage-content" type="button">← All cases</button></section></main>${authorPanel()}`;
+  }
+  const slotRows = contentUiState.slots
+    .map((slot) => {
+      const altOptions = [
+        `<option value="" ${!slot.draftAltId ? "selected" : ""}>Official — ${esc(slot.officialLabel)}</option>`,
+        ...slot.alternatives.map(
+          (alt) =>
+            `<option value="${esc(alt.id)}" ${slot.draftAltId === alt.id ? "selected" : ""}>${esc(alt.label)}</option>`
+        ),
+      ].join("");
+      const publishedLabel = slot.publishedAltId
+        ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || slot.publishedAltId
+        : "Official";
+      return `<tr>
+<td>${slot.slotKind === "source" ? "Source" : "MCQ"}: ${esc(slot.officialLabel)}</td>
+<td><select data-content-alternate-slot-kind="${esc(slot.slotKind)}" data-content-alternate-slot-id="${esc(slot.officialId)}">${altOptions}</select></td>
+<td>Currently published: ${esc(publishedLabel)}</td>
+</tr>`;
+    })
+    .join("");
+  const hasUnpublishedDraft = contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId);
+  return `${chrome()}<main class="shell completion-shell"><section>
+<button class="back-link" data-action="back-to-manage-content">← All cases</button>
+<p class="kicker">${esc(activeCase.shortTitle)}</p>
+<h1>${esc(activeCase.title)}</h1>
+${contentUiState.slots.length ? `<table class="roster-table"><thead><tr><th>Slot</th><th>Selection (draft)</th><th>Live status</th></tr></thead><tbody>${slotRows}</tbody></table>` : "<p>This case has no swappable sources or quests yet.</p>"}
+${contentUiState.error ? `<p class="feedback error">${esc(contentUiState.error)}</p>` : ""}
+<button class="btn btn-gold" data-action="publish-case-content" type="button" ${hasUnpublishedDraft ? "" : "disabled"}>Publish to students</button>
+<button class="btn btn-outline" data-action="toggle-content-preview" type="button">${contentUiState.previewing ? "Exit preview" : "Preview as student →"}</button>
+${contentUiState.previewing ? manageContentPreviewMarkup() : ""}
+</section></main>${authorPanel()}`;
+}
+
+// Read-only recap reusing the same resolved-content fields sourceReader()/renderQuest()
+// show a student, so a teacher's Preview reflects exactly what publishing would produce.
+// Resolution mode is switched to "draft" by the toggle-content-preview handler while this
+// is showing, and back to "published" the moment it's turned off — see
+// remote-content-selection-repository.js's loadSelectionsForResolution.
+function manageContentPreviewMarkup() {
+  const caseId = contentUiState.selectedCaseId;
+  const sourceCards = sourcesForCase(caseId)
+    .map(
+      (source) =>
+        `<article class="quest-practice-item"><p class="kicker">${esc(source.type)}</p><h3>${esc(source.title)}</h3><p>${esc(source.excerpt)}</p></article>`
+    )
+    .join("");
+  const questSet = PRACTICE_CHECK_QUESTS[caseId];
+  const mcqCards = (questSet?.mcq || [])
+    .map(resolveMcqQuestSlot)
+    .map((quest) => `<div class="quest-practice-item">${renderQuest("mcq", quest, {})}</div>`)
+    .join("");
+  return `<div class="activity-rule"><b>Preview:</b> this shows your draft selections exactly as a student would see them once published.</div>
+${sourceCards ? `<h3>Sources</h3>${sourceCards}` : ""}
+${mcqCards ? `<h3>Practice Check questions</h3>${mcqCards}` : ""}`;
+}
+
+async function loadManageContentCaseData(caseId) {
+  contentUiState.selectedCaseId = caseId;
+  contentUiState.error = "";
+  try {
+    const rows = await listSelectionsForCase(teacherUiState.selectedClassroomId, caseId);
+    const bySlot = {};
+    for (const row of rows) {
+      const key = `${row.slot_kind}:${row.slot_content_id}`;
+      (bySlot[key] ??= {})[row.status] = row.alt_content_id;
+    }
+    const sourceSlots = (UNIT_SOURCES[caseId] || []).map((source) => {
+      const key = `source:${source.id}`;
+      return {
+        slotKind: "source",
+        officialId: source.id,
+        officialLabel: source.title,
+        draftAltId: bySlot[key]?.draft || null,
+        publishedAltId: bySlot[key]?.published || null,
+        alternatives: alternativesForSourceSlot(source.id),
+      };
+    });
+    const mcqSlots = (PRACTICE_CHECK_QUESTS[caseId]?.mcq || []).map((quest) => {
+      const key = `mcq-quest:${quest.id}`;
+      return {
+        slotKind: "mcq-quest",
+        officialId: quest.id,
+        officialLabel: quest.prompt,
+        draftAltId: bySlot[key]?.draft || null,
+        publishedAltId: bySlot[key]?.published || null,
+        alternatives: alternativesForMcqSlot(quest.id),
+      };
+    });
+    contentUiState.slots = [...sourceSlots, ...mcqSlots];
+  } catch (err) {
+    contentUiState.error = err.message || "Could not load this case's content.";
+  }
+  render();
+}
+
+function handleManageContentClick(target, action) {
+  if (action === "open-manage-content-case") {
+    contentUiState = { selectedCaseId: target.dataset.caseId, slots: [], previewing: false, error: "", pending: false };
+    progress.currentScreen = "manage-content-case";
+    save();
+    render();
+    loadManageContentCaseData(target.dataset.caseId);
+    return true;
+  }
+  if (action === "back-to-manage-content") {
+    progress.currentScreen = "manage-content";
+    contentUiState.previewing = false;
+    save();
+    render();
+    return true;
+  }
+  if (action === "publish-case-content") {
+    const slotIds = contentUiState.slots.map((s) => ({ slotKind: s.slotKind, slotContentId: s.officialId }));
+    publishCaseSelections(teacherUiState.selectedClassroomId, contentUiState.selectedCaseId, slotIds)
+      .then(() => loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published"))
+      .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
+      .catch((err) => {
+        contentUiState.error = err.message || "Could not publish these changes.";
+        render();
+      });
+    return true;
+  }
+  if (action === "toggle-content-preview") {
+    contentUiState.previewing = !contentUiState.previewing;
+    loadSelectionsForResolution(
+      teacherUiState.selectedClassroomId,
+      contentUiState.previewing ? "draft" : "published"
+    ).then(render);
+    return true;
+  }
+  return false;
 }
 
 // Static, content-free background layer (letterhead rule lines + pillar glows) evoking an
@@ -3501,7 +3725,7 @@ function practiceCheckScreen() {
   const activeCase = caseById(caseId);
   const questSet = PRACTICE_CHECK_QUESTS[caseId];
 
-  const mcqQuests = questSet.mcq;
+  const mcqQuests = questSet.mcq.map(resolveMcqQuestSlot);
   const answeredCount = mcqQuests.filter(
     (quest) => progress.questResponses[quest.id]?.selected !== undefined
   ).length;
@@ -3977,6 +4201,12 @@ function render() {
       case "grading":
         html = gradingScreen();
         break;
+      case "manage-content":
+        html = manageContentScreen();
+        break;
+      case "manage-content-case":
+        html = manageContentCaseScreen();
+        break;
       default:
         html = instituteScreen();
     }
@@ -4048,6 +4278,46 @@ function unlockNextUnit(unitId) {
   const nextUnit = UNITS[index + 1];
   const firstCase = nextUnit?.cases[0];
   if (firstCase && !progress.unlocked.includes(firstCase.id)) progress.unlocked.push(firstCase.id);
+}
+
+// Teacher Mode's "advance to next unit" is an early-access floor, never a
+// ceiling: it additively unions every enabled unit's first case into
+// progress.unlocked, exactly like unlockNextUnit() already does for a
+// student who finishes a unit review — so a student who's unlocked further
+// via normal play is never demoted by a classroom's floor being behind them.
+function hydrateClassroomUnitFloor(enabledUnitIndex) {
+  let changed = false;
+  for (let i = 0; i <= enabledUnitIndex && i < UNITS.length; i += 1) {
+    const firstCase = UNITS[i].cases[0];
+    if (firstCase && !progress.unlocked.includes(firstCase.id)) {
+      progress.unlocked.push(firstCase.id);
+      changed = true;
+    }
+  }
+  if (changed) save();
+}
+
+// Pulls the signed-in student's classroom-scoped Teacher Mode state
+// (published source/quest selections + the unit-access floor) once per
+// sign-in/boot, mirroring hydrateRemoteProgress's call pattern. A no-op for
+// signed-out play or a student not in any classroom.
+function hydrateTeacherModeForStudent() {
+  getCurrentClassroomId().then((classroomId) => {
+    if (!classroomId) return;
+    Promise.all([loadSelectionsForResolution(classroomId, "published"), getClassroomUnitFloor(classroomId)])
+      .then(([, enabledUnitIndex]) => {
+        hydrateClassroomUnitFloor(enabledUnitIndex);
+        render();
+      })
+      .catch((err) => {
+        // Non-fatal: matches hydrateRemoteProgress's own swallow-and-continue behavior.
+        // Lets a signed-in session keep working normally before
+        // supabase/migrations/0006_teacher_mode.sql has been applied to the
+        // live project (its tables don't exist yet), instead of surfacing an
+        // unhandled rejection to every student's console.
+        console.error("hydrateTeacherModeForStudent failed", err);
+      });
+  });
 }
 
 function resetFieldPosition() {
@@ -5205,6 +5475,26 @@ function handleAuthScreenClick(target, action) {
       });
     return true;
   }
+  if (action === "advance-classroom-unit") {
+    if (!teacherUiState.selectedClassroomId) return true;
+    teacherUiState.error = "";
+    advanceClassroomUnit(teacherUiState.selectedClassroomId, UNITS.length - 1)
+      .then((newIndex) => {
+        teacherUiState.enabledUnitIndex = newIndex;
+        render();
+      })
+      .catch((err) => {
+        teacherUiState.error = err.message || "Could not advance the unit.";
+        render();
+      });
+    return true;
+  }
+  if (action === "open-manage-content") {
+    progress.currentScreen = "manage-content";
+    save();
+    render();
+    return true;
+  }
   if (action === "teacher-sign-out") {
     signOut().then(() => {
       currentProfile = null;
@@ -5217,9 +5507,11 @@ function handleAuthScreenClick(target, action) {
         lastProvisioned: null,
         lastReissuedPassword: null,
         progressByStudent: {},
+        enabledUnitIndex: 0,
         error: "",
         pending: false,
       };
+      contentUiState = { selectedCaseId: null, slots: [], previewing: false, error: "", pending: false };
       authUiState.signupStep = 1;
       authUiState.signupDraft = null;
       authUiState.classroomRows = [];
@@ -5299,6 +5591,7 @@ const CLICK_HANDLER_GROUPS = [
   handleReviewClick,
   handleAuthScreenClick,
   handleGradingScreenClick,
+  handleManageContentClick,
   handleEvaluatorClick,
 ];
 
@@ -5356,6 +5649,22 @@ function handleAppChange(event) {
       setTeacherOverride(mapping.contentId, mapping.fieldName, field.value);
       render();
     }
+  } else if (field.matches("[data-content-alternate-slot-kind]")) {
+    const slotKind = field.dataset.contentAlternateSlotKind;
+    const slotId = field.dataset.contentAlternateSlotId;
+    contentUiState.error = "";
+    setDraftSelection(
+      teacherUiState.selectedClassroomId,
+      contentUiState.selectedCaseId,
+      slotKind,
+      slotId,
+      field.value || null
+    )
+      .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
+      .catch((err) => {
+        contentUiState.error = err.message || "Could not save this selection.";
+        render();
+      });
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
     progress.questResponses[questId] = { selected: field.value };

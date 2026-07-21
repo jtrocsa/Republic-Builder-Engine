@@ -14,6 +14,8 @@ import * as unit03Campaign from "../content/unit-03-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
+import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
+import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 
 export function loadChronicleContent() {
   return {
@@ -33,6 +35,12 @@ export function loadChronicleContent() {
       investigationSequencingQuests: unit01Quests.UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
       archiveChallengeQuests: unit01Quests.UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
       archiveEvidenceQuests: unit01Quests.UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
+      // Teacher Mode's curated swap pool (apps/web/src/repositories/
+      // remote-content-selection-repository.js) — proof-of-pipeline seed for
+      // Case 1.01 only, see docs/architecture for the plan this was built
+      // against.
+      sourceAlternates: CASE_001_SOURCE_ALTERNATES,
+      mcqAlternates: CASE_001_MCQ_ALTERNATES,
     },
     unit02: {
       unit: unit02Campaign.UNIT_02,

@@ -8,7 +8,7 @@
  */
 import { loadChronicleContent } from "../apps/web/src/repositories/local-content-repository.js";
 import { BrandSchema, UnitSchema } from "../apps/web/src/content/schemas/unit.schema.js";
-import { buildSourcesSchema } from "../apps/web/src/content/schemas/source.schema.js";
+import { buildSourceSchema, buildSourcesSchema } from "../apps/web/src/content/schemas/source.schema.js";
 import { ExchangeRecordsSchema } from "../apps/web/src/content/schemas/exchange-record.schema.js";
 import {
   EmpireEvidenceListSchema,
@@ -24,8 +24,10 @@ import {
   runSchema,
   checkUniqueGlobalIds,
   checkChallengeReferences,
+  checkAlternateReferences,
 } from "../apps/web/src/content/schemas/cross-reference.js";
-import { McqQuestListSchema } from "../apps/web/src/quest-types/generic/mcq-quest.js";
+import { z } from "zod";
+import { McqQuestSchema, McqQuestListSchema } from "../apps/web/src/quest-types/generic/mcq-quest.js";
 import { SequencingQuestListSchema } from "../apps/web/src/quest-types/generic/sequencing-quest.js";
 import { EvidenceOrganizingQuestListSchema } from "../apps/web/src/quest-types/history/evidence-organizing-quest.js";
 import { SourceAnalysisQuestListSchema } from "../apps/web/src/quest-types/history/source-analysis-quest.js";
@@ -116,6 +118,37 @@ function main() {
       "unit-01-quests.js: UNIT_01_ARCHIVE_EVIDENCE_QUESTS",
       EvidenceOrganizingQuestListSchema,
       content.unit01.archiveEvidenceQuests
+    )
+  );
+
+  // Teacher Mode's curated swap pool — each entry wraps a full official-shape
+  // source/quest object plus a `replacesXId` pointer, validated against the
+  // exact same schemas as the official content it's meant to replace (see
+  // apps/web/src/content/case-001-source-alternates.js's doc comment).
+  const SourceAlternatesSchema = z.array(
+    z.object({
+      replacesSourceId: z.string().min(1, "replacesSourceId is required"),
+      source: buildSourceSchema({}),
+    })
+  );
+  const McqAlternatesSchema = z.array(
+    z.object({
+      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
+      quest: McqQuestSchema,
+    })
+  );
+  results.push(
+    runSchema(
+      "case-001-source-alternates.js: CASE_001_SOURCE_ALTERNATES",
+      SourceAlternatesSchema,
+      content.unit01.sourceAlternates
+    )
+  );
+  results.push(
+    runSchema(
+      "case-001-mcq-alternates.js: CASE_001_MCQ_ALTERNATES",
+      McqAlternatesSchema,
+      content.unit01.mcqAlternates
     )
   );
 
@@ -265,6 +298,8 @@ function main() {
     "cross-reference: hipp quest ids",
     "cross-reference: archive challenge quest references",
     "cross-reference: investigation challenge quest references",
+    "cross-reference: source alternate references",
+    "cross-reference: mcq alternate references",
   ];
 
   // Every quest id, grouped by QUEST_TYPES key, across all three units — the resolution set
@@ -437,6 +472,24 @@ function main() {
       ],
       questTypeKeys,
       questsByType
+    ),
+    ...checkAlternateReferences(
+      "cross-reference: source alternate references",
+      content.unit01.sourceAlternates.map((entry) => ({
+        source: "case-001-source-alternates.js:CASE_001_SOURCE_ALTERNATES",
+        replacesId: entry.replacesSourceId,
+        altId: entry.source.id,
+      })),
+      content.unit01.sources.map((s) => s.id)
+    ),
+    ...checkAlternateReferences(
+      "cross-reference: mcq alternate references",
+      content.unit01.mcqAlternates.map((entry) => ({
+        source: "case-001-mcq-alternates.js:CASE_001_MCQ_ALTERNATES",
+        replacesId: entry.replacesQuestId,
+        altId: entry.quest.id,
+      })),
+      content.unit01.mcqQuests.map((q) => q.id)
     ),
   ];
 
