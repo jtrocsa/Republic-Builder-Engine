@@ -26,6 +26,11 @@ export function buildPrimarySourceEntrySchema() {
     excerpt: z.string().min(1, "excerpt is required"),
     citation: z.string().min(1, "citation is required"),
     externalUrl: z.url({ message: "externalUrl must be a valid URL" }).nullable(),
+    // Real, verbatim primary-source text — optional and populated unit by
+    // unit (see docs/content-guide/primary-source-library.md for the
+    // public-domain-only policy this is gated behind). Absent means "not
+    // yet transcribed," not "this source has no text."
+    fullText: z.string().min(1, "fullText must not be empty when present").nullable().optional(),
   });
 }
 

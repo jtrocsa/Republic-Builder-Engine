@@ -8388,6 +8388,30 @@ button:hover,
   color: #d5e1dd;
   line-height: 1.4;
 }
+.source-pool-fulltext-toggle {
+  margin: 2px 0 8px;
+  padding-left: 0;
+}
+.source-pool-fulltext-quote {
+  margin: 0 0 10px;
+  padding: 4px 14px;
+  border-left: 2px solid rgba(239, 204, 122, 0.35);
+  font-style: italic;
+  color: #d5e1dd;
+}
+.source-pool-fulltext-quote p {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.source-pool-fulltext-quote p:last-child {
+  margin-bottom: 0;
+}
+.source-pool-fulltext-note {
+  margin: 0 0 10px;
+  color: #b9c7c2;
+  font-size: 0.82rem;
+  font-style: italic;
+}
 .locked-note {
   color: #b9c7c2;
   font-size: 0.82rem;

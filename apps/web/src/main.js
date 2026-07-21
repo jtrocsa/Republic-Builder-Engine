@@ -1547,6 +1547,8 @@ let teacherUiState = {
   // keyed by `${kind}:${id}` since text/visual ids aren't guaranteed unique
   // against each other.
   sourcesPreviewKeys: new Set(),
+  // Which previews have "Show Full Text" expanded — same key shape as above.
+  sourcesFullTextKeys: new Set(),
 };
 // Manage Content (Teacher Mode's source/MCQ-quest swap editor) state —
 // separate from teacherUiState since it's a distinct screen family with its
@@ -2174,6 +2176,33 @@ function lockedSourcesForUnitNumber(unitNumber) {
   );
 }
 
+// A printed page and a half of quoted text, roughly — beyond this, showing
+// the full document inline would dwarf the rest of the preview, so we link
+// out to the original source instead. See sourceFullTextBlockMarkup().
+const FULL_TEXT_INLINE_LIMIT = 4000;
+
+// Splits real verbatim source text on blank lines into <p> paragraphs —
+// esc() alone doesn't turn "\n\n" into paragraph breaks.
+function fullTextParagraphsMarkup(text) {
+  return text
+    .split(/\n\n+/)
+    .map((paragraph) => `<p>${esc(paragraph.trim())}</p>`)
+    .join("");
+}
+
+function sourceFullTextBlockMarkup(item) {
+  const readMoreLink = item.externalUrl
+    ? ` <a href="${esc(item.externalUrl)}" target="_blank" rel="noopener noreferrer">Read the full text at the original source ↗</a>`
+    : "";
+  if (!item.fullText) {
+    return `<p class="source-pool-fulltext-note">Full text not yet transcribed.${readMoreLink}</p>`;
+  }
+  if (item.fullText.length > FULL_TEXT_INLINE_LIMIT) {
+    return `<p class="source-pool-fulltext-note">This document is longer than fits here.${readMoreLink}</p>`;
+  }
+  return `<blockquote class="source-pool-fulltext-quote">${fullTextParagraphsMarkup(item.fullText)}</blockquote>`;
+}
+
 // Full-content preview for a Sources-tab pool row — schema-matched to
 // apps/web/src/content/schemas/primary-source-library.schema.js (text vs.
 // visual entries have different fields), not the gameplay Source schema
@@ -2183,10 +2212,16 @@ function sourcePoolPreviewMarkup(item, kind) {
     ? `<a class="btn btn-outline" href="${esc(item.externalUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>`
     : "";
   if (kind === "text") {
+    const key = `${kind}:${item.id}`;
+    const fullTextExpanded = teacherUiState.sourcesFullTextKeys.has(key);
     return `<div class="source-pool-preview">
 <dl>
 <div><dt>APUSH use</dt><dd>${esc(item.apushUse)}</dd></div>
-<div><dt>Excerpt</dt><dd>${esc(item.excerpt)}</dd></div>
+<div><dt>Summary</dt><dd>${esc(item.excerpt)}</dd></div>
+</dl>
+<button class="btn btn-plain source-pool-fulltext-toggle" data-action="toggle-source-fulltext" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button" aria-expanded="${fullTextExpanded}">${fullTextExpanded ? "Hide Full Text ▾" : "Show Full Text ▸"}</button>
+${fullTextExpanded ? sourceFullTextBlockMarkup(item) : ""}
+<dl>
 <div><dt>Citation</dt><dd>${esc(item.citation)}</dd></div>
 </dl>
 ${externalLink}
@@ -2201,25 +2236,25 @@ ${externalLink}
 </div>`;
 }
 
-function sourcesPoolListMarkup(unitNumber, textSources, visualSources, pool) {
-  const row = (item, kind) => {
-    const selected = pool.has(item.id);
-    const metaLine = kind === "text" ? `${esc(item.creator)} · ${esc(item.date)}` : "Visual source";
-    const key = `${kind}:${item.id}`;
-    const expanded = teacherUiState.sourcesPreviewKeys.has(key);
-    return `<li class="source-pool-row ${selected ? "is-selected" : ""} ${expanded ? "is-expanded" : ""}">
+function sourceRowMarkup(item, kind, unitNumber, inPool) {
+  const metaLine = kind === "text" ? `${esc(item.creator)} · ${esc(item.date)}` : "Visual source";
+  const key = `${kind}:${item.id}`;
+  const previewExpanded = teacherUiState.sourcesPreviewKeys.has(key);
+  const toggleLabel = inPool ? "− Remove" : "+ Add";
+  return `<li class="source-pool-row ${inPool ? "is-selected" : ""} ${previewExpanded ? "is-expanded" : ""}">
 <div class="source-pool-row-main">
-<button class="btn ${selected ? "btn-gold" : "btn-outline"}" data-action="toggle-source-pool" data-unit="${unitNumber}" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button">${selected ? "✓ In pool" : "+ Add"}</button>
-<button class="btn btn-plain" data-action="toggle-source-preview" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button" aria-expanded="${expanded}">${expanded ? "View ▾" : "View ▸"}</button>
+<button class="btn ${inPool ? "btn-gold" : "btn-outline"}" data-action="toggle-source-pool" data-unit="${unitNumber}" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button">${toggleLabel}</button>
+<button class="btn btn-plain" data-action="toggle-source-preview" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button" aria-expanded="${previewExpanded}">${previewExpanded ? "View ▾" : "View ▸"}</button>
 <span class="source-pool-row-copy"><strong>${esc(item.title)}</strong><span class="kicker">${metaLine}</span></span>
 </div>
-${expanded ? sourcePoolPreviewMarkup(item, kind) : ""}
+${previewExpanded ? sourcePoolPreviewMarkup(item, kind) : ""}
 </li>`;
-  };
-  const rows = [
-    ...textSources.map((s) => row(s, "text")),
-    ...visualSources.map((s) => row(s, "visual")),
-  ].join("");
+}
+
+function sourceRowListMarkup(unitNumber, entries, pool) {
+  const rows = entries
+    .map(({ item, kind }) => sourceRowMarkup(item, kind, unitNumber, pool.has(item.id)))
+    .join("");
   return `<ul class="source-pool-list">${rows}</ul>`;
 }
 
@@ -2238,20 +2273,33 @@ function teacherSourcesUnitSectionMarkup(meta) {
           .join("")}</ul>`
       : "";
     const pool = teacherUiState.sourcePoolByUnit[unitNumber];
-    const poolMarkup =
-      pool === undefined
-        ? "<p>Loading…</p>"
-        : sourcesPoolListMarkup(
-            unitNumber,
-            getPrimarySourcesForUnit(unitNumber),
-            getVisualSourcesForUnit(unitNumber),
-            pool
-          );
+    let poolSectionsMarkup = "<p>Loading…</p>";
+    if (pool !== undefined) {
+      const textSources = getPrimarySourcesForUnit(unitNumber).map((item) => ({
+        item,
+        kind: "text",
+      }));
+      const visualSources = getVisualSourcesForUnit(unitNumber).map((item) => ({
+        item,
+        kind: "visual",
+      }));
+      const allEntries = [...textSources, ...visualSources];
+      const added = allEntries.filter(({ item }) => pool.has(item.id));
+      const available = allEntries.filter(({ item }) => !pool.has(item.id));
+      const missionPoolMarkup = added.length
+        ? sourceRowListMarkup(unitNumber, added, pool)
+        : `<p class="case-summary-note">No sources added yet — add one from the pool below.</p>`;
+      poolSectionsMarkup = `
+<h4>Unit ${unitNumber}: ${esc(meta.label)} Mission Pool Sources</h4>
+<p class="case-summary-note">Mission pool sources are available when you design quests for this unit. Come back to this page anytime to add or remove a source.</p>
+${missionPoolMarkup}
+<h4>Available pool</h4>
+<p class="case-summary-note">Browse every researched source for this unit and add the ones you want available for quest design.</p>
+${sourceRowListMarkup(unitNumber, available, pool)}`;
+    }
     body = `<div class="manage-content-unit-body">
 ${lockedMarkup}
-<h4>Available pool</h4>
-<p class="case-summary-note">Pre-select the sources and images available for this classroom in this unit. This doesn't yet change what shows up in a mission's swap dropdown — that comes in a later update.</p>
-${poolMarkup}
+${poolSectionsMarkup}
 </div>`;
   }
   return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
@@ -6866,6 +6914,15 @@ function handleAuthScreenClick(target, action) {
     const key = `${sourceKind}:${sourceId}`;
     if (teacherUiState.sourcesPreviewKeys.has(key)) teacherUiState.sourcesPreviewKeys.delete(key);
     else teacherUiState.sourcesPreviewKeys.add(key);
+    render();
+    return true;
+  }
+  if (action === "toggle-source-fulltext") {
+    const sourceId = target.dataset.sourceId;
+    const sourceKind = target.dataset.sourceKind;
+    const key = `${sourceKind}:${sourceId}`;
+    if (teacherUiState.sourcesFullTextKeys.has(key)) teacherUiState.sourcesFullTextKeys.delete(key);
+    else teacherUiState.sourcesFullTextKeys.add(key);
     render();
     return true;
   }
