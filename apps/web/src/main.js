@@ -39,7 +39,7 @@ import {
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
 import { renderQuest, gradeQuest } from "./quest-types/index.js";
-import { REFLECTION_MIN_LENGTH } from "./quest-types/history/evidence-organizing-quest.js";
+import { REFLECTION_MIN_LENGTH, SKILL_CATEGORIES } from "./quest-types/history/evidence-organizing-quest.js";
 import {
   UNIT_01_MCQ_QUESTS,
   UNIT_01_SEQUENCING_QUESTS,
@@ -158,7 +158,9 @@ import {
   buildAuthoredContent,
   defaultAuthoringFields,
   authoringFieldsFromContent,
+  slugify,
 } from "./engine/custom-content-authoring.js";
+import { HIPP_DIMENSIONS } from "./quest-types/history/source-analysis-quest.js";
 import { validateJoinCode, validateStudentIdCode, validatePassword } from "./engine/auth-flows.js";
 import {
   buildHippEvaluationRequest,
@@ -2261,16 +2263,13 @@ const OFFICIAL_QUEST_SOURCE_LINKS = {
   "case-007-hipp-henry-speech": "commoncause-henry-speech",
 };
 
-// Read-only inline previews for the Manage Content editor — reuse the exact
-// same renderQuest()/sourceVisual() a student sees, wrapped in a
+// Read-only inline preview of a source card for the Manage Content editor —
+// reuse the exact same sourceVisual() a student sees, wrapped in a
 // pointer-events:none container so the app's shared global click/change
-// listeners (keyed off the same data-mcq-quest/data-cargo-card/etc.
-// attributes used in real gameplay) can't fire from a teacher's edit screen
-// and mutate real progress state.
-function questPreviewCardMarkup(questType, quest) {
-  return `<div class="quest-preview-frozen"><p class="quest-preview-label">Student view preview</p>${renderQuest(questType, quest, {})}</div>`;
-}
-
+// listeners can't fire from a teacher's edit screen and mutate real
+// progress state. Questions no longer get this treatment: their editable
+// form (see authoringFieldsMarkup()) is itself styled to resemble the real
+// student widget, so a separate frozen duplicate would be redundant.
 function sourcePreviewCardMarkup(source) {
   return `<div class="quest-preview-frozen manage-content-source-preview"><p class="quest-preview-label">Student view preview</p><div class="manage-content-source-preview-art">${sourceVisual(source)}</div><div class="manage-content-source-preview-copy"><p class="kicker">${esc(source.type)}</p><h4>${esc(source.title)}</h4><dl><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.record)}</dd></div></dl><p class="case-summary-note">${esc(source.prompt)}</p></div></div>`;
 }
@@ -2336,71 +2335,61 @@ ${unitSections}
 </section></main>${authorPanel()}`;
 }
 
-function optionValue(alt) {
-  return `${alt.kind}:${alt.id}`;
+// Which real source document (if any) a question is grouped under —
+// resolved from UNIT_SOURCES for the summary line and the editable
+// "Linked source" select's current value alike.
+function resolvedSourceTitle(caseId, sourceId) {
+  if (!sourceId) return null;
+  return (UNIT_SOURCES[caseId] || []).find((s) => s.id === sourceId)?.title || null;
 }
 
-function manageContentOfficialQuestionCardMarkup(slot) {
-  const altOptions = [
-    `<option value="" ${!slot.draftAltId ? "selected" : ""}>Official — ${esc(slot.officialLabel)}</option>`,
-    ...slot.alternatives.map(
-      (alt) =>
-        `<option value="${esc(optionValue(alt))}" ${slot.draftAltId === alt.id ? "selected" : ""}>${alt.kind === "custom" ? "Custom — " : ""}${esc(alt.label)}</option>`
-    ),
-  ].join("");
-  const publishedLabel = slot.publishedAltId
-    ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || "Custom"
-    : "Official";
-  const kindLabel = slot.slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slot.slotKind] || slot.slotKind;
-  const isDraftUnpublished = slot.draftAltId !== slot.publishedAltId;
-  const preview =
-    slot.slotKind === "source"
-      ? sourcePreviewCardMarkup(slot.previewContent)
-      : questPreviewCardMarkup(slot.slotKind, slot.previewContent);
-  const editAction = slot.slotKind === "source" ? "start-edit-source" : "start-edit-question";
-  return `<article class="manage-content-slot-card">
-<div class="manage-content-slot-head">
-<span class="case-kind-badge">${esc(kindLabel)}</span>
-<p class="manage-content-slot-label">${esc(slot.officialLabel)}</p>
-</div>
-<div class="manage-content-slot-controls">
-<label class="manage-content-slot-select-label">Selection (draft)
-<select data-content-alternate-slot-kind="${esc(slot.slotKind)}" data-content-alternate-slot-id="${esc(slot.officialId)}">${altOptions}</select>
-</label>
-<span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}">Published: ${esc(publishedLabel)}</span>
-<button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" data-slot-kind="${esc(slot.slotKind)}" data-official-id="${esc(slot.officialId)}" data-related-source-id="${esc(slot.relatedSourceId || "")}" type="button">Edit this ${slot.slotKind === "source" ? "source" : "question"} →</button>
-</div>
-${isDraftUnpublished ? `<p class="manage-content-draft-note">✓ Saved as draft — not visible to students until you publish.</p>` : ""}
-${preview}
-</article>`;
+function isCardBeingEdited(auth, entry) {
+  if (!auth) return false;
+  return entry.officialId !== undefined ? auth.editingOfficialId === entry.officialId : auth.editingCustomId === entry.id;
 }
 
-function manageContentAdditionCardMarkup(item) {
-  const kindLabel = QUEST_SLOT_LABELS[item.slotKind] || item.slotKind;
-  const confirmingDelete = manageContentConfirmDeleteId === item.id;
-  return `<article class="manage-content-slot-card manage-content-slot-card--addition">
+// Collapsed-by-default summary row for one question/source card — official
+// or teacher-added alike. Editing happens in place (see
+// manageContentQuestionEntryMarkup()): clicking Edit swaps this same list
+// position for manageContentAuthoringFormMarkup() rather than opening a
+// separate panel below it.
+function manageContentCardSummaryMarkup(entry) {
+  const isOfficial = entry.officialId !== undefined;
+  const slotKind = entry.slotKind;
+  const kindLabel = slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slotKind] || slotKind;
+  const promptText = isOfficial ? entry.officialLabel : entry.content.prompt || entry.content.title || "";
+  const truncatedPrompt = promptText.length > 140 ? `${promptText.slice(0, 140)}…` : promptText;
+  const sourceLabel =
+    resolvedSourceTitle(contentUiState.selectedCaseId, entry.relatedSourceId) || "No linked source — general question";
+  const isDraftUnpublished = isOfficial ? entry.draftAltId !== entry.publishedAltId : entry.status !== "published";
+  const editAction = isOfficial ? (slotKind === "source" ? "start-edit-source" : "start-edit-question") : "start-edit-addition";
+  const editDataAttrs = isOfficial
+    ? `data-slot-kind="${esc(slotKind)}" data-official-id="${esc(entry.officialId)}" data-related-source-id="${esc(entry.relatedSourceId || "")}"`
+    : `data-custom-id="${esc(entry.id)}"`;
+  const confirmingDelete = !isOfficial && manageContentConfirmDeleteId === entry.id;
+  const deleteControls = !isOfficial
+    ? confirmingDelete
+      ? `<button class="btn btn-outline" data-action="delete-custom-addition" data-custom-id="${esc(entry.id)}" type="button">Confirm delete</button><button class="btn btn-plain" data-action="cancel-delete-addition" type="button">Cancel</button>`
+      : `<button class="btn btn-plain manage-content-delete-btn" data-action="delete-custom-addition" data-custom-id="${esc(entry.id)}" type="button">Delete</button>`
+    : "";
+  return `<article class="manage-content-slot-card manage-content-card-summary ${!isOfficial ? "manage-content-slot-card--addition" : ""}">
 <div class="manage-content-slot-head">
 <span class="case-kind-badge">${esc(kindLabel)}</span>
-<span class="case-kind-badge manage-content-badge-added">Teacher-added</span>
-<p class="manage-content-slot-label">${esc(item.content.prompt || item.content.title || "")}</p>
+${!isOfficial ? `<span class="case-kind-badge manage-content-badge-added">Teacher-added</span>` : ""}
+<p class="manage-content-slot-label">${esc(truncatedPrompt)}</p>
 </div>
 <div class="manage-content-slot-controls">
-<span class="manage-content-status-pill ${item.status === "published" ? "is-published" : "is-draft"}">${item.status === "published" ? "Published" : "Draft — not yet published"}</span>
-<button class="btn btn-plain manage-content-edit-btn" data-action="start-edit-addition" data-custom-id="${esc(item.id)}" type="button">Edit →</button>
-${
-  confirmingDelete
-    ? `<button class="btn btn-outline" data-action="delete-custom-addition" data-custom-id="${esc(item.id)}" type="button">Confirm delete</button><button class="btn btn-plain" data-action="cancel-delete-addition" type="button">Cancel</button>`
-    : `<button class="btn btn-plain manage-content-delete-btn" data-action="delete-custom-addition" data-custom-id="${esc(item.id)}" type="button">Delete</button>`
-}
+<span class="manage-content-summary-source">${esc(sourceLabel)}</span>
+<span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}">${isDraftUnpublished ? "Draft — not yet published" : "Published"}</span>
+<button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" ${editDataAttrs} type="button">Edit →</button>
+${deleteControls}
 </div>
-${questPreviewCardMarkup(item.slotKind, item.content)}
 </article>`;
 }
 
 function manageContentQuestionEntryMarkup(entry) {
-  return entry.officialId !== undefined
-    ? manageContentOfficialQuestionCardMarkup(entry)
-    : manageContentAdditionCardMarkup(entry);
+  if (isCardBeingEdited(manageContentAuthoring, entry)) return manageContentAuthoringFormMarkup();
+  return manageContentCardSummaryMarkup(entry);
 }
 
 function manageContentSectionMarkup({ id, title, kicker, bodyMarkup }) {
@@ -2436,25 +2425,33 @@ function manageContentGroupBodyMarkup(group, questions) {
     ? `<button class="btn btn-plain manage-content-edit-btn" data-action="start-edit-source" data-official-id="${esc(group.source.id)}" type="button">Edit this source →</button>`
     : "";
   const cards = questions.map(manageContentQuestionEntryMarkup).join("");
-  const showAddForm = manageContentAuthoring && manageContentAuthoring.relatedSourceId === group.id;
+  // Rendered here (appended after the card list) only for a brand-new
+  // question, or for editing the source itself — sources have no card of
+  // their own in `questions` to render in place. Editing an *existing*
+  // question renders inline via manageContentQuestionEntryMarkup() instead,
+  // even though it shares this group's relatedSourceId.
+  const showAddForm =
+    manageContentAuthoring &&
+    ((manageContentAuthoring.formMode === "add" && manageContentAuthoring.relatedSourceId === group.id) ||
+      (manageContentAuthoring.slotKind === "source" && manageContentAuthoring.editingOfficialId === group.source.id));
   return `<div class="manage-content-source-preview-wrap">${sourcePreview}${editSourceBtn}</div>
 <h4 class="manage-content-questions-heading">Questions about this source</h4>
 ${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No questions about this source yet.</p>`}
 ${
   showAddForm
     ? manageContentAuthoringFormMarkup()
-    : `<button class="btn btn-outline" data-action="start-add-question" data-related-source-id="${esc(group.id)}" type="button">+ Add new question about this source</button>`
+    : `<button class="manage-content-add-tab" data-action="start-add-question" data-related-source-id="${esc(group.id)}" type="button">+ Add new question about this source</button>`
 }`;
 }
 
 function manageContentGeneralGroupBodyMarkup(questions) {
   const cards = questions.map(manageContentQuestionEntryMarkup).join("");
-  const showAddForm = manageContentAuthoring && !manageContentAuthoring.relatedSourceId;
+  const showAddForm = manageContentAuthoring && manageContentAuthoring.formMode === "add" && !manageContentAuthoring.relatedSourceId;
   return `${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No general questions yet.</p>`}
 ${
   showAddForm
     ? manageContentAuthoringFormMarkup()
-    : `<button class="btn btn-outline" data-action="start-add-question" data-related-source-id="" type="button">+ Add new question</button>`
+    : `<button class="manage-content-add-tab" data-action="start-add-question" data-related-source-id="" type="button">+ Add new question</button>`
 }`;
 }
 
@@ -2476,7 +2473,140 @@ const AUTHORING_TYPE_LABELS = {
   hipp: "HIPP source-analysis question",
 };
 
-function authoringFieldsMarkup(slotKind, fields) {
+// Which real source document (if any) a question is grouped under — shown
+// on every quest-type editing form uniformly, since it's presentational
+// grouping rather than part of any quest content schema. Not shown for
+// slotKind "source" itself (a source isn't grouped under another source),
+// and not shown for a case with no UNIT_SOURCES entries (nothing to link).
+function linkedSourceFieldMarkup(auth) {
+  const caseSources = UNIT_SOURCES[contentUiState.selectedCaseId] || [];
+  if (!caseSources.length) return "";
+  const options = [
+    `<option value="">No linked source — general question</option>`,
+    ...caseSources.map(
+      (s) => `<option value="${esc(s.id)}" ${auth.relatedSourceId === s.id ? "selected" : ""}>${esc(s.title)}</option>`
+    ),
+  ].join("");
+  return `<label>Linked source<select data-authoring-field="relatedSourceId">${options}</select></label>`;
+}
+
+function mcqFieldsMarkup(fields) {
+  const choices = fields.choices || [];
+  const rows = choices
+    .map(
+      (choice, i) => `<div class="manage-content-mcq-row">
+<input type="radio" name="mcq-correct" data-mcq-correct ${choice.correct ? "checked" : ""} title="Mark as the correct choice">
+<input type="text" data-mcq-text value="${esc(choice.text)}" placeholder="Choice text">
+<button type="button" class="manage-content-row-delete-btn" data-action="remove-mcq-choice" data-row-index="${i}" ${choices.length <= 2 ? "disabled" : ""} title="Remove this choice">×</button>
+</div>`
+    )
+    .join("");
+  return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<div class="manage-content-field-label">Choices — mark the correct one</div>
+<div class="manage-content-row-list" data-authoring-rows="choices">${rows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-mcq-choice">+ Add choice</button>
+<label>Explanation (optional, shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+}
+
+function sequencingFieldsMarkup(fields) {
+  const items = fields.items || [];
+  const positionOptions = (currentPosition) =>
+    items.map((_, p) => `<option value="${p}" ${currentPosition === p ? "selected" : ""}>${p + 1}</option>`).join("");
+  const rows = items
+    .map(
+      (item, i) => `<div class="manage-content-sequence-row">
+<select data-sequence-position-select data-row-index="${i}" title="Position in the correct order">${positionOptions(item.position)}</select>
+<input type="text" data-sequence-text value="${esc(item.label)}" placeholder="Item text">
+<button type="button" class="manage-content-row-delete-btn" data-action="remove-sequence-item" data-row-index="${i}" ${items.length <= 2 ? "disabled" : ""} title="Remove this item">×</button>
+</div>`
+    )
+    .join("");
+  return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<div class="manage-content-field-label">Items — set each one's position in the correct causal order (not just chronological)</div>
+<div class="manage-content-row-list" data-authoring-rows="items">${rows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-sequence-item">+ Add item</button>
+<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+}
+
+function evidenceOrganizingFieldsMarkup(fields) {
+  const slots = fields.slots || [];
+  const sources = fields.sources || [];
+  const slotRows = slots
+    .map(
+      (slot, i) => `<div class="manage-content-evidence-slot-row">
+<input type="text" data-slot-label value="${esc(slot.label)}" placeholder="Slot name">
+<button type="button" class="manage-content-row-delete-btn" data-action="remove-evidence-slot" data-row-index="${i}" ${slots.length <= 2 ? "disabled" : ""} title="Remove this slot">×</button>
+</div>`
+    )
+    .join("");
+  const slotOptions = (currentSlotId) =>
+    slots
+      .map((slot) => {
+        const slotId = slugify(slot.label);
+        return `<option value="${esc(slotId)}" ${currentSlotId === slotId ? "selected" : ""}>${esc(slot.label || "(untitled slot)")}</option>`;
+      })
+      .join("");
+  const skillOptions = (currentSkill) =>
+    SKILL_CATEGORIES.map((cat) => `<option value="${esc(cat)}" ${currentSkill === cat ? "selected" : ""}>${esc(cat)}</option>`).join("");
+  const sourceRows = sources
+    .map(
+      (source, i) => `<div class="manage-content-evidence-source-row">
+<input type="text" data-source-label value="${esc(source.label)}" placeholder="Record label">
+<input type="text" data-source-attribution value="${esc(source.attribution)}" placeholder="Attribution">
+<textarea data-source-excerpt rows="2" placeholder="Excerpt shown to students">${esc(source.excerpt)}</textarea>
+<label class="manage-content-inline-field">Skill<select data-source-skill>${skillOptions(source.skillCategory)}</select></label>
+<label class="manage-content-inline-field">Correct slot<select data-source-slot>${slotOptions(source.correctSlotId)}</select></label>
+<button type="button" class="manage-content-row-delete-btn" data-action="remove-evidence-source" data-row-index="${i}" ${sources.length <= 1 ? "disabled" : ""} title="Remove this record">×</button>
+</div>`
+    )
+    .join("");
+  return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<div class="manage-content-field-label">Slots — the categories students sort evidence into</div>
+<div class="manage-content-row-list" data-authoring-rows="slots">${slotRows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-evidence-slot">+ Add slot</button>
+<div class="manage-content-field-label">Evidence records</div>
+<div class="manage-content-row-list" data-authoring-rows="sources">${sourceRows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-evidence-source">+ Add evidence record</button>
+<label>Reflection prompt (optional)<textarea data-authoring-field="reflectionPrompt" rows="2">${esc(fields.reflectionPrompt)}</textarea></label>`;
+}
+
+function hippFieldsMarkup(fields) {
+  const prompts = fields.hippPrompts || [];
+  const dimensionOptions = (currentDimension) =>
+    HIPP_DIMENSIONS.map((d) => `<option value="${esc(d)}" ${currentDimension === d ? "selected" : ""}>${esc(d)}</option>`).join("");
+  const promptBlocks = prompts
+    .map((prompt, pi) => {
+      const options = prompt.options || [];
+      const optionRows = options
+        .map(
+          (option, oi) => `<div class="manage-content-hipp-option-row">
+<input type="radio" name="hipp-correct-${pi}" data-hipp-correct ${option.correct ? "checked" : ""} title="Mark as the correct option">
+<label class="manage-content-inline-checkbox"><input type="checkbox" data-hipp-identification ${option.identificationOnly ? "checked" : ""}> ID-only distractor</label>
+<input type="text" data-hipp-option-text value="${esc(option.text)}" placeholder="Option text">
+<button type="button" class="manage-content-row-delete-btn" data-action="remove-hipp-option" data-prompt-index="${pi}" data-row-index="${oi}" ${options.length <= 3 ? "disabled" : ""} title="Remove this option">×</button>
+</div>`
+        )
+        .join("");
+      return `<div class="manage-content-hipp-prompt-block">
+<div class="manage-content-hipp-prompt-head">
+<select data-hipp-dimension title="HIPP dimension">${dimensionOptions(prompt.dimension)}</select>
+<button type="button" class="manage-content-row-delete-btn" data-action="remove-hipp-prompt" data-row-index="${pi}" ${prompts.length <= 1 ? "disabled" : ""} title="Remove this prompt">×</button>
+</div>
+<textarea data-hipp-argument rows="2" placeholder="Argument">${esc(prompt.argument)}</textarea>
+<div class="manage-content-row-list">${optionRows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-hipp-option" data-prompt-index="${pi}" ${options.length >= 6 ? "disabled" : ""}>+ Add option</button>
+</div>`;
+    })
+    .join("");
+  return `<label>Document text<textarea data-authoring-field="documentText" rows="6">${esc(fields.documentText)}</textarea></label>
+<label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
+<div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
+<div class="manage-content-row-list" data-authoring-rows="hippPrompts">${promptBlocks}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-hipp-prompt" ${prompts.length >= 2 ? "disabled" : ""}>+ Add HIPP prompt</button>`;
+}
+
+function authoringFieldsMarkup(auth) {
+  const { slotKind, fields } = auth;
   if (slotKind === "source") {
     return `<label>Type (e.g. "Primary source · letter")<input type="text" data-authoring-field="type" value="${esc(fields.type)}"></label>
 <label>Title<input type="text" data-authoring-field="title" value="${esc(fields.title)}"></label>
@@ -2486,38 +2616,11 @@ function authoringFieldsMarkup(slotKind, fields) {
 <label>Source text (shown to students)<textarea data-authoring-field="excerpt" rows="6">${esc(fields.excerpt)}</textarea></label>
 <label>Reading question<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
   }
-  if (slotKind === "mcq") {
-    return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<label>Choices — one per line, mark the correct one with a leading *<textarea data-authoring-field="choicesText" rows="5">${esc(fields.choicesText)}</textarea></label>
-<label>Explanation (shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
-  }
-  if (slotKind === "sequencing") {
-    return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<label>Items — one per line, in the correct causal order (not just chronological)<textarea data-authoring-field="itemsText" rows="6">${esc(fields.itemsText)}</textarea></label>
-<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
-  }
-  if (slotKind === "evidence-organizing") {
-    return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<label>Slots — one per line (the categories students sort evidence into)<textarea data-authoring-field="slotsText" rows="4">${esc(fields.slotsText)}</textarea></label>
-<label>Evidence records — one block per record, separated by a blank line:
-Label: …
-Attribution: …
-Skill: Comparison | Causation | Continuity and Change | Contextualization | Sourcing
-Correct slot: (must exactly match a slot label above)
-Excerpt: …
-<textarea data-authoring-field="sourcesText" rows="10">${esc(fields.sourcesText)}</textarea></label>
-<label>Reflection prompt (optional)<textarea data-authoring-field="reflectionPrompt" rows="2">${esc(fields.reflectionPrompt)}</textarea></label>`;
-  }
-  return `<label>Document text<textarea data-authoring-field="documentText" rows="6">${esc(fields.documentText)}</textarea></label>
-<label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
-<label>HIPP prompts — one block per dimension, separated by a blank line:
-Dimension: Historical situation | Intended audience | Point of view | Purpose
-Argument: …
-Options:
-* the one correct, explanation-linked option
-~ an identification-only distractor (names the element but doesn't explain it)
-- other incorrect distractors
-<textarea data-authoring-field="promptsText" rows="10">${esc(fields.promptsText)}</textarea></label>`;
+  const linkedSource = linkedSourceFieldMarkup(auth);
+  if (slotKind === "mcq") return linkedSource + mcqFieldsMarkup(fields);
+  if (slotKind === "sequencing") return linkedSource + sequencingFieldsMarkup(fields);
+  if (slotKind === "evidence-organizing") return linkedSource + evidenceOrganizingFieldsMarkup(fields);
+  return linkedSource + hippFieldsMarkup(fields);
 }
 
 function manageContentAuthoringFormMarkup() {
@@ -2542,7 +2645,7 @@ function manageContentAuthoringFormMarkup() {
 <h4>${auth.formMode === "add" ? "Add a new" : "Edit"} ${esc(AUTHORING_TYPE_LABELS[auth.slotKind])}${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}</h4>
 ${auth.errors.length ? `<ul class="manage-content-authoring-errors">${auth.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
 <div data-authoring-form>
-${authoringFieldsMarkup(auth.slotKind, auth.fields)}
+${authoringFieldsMarkup(auth)}
 </div>
 <div class="manage-content-authoring-actions">
 <button class="btn btn-gold" data-action="save-authoring" type="button">Save</button>
@@ -2722,17 +2825,80 @@ async function loadManageContentCaseData(caseId) {
   if (typeof window !== "undefined") window.scrollTo(0, scrollY);
 }
 
-function handleSaveAuthoring() {
-  const auth = manageContentAuthoring;
-  if (!auth || !auth.slotKind) return;
-  const formEl = document.querySelector("[data-authoring-form]");
+function currentAuthoringFormEl() {
+  return document.querySelector("[data-authoring-form]");
+}
+
+// Reads every currently-rendered authoring-form input back into a fresh
+// fields object — scalar [data-authoring-field] elements for every slot
+// kind, plus each quest type's structured row lists. Must run before any
+// add/remove/reorder mutation (which triggers a full re-render from state)
+// so sibling rows' already-typed values aren't discarded, and again at Save
+// so the persisted content reflects the form's live values.
+function syncAuthoringFieldsFromDom(slotKind, formEl) {
   const fields = {};
   formEl.querySelectorAll("[data-authoring-field]").forEach((el) => {
     fields[el.dataset.authoringField] = el.value;
   });
+  if (slotKind === "mcq") {
+    fields.choices = [...formEl.querySelectorAll('[data-authoring-rows="choices"] .manage-content-mcq-row')].map((row) => ({
+      text: row.querySelector("[data-mcq-text]").value,
+      correct: row.querySelector("[data-mcq-correct]").checked,
+    }));
+  } else if (slotKind === "sequencing") {
+    fields.items = [...formEl.querySelectorAll('[data-authoring-rows="items"] .manage-content-sequence-row')].map((row) => ({
+      label: row.querySelector("[data-sequence-text]").value,
+      position: Number(row.querySelector("[data-sequence-position-select]").value),
+    }));
+  } else if (slotKind === "evidence-organizing") {
+    fields.slots = [...formEl.querySelectorAll('[data-authoring-rows="slots"] .manage-content-evidence-slot-row')].map((row) => ({
+      label: row.querySelector("[data-slot-label]").value,
+    }));
+    fields.sources = [...formEl.querySelectorAll('[data-authoring-rows="sources"] .manage-content-evidence-source-row')].map((row) => ({
+      label: row.querySelector("[data-source-label]").value,
+      attribution: row.querySelector("[data-source-attribution]").value,
+      excerpt: row.querySelector("[data-source-excerpt]").value,
+      skillCategory: row.querySelector("[data-source-skill]").value,
+      correctSlotId: row.querySelector("[data-source-slot]").value,
+    }));
+  } else if (slotKind === "hipp") {
+    fields.hippPrompts = [...formEl.querySelectorAll('[data-authoring-rows="hippPrompts"] > .manage-content-hipp-prompt-block')].map(
+      (row) => ({
+        dimension: row.querySelector("[data-hipp-dimension]").value,
+        argument: row.querySelector("[data-hipp-argument]").value,
+        options: [...row.querySelectorAll(".manage-content-hipp-option-row")].map((optionRow) => ({
+          text: optionRow.querySelector("[data-hipp-option-text]").value,
+          correct: optionRow.querySelector("[data-hipp-correct]").checked,
+          identificationOnly: optionRow.querySelector("[data-hipp-identification]").checked,
+        })),
+      })
+    );
+  }
+  return fields;
+}
+
+// Reorders a sequencing item like a numbered list: pulls the moved row out,
+// re-sorts the rest by their existing position, reinserts the moved row at
+// the target index, then renumbers everyone 0..n-1 — so a teacher can just
+// pick "this is #1" on any row instead of clicking up/down repeatedly.
+function reorderSequenceItems(items, movedIndex, targetPosition) {
+  const movedItem = items[movedIndex];
+  const rest = items.filter((_, i) => i !== movedIndex).sort((a, b) => a.position - b.position);
+  const clamped = Math.max(0, Math.min(targetPosition, items.length - 1));
+  rest.splice(clamped, 0, movedItem);
+  return rest.map((item, i) => ({ ...item, position: i }));
+}
+
+function handleSaveAuthoring() {
+  const auth = manageContentAuthoring;
+  if (!auth || !auth.slotKind) return;
+  const formEl = currentAuthoringFormEl();
+  const fields = syncAuthoringFieldsFromDom(auth.slotKind, formEl);
+  const relatedSourceEl = formEl.querySelector('[data-authoring-field="relatedSourceId"]');
+  const relatedSourceId = relatedSourceEl ? relatedSourceEl.value || null : auth.relatedSourceId;
   const result = buildAuthoredContent(auth.slotKind, fields, auth.sourceWiring);
   if (!result.ok) {
-    manageContentAuthoring = { ...auth, fields, errors: result.errors };
+    manageContentAuthoring = { ...auth, fields, relatedSourceId, errors: result.errors };
     render();
     return;
   }
@@ -2740,14 +2906,14 @@ function handleSaveAuthoring() {
   const caseId = contentUiState.selectedCaseId;
   const isReplacement = Boolean(auth.editingOfficialId);
   const persist = auth.editingCustomId
-    ? updateCustomContent(auth.editingCustomId, { content: result.content, relatedSourceId: auth.relatedSourceId })
+    ? updateCustomContent(auth.editingCustomId, { content: result.content, relatedSourceId })
     : createCustomContent({
         classroomId,
         caseId,
         slotKind: auth.slotKind,
         mode: isReplacement ? "replacement" : "addition",
         replacesOfficialId: auth.editingOfficialId,
-        relatedSourceId: auth.relatedSourceId,
+        relatedSourceId,
         content: result.content,
       });
   persist
@@ -2992,6 +3158,133 @@ function handleManageContentClick(target, action) {
   }
   if (action === "cancel-delete-addition") {
     manageContentConfirmDeleteId = null;
+    render();
+    return true;
+  }
+  if (action === "add-mcq-choice") {
+    const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
+    fields.choices.push({ text: "", correct: false });
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "remove-mcq-choice") {
+    const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
+    const index = Number(target.dataset.rowIndex);
+    if (fields.choices.length > 2) {
+      const removedWasCorrect = fields.choices[index].correct;
+      fields.choices.splice(index, 1);
+      if (removedWasCorrect && !fields.choices.some((c) => c.correct)) fields.choices[0].correct = true;
+    }
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "add-sequence-item") {
+    const fields = syncAuthoringFieldsFromDom("sequencing", currentAuthoringFormEl());
+    fields.items.push({ label: "", position: fields.items.length });
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "remove-sequence-item") {
+    const fields = syncAuthoringFieldsFromDom("sequencing", currentAuthoringFormEl());
+    const index = Number(target.dataset.rowIndex);
+    if (fields.items.length > 2) {
+      fields.items.splice(index, 1);
+      fields.items = fields.items
+        .sort((a, b) => a.position - b.position)
+        .map((item, i) => ({ ...item, position: i }));
+    }
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "add-evidence-slot") {
+    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
+    fields.slots.push({ label: "" });
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "remove-evidence-slot") {
+    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
+    const index = Number(target.dataset.rowIndex);
+    if (fields.slots.length > 2) {
+      const removedSlotId = slugify(fields.slots[index].label);
+      fields.slots.splice(index, 1);
+      const fallbackSlotId = slugify(fields.slots[0].label);
+      fields.sources = fields.sources.map((source) =>
+        source.correctSlotId === removedSlotId ? { ...source, correctSlotId: fallbackSlotId } : source
+      );
+    }
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "add-evidence-source") {
+    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
+    fields.sources.push({
+      label: "",
+      attribution: "",
+      excerpt: "",
+      skillCategory: SKILL_CATEGORIES[0],
+      correctSlotId: fields.slots[0] ? slugify(fields.slots[0].label) : "",
+    });
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "remove-evidence-source") {
+    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
+    const index = Number(target.dataset.rowIndex);
+    if (fields.sources.length > 1) fields.sources.splice(index, 1);
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "add-hipp-prompt") {
+    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
+    if (fields.hippPrompts.length < 2) {
+      fields.hippPrompts.push({
+        dimension: HIPP_DIMENSIONS[0],
+        argument: "",
+        options: [
+          { text: "", correct: true, identificationOnly: false },
+          { text: "", correct: false, identificationOnly: true },
+          { text: "", correct: false, identificationOnly: false },
+        ],
+      });
+    }
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "remove-hipp-prompt") {
+    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
+    const index = Number(target.dataset.rowIndex);
+    if (fields.hippPrompts.length > 1) fields.hippPrompts.splice(index, 1);
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "add-hipp-option") {
+    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
+    const promptIndex = Number(target.dataset.promptIndex);
+    if (fields.hippPrompts[promptIndex].options.length < 6) {
+      fields.hippPrompts[promptIndex].options.push({ text: "", correct: false, identificationOnly: false });
+    }
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "remove-hipp-option") {
+    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
+    const promptIndex = Number(target.dataset.promptIndex);
+    const optionIndex = Number(target.dataset.rowIndex);
+    const options = fields.hippPrompts[promptIndex].options;
+    if (options.length > 3) options.splice(optionIndex, 1);
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
     return true;
   }
@@ -6426,23 +6719,14 @@ function handleAppChange(event) {
       setTeacherOverride(mapping.contentId, mapping.fieldName, field.value);
       render();
     }
-  } else if (field.matches("[data-content-alternate-slot-kind]")) {
-    const slotKind = field.dataset.contentAlternateSlotKind;
-    const slotId = field.dataset.contentAlternateSlotId;
-    contentUiState.error = "";
-    let altId = null;
-    let altKind = "curated";
-    if (field.value) {
-      const sepIndex = field.value.indexOf(":");
-      altKind = field.value.slice(0, sepIndex);
-      altId = field.value.slice(sepIndex + 1);
-    }
-    setDraftSelection(teacherUiState.selectedClassroomId, contentUiState.selectedCaseId, slotKind, slotId, altId, altKind)
-      .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
-      .catch((err) => {
-        contentUiState.error = err.message || "Could not save this selection.";
-        render();
-      });
+  } else if (field.matches("[data-sequence-position-select]")) {
+    const formEl = field.closest("[data-authoring-form]");
+    const fields = syncAuthoringFieldsFromDom("sequencing", formEl);
+    const rowIndex = Number(field.dataset.rowIndex);
+    const targetPosition = Number(field.value);
+    fields.items = reorderSequenceItems(fields.items, rowIndex, targetPosition);
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
     progress.questResponses[questId] = { selected: field.value };

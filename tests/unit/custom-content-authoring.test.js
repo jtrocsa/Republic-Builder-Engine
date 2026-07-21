@@ -25,10 +25,14 @@ describe("slugify", () => {
 });
 
 describe("buildMcqContent", () => {
-  it("builds a valid quest and marks the correct answer from the leading *", () => {
+  it("builds a valid quest and marks the correct answer from the correct row", () => {
     const result = buildMcqContent({
       prompt: "What is 2+2?",
-      choicesText: "3\n*4\n5",
+      choices: [
+        { text: "3", correct: false },
+        { text: "4", correct: true },
+        { text: "5", correct: false },
+      ],
       explanation: "Basic arithmetic.",
     });
     expect(result.ok).toBe(true);
@@ -37,24 +41,57 @@ describe("buildMcqContent", () => {
   });
 
   it("rejects fewer than 2 choices", () => {
-    const result = buildMcqContent({ prompt: "P", choicesText: "*only one", explanation: "E" });
+    const result = buildMcqContent({ prompt: "P", choices: [{ text: "only one", correct: true }], explanation: "E" });
     expect(result.ok).toBe(false);
     expect(result.errors[0]).toMatch(/at least 2 choices/);
   });
 
-  it("rejects zero or multiple correct-answer markers", () => {
-    expect(buildMcqContent({ prompt: "P", choicesText: "a\nb", explanation: "E" }).ok).toBe(false);
-    expect(buildMcqContent({ prompt: "P", choicesText: "*a\n*b", explanation: "E" }).ok).toBe(false);
+  it("rejects zero or multiple correct choices", () => {
+    expect(
+      buildMcqContent({
+        prompt: "P",
+        choices: [
+          { text: "a", correct: false },
+          { text: "b", correct: false },
+        ],
+        explanation: "E",
+      }).ok
+    ).toBe(false);
+    expect(
+      buildMcqContent({
+        prompt: "P",
+        choices: [
+          { text: "a", correct: true },
+          { text: "b", correct: true },
+        ],
+        explanation: "E",
+      }).ok
+    ).toBe(false);
   });
 
   it("fails schema validation when explanation is left blank", () => {
-    const result = buildMcqContent({ prompt: "P", choicesText: "*a\nb", explanation: "" });
+    const result = buildMcqContent({
+      prompt: "P",
+      choices: [
+        { text: "a", correct: true },
+        { text: "b", correct: false },
+      ],
+      explanation: "",
+    });
     expect(result.ok).toBe(false);
     expect(result.errors.join(" ")).toMatch(/explanation/);
   });
 
   it("round-trips through mcqToFields (prefill for editing)", () => {
-    const built = buildMcqContent({ prompt: "P", choicesText: "a\n*b\nc", explanation: "E" });
+    const built = buildMcqContent({
+      prompt: "P",
+      choices: [
+        { text: "a", correct: false },
+        { text: "b", correct: true },
+        { text: "c", correct: false },
+      ],
+      explanation: "E",
+    });
     const fields = mcqToFields(built.content);
     const rebuilt = buildMcqContent(fields);
     expect(rebuilt.ok).toBe(true);
@@ -64,10 +101,14 @@ describe("buildMcqContent", () => {
 });
 
 describe("buildSequencingContent", () => {
-  it("derives position from the typed (correct) order while storing items shuffled", () => {
+  it("derives the answer key from authored position while storing items shuffled", () => {
     const result = buildSequencingContent({
       prompt: "Order these",
-      itemsText: "First event\nSecond event\nThird event",
+      items: [
+        { label: "First event", position: 0 },
+        { label: "Second event", position: 1 },
+        { label: "Third event", position: 2 },
+      ],
       explanation: "",
     });
     expect(result.ok).toBe(true);
@@ -76,26 +117,69 @@ describe("buildSequencingContent", () => {
   });
 
   it("rejects fewer than 2 items", () => {
-    const result = buildSequencingContent({ prompt: "P", itemsText: "only one" });
+    const result = buildSequencingContent({ prompt: "P", items: [{ label: "only one", position: 0 }] });
     expect(result.ok).toBe(false);
   });
 
+  it("rejects duplicate or out-of-range positions", () => {
+    expect(
+      buildSequencingContent({
+        prompt: "P",
+        items: [
+          { label: "a", position: 0 },
+          { label: "b", position: 0 },
+        ],
+      }).ok
+    ).toBe(false);
+    expect(
+      buildSequencingContent({
+        prompt: "P",
+        items: [
+          { label: "a", position: 0 },
+          { label: "b", position: 5 },
+        ],
+      }).ok
+    ).toBe(false);
+  });
+
   it("round-trips through sequencingToFields back into the original correct order", () => {
-    const built = buildSequencingContent({ prompt: "P", itemsText: "Alpha\nBeta\nGamma\nDelta" });
+    const built = buildSequencingContent({
+      prompt: "P",
+      items: [
+        { label: "Alpha", position: 0 },
+        { label: "Beta", position: 1 },
+        { label: "Gamma", position: 2 },
+        { label: "Delta", position: 3 },
+      ],
+    });
     const fields = sequencingToFields(built.content);
-    expect(fields.itemsText.split("\n")).toEqual(["Alpha", "Beta", "Gamma", "Delta"]);
+    expect(fields.items.map((i) => i.label)).toEqual(["Alpha", "Beta", "Gamma", "Delta"]);
   });
 });
 
 describe("buildEvidenceOrganizingContent", () => {
   const validFields = {
     prompt: "Sort these",
-    slotsText: "Category One\nCategory Two",
-    sourcesText:
-      "Label: Record A\nAttribution: Someone, 1600\nSkill: Sourcing\nCorrect slot: Category One\nExcerpt: some text\n\nLabel: Record B\nAttribution: Someone Else, 1700\nSkill: Causation\nCorrect slot: Category Two\nExcerpt: other text",
+    slots: [{ label: "Category One" }, { label: "Category Two" }],
+    sources: [
+      {
+        label: "Record A",
+        attribution: "Someone, 1600",
+        excerpt: "some text",
+        skillCategory: "Sourcing",
+        correctSlotId: "category-one",
+      },
+      {
+        label: "Record B",
+        attribution: "Someone Else, 1700",
+        excerpt: "other text",
+        skillCategory: "Causation",
+        correctSlotId: "category-two",
+      },
+    ],
   };
 
-  it("builds a valid quest from block-formatted source text", () => {
+  it("builds a valid quest from structured slot/source rows", () => {
     const result = buildEvidenceOrganizingContent(validFields);
     expect(result.ok).toBe(true);
     expect(result.content.sources).toHaveLength(2);
@@ -106,19 +190,19 @@ describe("buildEvidenceOrganizingContent", () => {
   it("rejects an unrecognized skill category", () => {
     const result = buildEvidenceOrganizingContent({
       ...validFields,
-      sourcesText: validFields.sourcesText.replace("Skill: Sourcing", "Skill: Not A Real Skill"),
+      sources: [{ ...validFields.sources[0], skillCategory: "Not A Real Skill" }, validFields.sources[1]],
     });
     expect(result.ok).toBe(false);
-    expect(result.errors.join(" ")).toMatch(/skill/i);
+    expect(result.errors.join(" ")).toMatch(/skillCategory/i);
   });
 
-  it("rejects a correct slot that doesn't match any authored slot label", () => {
+  it("rejects a correctSlotId that doesn't match any authored slot", () => {
     const result = buildEvidenceOrganizingContent({
       ...validFields,
-      sourcesText: validFields.sourcesText.replace("Correct slot: Category One", "Correct slot: Nonexistent"),
+      sources: [{ ...validFields.sources[0], correctSlotId: "nonexistent" }, validFields.sources[1]],
     });
     expect(result.ok).toBe(false);
-    expect(result.errors.join(" ")).toMatch(/correct slot/i);
+    expect(result.errors.join(" ")).toMatch(/correctSlotId/i);
   });
 
   it("round-trips through evidenceOrganizingToFields", () => {
@@ -134,11 +218,20 @@ describe("buildHippContent", () => {
   const validFields = {
     documentText: "Some historical document text long enough to pass validation.",
     documentAttribution: "Some Author, 1800",
-    promptsText:
-      "Dimension: Purpose\nArgument: Why this matters\nOptions:\n* the correct, explanation-linked option\n~ names purpose but does not explain it\n- an unrelated wrong option",
+    hippPrompts: [
+      {
+        dimension: "Purpose",
+        argument: "Why this matters",
+        options: [
+          { text: "the correct, explanation-linked option", correct: true, identificationOnly: false },
+          { text: "names purpose but does not explain it", correct: false, identificationOnly: true },
+          { text: "an unrelated wrong option", correct: false, identificationOnly: false },
+        ],
+      },
+    ],
   };
 
-  it("builds a valid quest, tagging correct (*) and identification-only (~) options", () => {
+  it("builds a valid quest, tagging correct and identification-only options", () => {
     const result = buildHippContent(validFields);
     expect(result.ok).toBe(true);
     const prompt = result.content.hippPrompts[0];
@@ -148,14 +241,27 @@ describe("buildHippContent", () => {
   });
 
   it("rejects an unrecognized HIPP dimension", () => {
-    const result = buildHippContent({ ...validFields, promptsText: validFields.promptsText.replace("Purpose", "Not A Dimension") });
+    const result = buildHippContent({
+      ...validFields,
+      hippPrompts: [{ ...validFields.hippPrompts[0], dimension: "Not A Dimension" }],
+    });
     expect(result.ok).toBe(false);
   });
 
   it("fails schema validation when no identification-only distractor is given", () => {
     const result = buildHippContent({
       ...validFields,
-      promptsText: "Dimension: Purpose\nArgument: Why\nOptions:\n* correct one\n- wrong one\n- another wrong one",
+      hippPrompts: [
+        {
+          dimension: "Purpose",
+          argument: "Why",
+          options: [
+            { text: "correct one", correct: true, identificationOnly: false },
+            { text: "wrong one", correct: false, identificationOnly: false },
+            { text: "another wrong one", correct: false, identificationOnly: false },
+          ],
+        },
+      ],
     });
     expect(result.ok).toBe(false);
     expect(result.errors.join(" ")).toMatch(/identification-only/);
@@ -220,7 +326,14 @@ describe("buildSourceContent", () => {
 
 describe("buildAuthoredContent dispatch", () => {
   it("routes to the right builder by slotKind", () => {
-    const result = buildAuthoredContent("mcq", { prompt: "P", choicesText: "*a\nb", explanation: "E" });
+    const result = buildAuthoredContent("mcq", {
+      prompt: "P",
+      choices: [
+        { text: "a", correct: true },
+        { text: "b", correct: false },
+      ],
+      explanation: "E",
+    });
     expect(result.ok).toBe(true);
   });
 
