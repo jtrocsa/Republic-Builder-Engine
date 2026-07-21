@@ -7,12 +7,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // this file only exercises the pure resolution-cache logic, which is the
 // piece with a correctness guarantee worth locking down (official content
 // must resolve unchanged by default).
-let fromResult = { data: [], error: null };
+// A queue lets a single test control the sequence of results across the two
+// queries loadSelectionsForResolution now issues when a custom-kind
+// selection is present (the selections read, then the custom_content_items
+// follow-up read) without both calls seeing the same canned response.
+let resultsQueue = [];
+function nextResult() {
+  return resultsQueue.length ? resultsQueue.shift() : { data: [], error: null };
+}
 function makeQueryBuilder() {
   const builder = {
     select: () => builder,
     eq: () => builder,
-    then: (resolve, reject) => Promise.resolve(fromResult).then(resolve, reject),
+    in: () => builder,
+    then: (resolve, reject) => Promise.resolve(nextResult()).then(resolve, reject),
   };
   return builder;
 }
@@ -32,7 +40,7 @@ import {
 
 beforeEach(() => {
   clearResolutionCache();
-  fromResult = { data: [], error: null };
+  resultsQueue = [];
 });
 
 describe("resolveSourceSlot / resolveQuestSlot", () => {
@@ -47,12 +55,14 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
   });
 
   it("swaps in the curated source alternate and re-pins the official id once a published selection is loaded", async () => {
-    fromResult = {
-      data: [
-        { slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" },
-      ],
-      error: null,
-    };
+    resultsQueue = [
+      {
+        data: [
+          { slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" },
+        ],
+        error: null,
+      },
+    ];
     await loadSelectionsForResolution("classroom-1", "published");
 
     const official = { id: "taino-context", title: "Official" };
@@ -62,16 +72,18 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
   });
 
   it("swaps in the curated MCQ alternate and re-pins the official id", async () => {
-    fromResult = {
-      data: [
-        {
-          slot_kind: "mcq",
-          slot_content_id: "case-001-mcq-taino-sourcing",
-          alt_content_id: "case-001-mcq-taino-sourcing-alt-authorship",
-        },
-      ],
-      error: null,
-    };
+    resultsQueue = [
+      {
+        data: [
+          {
+            slot_kind: "mcq",
+            slot_content_id: "case-001-mcq-taino-sourcing",
+            alt_content_id: "case-001-mcq-taino-sourcing-alt-authorship",
+          },
+        ],
+        error: null,
+      },
+    ];
     await loadSelectionsForResolution("classroom-1", "published");
 
     const official = { id: "case-001-mcq-taino-sourcing", prompt: "Official prompt" };
@@ -81,16 +93,18 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
   });
 
   it("swaps in a curated alternate for a non-mcq quest type (sequencing), scoped by questType", async () => {
-    fromResult = {
-      data: [
-        {
-          slot_kind: "sequencing",
-          slot_content_id: "case-001-sequencing-columbian-exchange",
-          alt_content_id: "case-001-sequencing-columbian-exchange-alt-labor-and-disease",
-        },
-      ],
-      error: null,
-    };
+    resultsQueue = [
+      {
+        data: [
+          {
+            slot_kind: "sequencing",
+            slot_content_id: "case-001-sequencing-columbian-exchange",
+            alt_content_id: "case-001-sequencing-columbian-exchange-alt-labor-and-disease",
+          },
+        ],
+        error: null,
+      },
+    ];
     await loadSelectionsForResolution("classroom-1", "published");
 
     const official = { id: "case-001-sequencing-columbian-exchange", prompt: "Official prompt" };
@@ -102,15 +116,54 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
   });
 
   it("clearResolutionCache resets back to official-only resolution", async () => {
-    fromResult = {
-      data: [{ slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" }],
-      error: null,
-    };
+    resultsQueue = [
+      {
+        data: [{ slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" }],
+        error: null,
+      },
+    ];
     await loadSelectionsForResolution("classroom-1", "published");
     clearResolutionCache();
 
     const official = { id: "taino-context", title: "Official" };
     expect(resolveSourceSlot(official)).toBe(official);
+  });
+
+  it("resolves a teacher-authored (alt_kind: custom) replacement by fetching custom_content_items", async () => {
+    resultsQueue = [
+      {
+        data: [
+          {
+            slot_kind: "mcq",
+            slot_content_id: "case-001-mcq-taino-sourcing",
+            alt_content_id: "custom-item-1",
+            alt_kind: "custom",
+          },
+        ],
+        error: null,
+      },
+      { data: [{ id: "custom-item-1", content: { prompt: "A teacher-written prompt" } }], error: null },
+    ];
+    await loadSelectionsForResolution("classroom-1", "published");
+
+    const official = { id: "case-001-mcq-taino-sourcing", prompt: "Official prompt" };
+    const resolved = resolveQuestSlot("mcq", official);
+    expect(resolved.id).toBe("case-001-mcq-taino-sourcing");
+    expect(resolved.prompt).toBe("A teacher-written prompt");
+  });
+
+  it("treats a row with no alt_kind column (pre-migration data) as curated by default", async () => {
+    resultsQueue = [
+      {
+        data: [
+          { slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" },
+        ],
+        error: null,
+      },
+    ];
+    await loadSelectionsForResolution("classroom-1", "published");
+    const official = { id: "taino-context", title: "Official" };
+    expect(resolveSourceSlot(official).title).not.toBe("Official");
   });
 });
 

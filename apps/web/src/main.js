@@ -148,6 +148,17 @@ import {
   setDraftSelection,
   publishCaseSelections,
 } from "./repositories/remote-content-selection-repository.js";
+import {
+  listCustomContentForCase,
+  createCustomContent,
+  updateCustomContent,
+  deleteCustomContent,
+} from "./repositories/remote-custom-content-repository.js";
+import {
+  buildAuthoredContent,
+  defaultAuthoringFields,
+  authoringFieldsFromContent,
+} from "./engine/custom-content-authoring.js";
 import { validateJoinCode, validateStudentIdCode, validatePassword } from "./engine/auth-flows.js";
 import {
   buildHippEvaluationRequest,
@@ -1518,7 +1529,8 @@ let teacherUiState = {
 // own loader/click-handler group, mirroring how gradingUiState is split out.
 let contentUiState = {
   selectedCaseId: null,
-  slots: [], // [{slotKind, officialId, officialLabel, draftAltId, publishedAltId, alternatives: [{id,label}], previewContent}]
+  slots: [], // official slots: [{slotKind, officialId, officialLabel, relatedSourceId, draftAltId, draftAltKind, publishedAltId, alternatives: [{id,label,kind}], previewContent}]
+  additionSlots: [], // teacher-added questions with no official counterpart: [{id, slotKind, relatedSourceId, content, status}]
   lockedSources: [], // map-case sources shown read-only — see caseKindLabel()/loadManageContentCaseData()
   error: "",
   pending: false,
@@ -1527,6 +1539,22 @@ let contentUiState = {
 // accordion — a single id (not a Set) so opening one unit always collapses
 // whichever was previously open. Transient UI state, never persisted.
 let manageContentExpandedUnitId = null;
+// Per-source collapsible sections inside manageContentCaseScreen() — a Set
+// of collapsed source/"general" ids (default: everything expanded, since a
+// case has at most a handful of sources). Kept as JS-tracked state rather
+// than native <details open> because render() fully replaces the screen's
+// markup on every change (a dropdown swap, a save), which would otherwise
+// reset any native disclosure state back to its default each time.
+let manageContentCollapsedSectionIds = new Set();
+// In-progress "add new question" / "edit" authoring form — null when no
+// form is open. See engine/custom-content-authoring.js for the field <->
+// content-object conversion this drives.
+let manageContentAuthoring = null;
+// Two-click "Delete" confirmation for teacher-added (mode: "addition")
+// questions — holds the custom_content_items.id currently showing its
+// "Confirm delete?" state, or null. The app has no window.confirm()
+// precedent elsewhere, so this mirrors the rest of its custom-UI approach.
+let manageContentConfirmDeleteId = null;
 // Ephemeral "Preview as student" session for map (route: "field") cases —
 // drops the teacher into the real, walkable field screen instead of a
 // bespoke preview card, per CLAUDE.md's standing rule against duplicating
@@ -2209,6 +2237,30 @@ const QUEST_SLOT_LABELS = {
   hipp: "HIPP",
 };
 
+// Presentational-only grouping: which source card a question's Manage
+// Content editor sub-card nests under. Nothing in the content schemas links
+// a quest to "its" source (a question can legitimately synthesize several,
+// e.g. the sequencing/evidence-organizing quests below), so this is a small
+// hand-authored map covering the questions that really are about one
+// specific source, built by matching each question's real subject against
+// its case's real UNIT_SOURCES ids. A question with no entry here (or one
+// mapped to null) renders under "General questions" instead of erroring —
+// unmapped is the expected default for a newly-authored question until its
+// author picks a related source in the authoring form.
+const OFFICIAL_QUEST_SOURCE_LINKS = {
+  "case-001-mcq-taino-sourcing": "taino-context",
+  "case-001-mcq-columbus-audience": "columbus-letter",
+  "case-001-mcq-waldseemuller-change": "waldseemuller-map",
+  "case-001-hipp-columbus-letter": "columbus-letter",
+  "case-004-mcq-charter-sourcing": "riverbend-charter",
+  "case-004-mcq-frethorne-audience": "riverbend-letter",
+  "case-004-mcq-ledger-sourcing": "riverbend-ledger",
+  "case-004-hipp-frethorne-letter": "riverbend-letter",
+  "case-007-mcq-pontiac-sourcing": "commoncause-pontiac-speech",
+  "case-007-mcq-dunmore-causation": "commoncause-dunmore-proclamation",
+  "case-007-hipp-henry-speech": "commoncause-henry-speech",
+};
+
 // Read-only inline previews for the Manage Content editor — reuse the exact
 // same renderQuest()/sourceVisual() a student sees, wrapped in a
 // pointer-events:none container so the app's shared global click/change
@@ -2284,23 +2336,28 @@ ${unitSections}
 </section></main>${authorPanel()}`;
 }
 
-function manageContentSlotCardMarkup(slot) {
+function optionValue(alt) {
+  return `${alt.kind}:${alt.id}`;
+}
+
+function manageContentOfficialQuestionCardMarkup(slot) {
   const altOptions = [
     `<option value="" ${!slot.draftAltId ? "selected" : ""}>Official — ${esc(slot.officialLabel)}</option>`,
     ...slot.alternatives.map(
       (alt) =>
-        `<option value="${esc(alt.id)}" ${slot.draftAltId === alt.id ? "selected" : ""}>${esc(alt.label)}</option>`
+        `<option value="${esc(optionValue(alt))}" ${slot.draftAltId === alt.id ? "selected" : ""}>${alt.kind === "custom" ? "Custom — " : ""}${esc(alt.label)}</option>`
     ),
   ].join("");
   const publishedLabel = slot.publishedAltId
-    ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || slot.publishedAltId
+    ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || "Custom"
     : "Official";
   const kindLabel = slot.slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slot.slotKind] || slot.slotKind;
-  const statusClass = slot.draftAltId !== slot.publishedAltId ? "is-draft" : "is-published";
+  const isDraftUnpublished = slot.draftAltId !== slot.publishedAltId;
   const preview =
     slot.slotKind === "source"
       ? sourcePreviewCardMarkup(slot.previewContent)
       : questPreviewCardMarkup(slot.slotKind, slot.previewContent);
+  const editAction = slot.slotKind === "source" ? "start-edit-source" : "start-edit-question";
   return `<article class="manage-content-slot-card">
 <div class="manage-content-slot-head">
 <span class="case-kind-badge">${esc(kindLabel)}</span>
@@ -2310,10 +2367,188 @@ function manageContentSlotCardMarkup(slot) {
 <label class="manage-content-slot-select-label">Selection (draft)
 <select data-content-alternate-slot-kind="${esc(slot.slotKind)}" data-content-alternate-slot-id="${esc(slot.officialId)}">${altOptions}</select>
 </label>
-<span class="manage-content-status-pill ${statusClass}">Published: ${esc(publishedLabel)}</span>
+<span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}">Published: ${esc(publishedLabel)}</span>
+<button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" data-slot-kind="${esc(slot.slotKind)}" data-official-id="${esc(slot.officialId)}" data-related-source-id="${esc(slot.relatedSourceId || "")}" type="button">Edit this ${slot.slotKind === "source" ? "source" : "question"} →</button>
 </div>
+${isDraftUnpublished ? `<p class="manage-content-draft-note">✓ Saved as draft — not visible to students until you publish.</p>` : ""}
 ${preview}
 </article>`;
+}
+
+function manageContentAdditionCardMarkup(item) {
+  const kindLabel = QUEST_SLOT_LABELS[item.slotKind] || item.slotKind;
+  const confirmingDelete = manageContentConfirmDeleteId === item.id;
+  return `<article class="manage-content-slot-card manage-content-slot-card--addition">
+<div class="manage-content-slot-head">
+<span class="case-kind-badge">${esc(kindLabel)}</span>
+<span class="case-kind-badge manage-content-badge-added">Teacher-added</span>
+<p class="manage-content-slot-label">${esc(item.content.prompt || item.content.title || "")}</p>
+</div>
+<div class="manage-content-slot-controls">
+<span class="manage-content-status-pill ${item.status === "published" ? "is-published" : "is-draft"}">${item.status === "published" ? "Published" : "Draft — not yet published"}</span>
+<button class="btn btn-plain manage-content-edit-btn" data-action="start-edit-addition" data-custom-id="${esc(item.id)}" type="button">Edit →</button>
+${
+  confirmingDelete
+    ? `<button class="btn btn-outline" data-action="delete-custom-addition" data-custom-id="${esc(item.id)}" type="button">Confirm delete</button><button class="btn btn-plain" data-action="cancel-delete-addition" type="button">Cancel</button>`
+    : `<button class="btn btn-plain manage-content-delete-btn" data-action="delete-custom-addition" data-custom-id="${esc(item.id)}" type="button">Delete</button>`
+}
+</div>
+${questPreviewCardMarkup(item.slotKind, item.content)}
+</article>`;
+}
+
+function manageContentQuestionEntryMarkup(entry) {
+  return entry.officialId !== undefined
+    ? manageContentOfficialQuestionCardMarkup(entry)
+    : manageContentAdditionCardMarkup(entry);
+}
+
+function manageContentSectionMarkup({ id, title, kicker, bodyMarkup }) {
+  const collapsed = manageContentCollapsedSectionIds.has(id);
+  return `<section class="manage-content-source-section ${collapsed ? "is-collapsed" : ""}">
+<button class="manage-content-source-toggle" data-action="toggle-manage-content-section" data-section-id="${esc(id)}" type="button" aria-expanded="${!collapsed}">
+<span class="manage-content-unit-chevron" aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
+<span class="manage-content-source-toggle-heading"><strong>${esc(title)}</strong>${kicker ? `<span class="kicker">${esc(kicker)}</span>` : ""}</span>
+</button>
+${collapsed ? "" : `<div class="manage-content-source-body">${bodyMarkup}</div>`}
+</section>`;
+}
+
+// Which source card a question group nests under — map cases read from
+// lockedSources (official-only, never swapped), non-map cases read the
+// editable "source" slots. UNIT_SOURCES only covers case-001/004/007 today
+// (all three map cases), so the non-map branch has no live case yet — see
+// docs/architecture/ARCHITECTURE-QUICKREF.md's Phase 24 note on this same
+// UNIT_SOURCES coverage gap. Kept general rather than map-case-only so a
+// future non-map case with real sources works without further changes here.
+function manageContentSourceGroups(activeCase) {
+  if (activeCase.route === "field") {
+    return contentUiState.lockedSources.map((source) => ({ id: source.id, source, locked: true }));
+  }
+  return contentUiState.slots
+    .filter((s) => s.slotKind === "source")
+    .map((slot) => ({ id: slot.officialId, source: slot.previewContent, locked: false }));
+}
+
+function manageContentGroupBodyMarkup(group, questions) {
+  const sourcePreview = sourcePreviewCardMarkup(group.source);
+  const editSourceBtn = !group.locked
+    ? `<button class="btn btn-plain manage-content-edit-btn" data-action="start-edit-source" data-official-id="${esc(group.source.id)}" type="button">Edit this source →</button>`
+    : "";
+  const cards = questions.map(manageContentQuestionEntryMarkup).join("");
+  const showAddForm = manageContentAuthoring && manageContentAuthoring.relatedSourceId === group.id;
+  return `<div class="manage-content-source-preview-wrap">${sourcePreview}${editSourceBtn}</div>
+<h4 class="manage-content-questions-heading">Questions about this source</h4>
+${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No questions about this source yet.</p>`}
+${
+  showAddForm
+    ? manageContentAuthoringFormMarkup()
+    : `<button class="btn btn-outline" data-action="start-add-question" data-related-source-id="${esc(group.id)}" type="button">+ Add new question about this source</button>`
+}`;
+}
+
+function manageContentGeneralGroupBodyMarkup(questions) {
+  const cards = questions.map(manageContentQuestionEntryMarkup).join("");
+  const showAddForm = manageContentAuthoring && !manageContentAuthoring.relatedSourceId;
+  return `${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No general questions yet.</p>`}
+${
+  showAddForm
+    ? manageContentAuthoringFormMarkup()
+    : `<button class="btn btn-outline" data-action="start-add-question" data-related-source-id="" type="button">+ Add new question</button>`
+}`;
+}
+
+function missionFlowSummary(kase, hasEditableContent) {
+  if (kase.route === "field") {
+    return "Fixed: students walk a real map and talk to NPCs to find these sources at set in-world locations. Editable below: the practice questions students answer after reading each source.";
+  }
+  if (!hasEditableContent && LEDGER_PREVIEW_RECORDS_BY_CASE[kase.id]) {
+    return "Fixed: this mission is a bespoke ledger activity shown read-only below — its records aren't one of the swappable quest types yet.";
+  }
+  return "Fixed: this mission's activity mechanic and layout. Editable below: its sources (if any) and its practice or Archive Challenge questions.";
+}
+
+const AUTHORING_TYPE_LABELS = {
+  source: "source",
+  mcq: "multiple-choice question",
+  sequencing: "sequencing question",
+  "evidence-organizing": "evidence-organizing question",
+  hipp: "HIPP source-analysis question",
+};
+
+function authoringFieldsMarkup(slotKind, fields) {
+  if (slotKind === "source") {
+    return `<label>Type (e.g. "Primary source · letter")<input type="text" data-authoring-field="type" value="${esc(fields.type)}"></label>
+<label>Title<input type="text" data-authoring-field="title" value="${esc(fields.title)}"></label>
+<label>Creator<input type="text" data-authoring-field="creator" value="${esc(fields.creator)}"></label>
+<label>Date<input type="text" data-authoring-field="date" value="${esc(fields.date)}"></label>
+<label>Record<input type="text" data-authoring-field="record" value="${esc(fields.record)}"></label>
+<label>Source text (shown to students)<textarea data-authoring-field="excerpt" rows="6">${esc(fields.excerpt)}</textarea></label>
+<label>Reading question<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
+  }
+  if (slotKind === "mcq") {
+    return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<label>Choices — one per line, mark the correct one with a leading *<textarea data-authoring-field="choicesText" rows="5">${esc(fields.choicesText)}</textarea></label>
+<label>Explanation (shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+  }
+  if (slotKind === "sequencing") {
+    return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<label>Items — one per line, in the correct causal order (not just chronological)<textarea data-authoring-field="itemsText" rows="6">${esc(fields.itemsText)}</textarea></label>
+<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+  }
+  if (slotKind === "evidence-organizing") {
+    return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<label>Slots — one per line (the categories students sort evidence into)<textarea data-authoring-field="slotsText" rows="4">${esc(fields.slotsText)}</textarea></label>
+<label>Evidence records — one block per record, separated by a blank line:
+Label: …
+Attribution: …
+Skill: Comparison | Causation | Continuity and Change | Contextualization | Sourcing
+Correct slot: (must exactly match a slot label above)
+Excerpt: …
+<textarea data-authoring-field="sourcesText" rows="10">${esc(fields.sourcesText)}</textarea></label>
+<label>Reflection prompt (optional)<textarea data-authoring-field="reflectionPrompt" rows="2">${esc(fields.reflectionPrompt)}</textarea></label>`;
+  }
+  return `<label>Document text<textarea data-authoring-field="documentText" rows="6">${esc(fields.documentText)}</textarea></label>
+<label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
+<label>HIPP prompts — one block per dimension, separated by a blank line:
+Dimension: Historical situation | Intended audience | Point of view | Purpose
+Argument: …
+Options:
+* the one correct, explanation-linked option
+~ an identification-only distractor (names the element but doesn't explain it)
+- other incorrect distractors
+<textarea data-authoring-field="promptsText" rows="10">${esc(fields.promptsText)}</textarea></label>`;
+}
+
+function manageContentAuthoringFormMarkup() {
+  const auth = manageContentAuthoring;
+  if (!auth) return "";
+  const heading = `${auth.formMode === "add" ? "Add a new" : "Edit"} question${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}`;
+  if (!auth.slotKind) {
+    return `<div class="manage-content-authoring-form manage-content-type-picker">
+<h4>${heading}</h4>
+<p>Choose a question type:</p>
+<div class="manage-content-type-picker-options">
+<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="mcq" type="button">Multiple choice</button>
+<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="sequencing" type="button">Sequencing</button>
+<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="evidence-organizing" type="button">Evidence organizing</button>
+<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="hipp" type="button">HIPP source analysis</button>
+<button class="btn btn-plain" disabled title="SAQ doesn't exist as a quest type in the engine yet — a separate, larger effort, not part of this editor." type="button">SAQ — not available yet</button>
+</div>
+<button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>
+</div>`;
+  }
+  return `<div class="manage-content-authoring-form">
+<h4>${auth.formMode === "add" ? "Add a new" : "Edit"} ${esc(AUTHORING_TYPE_LABELS[auth.slotKind])}${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}</h4>
+${auth.errors.length ? `<ul class="manage-content-authoring-errors">${auth.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+<div data-authoring-form>
+${authoringFieldsMarkup(auth.slotKind, auth.fields)}
+</div>
+<div class="manage-content-authoring-actions">
+<button class="btn btn-gold" data-action="save-authoring" type="button">Save</button>
+<button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>
+</div>
+</div>`;
 }
 
 function manageContentCaseScreen() {
@@ -2325,26 +2560,53 @@ function manageContentCaseScreen() {
     return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-manage-content" type="button">← All cases</button></section></main>${authorPanel()}`;
   }
   const isMapCase = activeCase.route === "field";
-  const lockedSourceCards = contentUiState.lockedSources.map(sourcePreviewCardMarkup).join("");
-  const slotCards = contentUiState.slots.map(manageContentSlotCardMarkup).join("");
+  const groups = manageContentSourceGroups(activeCase);
+  const groupIds = new Set(groups.map((g) => g.id));
+  const questionSlots = contentUiState.slots.filter((s) => s.slotKind !== "source");
+  const generalQuestions = [
+    ...questionSlots.filter((s) => !s.relatedSourceId || !groupIds.has(s.relatedSourceId)),
+    ...contentUiState.additionSlots.filter((a) => !a.relatedSourceId || !groupIds.has(a.relatedSourceId)),
+  ];
+  const hasEditableContent = groups.length > 0 || questionSlots.length > 0 || contentUiState.additionSlots.length > 0;
   const ledgerRecords = LEDGER_PREVIEW_RECORDS_BY_CASE[activeCase.id];
-  const ledgerPreviewCards = !contentUiState.slots.length && ledgerRecords ? ledgerRecords.map(ledgerPreviewCardMarkup).join("") : "";
-  const hasUnpublishedDraft = contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId);
-  const canPreview = isMapCase || contentUiState.slots.length > 0;
+  const ledgerPreviewCards = !hasEditableContent && ledgerRecords ? ledgerRecords.map(ledgerPreviewCardMarkup).join("") : "";
+  const hasUnpublishedDraft =
+    contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId) ||
+    contentUiState.additionSlots.some((a) => a.status === "draft");
+  const canPreview = isMapCase || hasEditableContent;
+
+  const groupSections = groups
+    .map((group) =>
+      manageContentSectionMarkup({
+        id: group.id,
+        title: group.source.title,
+        kicker: `${group.source.type}${group.locked ? " · locked to official text" : ""}`,
+        bodyMarkup: manageContentGroupBodyMarkup(group, [
+          ...questionSlots.filter((s) => s.relatedSourceId === group.id),
+          ...contentUiState.additionSlots.filter((a) => a.relatedSourceId === group.id),
+        ]),
+      })
+    )
+    .join("");
+  const generalSection =
+    generalQuestions.length || !groups.length
+      ? manageContentSectionMarkup({
+          id: "general",
+          title: "General questions",
+          kicker: groups.length ? "Not tied to a single source" : undefined,
+          bodyMarkup: manageContentGeneralGroupBodyMarkup(generalQuestions),
+        })
+      : "";
+
   return `${chrome()}<main class="shell manage-content-shell"><section>
 <button class="back-link" data-action="back-to-manage-content">← All cases</button>
 <p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
 <h1>${esc(activeCase.title)}</h1>
 <p>${esc(activeCase.summary)}</p>
+<p class="manage-content-flow-strip">${esc(missionFlowSummary(activeCase, hasEditableContent))}</p>
 ${
-  isMapCase
-    ? `<h2>Sources</h2><p class="locked-note">This mission's sources are fixed to real locations on the walkable map and can't be swapped — only its questions are editable below.</p>${lockedSourceCards ? `<div class="manage-content-preview-grid">${lockedSourceCards}</div>` : ""}`
-    : ""
-}
-<h2>Questions</h2>
-${
-  slotCards
-    ? `<div class="manage-content-slot-stack">${slotCards}</div>`
+  hasEditableContent
+    ? `${groupSections}${generalSection}`
     : ledgerPreviewCards
       ? `<p class="locked-note">This mission's questions are a bespoke activity, not one of the swappable quest types yet — shown here read-only.</p><div class="manage-content-preview-grid">${ledgerPreviewCards}</div>`
       : "<p>This mission has no swappable content yet.</p>"
@@ -2358,49 +2620,146 @@ ${contentUiState.error ? `<p class="feedback error">${esc(contentUiState.error)}
 async function loadManageContentCaseData(caseId) {
   contentUiState.selectedCaseId = caseId;
   contentUiState.error = "";
+  const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
   try {
     const kase = caseById(caseId);
     const isMapCase = kase?.route === "field";
-    const rows = await listSelectionsForCase(teacherUiState.selectedClassroomId, caseId);
+    const classroomId = teacherUiState.selectedClassroomId;
+    const [rows, customItems] = await Promise.all([
+      listSelectionsForCase(classroomId, caseId),
+      listCustomContentForCase(classroomId, caseId),
+    ]);
     const bySlot = {};
     for (const row of rows) {
       const key = `${row.slot_kind}:${row.slot_content_id}`;
-      (bySlot[key] ??= {})[row.status] = row.alt_content_id;
+      (bySlot[key] ??= {})[row.status] = { id: row.alt_content_id, kind: row.alt_kind || "curated" };
     }
+    const customById = new Map(customItems.map((item) => [item.id, item]));
+    const customReplacementsBySlot = {};
+    for (const item of customItems) {
+      if (item.mode !== "replacement") continue;
+      const key = `${item.slot_kind}:${item.replaces_official_id}`;
+      (customReplacementsBySlot[key] ??= []).push(item);
+    }
+
     contentUiState.lockedSources = isMapCase ? UNIT_SOURCES[caseId] || [] : [];
     const sourceSlots = isMapCase
       ? []
       : (UNIT_SOURCES[caseId] || []).map((source) => {
           const key = `source:${source.id}`;
-          const draftAltId = bySlot[key]?.draft || null;
+          const draft = bySlot[key]?.draft || null;
+          const published = bySlot[key]?.published || null;
+          const customAlts = (customReplacementsBySlot[key] || []).map((item) => ({
+            id: item.id,
+            label: item.content.title || "Custom",
+            kind: "custom",
+          }));
+          const previewContent =
+            draft && draft.kind === "custom"
+              ? customById.get(draft.id)?.content || source
+              : draft
+                ? sourceAlternateById(draft.id) || source
+                : source;
           return {
             slotKind: "source",
             officialId: source.id,
             officialLabel: source.title,
-            draftAltId,
-            publishedAltId: bySlot[key]?.published || null,
-            alternatives: alternativesForSourceSlot(source.id),
-            previewContent: (draftAltId && sourceAlternateById(draftAltId)) || source,
+            relatedSourceId: source.id,
+            draftAltId: draft?.id || null,
+            draftAltKind: draft?.kind || "curated",
+            publishedAltId: published?.id || null,
+            alternatives: [
+              ...alternativesForSourceSlot(source.id).map((a) => ({ ...a, kind: "curated" })),
+              ...customAlts,
+            ],
+            previewContent,
           };
         });
     const questSlots = officialQuestSlotsForCase(caseId).map(({ questType, quest }) => {
       const key = `${questType}:${quest.id}`;
-      const draftAltId = bySlot[key]?.draft || null;
+      const draft = bySlot[key]?.draft || null;
+      const published = bySlot[key]?.published || null;
+      const customAlts = (customReplacementsBySlot[key] || []).map((item) => ({
+        id: item.id,
+        label: item.content.prompt ? item.content.prompt.slice(0, 80) : "Custom",
+        kind: "custom",
+      }));
+      const previewContent =
+        draft && draft.kind === "custom"
+          ? customById.get(draft.id)?.content || quest
+          : draft
+            ? questAlternateById(questType, draft.id) || quest
+            : quest;
       return {
         slotKind: questType,
         officialId: quest.id,
         officialLabel: quest.prompt,
-        draftAltId,
-        publishedAltId: bySlot[key]?.published || null,
-        alternatives: alternativesForQuestSlot(questType, quest.id),
-        previewContent: (draftAltId && questAlternateById(questType, draftAltId)) || quest,
+        relatedSourceId: OFFICIAL_QUEST_SOURCE_LINKS[quest.id] || null,
+        draftAltId: draft?.id || null,
+        draftAltKind: draft?.kind || "curated",
+        publishedAltId: published?.id || null,
+        alternatives: [
+          ...alternativesForQuestSlot(questType, quest.id).map((a) => ({ ...a, kind: "curated" })),
+          ...customAlts,
+        ],
+        previewContent,
       };
     });
     contentUiState.slots = [...sourceSlots, ...questSlots];
+    contentUiState.additionSlots = customItems
+      .filter((item) => item.mode === "addition")
+      .map((item) => ({
+        id: item.id,
+        slotKind: item.slot_kind,
+        relatedSourceId: item.related_source_id,
+        content: item.content,
+        status: item.status,
+      }));
   } catch (err) {
     contentUiState.error = err.message || "Could not load this case's content.";
   }
   render();
+  if (typeof window !== "undefined") window.scrollTo(0, scrollY);
+}
+
+function handleSaveAuthoring() {
+  const auth = manageContentAuthoring;
+  if (!auth || !auth.slotKind) return;
+  const formEl = document.querySelector("[data-authoring-form]");
+  const fields = {};
+  formEl.querySelectorAll("[data-authoring-field]").forEach((el) => {
+    fields[el.dataset.authoringField] = el.value;
+  });
+  const result = buildAuthoredContent(auth.slotKind, fields, auth.sourceWiring);
+  if (!result.ok) {
+    manageContentAuthoring = { ...auth, fields, errors: result.errors };
+    render();
+    return;
+  }
+  const classroomId = teacherUiState.selectedClassroomId;
+  const caseId = contentUiState.selectedCaseId;
+  const isReplacement = Boolean(auth.editingOfficialId);
+  const persist = auth.editingCustomId
+    ? updateCustomContent(auth.editingCustomId, { content: result.content, relatedSourceId: auth.relatedSourceId })
+    : createCustomContent({
+        classroomId,
+        caseId,
+        slotKind: auth.slotKind,
+        mode: isReplacement ? "replacement" : "addition",
+        replacesOfficialId: auth.editingOfficialId,
+        relatedSourceId: auth.relatedSourceId,
+        content: result.content,
+      });
+  persist
+    .then((row) => (isReplacement ? setDraftSelection(classroomId, caseId, auth.slotKind, auth.editingOfficialId, row.id, "custom") : null))
+    .then(() => {
+      manageContentAuthoring = null;
+      return loadManageContentCaseData(caseId);
+    })
+    .catch((err) => {
+      contentUiState.error = err.message || "Could not save this question.";
+      render();
+    });
 }
 
 // Real "Preview as student" — no bespoke preview markup. Switches the
@@ -2463,10 +2822,14 @@ function handleManageContentClick(target, action) {
     contentUiState = {
       selectedCaseId: target.dataset.caseId,
       slots: [],
+      additionSlots: [],
       lockedSources: [],
       error: "",
       pending: false,
     };
+    manageContentCollapsedSectionIds = new Set();
+    manageContentAuthoring = null;
+    manageContentConfirmDeleteId = null;
     progress.currentScreen = "manage-content-case";
     save();
     render();
@@ -2481,7 +2844,11 @@ function handleManageContentClick(target, action) {
   }
   if (action === "publish-case-content") {
     const slotIds = contentUiState.slots.map((s) => ({ slotKind: s.slotKind, slotContentId: s.officialId }));
-    publishCaseSelections(teacherUiState.selectedClassroomId, contentUiState.selectedCaseId, slotIds)
+    const draftAdditions = contentUiState.additionSlots.filter((a) => a.status === "draft");
+    Promise.all([
+      publishCaseSelections(teacherUiState.selectedClassroomId, contentUiState.selectedCaseId, slotIds),
+      ...draftAdditions.map((a) => updateCustomContent(a.id, { status: "published" })),
+    ])
       .then(() => loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published"))
       .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
       .catch((err) => {
@@ -2496,6 +2863,136 @@ function handleManageContentClick(target, action) {
   }
   if (action === "exit-content-preview") {
     exitContentPreview();
+    return true;
+  }
+  if (action === "toggle-manage-content-section") {
+    const id = target.dataset.sectionId;
+    if (manageContentCollapsedSectionIds.has(id)) manageContentCollapsedSectionIds.delete(id);
+    else manageContentCollapsedSectionIds.add(id);
+    render();
+    return true;
+  }
+  if (action === "start-add-question") {
+    const relatedSourceId = target.dataset.relatedSourceId || null;
+    const activeCase = caseById(contentUiState.selectedCaseId);
+    const group = activeCase ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId) : null;
+    manageContentAuthoring = {
+      formMode: "add",
+      slotKind: null,
+      relatedSourceId,
+      relatedSourceLabel: group?.source.title || null,
+      editingCustomId: null,
+      editingOfficialId: null,
+      sourceWiring: null,
+      fields: {},
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  if (action === "pick-question-type") {
+    if (!manageContentAuthoring) return true;
+    const slotKind = target.dataset.slotKind;
+    manageContentAuthoring = {
+      ...manageContentAuthoring,
+      slotKind,
+      fields: defaultAuthoringFields(slotKind),
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  if (action === "start-edit-question") {
+    const slotKind = target.dataset.slotKind;
+    const officialId = target.dataset.officialId;
+    const relatedSourceId = target.dataset.relatedSourceId || null;
+    const slot = contentUiState.slots.find((s) => s.slotKind === slotKind && s.officialId === officialId);
+    if (!slot) return true;
+    const activeCase = caseById(contentUiState.selectedCaseId);
+    const group = activeCase ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId) : null;
+    manageContentAuthoring = {
+      formMode: "edit",
+      slotKind,
+      relatedSourceId,
+      relatedSourceLabel: group?.source.title || null,
+      editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
+      editingOfficialId: officialId,
+      sourceWiring: null,
+      fields: authoringFieldsFromContent(slotKind, slot.previewContent),
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  if (action === "start-edit-source") {
+    const officialId = target.dataset.officialId;
+    const slot = contentUiState.slots.find((s) => s.slotKind === "source" && s.officialId === officialId);
+    const officialSource = (UNIT_SOURCES[contentUiState.selectedCaseId] || []).find((s) => s.id === officialId);
+    if (!slot || !officialSource) return true;
+    // eslint-disable-next-line no-unused-vars -- destructuring-to-omit: these 7 fields are the teacher-editable ones, `wiring` is everything else
+    const { type, title, creator, date, record, excerpt, prompt, ...wiring } = officialSource;
+    manageContentAuthoring = {
+      formMode: "edit",
+      slotKind: "source",
+      relatedSourceId: officialId,
+      relatedSourceLabel: officialSource.title,
+      editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
+      editingOfficialId: officialId,
+      sourceWiring: wiring,
+      fields: authoringFieldsFromContent("source", slot.previewContent),
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  if (action === "start-edit-addition") {
+    const customId = target.dataset.customId;
+    const item = contentUiState.additionSlots.find((a) => a.id === customId);
+    if (!item) return true;
+    const activeCase = caseById(contentUiState.selectedCaseId);
+    const group = activeCase ? manageContentSourceGroups(activeCase).find((g) => g.id === item.relatedSourceId) : null;
+    manageContentAuthoring = {
+      formMode: "edit",
+      slotKind: item.slotKind,
+      relatedSourceId: item.relatedSourceId,
+      relatedSourceLabel: group?.source.title || null,
+      editingCustomId: item.id,
+      editingOfficialId: null,
+      sourceWiring: null,
+      fields: authoringFieldsFromContent(item.slotKind, item.content),
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  if (action === "cancel-authoring") {
+    manageContentAuthoring = null;
+    render();
+    return true;
+  }
+  if (action === "save-authoring") {
+    handleSaveAuthoring();
+    return true;
+  }
+  if (action === "delete-custom-addition") {
+    const id = target.dataset.customId;
+    if (manageContentConfirmDeleteId === id) {
+      manageContentConfirmDeleteId = null;
+      deleteCustomContent(id)
+        .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
+        .catch((err) => {
+          contentUiState.error = err.message || "Could not delete this question.";
+          render();
+        });
+    } else {
+      manageContentConfirmDeleteId = id;
+      render();
+    }
+    return true;
+  }
+  if (action === "cancel-delete-addition") {
+    manageContentConfirmDeleteId = null;
+    render();
     return true;
   }
   return false;
@@ -5933,13 +6430,14 @@ function handleAppChange(event) {
     const slotKind = field.dataset.contentAlternateSlotKind;
     const slotId = field.dataset.contentAlternateSlotId;
     contentUiState.error = "";
-    setDraftSelection(
-      teacherUiState.selectedClassroomId,
-      contentUiState.selectedCaseId,
-      slotKind,
-      slotId,
-      field.value || null
-    )
+    let altId = null;
+    let altKind = "curated";
+    if (field.value) {
+      const sepIndex = field.value.indexOf(":");
+      altKind = field.value.slice(0, sepIndex);
+      altId = field.value.slice(sepIndex + 1);
+    }
+    setDraftSelection(teacherUiState.selectedClassroomId, contentUiState.selectedCaseId, slotKind, slotId, altId, altKind)
       .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
       .catch((err) => {
         contentUiState.error = err.message || "Could not save this selection.";

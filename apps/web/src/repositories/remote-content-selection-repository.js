@@ -26,6 +26,15 @@
  * content file) — as more cases get alternates, add another import + spread
  * into QUEST_ALTERNATE_ENTRIES_BY_TYPE below, mirroring how main.js's
  * ARCHIVE_CHALLENGE_QUESTS_BY_TYPE aggregates per-unit quest arrays.
+ *
+ * A selection's alt_content_id may now also point at a teacher-authored row
+ * in custom_content_items (supabase/migrations/0008_custom_content_authoring.sql)
+ * instead of the curated pool — alt_kind ("curated" | "custom") disambiguates
+ * which. Unlike the curated pool (static, importable at module load), custom
+ * content is per-classroom and lives in the database, so
+ * loadSelectionsForResolution fetches any referenced custom rows alongside
+ * the selections themselves and caches them for resolveSourceSlot/
+ * resolveQuestSlot the same way the curated maps already are.
  */
 import { supabase } from "../lib/supabase-client.js";
 import { getSession } from "./remote-auth-repository.js";
@@ -95,15 +104,17 @@ export function questAlternateById(questType, altId) {
 
 let sourceSelections = {};
 let questSelectionsByType = {};
+let customContentById = new Map();
 
 export async function loadSelectionsForResolution(classroomId, status = "published") {
   sourceSelections = {};
   questSelectionsByType = {};
+  customContentById = new Map();
   if (!classroomId) return;
 
   const { data, error } = await supabase
     .from("classroom_content_selections")
-    .select("slot_kind, slot_content_id, alt_content_id")
+    .select("slot_kind, slot_content_id, alt_content_id, alt_kind")
     .eq("classroom_id", classroomId)
     .eq("status", status);
   if (error) {
@@ -111,28 +122,46 @@ export async function loadSelectionsForResolution(classroomId, status = "publish
     return;
   }
   for (const row of data) {
-    if (row.slot_kind === "source") sourceSelections[row.slot_content_id] = row.alt_content_id;
-    else (questSelectionsByType[row.slot_kind] ??= {})[row.slot_content_id] = row.alt_content_id;
+    const entry = { altId: row.alt_content_id, altKind: row.alt_kind || "curated" };
+    if (row.slot_kind === "source") sourceSelections[row.slot_content_id] = entry;
+    else (questSelectionsByType[row.slot_kind] ??= {})[row.slot_content_id] = entry;
+  }
+
+  const customAltIds = data.filter((row) => row.alt_kind === "custom").map((row) => row.alt_content_id);
+  if (customAltIds.length) {
+    const { data: customRows, error: customError } = await supabase
+      .from("custom_content_items")
+      .select("id, content")
+      .in("id", customAltIds);
+    if (customError) {
+      console.error("loadSelectionsForResolution failed to load custom content", customError);
+    } else {
+      for (const row of customRows) customContentById.set(row.id, row.content);
+    }
   }
 }
 
+function resolveAlt(entry, curatedLookup) {
+  if (!entry) return undefined;
+  return entry.altKind === "custom" ? customContentById.get(entry.altId) : curatedLookup(entry.altId);
+}
+
 export function resolveSourceSlot(officialSource) {
-  const altId = sourceSelections[officialSource.id];
-  if (!altId) return officialSource;
-  const alt = SOURCE_ALTERNATES_BY_ALT_ID.get(altId);
+  const alt = resolveAlt(sourceSelections[officialSource.id], (id) => SOURCE_ALTERNATES_BY_ALT_ID.get(id));
   return alt ? { ...alt, id: officialSource.id } : officialSource;
 }
 
 export function resolveQuestSlot(questType, officialQuest) {
-  const altId = questSelectionsByType[questType]?.[officialQuest.id];
-  if (!altId) return officialQuest;
-  const alt = QUEST_ALTERNATES_BY_ALT_ID_BY_TYPE[questType]?.get(altId);
+  const alt = resolveAlt(questSelectionsByType[questType]?.[officialQuest.id], (id) =>
+    QUEST_ALTERNATES_BY_ALT_ID_BY_TYPE[questType]?.get(id)
+  );
   return alt ? { ...alt, id: officialQuest.id } : officialQuest;
 }
 
 export function clearResolutionCache() {
   sourceSelections = {};
   questSelectionsByType = {};
+  customContentById = new Map();
 }
 
 // --- Teacher editing (draft CRUD; direct DB hits, no cache) ---
@@ -140,14 +169,14 @@ export function clearResolutionCache() {
 export async function listSelectionsForCase(classroomId, caseId) {
   const { data, error } = await supabase
     .from("classroom_content_selections")
-    .select("slot_kind, slot_content_id, status, alt_content_id, updated_at")
+    .select("slot_kind, slot_content_id, status, alt_content_id, alt_kind, updated_at")
     .eq("classroom_id", classroomId)
     .eq("case_id", caseId);
   if (error) throw error;
   return data;
 }
 
-export async function setDraftSelection(classroomId, caseId, slotKind, slotContentId, altContentId) {
+export async function setDraftSelection(classroomId, caseId, slotKind, slotContentId, altContentId, altKind = "curated") {
   if (altContentId === null) {
     const { error } = await supabase
       .from("classroom_content_selections")
@@ -170,6 +199,7 @@ export async function setDraftSelection(classroomId, caseId, slotKind, slotConte
       slot_content_id: slotContentId,
       status: "draft",
       alt_content_id: altContentId,
+      alt_kind: altKind,
       updated_by: session.user.id,
       updated_at: new Date().toISOString(),
     },
@@ -189,7 +219,7 @@ export async function publishCaseSelections(classroomId, caseId, slotIds) {
   for (const { slotKind, slotContentId } of slotIds) {
     const { data: draftRow, error: draftError } = await supabase
       .from("classroom_content_selections")
-      .select("alt_content_id")
+      .select("alt_content_id, alt_kind")
       .eq("classroom_id", classroomId)
       .eq("slot_kind", slotKind)
       .eq("slot_content_id", slotContentId)
@@ -206,6 +236,7 @@ export async function publishCaseSelections(classroomId, caseId, slotIds) {
           slot_content_id: slotContentId,
           status: "published",
           alt_content_id: draftRow.alt_content_id,
+          alt_kind: draftRow.alt_kind || "curated",
           updated_by: session.user.id,
           updated_at: new Date().toISOString(),
         },
