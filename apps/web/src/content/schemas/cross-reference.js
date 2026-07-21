@@ -104,7 +104,7 @@ export function checkChallengeReferences(groupLabel, entries, questTypeKeys, que
 // Checks Teacher Mode's curated alternate-content pools (e.g.
 // case-001-source-alternates.js's `replacesSourceId`, case-001-mcq-alternates.js's
 // `replacesQuestId`) point at real official content ids — a typo here would let a
-// teacher "select" an alternate that main.js's resolveSourceSlot/resolveMcqQuestSlot
+// teacher "select" an alternate that main.js's resolveSourceSlot/resolveQuestSlot
 // can never actually match against any official slot, silently doing nothing.
 export function checkAlternateReferences(groupLabel, entries, officialIds) {
   const known = new Set(officialIds);

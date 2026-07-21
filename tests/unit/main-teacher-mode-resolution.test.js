@@ -10,7 +10,7 @@ import { CASE_001_SOURCES } from "../../apps/web/src/content/unit-01-campaign.js
 // Mode's swap resolution must be a no-op, so official content renders
 // byte-identical to before this feature existed. Swap-in-progress behavior
 // (id-pinning, alternate lookup) is covered directly against
-// remote-content-selection-repository.js's resolveSourceSlot/resolveMcqQuestSlot.
+// remote-content-selection-repository.js's resolveSourceSlot/resolveQuestSlot.
 describe("sourcesForCase / sourceById (Teacher Mode resolution wiring)", () => {
   it("returns official Case 1.01 sources unchanged when no classroom customization is active", () => {
     expect(sourcesForCase("case-001")).toEqual(CASE_001_SOURCES);

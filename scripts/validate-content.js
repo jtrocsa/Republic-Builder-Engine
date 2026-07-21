@@ -28,9 +28,18 @@ import {
 } from "../apps/web/src/content/schemas/cross-reference.js";
 import { z } from "zod";
 import { McqQuestSchema, McqQuestListSchema } from "../apps/web/src/quest-types/generic/mcq-quest.js";
-import { SequencingQuestListSchema } from "../apps/web/src/quest-types/generic/sequencing-quest.js";
-import { EvidenceOrganizingQuestListSchema } from "../apps/web/src/quest-types/history/evidence-organizing-quest.js";
-import { SourceAnalysisQuestListSchema } from "../apps/web/src/quest-types/history/source-analysis-quest.js";
+import {
+  SequencingQuestSchema,
+  SequencingQuestListSchema,
+} from "../apps/web/src/quest-types/generic/sequencing-quest.js";
+import {
+  EvidenceOrganizingQuestSchema,
+  EvidenceOrganizingQuestListSchema,
+} from "../apps/web/src/quest-types/history/evidence-organizing-quest.js";
+import {
+  SourceAnalysisQuestSchema,
+  SourceAnalysisQuestListSchema,
+} from "../apps/web/src/quest-types/history/source-analysis-quest.js";
 import { QUEST_TYPES } from "../apps/web/src/quest-types/index.js";
 
 function main() {
@@ -137,6 +146,24 @@ function main() {
       quest: McqQuestSchema,
     })
   );
+  const SequencingAlternatesSchema = z.array(
+    z.object({
+      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
+      quest: SequencingQuestSchema,
+    })
+  );
+  const EvidenceOrganizingAlternatesSchema = z.array(
+    z.object({
+      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
+      quest: EvidenceOrganizingQuestSchema,
+    })
+  );
+  const SourceAnalysisAlternatesSchema = z.array(
+    z.object({
+      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
+      quest: SourceAnalysisQuestSchema,
+    })
+  );
   results.push(
     runSchema(
       "case-001-source-alternates.js: CASE_001_SOURCE_ALTERNATES",
@@ -149,6 +176,34 @@ function main() {
       "case-001-mcq-alternates.js: CASE_001_MCQ_ALTERNATES",
       McqAlternatesSchema,
       content.unit01.mcqAlternates
+    )
+  );
+  results.push(
+    runSchema(
+      "case-001-sequencing-alternates.js: CASE_001_SEQUENCING_ALTERNATES",
+      SequencingAlternatesSchema,
+      content.unit01.sequencingAlternates
+    )
+  );
+  results.push(
+    runSchema(
+      "case-001-evidence-organizing-alternates.js: CASE_001_EVIDENCE_ORGANIZING_ALTERNATES",
+      EvidenceOrganizingAlternatesSchema,
+      content.unit01.evidenceOrganizingAlternates
+    )
+  );
+  results.push(
+    runSchema(
+      "case-001-hipp-alternates.js: CASE_001_HIPP_ALTERNATES",
+      SourceAnalysisAlternatesSchema,
+      content.unit01.sourceAnalysisAlternates
+    )
+  );
+  results.push(
+    runSchema(
+      "case-006-evidence-organizing-alternates.js: CASE_006_EVIDENCE_ORGANIZING_ALTERNATES",
+      EvidenceOrganizingAlternatesSchema,
+      content.unit02.evidenceOrganizingAlternates
     )
   );
 
@@ -300,6 +355,9 @@ function main() {
     "cross-reference: investigation challenge quest references",
     "cross-reference: source alternate references",
     "cross-reference: mcq alternate references",
+    "cross-reference: sequencing alternate references",
+    "cross-reference: evidence-organizing alternate references",
+    "cross-reference: hipp alternate references",
   ];
 
   // Every quest id, grouped by QUEST_TYPES key, across all three units — the resolution set
@@ -490,6 +548,40 @@ function main() {
         altId: entry.quest.id,
       })),
       content.unit01.mcqQuests.map((q) => q.id)
+    ),
+    ...checkAlternateReferences(
+      "cross-reference: sequencing alternate references",
+      content.unit01.sequencingAlternates.map((entry) => ({
+        source: "case-001-sequencing-alternates.js:CASE_001_SEQUENCING_ALTERNATES",
+        replacesId: entry.replacesQuestId,
+        altId: entry.quest.id,
+      })),
+      content.unit01.sequencingQuests.map((q) => q.id)
+    ),
+    ...checkAlternateReferences(
+      "cross-reference: evidence-organizing alternate references",
+      [
+        ...content.unit01.evidenceOrganizingAlternates.map((entry) => ({
+          source: "case-001-evidence-organizing-alternates.js:CASE_001_EVIDENCE_ORGANIZING_ALTERNATES",
+          replacesId: entry.replacesQuestId,
+          altId: entry.quest.id,
+        })),
+        ...content.unit02.evidenceOrganizingAlternates.map((entry) => ({
+          source: "case-006-evidence-organizing-alternates.js:CASE_006_EVIDENCE_ORGANIZING_ALTERNATES",
+          replacesId: entry.replacesQuestId,
+          altId: entry.quest.id,
+        })),
+      ],
+      [...content.unit01.evidenceOrganizingQuests, ...content.unit02.archiveChallengeQuests].map((q) => q.id)
+    ),
+    ...checkAlternateReferences(
+      "cross-reference: hipp alternate references",
+      content.unit01.sourceAnalysisAlternates.map((entry) => ({
+        source: "case-001-hipp-alternates.js:CASE_001_HIPP_ALTERNATES",
+        replacesId: entry.replacesQuestId,
+        altId: entry.quest.id,
+      })),
+      content.unit01.sourceAnalysisQuests.map((q) => q.id)
     ),
   ];
 

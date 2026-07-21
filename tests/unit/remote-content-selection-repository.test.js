@@ -23,11 +23,11 @@ vi.mock("../../apps/web/src/lib/supabase-client.js", () => ({
 
 import {
   resolveSourceSlot,
-  resolveMcqQuestSlot,
+  resolveQuestSlot,
   loadSelectionsForResolution,
   clearResolutionCache,
   alternativesForSourceSlot,
-  alternativesForMcqSlot,
+  alternativesForQuestSlot,
 } from "../../apps/web/src/repositories/remote-content-selection-repository.js";
 
 beforeEach(() => {
@@ -35,7 +35,7 @@ beforeEach(() => {
   fromResult = { data: [], error: null };
 });
 
-describe("resolveSourceSlot / resolveMcqQuestSlot", () => {
+describe("resolveSourceSlot / resolveQuestSlot", () => {
   it("returns the official source unchanged when no classroom/selection is active", () => {
     const official = { id: "taino-context", title: "Official" };
     expect(resolveSourceSlot(official)).toBe(official);
@@ -43,7 +43,7 @@ describe("resolveSourceSlot / resolveMcqQuestSlot", () => {
 
   it("returns the official quest unchanged when no classroom/selection is active", () => {
     const official = { id: "case-001-mcq-taino-sourcing", prompt: "Official prompt" };
-    expect(resolveMcqQuestSlot(official)).toBe(official);
+    expect(resolveQuestSlot("mcq", official)).toBe(official);
   });
 
   it("swaps in the curated source alternate and re-pins the official id once a published selection is loaded", async () => {
@@ -65,7 +65,7 @@ describe("resolveSourceSlot / resolveMcqQuestSlot", () => {
     fromResult = {
       data: [
         {
-          slot_kind: "mcq-quest",
+          slot_kind: "mcq",
           slot_content_id: "case-001-mcq-taino-sourcing",
           alt_content_id: "case-001-mcq-taino-sourcing-alt-authorship",
         },
@@ -75,9 +75,30 @@ describe("resolveSourceSlot / resolveMcqQuestSlot", () => {
     await loadSelectionsForResolution("classroom-1", "published");
 
     const official = { id: "case-001-mcq-taino-sourcing", prompt: "Official prompt" };
-    const resolved = resolveMcqQuestSlot(official);
+    const resolved = resolveQuestSlot("mcq", official);
     expect(resolved.id).toBe("case-001-mcq-taino-sourcing");
     expect(resolved.prompt).not.toBe("Official prompt");
+  });
+
+  it("swaps in a curated alternate for a non-mcq quest type (sequencing), scoped by questType", async () => {
+    fromResult = {
+      data: [
+        {
+          slot_kind: "sequencing",
+          slot_content_id: "case-001-sequencing-columbian-exchange",
+          alt_content_id: "case-001-sequencing-columbian-exchange-alt-labor-and-disease",
+        },
+      ],
+      error: null,
+    };
+    await loadSelectionsForResolution("classroom-1", "published");
+
+    const official = { id: "case-001-sequencing-columbian-exchange", prompt: "Official prompt" };
+    expect(resolveQuestSlot("sequencing", official).prompt).not.toBe("Official prompt");
+    // A draft/published row for one quest type must never leak into another
+    // type's resolution, even if (hypothetically) the same slot id existed
+    // in two types' official content.
+    expect(resolveQuestSlot("mcq", official)).toBe(official);
   });
 
   it("clearResolutionCache resets back to official-only resolution", async () => {
@@ -93,14 +114,21 @@ describe("resolveSourceSlot / resolveMcqQuestSlot", () => {
   });
 });
 
-describe("alternativesForSourceSlot / alternativesForMcqSlot", () => {
+describe("alternativesForSourceSlot / alternativesForQuestSlot", () => {
   it("lists curated alternatives for a known slot", () => {
     expect(alternativesForSourceSlot("taino-context").length).toBeGreaterThan(0);
-    expect(alternativesForMcqSlot("case-001-mcq-taino-sourcing").length).toBeGreaterThan(0);
+    expect(alternativesForQuestSlot("mcq", "case-001-mcq-taino-sourcing").length).toBeGreaterThan(0);
+    expect(alternativesForQuestSlot("sequencing", "case-001-sequencing-columbian-exchange").length).toBeGreaterThan(
+      0
+    );
+    expect(
+      alternativesForQuestSlot("evidence-organizing", "case-001-evidence-record-sourcing").length
+    ).toBeGreaterThan(0);
+    expect(alternativesForQuestSlot("hipp", "case-001-hipp-columbus-letter").length).toBeGreaterThan(0);
   });
 
   it("returns an empty list for a slot with no curated alternatives", () => {
     expect(alternativesForSourceSlot("nonexistent-slot")).toEqual([]);
-    expect(alternativesForMcqSlot("nonexistent-slot")).toEqual([]);
+    expect(alternativesForQuestSlot("mcq", "nonexistent-slot")).toEqual([]);
   });
 });

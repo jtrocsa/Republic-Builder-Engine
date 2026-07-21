@@ -139,9 +139,9 @@ import {
 import {
   loadSelectionsForResolution,
   resolveSourceSlot,
-  resolveMcqQuestSlot,
+  resolveQuestSlot,
   alternativesForSourceSlot,
-  alternativesForMcqSlot,
+  alternativesForQuestSlot,
   listSelectionsForCase,
   setDraftSelection,
   publishCaseSelections,
@@ -1517,10 +1517,19 @@ let teacherUiState = {
 let contentUiState = {
   selectedCaseId: null,
   slots: [], // [{slotKind, officialId, officialLabel, draftAltId, publishedAltId, alternatives: [{id,label}]}]
-  previewing: false,
+  lockedSources: [], // map-case sources shown read-only — see caseKindLabel()/loadManageContentCaseData()
   error: "",
   pending: false,
 };
+// Ephemeral "Preview as student" session for map (route: "field") cases —
+// drops the teacher into the real, walkable field screen instead of a
+// bespoke preview card, per CLAUDE.md's standing rule against duplicating
+// movement/collision/camera code. Never persisted: entering/exiting only
+// ever touches in-memory `progress` fields, restored from `snapshot` on
+// exit, and save() below no-ops for the whole session so nothing the
+// teacher does while previewing (including real gameplay side effects like
+// evidence collection) reaches localStorage or Supabase.
+let previewSession = { active: false, snapshot: null };
 // Per-taskId pending/error state for the AI Archive Evaluator calls kicked
 // off from sourceReader()/reviewScreen() — see runEvaluation() below.
 const evaluatorPendingTaskIds = new Set();
@@ -1698,7 +1707,8 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
   mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
 };
 function archiveChallengeQuestFor(questType, questId) {
-  return (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+  const official = (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+  return official ? resolveQuestSlot(questType, official) : undefined;
 }
 // Investigation Challenge quest content, resolved by (questType, questId) from a
 // source's source.investigationMode/investigationQuestId pointer (source.schema.js).
@@ -1784,10 +1794,19 @@ const esc = (value) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-const save = () => saveProgress(progress);
+// Guarded by previewSession so a teacher exploring the real field screen in
+// "Preview as student" mode (see manageContentCaseScreen()) never persists
+// anything to the teacher's own save — see previewSession's own comment.
+const save = () => {
+  if (previewSession.active) return;
+  saveProgress(progress);
+};
 
 function chrome() {
-  return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><small>${esc(BRAND.engine)}</small><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="text-button" data-action="open-main-menu">Menu</button><button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" aria-label="Toggle Chronicle music">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button><button class="author-toggle ${authorMode ? "active" : ""}" data-action="author">✦ ${authorMode ? "Author Mode On" : "Author Mode"}</button></div></header>`;
+  const previewBanner = previewSession.active
+    ? `<div class="field-preview-banner" role="status"><span>Previewing as student — draft content shown, nothing you do here is saved.</span><button class="btn btn-outline" data-action="exit-content-preview" type="button">Exit preview</button></div>`
+    : "";
+  return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><small>${esc(BRAND.engine)}</small><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="text-button" data-action="open-main-menu">Menu</button><button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" aria-label="Toggle Chronicle music">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button><button class="author-toggle ${authorMode ? "active" : ""}" data-action="author">✦ ${authorMode ? "Author Mode On" : "Author Mode"}</button></div></header>${previewBanner}`;
 }
 
 // Stable-key convention for Author Mode content overrides: keyed by the
@@ -2131,31 +2150,78 @@ async function openGradingScreen(submissionId) {
   render();
 }
 
-// --- Manage Content (Teacher Mode's source/MCQ-quest swap editor) --------
-// Cases with a curated swap pool today — proof-of-pipeline scope is Case
-// 1.01 only (see apps/web/src/content/case-001-source-alternates.js), but
-// this stays a general filter (any case with a source/mcq array) so adding
-// more cases' alternates later needs no main.js change.
-function manageableCases() {
-  return UNITS.flatMap((unit) => unit.cases).filter((c) => UNIT_SOURCES[c.id] || PRACTICE_CHECK_QUESTS[c.id]?.mcq);
+// --- Manage Content (Teacher Mode's per-mission source/quest swap editor) --------
+// Listed by Unit → Mission (case) so a teacher sees what kind of mission
+// they're about to edit before opening it — see caseKindLabel(). Map
+// missions (case.route === "field") have fixed geography and NPC/source
+// placement, so their sources are locked and only their questions are
+// editable; every other mission's questions are editable the same way, plus
+// any generic-schema sources it has (UNIT_SOURCES today only covers the 3
+// map cases, so that path is currently a no-op for non-map missions — see
+// the plan this shipped against).
+function caseKindLabel(kase) {
+  if (kase.route === "field") return "Walkable map";
+  if (kase.route === null) return "Archive Challenge only";
+  return `Activity — ${kase.mechanic}`;
 }
+
+// QUEST_TYPES keys (renderQuest/gradeQuest, quest-types/index.js — also
+// classroom_content_selections.slot_kind for quest slots) vs. the camelCase
+// property names PRACTICE_CHECK_QUESTS groups the same 4 types under.
+const QUEST_SLOT_TYPES = [
+  { questType: "mcq", practiceKey: "mcq" },
+  { questType: "sequencing", practiceKey: "sequencing" },
+  { questType: "evidence-organizing", practiceKey: "evidenceOrganizing" },
+  { questType: "hipp", practiceKey: "hipp" },
+];
+
+// Official (unresolved) {questType, quest} pairs a case has editable quest
+// content for — Practice Check's 4 arrays plus, if set, the case's single
+// case-level Archive Challenge pointer. Deliberately reads
+// ARCHIVE_CHALLENGE_QUESTS_BY_TYPE directly rather than going through
+// archiveChallengeQuestFor(), which resolves through the active
+// classroom's selection cache — the editor needs the true official baseline
+// to build officialId/officialLabel from, not whatever is currently swapped.
+function officialQuestSlotsForCase(caseId) {
+  const questSet = PRACTICE_CHECK_QUESTS[caseId];
+  const practiceSlots = questSet
+    ? QUEST_SLOT_TYPES.flatMap(({ questType, practiceKey }) =>
+        (questSet[practiceKey] || []).map((quest) => ({ questType, quest }))
+      )
+    : [];
+  const challenge = caseById(caseId)?.archiveChallenge;
+  const challengeQuest = challenge
+    ? (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[challenge.questType] || []).find((q) => q.id === challenge.questId)
+    : undefined;
+  return challengeQuest ? [...practiceSlots, { questType: challenge.questType, quest: challengeQuest }] : practiceSlots;
+}
+
+const QUEST_SLOT_LABELS = {
+  mcq: "MCQ",
+  sequencing: "Sequencing",
+  "evidence-organizing": "Evidence organizing",
+  hipp: "HIPP",
+};
 
 function manageContentScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
     return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
-  const caseRows = manageableCases()
-    .map(
-      (c) =>
-        `<tr><td>${esc(c.shortTitle)}</td><td>${esc(c.title)}</td><td><button class="text-button" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit sources &amp; quests →</button></td></tr>`
-    )
-    .join("");
+  const unitSections = UNITS.map((unit) => {
+    const caseRows = unit.cases
+      .map(
+        (c) =>
+          `<tr><td>${esc(c.shortTitle)}</td><td><strong>${esc(c.title)}</strong><br><span class="case-kind-badge">${esc(caseKindLabel(c))}</span><p class="case-summary-note">${esc(c.summary)}</p></td><td><button class="text-button" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit →</button></td></tr>`
+      )
+      .join("");
+    return `<section class="manage-content-unit"><h2>${esc(resolvedUnitTitle(unit))}</h2><p class="kicker">${esc(unit.period)}</p><p>${esc(unit.description)}</p>${resolvedUnitCentralQuestion(unit) ? `<p class="manage-content-central-question">${esc(resolvedUnitCentralQuestion(unit))}</p>` : ""}<table class="roster-table"><thead><tr><th>Mission</th><th>Details</th><th></th></tr></thead><tbody>${caseRows}</tbody></table></section>`;
+  }).join("");
   return `${chrome()}<main class="shell completion-shell"><section>
 <button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Manage Content</h1>
-<p>Pick a case to review or swap its primary sources and practice-check questions for this classroom.</p>
-<table class="roster-table"><thead><tr><th>Case</th><th>Title</th><th></th></tr></thead><tbody>${caseRows}</tbody></table>
+<p>Pick a mission to review its intent, then swap its practice questions — and, for non-map missions, its sources — for this classroom.</p>
+${unitSections}
 </section></main>${authorPanel()}`;
 }
 
@@ -2167,6 +2233,10 @@ function manageContentCaseScreen() {
   if (!activeCase) {
     return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-manage-content" type="button">← All cases</button></section></main>${authorPanel()}`;
   }
+  const isMapCase = activeCase.route === "field";
+  const lockedSourceRows = contentUiState.lockedSources
+    .map((source) => `<li><strong>${esc(source.title)}</strong> — <span class="locked-note">fixed to this map, not editable</span></li>`)
+    .join("");
   const slotRows = contentUiState.slots
     .map((slot) => {
       const altOptions = [
@@ -2179,91 +2249,136 @@ function manageContentCaseScreen() {
       const publishedLabel = slot.publishedAltId
         ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || slot.publishedAltId
         : "Official";
+      const kindLabel = slot.slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slot.slotKind] || slot.slotKind;
       return `<tr>
-<td>${slot.slotKind === "source" ? "Source" : "MCQ"}: ${esc(slot.officialLabel)}</td>
+<td>${esc(kindLabel)}: ${esc(slot.officialLabel)}</td>
 <td><select data-content-alternate-slot-kind="${esc(slot.slotKind)}" data-content-alternate-slot-id="${esc(slot.officialId)}">${altOptions}</select></td>
 <td>Currently published: ${esc(publishedLabel)}</td>
 </tr>`;
     })
     .join("");
   const hasUnpublishedDraft = contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId);
+  const canPreview = isMapCase || contentUiState.slots.length > 0;
   return `${chrome()}<main class="shell completion-shell"><section>
 <button class="back-link" data-action="back-to-manage-content">← All cases</button>
-<p class="kicker">${esc(activeCase.shortTitle)}</p>
+<p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
 <h1>${esc(activeCase.title)}</h1>
-${contentUiState.slots.length ? `<table class="roster-table"><thead><tr><th>Slot</th><th>Selection (draft)</th><th>Live status</th></tr></thead><tbody>${slotRows}</tbody></table>` : "<p>This case has no swappable sources or quests yet.</p>"}
+<p>${esc(activeCase.summary)}</p>
+${
+  isMapCase
+    ? `<h2>Sources</h2><p>This mission's sources are fixed to real locations on the walkable map and can't be swapped — only its questions are editable below.</p>${lockedSourceRows ? `<ul class="manage-content-locked-list">${lockedSourceRows}</ul>` : ""}`
+    : ""
+}
+<h2>Questions</h2>
+${contentUiState.slots.length ? `<table class="roster-table"><thead><tr><th>Slot</th><th>Selection (draft)</th><th>Live status</th></tr></thead><tbody>${slotRows}</tbody></table>` : "<p>This mission has no swappable content yet.</p>"}
 ${contentUiState.error ? `<p class="feedback error">${esc(contentUiState.error)}</p>` : ""}
 <button class="btn btn-gold" data-action="publish-case-content" type="button" ${hasUnpublishedDraft ? "" : "disabled"}>Publish to students</button>
-<button class="btn btn-outline" data-action="toggle-content-preview" type="button">${contentUiState.previewing ? "Exit preview" : "Preview as student →"}</button>
-${contentUiState.previewing ? manageContentPreviewMarkup() : ""}
+<button class="btn btn-outline" data-action="toggle-content-preview" type="button" ${canPreview ? "" : "disabled"}>Preview as student →</button>
 </section></main>${authorPanel()}`;
-}
-
-// Read-only recap reusing the same resolved-content fields sourceReader()/renderQuest()
-// show a student, so a teacher's Preview reflects exactly what publishing would produce.
-// Resolution mode is switched to "draft" by the toggle-content-preview handler while this
-// is showing, and back to "published" the moment it's turned off — see
-// remote-content-selection-repository.js's loadSelectionsForResolution.
-function manageContentPreviewMarkup() {
-  const caseId = contentUiState.selectedCaseId;
-  const sourceCards = sourcesForCase(caseId)
-    .map(
-      (source) =>
-        `<article class="quest-practice-item"><p class="kicker">${esc(source.type)}</p><h3>${esc(source.title)}</h3><p>${esc(source.excerpt)}</p></article>`
-    )
-    .join("");
-  const questSet = PRACTICE_CHECK_QUESTS[caseId];
-  const mcqCards = (questSet?.mcq || [])
-    .map(resolveMcqQuestSlot)
-    .map((quest) => `<div class="quest-practice-item">${renderQuest("mcq", quest, {})}</div>`)
-    .join("");
-  return `<div class="activity-rule"><b>Preview:</b> this shows your draft selections exactly as a student would see them once published.</div>
-${sourceCards ? `<h3>Sources</h3>${sourceCards}` : ""}
-${mcqCards ? `<h3>Practice Check questions</h3>${mcqCards}` : ""}`;
 }
 
 async function loadManageContentCaseData(caseId) {
   contentUiState.selectedCaseId = caseId;
   contentUiState.error = "";
   try {
+    const kase = caseById(caseId);
+    const isMapCase = kase?.route === "field";
     const rows = await listSelectionsForCase(teacherUiState.selectedClassroomId, caseId);
     const bySlot = {};
     for (const row of rows) {
       const key = `${row.slot_kind}:${row.slot_content_id}`;
       (bySlot[key] ??= {})[row.status] = row.alt_content_id;
     }
-    const sourceSlots = (UNIT_SOURCES[caseId] || []).map((source) => {
-      const key = `source:${source.id}`;
+    contentUiState.lockedSources = isMapCase ? UNIT_SOURCES[caseId] || [] : [];
+    const sourceSlots = isMapCase
+      ? []
+      : (UNIT_SOURCES[caseId] || []).map((source) => {
+          const key = `source:${source.id}`;
+          return {
+            slotKind: "source",
+            officialId: source.id,
+            officialLabel: source.title,
+            draftAltId: bySlot[key]?.draft || null,
+            publishedAltId: bySlot[key]?.published || null,
+            alternatives: alternativesForSourceSlot(source.id),
+          };
+        });
+    const questSlots = officialQuestSlotsForCase(caseId).map(({ questType, quest }) => {
+      const key = `${questType}:${quest.id}`;
       return {
-        slotKind: "source",
-        officialId: source.id,
-        officialLabel: source.title,
-        draftAltId: bySlot[key]?.draft || null,
-        publishedAltId: bySlot[key]?.published || null,
-        alternatives: alternativesForSourceSlot(source.id),
-      };
-    });
-    const mcqSlots = (PRACTICE_CHECK_QUESTS[caseId]?.mcq || []).map((quest) => {
-      const key = `mcq-quest:${quest.id}`;
-      return {
-        slotKind: "mcq-quest",
+        slotKind: questType,
         officialId: quest.id,
         officialLabel: quest.prompt,
         draftAltId: bySlot[key]?.draft || null,
         publishedAltId: bySlot[key]?.published || null,
-        alternatives: alternativesForMcqSlot(quest.id),
+        alternatives: alternativesForQuestSlot(questType, quest.id),
       };
     });
-    contentUiState.slots = [...sourceSlots, ...mcqSlots];
+    contentUiState.slots = [...sourceSlots, ...questSlots];
   } catch (err) {
     contentUiState.error = err.message || "Could not load this case's content.";
   }
   render();
 }
 
+// Real "Preview as student" — no bespoke preview markup. Switches the
+// resolution cache to draft and navigates into the actual screen a student
+// would land on: the real walkable field screen for map missions (fully
+// playable — movement, collision, NPCs, Practice Check), or the real
+// Archive Challenges screen for a mission whose only editable content is a
+// case-level Archive Challenge. Nothing here is persisted — see
+// previewSession's own comment and the save() guard above.
+function enterContentPreview(caseId) {
+  const kase = caseById(caseId);
+  if (!kase) return;
+  const isMapCase = kase.route === "field";
+  if (!isMapCase && !kase.archiveChallenge) return;
+  loadSelectionsForResolution(teacherUiState.selectedClassroomId, "draft").then(() => {
+    previewSession = {
+      active: true,
+      snapshot: {
+        activeCaseId: progress.activeCaseId,
+        currentScreen: progress.currentScreen,
+        selectedUnitId: progress.selectedUnitId,
+        miniGamesEnabled: progress.settings.miniGamesEnabled,
+      },
+    };
+    progress.activeCaseId = caseId;
+    progress.settings = { ...progress.settings, miniGamesEnabled: true };
+    if (isMapCase) {
+      progress.currentScreen = "field";
+      resetFieldPosition();
+    } else {
+      progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
+      progress.currentScreen = "archive-challenges";
+    }
+    render();
+  });
+}
+
+function exitContentPreview() {
+  const snapshot = previewSession.snapshot;
+  previewSession = { active: false, snapshot: null };
+  if (snapshot) {
+    progress.activeCaseId = snapshot.activeCaseId;
+    progress.currentScreen = snapshot.currentScreen;
+    progress.selectedUnitId = snapshot.selectedUnitId;
+    progress.settings = { ...progress.settings, miniGamesEnabled: snapshot.miniGamesEnabled };
+  } else {
+    progress.currentScreen = "manage-content-case";
+  }
+  loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published").then(render);
+}
+
 function handleManageContentClick(target, action) {
   if (action === "open-manage-content-case") {
-    contentUiState = { selectedCaseId: target.dataset.caseId, slots: [], previewing: false, error: "", pending: false };
+    contentUiState = {
+      selectedCaseId: target.dataset.caseId,
+      slots: [],
+      lockedSources: [],
+      error: "",
+      pending: false,
+    };
     progress.currentScreen = "manage-content-case";
     save();
     render();
@@ -2272,7 +2387,6 @@ function handleManageContentClick(target, action) {
   }
   if (action === "back-to-manage-content") {
     progress.currentScreen = "manage-content";
-    contentUiState.previewing = false;
     save();
     render();
     return true;
@@ -2289,11 +2403,11 @@ function handleManageContentClick(target, action) {
     return true;
   }
   if (action === "toggle-content-preview") {
-    contentUiState.previewing = !contentUiState.previewing;
-    loadSelectionsForResolution(
-      teacherUiState.selectedClassroomId,
-      contentUiState.previewing ? "draft" : "published"
-    ).then(render);
+    enterContentPreview(contentUiState.selectedCaseId);
+    return true;
+  }
+  if (action === "exit-content-preview") {
+    exitContentPreview();
     return true;
   }
   return false;
@@ -3742,7 +3856,7 @@ function practiceCheckScreen() {
   const activeCase = caseById(caseId);
   const questSet = PRACTICE_CHECK_QUESTS[caseId];
 
-  const mcqQuests = questSet.mcq.map(resolveMcqQuestSlot);
+  const mcqQuests = questSet.mcq.map((quest) => resolveQuestSlot("mcq", quest));
   const answeredCount = mcqQuests.filter(
     (quest) => progress.questResponses[quest.id]?.selected !== undefined
   ).length;
@@ -3763,6 +3877,7 @@ function practiceCheckScreen() {
     .join("");
 
   const sequencingCards = questSet.sequencing
+    .map((quest) => resolveQuestSlot("sequencing", quest))
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("sequencing", quest, state);
@@ -3779,6 +3894,7 @@ function practiceCheckScreen() {
     .join("");
 
   const evidenceCards = questSet.evidenceOrganizing
+    .map((quest) => resolveQuestSlot("evidence-organizing", quest))
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("evidence-organizing", quest, state);
@@ -3798,6 +3914,7 @@ function practiceCheckScreen() {
     .join("");
 
   const hippCards = questSet.hipp
+    .map((quest) => resolveQuestSlot("hipp", quest))
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("hipp", quest, state);
@@ -3877,6 +3994,11 @@ async function runEvaluation(taskId, requestBody) {
       requestedAt: Date.now(),
     };
     save();
+    // Guarded the same as save() above — a teacher who submits a real
+    // source reading while previewing a map mission (see previewSession's
+    // own comment) must not create a real submissions/evaluations row
+    // against their classroom.
+    if (previewSession.active) return;
     getCurrentClassroomId().then((classroomId) => {
       if (!classroomId) return;
       recordSubmission({
@@ -4479,6 +4601,15 @@ function handleChromeClick(target, action) {
     return true;
   }
   if (action === "home") {
+    // Safety net: a teacher previewing a map mission can also leave via the
+    // field screen's own "Recall to Institute" control, not just the
+    // preview banner's "Exit preview" — either must cleanly end the
+    // ephemeral preview session (see previewSession's own comment) rather
+    // than stranding it active on the real institute screen.
+    if (previewSession.active) {
+      exitContentPreview();
+      return true;
+    }
     progress.activeFieldNpc = null;
     safeInstituteSpawn(7, 9, "up");
     progress.currentScreen = "institute";
@@ -4487,6 +4618,10 @@ function handleChromeClick(target, action) {
     return true;
   }
   if (action === "archive-room") {
+    if (previewSession.active) {
+      exitContentPreview();
+      return true;
+    }
     // Unlike "home", deliberately does not touch currentHubRoom/spawn position —
     // this only returns from the archive-challenges screen back into whichever
     // room the player was already standing in (always "archive" in practice,
@@ -5566,7 +5701,8 @@ function handleAuthScreenClick(target, action) {
         error: "",
         pending: false,
       };
-      contentUiState = { selectedCaseId: null, slots: [], previewing: false, error: "", pending: false };
+      contentUiState = { selectedCaseId: null, slots: [], lockedSources: [], error: "", pending: false };
+      previewSession = { active: false, snapshot: null };
       authUiState.signupStep = 1;
       authUiState.signupDraft = null;
       authUiState.classroomRows = [];

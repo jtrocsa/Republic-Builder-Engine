@@ -16,6 +16,10 @@ import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
+import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
+import { CASE_001_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-001-evidence-organizing-alternates.js";
+import { CASE_001_HIPP_ALTERNATES } from "../content/quests/case-001-hipp-alternates.js";
+import { CASE_006_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-006-evidence-organizing-alternates.js";
 
 export function loadChronicleContent() {
   return {
@@ -41,6 +45,9 @@ export function loadChronicleContent() {
       // against.
       sourceAlternates: CASE_001_SOURCE_ALTERNATES,
       mcqAlternates: CASE_001_MCQ_ALTERNATES,
+      sequencingAlternates: CASE_001_SEQUENCING_ALTERNATES,
+      evidenceOrganizingAlternates: CASE_001_EVIDENCE_ORGANIZING_ALTERNATES,
+      sourceAnalysisAlternates: CASE_001_HIPP_ALTERNATES,
     },
     unit02: {
       unit: unit02Campaign.UNIT_02,
@@ -56,6 +63,7 @@ export function loadChronicleContent() {
       archiveChallengeQuests: unit02Quests.UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
       investigationEvidenceQuests: unit02Quests.UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
       archiveStrongestEvidenceQuests: unit02Quests.UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
+      evidenceOrganizingAlternates: CASE_006_EVIDENCE_ORGANIZING_ALTERNATES,
     },
     unit03: {
       unit: unit03Campaign.UNIT_03,

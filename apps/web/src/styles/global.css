@@ -8208,3 +8208,69 @@ button:hover,
   line-height: 1.6;
   white-space: pre-wrap;
 }
+
+/* --- Manage Content: unit-grouped listing, kind badges, preview banner --- */
+.manage-content-unit {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(239, 204, 122, 0.18);
+}
+.manage-content-unit h2 {
+  margin: 0 0 2px;
+  color: var(--gold-soft);
+  font-family: "Cinzel", serif;
+}
+.manage-content-central-question {
+  color: #d5e1dd;
+  font-style: italic;
+  opacity: 0.9;
+}
+.case-kind-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: 1px solid rgba(239, 204, 122, 0.35);
+  border-radius: 999px;
+  color: var(--gold-soft);
+  font:
+    700 0.65rem "Cinzel",
+    serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.case-summary-note {
+  margin: 6px 0 0;
+  color: #b9c7c2;
+  font-size: 0.85rem;
+}
+.manage-content-locked-list {
+  margin: 10px 0 18px;
+  padding-left: 20px;
+  color: #d5e1dd;
+}
+.manage-content-locked-list li {
+  margin: 4px 0;
+}
+.locked-note {
+  color: #b9c7c2;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+.field-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: min(1480px, calc(100% - 56px));
+  margin: 0 auto 10px;
+  padding: 8px 16px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: rgba(239, 204, 122, 0.14);
+  color: var(--gold-soft);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.field-preview-banner button {
+  flex-shrink: 0;
+}
