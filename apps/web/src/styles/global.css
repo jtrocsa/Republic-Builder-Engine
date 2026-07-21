@@ -8209,21 +8209,109 @@ button:hover,
   white-space: pre-wrap;
 }
 
-/* --- Manage Content: unit-grouped listing, kind badges, preview banner --- */
+/* --- Manage Content: wide editor shell, unit accordion, mission/slot cards, inline previews --- */
+.manage-content-shell {
+  width: min(1180px, calc(100% - 56px));
+  margin: auto;
+  padding: 42px 0;
+}
+.manage-content-shell > section {
+  padding: 40px 44px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(13, 58, 73, 0.91), rgba(4, 26, 38, 0.96));
+  box-shadow: 0 30px 55px rgba(0, 0, 0, 0.28);
+}
+.manage-content-shell h1 {
+  margin: 4px 0 14px;
+  color: #f9e9bd;
+  font:
+    700 clamp(2.2rem, 3.6vw, 3.2rem) "Spectral",
+    serif;
+}
 .manage-content-unit {
-  margin-top: 22px;
-  padding-top: 18px;
+  margin-top: 18px;
+  padding-top: 16px;
   border-top: 1px solid rgba(239, 204, 122, 0.18);
 }
-.manage-content-unit h2 {
-  margin: 0 0 2px;
+.manage-content-unit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.manage-content-unit-chevron {
+  flex: none;
+  width: 1em;
+  color: var(--gold);
+  font-size: 1.1rem;
+}
+.manage-content-unit-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.manage-content-unit-title {
   color: var(--gold-soft);
   font-family: "Cinzel", serif;
+  font-size: 1.15rem;
+}
+.manage-content-unit-heading .kicker {
+  margin: 0;
+}
+.manage-content-unit-body {
+  margin-top: 14px;
+  padding-left: calc(1em + 12px);
 }
 .manage-content-central-question {
   color: #d5e1dd;
   font-style: italic;
   opacity: 0.9;
+}
+.manage-content-mission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.manage-content-mission-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 14px;
+  background: rgba(4, 26, 38, 0.32);
+}
+.manage-content-mission-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.manage-content-mission-head .case-kind-badge {
+  margin-top: 0;
+  white-space: normal;
+  text-align: right;
+}
+.manage-content-mission-card h3 {
+  margin: 2px 0 0;
+  color: #f0e4c4;
+  font-family: "Cinzel", serif;
+  font-size: 1rem;
+}
+.manage-content-mission-card .btn {
+  align-self: flex-start;
+  margin-top: 8px;
 }
 .case-kind-badge {
   display: inline-block;
@@ -8243,18 +8331,127 @@ button:hover,
   color: #b9c7c2;
   font-size: 0.85rem;
 }
-.manage-content-locked-list {
-  margin: 10px 0 18px;
-  padding-left: 20px;
-  color: #d5e1dd;
-}
-.manage-content-locked-list li {
-  margin: 4px 0;
-}
 .locked-note {
   color: #b9c7c2;
   font-size: 0.82rem;
   font-style: italic;
+}
+.manage-content-slot-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 14px;
+}
+.manage-content-slot-card {
+  padding: 18px 20px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 16px;
+  background: rgba(4, 26, 38, 0.28);
+}
+.manage-content-slot-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.manage-content-slot-label {
+  margin: 0;
+  color: #f0e4c4;
+  font-size: 0.95rem;
+}
+.manage-content-slot-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.manage-content-slot-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 220px;
+  color: var(--gold-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.manage-content-slot-select-label select {
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.manage-content-status-pill {
+  padding: 3px 10px;
+  border: 1px solid rgba(239, 204, 122, 0.28);
+  border-radius: 999px;
+  color: #d8e3de;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.manage-content-status-pill.is-draft {
+  border-color: var(--gold);
+  color: var(--gold-soft);
+}
+.manage-content-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+.quest-preview-frozen {
+  position: relative;
+  margin-top: 14px;
+  padding: 14px 16px 6px;
+  border: 1px dashed rgba(239, 204, 122, 0.3);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+.quest-preview-label {
+  margin: 0 0 8px;
+  color: var(--gold-soft);
+  font:
+    700 0.62rem "Cinzel",
+    serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.manage-content-source-preview-art .document-paper,
+.manage-content-source-preview-art .document-image {
+  width: 100%;
+}
+.manage-content-source-preview-copy h4 {
+  margin: 6px 0 4px;
+  color: #f0e4c4;
+}
+.manage-content-source-preview-copy dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 4px 0;
+  font-size: 0.82rem;
+}
+.manage-content-source-preview-copy dl div {
+  display: flex;
+  gap: 4px;
+}
+.manage-content-source-preview-copy dt {
+  color: var(--gold-soft);
+}
+.manage-content-source-preview-copy dd {
+  margin: 0;
+  color: #d5e1dd;
+}
+.ledger-choice.ledger-choice--preview {
+  grid-template-columns: 26px 1fr !important;
+}
+.ledger-choice.is-correct-preview {
+  border-color: var(--gold);
+  color: #f0e4c4;
 }
 .field-preview-banner {
   display: flex;

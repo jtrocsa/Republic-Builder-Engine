@@ -80,6 +80,17 @@ export function alternativesForQuestSlot(questType, slotContentId) {
   return QUEST_ALTERNATIVES_BY_SLOT_BY_TYPE[questType]?.[slotContentId] || [];
 }
 
+// Full curated-alternate content objects (not just {id, label}) — used by
+// Manage Content's inline slot preview to render the currently-selected
+// draft alternate with the same renderQuest()/sourceVisual() a student sees.
+export function sourceAlternateById(altId) {
+  return SOURCE_ALTERNATES_BY_ALT_ID.get(altId);
+}
+
+export function questAlternateById(questType, altId) {
+  return QUEST_ALTERNATES_BY_ALT_ID_BY_TYPE[questType]?.get(altId);
+}
+
 // --- Resolution cache (student/live-game path + teacher preview) ---
 
 let sourceSelections = {};

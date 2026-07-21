@@ -142,6 +142,8 @@ import {
   resolveQuestSlot,
   alternativesForSourceSlot,
   alternativesForQuestSlot,
+  sourceAlternateById,
+  questAlternateById,
   listSelectionsForCase,
   setDraftSelection,
   publishCaseSelections,
@@ -1516,11 +1518,15 @@ let teacherUiState = {
 // own loader/click-handler group, mirroring how gradingUiState is split out.
 let contentUiState = {
   selectedCaseId: null,
-  slots: [], // [{slotKind, officialId, officialLabel, draftAltId, publishedAltId, alternatives: [{id,label}]}]
+  slots: [], // [{slotKind, officialId, officialLabel, draftAltId, publishedAltId, alternatives: [{id,label}], previewContent}]
   lockedSources: [], // map-case sources shown read-only — see caseKindLabel()/loadManageContentCaseData()
   error: "",
   pending: false,
 };
+// Which unit's mission list is expanded on the top-level manageContentScreen()
+// accordion — a single id (not a Set) so opening one unit always collapses
+// whichever was previously open. Transient UI state, never persisted.
+let manageContentExpandedUnitId = null;
 // Ephemeral "Preview as student" session for map (route: "field") cases —
 // drops the teacher into the real, walkable field screen instead of a
 // bespoke preview card, per CLAUDE.md's standing rule against duplicating
@@ -2203,74 +2209,146 @@ const QUEST_SLOT_LABELS = {
   hipp: "HIPP",
 };
 
+// Read-only inline previews for the Manage Content editor — reuse the exact
+// same renderQuest()/sourceVisual() a student sees, wrapped in a
+// pointer-events:none container so the app's shared global click/change
+// listeners (keyed off the same data-mcq-quest/data-cargo-card/etc.
+// attributes used in real gameplay) can't fire from a teacher's edit screen
+// and mutate real progress state.
+function questPreviewCardMarkup(questType, quest) {
+  return `<div class="quest-preview-frozen"><p class="quest-preview-label">Student view preview</p>${renderQuest(questType, quest, {})}</div>`;
+}
+
+function sourcePreviewCardMarkup(source) {
+  return `<div class="quest-preview-frozen manage-content-source-preview"><p class="quest-preview-label">Student view preview</p><div class="manage-content-source-preview-art">${sourceVisual(source)}</div><div class="manage-content-source-preview-copy"><p class="kicker">${esc(source.type)}</p><h4>${esc(source.title)}</h4><dl><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.record)}</dd></div></dl><p class="case-summary-note">${esc(source.prompt)}</p></div></div>`;
+}
+
+// Bespoke non-quest-type mechanics with zero swappable content today (see
+// officialQuestSlotsForCase()) — case-002's Exchange Ledger and case-008's
+// Founding Debate ledger are the only two cases this applies to (every
+// other case has real quest-type slots). Read-only preview only, per the
+// scope decision this shipped against: no new editable-content model.
+const LEDGER_PREVIEW_RECORDS_BY_CASE = {
+  "case-002": EXCHANGE_RECORDS,
+  "case-008": FOUNDING_RECORDS,
+};
+
+function ledgerPreviewCardMarkup(record, index) {
+  const choices = record.choices
+    .map(
+      (choice, ci) =>
+        `<label class="ledger-choice ledger-choice--preview ${ci === record.answer ? "is-correct-preview" : ""}"><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`
+    )
+    .join("");
+  return `<div class="quest-preview-frozen"><p class="quest-preview-label">Student view preview</p><article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${choices}</fieldset><small>${esc(record.citation)}</small></article></div>`;
+}
+
+function manageContentMissionCardMarkup(c) {
+  return `<article class="manage-content-mission-card">
+<div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p><span class="case-kind-badge">${esc(caseKindLabel(c))}</span></div>
+<h3>${esc(c.title)}</h3>
+<p class="case-summary-note">${esc(c.summary)}</p>
+<button class="btn btn-outline" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit mission →</button>
+</article>`;
+}
+
+function manageContentUnitSectionMarkup(unit) {
+  const isOpen = manageContentExpandedUnitId === unit.id;
+  const body = isOpen
+    ? `<div class="manage-content-unit-body">
+<p>${esc(unit.description)}</p>
+${resolvedUnitCentralQuestion(unit) ? `<p class="manage-content-central-question">${esc(resolvedUnitCentralQuestion(unit))}</p>` : ""}
+<div class="manage-content-mission-grid">${unit.cases.map(manageContentMissionCardMarkup).join("")}</div>
+</div>`
+    : "";
+  return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
+<button class="manage-content-unit-toggle" data-action="toggle-manage-content-unit" data-unit-id="${esc(unit.id)}" type="button" aria-expanded="${isOpen}">
+<span class="manage-content-unit-chevron" aria-hidden="true">${isOpen ? "▾" : "▸"}</span>
+<span class="manage-content-unit-heading"><span class="manage-content-unit-title">${esc(resolvedUnitTitle(unit))}</span><span class="kicker">${esc(unit.period)}</span></span>
+</button>
+${body}
+</section>`;
+}
+
 function manageContentScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
-  const unitSections = UNITS.map((unit) => {
-    const caseRows = unit.cases
-      .map(
-        (c) =>
-          `<tr><td>${esc(c.shortTitle)}</td><td><strong>${esc(c.title)}</strong><br><span class="case-kind-badge">${esc(caseKindLabel(c))}</span><p class="case-summary-note">${esc(c.summary)}</p></td><td><button class="text-button" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit →</button></td></tr>`
-      )
-      .join("");
-    return `<section class="manage-content-unit"><h2>${esc(resolvedUnitTitle(unit))}</h2><p class="kicker">${esc(unit.period)}</p><p>${esc(unit.description)}</p>${resolvedUnitCentralQuestion(unit) ? `<p class="manage-content-central-question">${esc(resolvedUnitCentralQuestion(unit))}</p>` : ""}<table class="roster-table"><thead><tr><th>Mission</th><th>Details</th><th></th></tr></thead><tbody>${caseRows}</tbody></table></section>`;
-  }).join("");
-  return `${chrome()}<main class="shell completion-shell"><section>
+  const unitSections = UNITS.map(manageContentUnitSectionMarkup).join("");
+  return `${chrome()}<main class="shell manage-content-shell"><section>
 <button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Manage Content</h1>
-<p>Pick a mission to review its intent, then swap its practice questions — and, for non-map missions, its sources — for this classroom.</p>
+<p>Pick a unit to see its missions, then open one to review its intent, preview its content, and swap its practice questions — and, for non-map missions, its sources — for this classroom.</p>
 ${unitSections}
 </section></main>${authorPanel()}`;
 }
 
+function manageContentSlotCardMarkup(slot) {
+  const altOptions = [
+    `<option value="" ${!slot.draftAltId ? "selected" : ""}>Official — ${esc(slot.officialLabel)}</option>`,
+    ...slot.alternatives.map(
+      (alt) =>
+        `<option value="${esc(alt.id)}" ${slot.draftAltId === alt.id ? "selected" : ""}>${esc(alt.label)}</option>`
+    ),
+  ].join("");
+  const publishedLabel = slot.publishedAltId
+    ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || slot.publishedAltId
+    : "Official";
+  const kindLabel = slot.slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slot.slotKind] || slot.slotKind;
+  const statusClass = slot.draftAltId !== slot.publishedAltId ? "is-draft" : "is-published";
+  const preview =
+    slot.slotKind === "source"
+      ? sourcePreviewCardMarkup(slot.previewContent)
+      : questPreviewCardMarkup(slot.slotKind, slot.previewContent);
+  return `<article class="manage-content-slot-card">
+<div class="manage-content-slot-head">
+<span class="case-kind-badge">${esc(kindLabel)}</span>
+<p class="manage-content-slot-label">${esc(slot.officialLabel)}</p>
+</div>
+<div class="manage-content-slot-controls">
+<label class="manage-content-slot-select-label">Selection (draft)
+<select data-content-alternate-slot-kind="${esc(slot.slotKind)}" data-content-alternate-slot-id="${esc(slot.officialId)}">${altOptions}</select>
+</label>
+<span class="manage-content-status-pill ${statusClass}">Published: ${esc(publishedLabel)}</span>
+</div>
+${preview}
+</article>`;
+}
+
 function manageContentCaseScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
   const activeCase = caseById(contentUiState.selectedCaseId);
   if (!activeCase) {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-manage-content" type="button">← All cases</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-manage-content" type="button">← All cases</button></section></main>${authorPanel()}`;
   }
   const isMapCase = activeCase.route === "field";
-  const lockedSourceRows = contentUiState.lockedSources
-    .map((source) => `<li><strong>${esc(source.title)}</strong> — <span class="locked-note">fixed to this map, not editable</span></li>`)
-    .join("");
-  const slotRows = contentUiState.slots
-    .map((slot) => {
-      const altOptions = [
-        `<option value="" ${!slot.draftAltId ? "selected" : ""}>Official — ${esc(slot.officialLabel)}</option>`,
-        ...slot.alternatives.map(
-          (alt) =>
-            `<option value="${esc(alt.id)}" ${slot.draftAltId === alt.id ? "selected" : ""}>${esc(alt.label)}</option>`
-        ),
-      ].join("");
-      const publishedLabel = slot.publishedAltId
-        ? slot.alternatives.find((a) => a.id === slot.publishedAltId)?.label || slot.publishedAltId
-        : "Official";
-      const kindLabel = slot.slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slot.slotKind] || slot.slotKind;
-      return `<tr>
-<td>${esc(kindLabel)}: ${esc(slot.officialLabel)}</td>
-<td><select data-content-alternate-slot-kind="${esc(slot.slotKind)}" data-content-alternate-slot-id="${esc(slot.officialId)}">${altOptions}</select></td>
-<td>Currently published: ${esc(publishedLabel)}</td>
-</tr>`;
-    })
-    .join("");
+  const lockedSourceCards = contentUiState.lockedSources.map(sourcePreviewCardMarkup).join("");
+  const slotCards = contentUiState.slots.map(manageContentSlotCardMarkup).join("");
+  const ledgerRecords = LEDGER_PREVIEW_RECORDS_BY_CASE[activeCase.id];
+  const ledgerPreviewCards = !contentUiState.slots.length && ledgerRecords ? ledgerRecords.map(ledgerPreviewCardMarkup).join("") : "";
   const hasUnpublishedDraft = contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId);
   const canPreview = isMapCase || contentUiState.slots.length > 0;
-  return `${chrome()}<main class="shell completion-shell"><section>
+  return `${chrome()}<main class="shell manage-content-shell"><section>
 <button class="back-link" data-action="back-to-manage-content">← All cases</button>
 <p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
 <h1>${esc(activeCase.title)}</h1>
 <p>${esc(activeCase.summary)}</p>
 ${
   isMapCase
-    ? `<h2>Sources</h2><p>This mission's sources are fixed to real locations on the walkable map and can't be swapped — only its questions are editable below.</p>${lockedSourceRows ? `<ul class="manage-content-locked-list">${lockedSourceRows}</ul>` : ""}`
+    ? `<h2>Sources</h2><p class="locked-note">This mission's sources are fixed to real locations on the walkable map and can't be swapped — only its questions are editable below.</p>${lockedSourceCards ? `<div class="manage-content-preview-grid">${lockedSourceCards}</div>` : ""}`
     : ""
 }
 <h2>Questions</h2>
-${contentUiState.slots.length ? `<table class="roster-table"><thead><tr><th>Slot</th><th>Selection (draft)</th><th>Live status</th></tr></thead><tbody>${slotRows}</tbody></table>` : "<p>This mission has no swappable content yet.</p>"}
+${
+  slotCards
+    ? `<div class="manage-content-slot-stack">${slotCards}</div>`
+    : ledgerPreviewCards
+      ? `<p class="locked-note">This mission's questions are a bespoke activity, not one of the swappable quest types yet — shown here read-only.</p><div class="manage-content-preview-grid">${ledgerPreviewCards}</div>`
+      : "<p>This mission has no swappable content yet.</p>"
+}
 ${contentUiState.error ? `<p class="feedback error">${esc(contentUiState.error)}</p>` : ""}
 <button class="btn btn-gold" data-action="publish-case-content" type="button" ${hasUnpublishedDraft ? "" : "disabled"}>Publish to students</button>
 <button class="btn btn-outline" data-action="toggle-content-preview" type="button" ${canPreview ? "" : "disabled"}>Preview as student →</button>
@@ -2294,24 +2372,28 @@ async function loadManageContentCaseData(caseId) {
       ? []
       : (UNIT_SOURCES[caseId] || []).map((source) => {
           const key = `source:${source.id}`;
+          const draftAltId = bySlot[key]?.draft || null;
           return {
             slotKind: "source",
             officialId: source.id,
             officialLabel: source.title,
-            draftAltId: bySlot[key]?.draft || null,
+            draftAltId,
             publishedAltId: bySlot[key]?.published || null,
             alternatives: alternativesForSourceSlot(source.id),
+            previewContent: (draftAltId && sourceAlternateById(draftAltId)) || source,
           };
         });
     const questSlots = officialQuestSlotsForCase(caseId).map(({ questType, quest }) => {
       const key = `${questType}:${quest.id}`;
+      const draftAltId = bySlot[key]?.draft || null;
       return {
         slotKind: questType,
         officialId: quest.id,
         officialLabel: quest.prompt,
-        draftAltId: bySlot[key]?.draft || null,
+        draftAltId,
         publishedAltId: bySlot[key]?.published || null,
         alternatives: alternativesForQuestSlot(questType, quest.id),
+        previewContent: (draftAltId && questAlternateById(questType, draftAltId)) || quest,
       };
     });
     contentUiState.slots = [...sourceSlots, ...questSlots];
@@ -2371,6 +2453,12 @@ function exitContentPreview() {
 }
 
 function handleManageContentClick(target, action) {
+  if (action === "toggle-manage-content-unit") {
+    const unitId = target.dataset.unitId;
+    manageContentExpandedUnitId = manageContentExpandedUnitId === unitId ? null : unitId;
+    render();
+    return true;
+  }
   if (action === "open-manage-content-case") {
     contentUiState = {
       selectedCaseId: target.dataset.caseId,
@@ -5680,6 +5768,7 @@ function handleAuthScreenClick(target, action) {
     return true;
   }
   if (action === "open-manage-content") {
+    manageContentExpandedUnitId = null;
     progress.currentScreen = "manage-content";
     save();
     render();
