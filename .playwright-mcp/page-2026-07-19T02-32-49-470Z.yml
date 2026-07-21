@@ -1,0 +1,34 @@
+- generic [ref=f8e2]:
+  - banner [ref=f8e55]:
+    - button "Return to Chronicle Institute" [ref=f8e56]:
+      - generic [ref=f8e57]: ✦
+      - generic [ref=f8e58]:
+        - generic [ref=f8e59]: Republic Builder Engine
+        - strong [ref=f8e60]: Chronicle
+    - generic [ref=f8e61]:
+      - generic [ref=f8e62]: Archive connection secure
+      - button "Menu" [ref=f8e64]
+      - button "Toggle Chronicle music" [ref=f8e65]: ♫ Music off
+      - button "✦ Author Mode" [ref=f8e66]
+  - main [ref=f8e67]:
+    - generic [ref=f8e68]:
+      - paragraph [ref=f8e69]: Republic Builder Engine
+      - heading "Teacher Sign In" [level=1] [ref=f8e70]
+      - generic [ref=f8e71]:
+        - button "Sign In" [ref=f8e72]
+        - button "Create Account" [ref=f8e73]
+      - generic [ref=f8e74]:
+        - text: Your name
+        - textbox "Your name" [ref=f8e75]:
+          - /placeholder: Ms. Rivera
+      - generic [ref=f8e76]:
+        - text: Email
+        - textbox "Email" [ref=f8e77]:
+          - /placeholder: you@school.edu
+      - generic [ref=f8e78]:
+        - text: Password
+        - textbox "Password" [ref=f8e79]:
+          - /placeholder: ••••••••
+      - paragraph [ref=f8e80]: email rate limit exceeded
+      - button "Create Account →" [ref=f8e81]
+      - button "← Back" [ref=f8e82]

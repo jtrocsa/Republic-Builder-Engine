@@ -1449,7 +1449,13 @@ let authorPanelOpen = false;
 // progress = loadProgress() above must stay synchronous. Odysso (the
 // separate marketing site) links directly into "join"/"login" via ?entry=.
 let currentProfile = null;
-const authUiState = { studentTab: "claim", teacherTab: "signin", error: "", pending: false };
+const authUiState = {
+  studentTab: "claim",
+  teacherTab: "signin",
+  error: "",
+  info: "",
+  pending: false,
+};
 let teacherUiState = {
   classrooms: [],
   selectedClassroomId: null,
@@ -1815,6 +1821,7 @@ function loginScreen() {
 ${!isSignIn ? `<label>Your name<input id="teacher-display-name" placeholder="Ms. Rivera" autocomplete="off"></label>` : ""}
 <label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" autocomplete="off"></label>
 <label>Password<input id="teacher-password" type="password" placeholder="••••••••" autocomplete="off"></label>
+${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
 ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
 <button class="btn btn-gold" data-action="${isSignIn ? "submit-teacher-signin" : "submit-teacher-signup"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isSignIn ? "Sign In →" : "Create Account →"}</button>
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
@@ -4782,6 +4789,7 @@ function handleAuthScreenClick(target, action) {
     progress.currentScreen = "join";
     showMainMenu = false;
     authUiState.error = "";
+    authUiState.info = "";
     save();
     render();
     return true;
@@ -4790,6 +4798,7 @@ function handleAuthScreenClick(target, action) {
     progress.currentScreen = "login";
     showMainMenu = false;
     authUiState.error = "";
+    authUiState.info = "";
     save();
     render();
     return true;
@@ -4797,12 +4806,14 @@ function handleAuthScreenClick(target, action) {
   if (action === "student-tab-claim" || action === "student-tab-signin") {
     authUiState.studentTab = action === "student-tab-claim" ? "claim" : "signin";
     authUiState.error = "";
+    authUiState.info = "";
     render();
     return true;
   }
   if (action === "teacher-tab-signin" || action === "teacher-tab-signup") {
     authUiState.teacherTab = action === "teacher-tab-signin" ? "signin" : "signup";
     authUiState.error = "";
+    authUiState.info = "";
     render();
     return true;
   }
@@ -4823,6 +4834,7 @@ function handleAuthScreenClick(target, action) {
     }
     authUiState.pending = true;
     authUiState.error = "";
+    authUiState.info = "";
     render();
     claimSlot({ joinCode, studentIdCode, password, displayName })
       .then(({ email }) => signInWithPassword(email, password))
@@ -4850,6 +4862,7 @@ function handleAuthScreenClick(target, action) {
     }
     authUiState.pending = true;
     authUiState.error = "";
+    authUiState.info = "";
     render();
     resolveStudentEmail({ joinCode, studentIdCode })
       .then(({ email }) => signInWithPassword(email, password))
@@ -4876,6 +4889,7 @@ function handleAuthScreenClick(target, action) {
     }
     authUiState.pending = true;
     authUiState.error = "";
+    authUiState.info = "";
     render();
     signInWithPassword(email, password)
       .then(() => getProfile())
@@ -4905,14 +4919,21 @@ function handleAuthScreenClick(target, action) {
     }
     authUiState.pending = true;
     authUiState.error = "";
+    authUiState.info = "";
     render();
     signUpTeacher(email, password, displayName)
-      .then(() => getProfile())
-      .then((profile) => {
-        currentProfile = profile;
-        progress.currentScreen = "teacher-dashboard";
-        save();
-        return loadTeacherDashboardData();
+      .then(({ needsEmailConfirmation }) => {
+        if (needsEmailConfirmation) {
+          authUiState.teacherTab = "signin";
+          authUiState.info = "Account created — check your email to confirm it, then sign in.";
+          return null;
+        }
+        return getProfile().then((profile) => {
+          currentProfile = profile;
+          progress.currentScreen = "teacher-dashboard";
+          save();
+          return loadTeacherDashboardData();
+        });
       })
       .catch((err) => {
         authUiState.error = err.message || "Could not create your account.";

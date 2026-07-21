@@ -37,20 +37,25 @@ export async function signInWithPassword(email, password) {
 // Self-serve teacher account creation — the one open-signup path in this
 // system (student accounts are always teacher-provisioned, see
 // remote-classroom-repository.js's claimSlot). Uses the anon-key browser
-// client only; no privileged operation is involved.
+// client only; no privileged operation is involved. The `profiles` row is
+// created by a database trigger (see migration 0003) from the metadata
+// passed here, not by a client-side insert — a client insert would have no
+// auth.uid() to satisfy RLS with whenever email confirmation is pending.
+// Returns `{ session, needsEmailConfirmation }`: session is null and
+// needsEmailConfirmation is true when the project requires confirming the
+// address before it's usable.
 export async function signUpTeacher(email, password, displayName) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { role: "teacher", display_name: displayName?.trim() || "Teacher" },
+    },
+  });
   if (error) throw error;
   if (!data.user) throw new Error("Sign-up did not return a user.");
 
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: data.user.id,
-    role: "teacher",
-    display_name: displayName?.trim() || "Teacher",
-  });
-  if (profileError) throw profileError;
-
-  return data.session;
+  return { session: data.session, needsEmailConfirmation: !data.session };
 }
 
 export async function signOut() {

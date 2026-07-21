@@ -1,0 +1,10 @@
+[     253ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0
+[     353ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5174/favicon.ico:0
+[    8723ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0
+[   27815ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0
+[   28930ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://rxhpxqbtrnswjevcuxon.supabase.co/auth/v1/signup:0
+[   29041ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0
+[   54759ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0
+[   86543ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0
+[   87577ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://rxhpxqbtrnswjevcuxon.supabase.co/rest/v1/profiles:0
+[   87681ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5174/?entry=teacher-login:0

@@ -1,0 +1,29 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - button "Return to Chronicle Institute" [ref=e4]:
+      - generic [ref=e5]: ✦
+      - generic [ref=e6]:
+        - generic [ref=e7]: Republic Builder Engine
+        - strong [ref=e8]: Chronicle
+    - generic [ref=e9]:
+      - generic [ref=e10]: Archive connection secure
+      - button "Menu" [ref=e12]
+      - button "Toggle Chronicle music" [ref=e13]: ♫ Music off
+      - button "✦ Author Mode" [ref=e14]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - paragraph [ref=e17]: Republic Builder Engine
+      - heading "Teacher Sign In" [level=1] [ref=e18]
+      - generic [ref=e19]:
+        - button "Sign In" [ref=e20]
+        - button "Create Account" [ref=e21]
+      - generic [ref=e22]:
+        - text: Email
+        - textbox "Email" [ref=e23]:
+          - /placeholder: you@school.edu
+      - generic [ref=e24]:
+        - text: Password
+        - textbox "Password" [ref=e25]:
+          - /placeholder: ••••••••
+      - button "Sign In →" [ref=e26]
+      - button "← Back" [ref=e27]

@@ -52,28 +52,22 @@ export default async function handler(req, res) {
   }
 
   const email = deriveStudentLoginEmail(classroom.id, studentIdCode.trim());
+  const resolvedDisplayName =
+    typeof displayName === "string" && displayName.trim()
+      ? displayName.trim()
+      : `Chronicler ${studentIdCode.trim()}`;
+  // profiles row is created by the on_auth_user_created trigger (migration
+  // 0003) from this metadata, not by a manual insert here — see
+  // remote-auth-repository.js's signUpTeacher() for why.
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { role: "student" },
+    user_metadata: { role: "student", display_name: resolvedDisplayName },
   });
   if (createError || !created?.user) {
     console.error("roster/claim: createUser failed", createError);
     return res.status(500).json({ error: "Could not create your account. Try again." });
-  }
-
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: created.user.id,
-    role: "student",
-    display_name:
-      typeof displayName === "string" && displayName.trim()
-        ? displayName.trim()
-        : `Chronicler ${studentIdCode.trim()}`,
-  });
-  if (profileError) {
-    console.error("roster/claim: profile insert failed", profileError);
-    return res.status(500).json({ error: "Could not finish creating your account." });
   }
 
   const { error: slotError } = await admin
