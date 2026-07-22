@@ -7,7 +7,7 @@ export const BRAND = {
 export const UNIT_01 = {
   id: "unit-01",
   title: "The Atlantic World",
-  period: "1491–1607",
+  period: "Period 1 · 1491–1607",
   description:
     "Investigate the societies, exchanges, and colonial systems that reshaped the Atlantic world after 1492.",
   centralQuestion:

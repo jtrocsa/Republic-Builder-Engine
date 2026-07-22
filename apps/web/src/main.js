@@ -2305,7 +2305,7 @@ ${poolSectionsMarkup}
   return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
 <button class="manage-content-unit-toggle" data-action="toggle-sources-unit" data-unit="${unitNumber}" type="button" aria-expanded="${isOpen}">
 <span class="manage-content-unit-chevron" aria-hidden="true">${isOpen ? "▾" : "▸"}</span>
-<span class="manage-content-unit-heading"><span class="manage-content-unit-title">${esc(meta.label)}</span><span class="kicker">${esc(meta.period)} · ${esc(meta.years)}</span></span>
+<span class="manage-content-unit-heading"><span class="manage-content-unit-number">Unit ${unitNumber}</span><span class="manage-content-unit-title">${esc(meta.label)}</span><span class="kicker">${esc(meta.period)} · ${esc(meta.years)}</span></span>
 </button>
 ${body}
 </section>`;
@@ -2532,6 +2532,7 @@ function manageContentMissionCardMarkup(c) {
 
 function manageContentUnitSectionMarkup(unit) {
   const isOpen = manageContentExpandedUnitId === unit.id;
+  const unitNumber = Number(unit.id.split("-")[1]);
   const body = isOpen
     ? `<div class="manage-content-unit-body">
 <p>${esc(unit.description)}</p>
@@ -2542,7 +2543,7 @@ ${resolvedUnitCentralQuestion(unit) ? `<p class="manage-content-central-question
   return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
 <button class="manage-content-unit-toggle" data-action="toggle-manage-content-unit" data-unit-id="${esc(unit.id)}" type="button" aria-expanded="${isOpen}">
 <span class="manage-content-unit-chevron" aria-hidden="true">${isOpen ? "▾" : "▸"}</span>
-<span class="manage-content-unit-heading"><span class="manage-content-unit-title">${esc(resolvedUnitTitle(unit))}</span><span class="kicker">${esc(unit.period)}</span></span>
+<span class="manage-content-unit-heading"><span class="manage-content-unit-number">Unit ${unitNumber}</span><span class="manage-content-unit-title">${esc(resolvedUnitTitle(unit))}</span><span class="kicker">${esc(unit.period)}</span></span>
 </button>
 ${body}
 </section>`;
