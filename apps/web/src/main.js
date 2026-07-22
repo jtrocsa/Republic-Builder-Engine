@@ -1566,12 +1566,13 @@ let contentUiState = {
 // whichever was previously open. Transient UI state, never persisted.
 let manageContentExpandedUnitId = null;
 // Per-source collapsible sections inside manageContentCaseScreen() — a Set
-// of collapsed source/"general" ids (default: everything expanded, since a
-// case has at most a handful of sources). Kept as JS-tracked state rather
-// than native <details open> because render() fully replaces the screen's
+// of source/"general" ids the teacher has explicitly expanded (default:
+// everything collapsed, since a case screen can otherwise be a wall of text
+// before a teacher does anything). Kept as JS-tracked state rather than
+// native <details open> because render() fully replaces the screen's
 // markup on every change (a dropdown swap, a save), which would otherwise
 // reset any native disclosure state back to its default each time.
-let manageContentCollapsedSectionIds = new Set();
+let manageContentExpandedSectionIds = new Set();
 // In-progress "add new question" / "edit" authoring form — null when no
 // form is open. See engine/custom-content-authoring.js for the field <->
 // content-object conversion this drives.
@@ -2536,6 +2537,34 @@ ${meta}
 <div class="manage-content-locked-prompt"><span class="manage-content-lock-glyph" aria-hidden="true">&#128274;</span><div><p class="manage-content-locked-label">Chronicler prompt · fixed, locked to the map</p><p>${esc(source.prompt)}</p></div></div>`;
 }
 
+// Short, per-source explainer of the real order a student encounters this
+// source in — gate presence/type varies per source, so this stays a small
+// per-source note rather than a single case-level sentence (which couldn't
+// stay accurate across e.g. case-001's gated taino-context vs. its ungated
+// columbus-letter).
+function sourceFlowNoteMarkup(source) {
+  const text = source?.investigationMode
+    ? "How students get here: they complete the Investigation Challenge below first — this source stays locked until they do. Once unlocked, the Chronicler prompt is answered right away; Institute Context stays sealed until they submit that response."
+    : "How students get here: this source has no Investigation Challenge gate — it opens directly. The Chronicler prompt is answered right away; Institute Context stays sealed until they submit that response.";
+  return `<p class="manage-content-help-text">${text}</p>`;
+}
+
+// Read-only inline preview of a source's real Investigation Challenge gate
+// (source.investigationMode/investigationQuestId) — reuses the same
+// renderQuest() a student's investigationScreen() calls, wrapped frozen so
+// this editor's global click/change listeners can't fire from it. Empty
+// state ({}) previews the quest itself, not any particular student's
+// answers. Returns "" for a source with no gate (e.g. case-001's
+// columbus-letter) — there's nothing to preview.
+function investigationGatePreviewMarkup(source) {
+  if (!source?.investigationMode) return "";
+  const quest = investigationQuestFor(source.investigationMode, source.investigationQuestId);
+  return `<div class="quest-preview-frozen">
+<p class="quest-preview-label">Investigation Challenge · students complete this before the source unlocks · fixed, not editable here</p>
+${quest ? renderQuest(source.investigationMode, quest, {}) : `<p class="bank-empty">This record's Investigation Challenge is still being cataloged.</p>`}
+</div>`;
+}
+
 // Bespoke non-quest-type mechanic with zero swappable content today (see
 // officialQuestSlotsForCase()) — case-008's Founding Debate ledger. Case
 // 1.02's Exchange Ledger used to be here too, but is now wired into real
@@ -2665,7 +2694,7 @@ function manageContentQuestionEntryMarkup(entry) {
 }
 
 function manageContentSectionMarkup({ id, title, kicker, bodyMarkup }) {
-  const collapsed = manageContentCollapsedSectionIds.has(id);
+  const collapsed = !manageContentExpandedSectionIds.has(id);
   return `<section class="manage-content-source-section ${collapsed ? "is-collapsed" : ""}">
 <button class="manage-content-source-toggle" data-action="toggle-manage-content-section" data-section-id="${esc(id)}" type="button" aria-expanded="${!collapsed}">
 <span class="manage-content-unit-chevron" aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
@@ -2708,9 +2737,11 @@ function manageContentGroupBodyMarkup(group, questions) {
       manageContentAuthoring.relatedSourceId === group.id) ||
       (manageContentAuthoring.slotKind === "source" &&
         manageContentAuthoring.editingOfficialId === group.source.id));
-  return `<div class="manage-content-source-preview-wrap">${sourcePreview}${editSourceBtn}</div>
-<h4 class="manage-content-questions-heading">Questions about this source</h4>
-<p class="manage-content-editable-note">These are editable — the source above is fixed to the map.</p>
+  return `${sourceFlowNoteMarkup(group.source)}
+${investigationGatePreviewMarkup(group.source)}
+<div class="manage-content-source-preview-wrap">${sourcePreview}${editSourceBtn}</div>
+<h4 class="manage-content-questions-heading">Practice Check questions about this source</h4>
+<p class="manage-content-editable-note">Editable, and optional for students — these appear later on the separate Practice Check screen, not while reading this source, and don't affect whether it unlocks.</p>
 ${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No questions about this source yet.</p>`}
 ${
   showAddForm
@@ -3409,7 +3440,7 @@ function handleManageContentClick(target, action) {
       error: "",
       pending: false,
     };
-    manageContentCollapsedSectionIds = new Set();
+    manageContentExpandedSectionIds = new Set();
     manageContentAuthoring = null;
     manageContentConfirmDeleteId = null;
     progress.currentScreen = "manage-content-case";
@@ -3450,8 +3481,8 @@ function handleManageContentClick(target, action) {
   }
   if (action === "toggle-manage-content-section") {
     const id = target.dataset.sectionId;
-    if (manageContentCollapsedSectionIds.has(id)) manageContentCollapsedSectionIds.delete(id);
-    else manageContentCollapsedSectionIds.add(id);
+    if (manageContentExpandedSectionIds.has(id)) manageContentExpandedSectionIds.delete(id);
+    else manageContentExpandedSectionIds.add(id);
     render();
     return true;
   }
