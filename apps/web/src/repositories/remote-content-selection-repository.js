@@ -123,11 +123,15 @@ export function questAlternateById(questType, altId) {
 let sourceSelections = {};
 let questSelectionsByType = {};
 let customContentById = new Map();
+let customContentSlotKindById = new Map();
+let additionsByCase = {};
 
 export async function loadSelectionsForResolution(classroomId, status = "published") {
   sourceSelections = {};
   questSelectionsByType = {};
   customContentById = new Map();
+  customContentSlotKindById = new Map();
+  additionsByCase = {};
   if (!classroomId) return;
 
   const { data, error } = await supabase
@@ -151,14 +155,50 @@ export async function loadSelectionsForResolution(classroomId, status = "publish
   if (customAltIds.length) {
     const { data: customRows, error: customError } = await supabase
       .from("custom_content_items")
-      .select("id, content")
+      .select("id, slot_kind, content")
       .in("id", customAltIds);
     if (customError) {
       console.error("loadSelectionsForResolution failed to load custom content", customError);
     } else {
-      for (const row of customRows) customContentById.set(row.id, row.content);
+      for (const row of customRows) {
+        customContentById.set(row.id, row.content);
+        customContentSlotKindById.set(row.id, row.slot_kind);
+      }
     }
   }
+
+  // Addition-slot questions (brand-new, no official counterpart) have no
+  // classroom_content_selections row to key off of — they're published/
+  // drafted directly on their own custom_content_items row (see
+  // remote-custom-content-repository.js). "draft" status here means Preview
+  // as student (a teacher previewing their own unpublished work), so it
+  // shows both draft and published additions; "published" (the real
+  // student-facing/default path) shows only published ones.
+  const { data: additionRows, error: additionError } = await supabase
+    .from("custom_content_items")
+    .select("id, case_id, slot_kind, related_source_id, content, status")
+    .eq("classroom_id", classroomId)
+    .eq("mode", "addition");
+  if (additionError) {
+    console.error("loadSelectionsForResolution failed to load additions", additionError);
+  } else {
+    for (const row of additionRows) {
+      if (status === "published" && row.status !== "published") continue;
+      (additionsByCase[row.case_id] ??= []).push({
+        id: row.id,
+        slotKind: row.slot_kind,
+        relatedSourceId: row.related_source_id,
+        content: row.content,
+      });
+    }
+  }
+}
+
+// Published (or, while previewing, draft) teacher-added questions for a
+// case, with no official counterpart to swap — see
+// archiveChallengesScreen()'s addition-card rendering in main.js.
+export function resolvedAdditionsForCase(caseId) {
+  return additionsByCase[caseId] || [];
 }
 
 function resolveAlt(entry, curatedLookup) {
@@ -182,10 +222,44 @@ export function resolveQuestSlot(questType, officialQuest) {
   return alt ? { ...alt, id: officialQuest.id } : officialQuest;
 }
 
+// Like resolveQuestSlot(), but for slots where a teacher-authored
+// replacement is allowed to be a genuinely different quest type than the
+// official slot it replaces (e.g. swapping an mcq Archive Challenge for a
+// hipp one) — returns the type to actually render/grade as, not just the
+// content. officialQuestType stays the stable identifier used to look up
+// the slot's selection row (classroom_content_selections.slot_kind never
+// changes for a given official slot); the *resolved* type only diverges
+// when the published alt is a custom row, since custom_content_items.slot_kind
+// is the real authored type and isn't constrained to match what it
+// replaces. Curated alternates are always the same type as the slot they
+// replace (one static pool per type), so that branch never changes type.
+// Left as a sibling to resolveQuestSlot() rather than replacing it, since
+// "ledger-record" (case-002) has no type-swap concept and still wants the
+// simpler, type-fixed behavior.
+export function resolveQuestSlotWithType(officialQuestType, officialQuest) {
+  const entry = questSelectionsByType[officialQuestType]?.[officialQuest.id];
+  if (!entry) return { questType: officialQuestType, quest: officialQuest };
+  if (entry.altKind === "custom") {
+    const content = customContentById.get(entry.altId);
+    if (!content) return { questType: officialQuestType, quest: officialQuest };
+    return {
+      questType: customContentSlotKindById.get(entry.altId) || officialQuestType,
+      quest: { ...content, id: officialQuest.id },
+    };
+  }
+  const curated = QUEST_ALTERNATES_BY_ALT_ID_BY_TYPE[officialQuestType]?.get(entry.altId);
+  return {
+    questType: officialQuestType,
+    quest: curated ? { ...curated, id: officialQuest.id } : officialQuest,
+  };
+}
+
 export function clearResolutionCache() {
   sourceSelections = {};
   questSelectionsByType = {};
   customContentById = new Map();
+  customContentSlotKindById = new Map();
+  additionsByCase = {};
 }
 
 // --- Teacher editing (draft CRUD; direct DB hits, no cache) ---

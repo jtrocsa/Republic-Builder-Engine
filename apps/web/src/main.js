@@ -152,6 +152,7 @@ import {
   loadSelectionsForResolution,
   resolveSourceSlot,
   resolveQuestSlot,
+  resolveQuestSlotWithType,
   alternativesForSourceSlot,
   alternativesForQuestSlot,
   sourceAlternateById,
@@ -159,6 +160,7 @@ import {
   listSelectionsForCase,
   setDraftSelection,
   publishCaseSelections,
+  resolvedAdditionsForCase,
 } from "./repositories/remote-content-selection-repository.js";
 import {
   listCustomContentForCase,
@@ -1557,7 +1559,6 @@ let contentUiState = {
   selectedCaseId: null,
   slots: [], // official slots: [{slotKind, officialId, officialLabel, relatedSourceId, draftAltId, draftAltKind, publishedAltId, alternatives: [{id,label,kind}], previewContent}]
   additionSlots: [], // teacher-added questions with no official counterpart: [{id, slotKind, relatedSourceId, content, status}]
-  lockedSources: [], // map-case sources shown read-only — see caseKindLabel()/loadManageContentCaseData()
   error: "",
   pending: false,
 };
@@ -1577,6 +1578,16 @@ let manageContentExpandedSectionIds = new Set();
 // form is open. See engine/custom-content-authoring.js for the field <->
 // content-object conversion this drives.
 let manageContentAuthoring = null;
+// The guided "Keep what's here? / Add one? / Replace it?" mini-flow for one
+// official quest slot — null when no such prompt is open for any slot.
+// {slotKind, officialId, relatedSourceId, relatedSourceLabel, step}, step
+// is "keep-or-not" or "add-one". Kept separate from manageContentAuthoring
+// (which drives the actual authoring form) since the guided prompt is a
+// lightweight Yes/No panel, not a form — see
+// manageContentGuidedPromptMarkup(). Only ever set for the 4 real quest
+// types (mcq/sequencing/evidence-organizing/hipp); sources and ledger
+// records keep their existing one-click "Edit →" only.
+let manageContentGuidedPrompt = null;
 // Two-click "Delete" confirmation for teacher-added (mode: "addition")
 // questions — holds the custom_content_items.id currently showing its
 // "Confirm delete?" state, or null. The app has no window.confirm()
@@ -1767,11 +1778,16 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
   sequencing: UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
   mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
 };
+// Returns {questType, quest} rather than just the content — a published
+// teacher-authored replacement can be a genuinely different quest type than
+// the official slot it replaces (see resolveQuestSlotWithType()'s doc
+// comment), so the type actually used to render/grade this challenge has to
+// come back from resolution, not stay fixed at the caller's questType.
 function archiveChallengeQuestFor(questType, questId) {
   const official = (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE[questType] || []).find(
     (quest) => quest.id === questId
   );
-  return official ? resolveQuestSlot(questType, official) : undefined;
+  return official ? resolveQuestSlotWithType(questType, official) : undefined;
 }
 // Investigation Challenge quest content, resolved by (questType, questId) from a
 // source's source.investigationMode/investigationQuestId pointer (source.schema.js).
@@ -1893,6 +1909,22 @@ export function resolvedUnitTitle(unit) {
 }
 export function resolvedUnitCentralQuestion(unit) {
   return resolveTeacherOverride(unit.id, "centralQuestion", unit.centralQuestion);
+}
+
+// A case's title is "Case N.NN — Name" for case-001/002/003 only — later
+// units drop the numbering (e.g. "The Riverbend Settlement"). The prefix
+// (if present) is never editable; only the descriptive name after it is, via
+// the same generic teacher-override store unit titles already use.
+const CASE_TITLE_PREFIX_RE = /^(Case\s+\d+\.\d+\s*—\s*)/;
+function splitCaseTitle(kase) {
+  const m = kase.title.match(CASE_TITLE_PREFIX_RE);
+  return m
+    ? { prefix: m[1], name: kase.title.slice(m[1].length) }
+    : { prefix: "", name: kase.title };
+}
+function resolvedCaseTitle(kase) {
+  const { prefix, name } = splitCaseTitle(kase);
+  return prefix + resolveTeacherOverride(kase.id, "title", name);
 }
 
 function authorPanel() {
@@ -2421,16 +2453,34 @@ async function openGradingScreen(submissionId) {
 // --- Manage Content (Teacher Mode's per-mission source/quest swap editor) --------
 // Listed by Unit → Mission (case) so a teacher sees what kind of mission
 // they're about to edit before opening it — see caseKindLabel(). Map
-// missions (case.route === "field") have fixed geography and NPC/source
-// placement, so their sources are locked and only their questions are
-// editable; every other mission's questions are editable the same way, plus
-// any generic-schema sources it has (UNIT_SOURCES today only covers the 3
-// map cases, so that path is currently a no-op for non-map missions — see
-// the plan this shipped against).
+// Missions (case.route === "field") are entirely fixed content — geography,
+// NPC/source placement, and Practice Check questions alike — so
+// manageContentCaseScreen() shows them as locked with no editable slots at
+// all. Every other case is an Activity Mission: its questions are editable,
+// plus any generic-schema sources it has (UNIT_SOURCES today only covers
+// the 3 map cases, so that path is currently a no-op for Activity Missions —
+// see the plan this shipped against).
 function caseKindLabel(kase) {
-  if (kase.route === "field") return "Walkable map";
-  if (kase.route === null) return "Archive Challenge only";
-  return `Activity — ${kase.mechanic}`;
+  if (kase.route === "field") return "Map Mission";
+  if (kase.route === null) return "Activity Mission — Archive Challenge only";
+  return `Activity Mission — ${kase.mechanic}`;
+}
+
+// Renaming is metadata, not editable mission content, so it's offered even
+// on a fully locked Map Mission — saves directly on change via
+// setTeacherOverride(), same live-save pattern as Author Mode's unit-title
+// field (see handleAppChange()'s [data-case-title] branch). The "Case
+// N.NN —" prefix, if this case has one, renders as static text and is never
+// part of the editable value.
+function missionRenameControlMarkup(kase) {
+  const { prefix, name } = splitCaseTitle(kase);
+  const edited = hasTeacherOverride(kase.id, "title");
+  const resolvedName = resolveTeacherOverride(kase.id, "title", name);
+  return `<div class="manage-content-rename">
+<label>Mission name${edited ? ' <span class="author-override-flag">edited</span>' : ""}
+<span class="manage-content-rename-input-row">${prefix ? `<span class="manage-content-rename-prefix">${esc(prefix)}</span>` : ""}<input type="text" data-case-title="${esc(kase.id)}" value="${esc(resolvedName)}"></span>
+</label>
+</div>`;
 }
 
 // QUEST_TYPES keys (renderQuest/gradeQuest, quest-types/index.js — also
@@ -2478,12 +2528,31 @@ function officialQuestSlotsForCase(caseId) {
     : practiceSlots;
 }
 
-const QUEST_SLOT_LABELS = {
-  mcq: "MCQ",
+// Canonical display names for the 4 real quest-types/index.js QUEST_TYPES
+// keys — every other display string in Manage Content (QUEST_SLOT_LABELS,
+// AUTHORING_TYPE_LABELS, the type-picker cards) derives from this single
+// table so "Multiple Choice" vs "multiple-choice question" vs "MCQ" can't
+// drift apart again. The stable string KEYS themselves (mcq/sequencing/
+// evidence-organizing/hipp) never change — see quest-types/index.js's own
+// comment on why evidence-organizing's key was kept as-is. "ledger-record"
+// is a 5th, unrelated quasi-type (case-002 only, its own bespoke render
+// path, never routed through QUEST_TYPES/renderQuest) and deliberately has
+// no entry here — it's never offered as a pickable quest type.
+const QUEST_TYPE_DISPLAY_NAMES = {
+  mcq: "Multiple Choice",
   sequencing: "Sequencing",
-  "evidence-organizing": "Evidence organizing",
-  hipp: "HIPP",
-  "ledger-record": "Ledger record",
+  "evidence-organizing": "Evidence Organizing",
+  hipp: "HIPP Source Analysis",
+};
+const QUEST_TYPE_DESCRIPTIONS = {
+  mcq: "A single question with several answer choices.",
+  sequencing: "Arrange records in the order that reflects cause and effect.",
+  "evidence-organizing": "Sort sources into the historical-thinking skill each best demonstrates.",
+  hipp: "Analyze a document's Historical situation, Intended audience, Purpose, and Point of view.",
+};
+const QUEST_SLOT_LABELS = {
+  ...QUEST_TYPE_DISPLAY_NAMES,
+  "ledger-record": "Ledger Record",
 };
 
 // Presentational-only grouping: which source card a question's Manage
@@ -2589,7 +2658,7 @@ function ledgerPreviewCardMarkup(record, index) {
 function manageContentMissionCardMarkup(c) {
   return `<article class="manage-content-mission-card">
 <div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p><span class="case-kind-badge">${esc(caseKindLabel(c))}</span></div>
-<h3>${esc(c.title)}</h3>
+<h3>${esc(resolvedCaseTitle(c))}</h3>
 <p class="case-summary-note">${esc(c.summary)}</p>
 <button class="btn btn-outline" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit mission →</button>
 </article>`;
@@ -2642,7 +2711,13 @@ function isCardBeingEdited(auth, entry) {
 function manageContentCardSummaryMarkup(entry) {
   const isOfficial = entry.officialId !== undefined;
   const slotKind = entry.slotKind;
-  const kindLabel = slotKind === "source" ? "Source" : QUEST_SLOT_LABELS[slotKind] || slotKind;
+  // The badge shows what this slot currently renders as for students — for
+  // most slots that's just slotKind, but a teacher-authored type-changing
+  // replacement means the two can genuinely differ (see currentSlotKind's
+  // doc comment in loadManageContentCaseData()).
+  const displaySlotKind = entry.currentSlotKind || slotKind;
+  const kindLabel =
+    displaySlotKind === "source" ? "Source" : QUEST_SLOT_LABELS[displaySlotKind] || displaySlotKind;
   const promptText = isOfficial
     ? entry.officialLabel
     : entry.content.prompt || entry.content.title || "";
@@ -2673,6 +2748,13 @@ function manageContentCardSummaryMarkup(entry) {
       ? `<button class="btn btn-outline" data-action="delete-custom-addition" data-custom-id="${esc(entry.id)}" type="button">Confirm delete</button><button class="btn btn-plain" data-action="cancel-delete-addition" type="button">Cancel</button>`
       : `<button class="btn btn-plain manage-content-delete-btn" data-action="delete-custom-addition" data-custom-id="${esc(entry.id)}" type="button">Delete</button>`
     : "";
+  // The guided Keep/Add/Replace flow only applies to the 4 real quest
+  // types — sources and ledger records (case-002's fixed grid layout) keep
+  // today's single-click "Edit →" only.
+  const guidedButton =
+    isOfficial && QUEST_TYPE_DISPLAY_NAMES[slotKind]
+      ? `<button class="btn btn-plain manage-content-edit-btn" data-action="start-guided-change" ${editDataAttrs} type="button">Change this question →</button>`
+      : "";
   return `<article class="manage-content-slot-card manage-content-card-summary ${!isOfficial ? "manage-content-slot-card--addition" : ""}">
 <div class="manage-content-slot-head">
 <span class="case-kind-badge">${esc(kindLabel)}</span>
@@ -2683,13 +2765,47 @@ ${!isOfficial ? `<span class="case-kind-badge manage-content-badge-added">Teache
 ${sourceLabel ? `<span class="manage-content-summary-source">${esc(sourceLabel)}</span>` : ""}
 <span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}">${isDraftUnpublished ? "Draft — not yet published" : "Published"}</span>
 <button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" ${editDataAttrs} type="button">Edit →</button>
+${guidedButton}
 ${deleteControls}
 </div>
 </article>`;
 }
 
+function isCardInGuidedPrompt(entry) {
+  if (!manageContentGuidedPrompt || entry.officialId === undefined) return false;
+  return (
+    manageContentGuidedPrompt.officialId === entry.officialId &&
+    manageContentGuidedPrompt.slotKind === entry.slotKind
+  );
+}
+
+// The "Keep what's here?" / "Add one additional question?" mini-flow —
+// swapped in for the summary card the same way the authoring form is (see
+// manageContentQuestionEntryMarkup()), one Yes/No step at a time.
+function manageContentGuidedPromptMarkup() {
+  const p = manageContentGuidedPrompt;
+  if (p.step === "add-one") {
+    return `<article class="manage-content-slot-card manage-content-guided-prompt">
+<p class="manage-content-slot-label">Add one additional question?</p>
+<div class="manage-content-guided-actions">
+<button class="btn btn-gold" data-action="guided-add-yes" type="button">Yes, add one</button>
+<button class="btn btn-outline" data-action="guided-add-no" type="button">No, that's all</button>
+</div>
+</article>`;
+  }
+  return `<article class="manage-content-slot-card manage-content-guided-prompt">
+<p class="manage-content-slot-label">Keep what's here?</p>
+<div class="manage-content-guided-actions">
+<button class="btn btn-gold" data-action="guided-keep-yes" type="button">Yes, keep it</button>
+<button class="btn btn-outline" data-action="guided-keep-no" type="button">No, replace it</button>
+</div>
+<button class="btn btn-plain" data-action="cancel-guided-prompt" type="button">Cancel</button>
+</article>`;
+}
+
 function manageContentQuestionEntryMarkup(entry) {
   if (isCardBeingEdited(manageContentAuthoring, entry)) return manageContentAuthoringFormMarkup();
+  if (isCardInGuidedPrompt(entry)) return manageContentGuidedPromptMarkup();
   return manageContentCardSummaryMarkup(entry);
 }
 
@@ -2704,17 +2820,14 @@ ${collapsed ? "" : `<div class="manage-content-source-body">${bodyMarkup}</div>`
 </section>`;
 }
 
-// Which source card a question group nests under — map cases read from
-// lockedSources (official-only, never swapped), non-map cases read the
-// editable "source" slots. UNIT_SOURCES only covers case-001/004/007 today
-// (all three map cases), so the non-map branch has no live case yet — see
+// Which source card a question group nests under. UNIT_SOURCES only covers
+// case-001/004/007 today (all three Map Missions, now fully locked and
+// never reaching this function — see manageContentCaseScreen()'s early
+// return for route === "field"), so this has no live case yet — see
 // docs/architecture/ARCHITECTURE-QUICKREF.md's Phase 24 note on this same
-// UNIT_SOURCES coverage gap. Kept general rather than map-case-only so a
-// future non-map case with real sources works without further changes here.
-function manageContentSourceGroups(activeCase) {
-  if (activeCase.route === "field") {
-    return contentUiState.lockedSources.map((source) => ({ id: source.id, source, locked: true }));
-  }
+// UNIT_SOURCES coverage gap. Kept general rather than case-specific so a
+// future Activity Mission with real sources works without further changes.
+function manageContentSourceGroups() {
   return contentUiState.slots
     .filter((s) => s.slotKind === "source")
     .map((slot) => ({ id: slot.officialId, source: slot.previewContent, locked: false }));
@@ -2750,24 +2863,32 @@ ${
 }`;
 }
 
-function manageContentGeneralGroupBodyMarkup(questions, emptyText = "No general questions yet.") {
+function manageContentGeneralGroupBodyMarkup(
+  questions,
+  emptyText = "No general questions yet.",
+  additionsSupported = false
+) {
   const cards = questions.map(manageContentQuestionEntryMarkup).join("");
   const showAddForm =
     manageContentAuthoring &&
     manageContentAuthoring.formMode === "add" &&
     !manageContentAuthoring.relatedSourceId;
+  // A teacher-added question only reaches real students through Archive
+  // Challenges (see archiveChallengesScreen()'s additionCards) — a case
+  // without its own case.archiveChallenge has nowhere for one to render, so
+  // the button stays disabled there rather than silently saving a question
+  // no student will ever see.
+  const addButton = additionsSupported
+    ? `<button class="manage-content-add-tab" data-action="start-add-question" type="button">+ Add new question</button>`
+    : `<button class="manage-content-add-tab" disabled title="Only supported for missions with an Archive Challenge, for now." type="button">+ Add new question</button>`;
   return `${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">${esc(emptyText)}</p>`}
-${
-  showAddForm
-    ? manageContentAuthoringFormMarkup()
-    : `<button class="manage-content-add-tab" disabled title="Coming soon — for now you can adjust existing questions or swap in an alternate." type="button">+ Add new question</button>`
-}`;
+${showAddForm ? manageContentAuthoringFormMarkup() : addButton}`;
 }
 
+// Map Missions (route === "field") never reach this function — see
+// manageContentCaseScreen()'s early return, which shows its own fixed
+// locked-panel copy instead.
 function missionFlowSummary(kase, hasEditableContent) {
-  if (kase.route === "field") {
-    return "Fixed: students walk a real map and talk to NPCs to find these sources at set in-world locations. Editable below: the practice questions students answer after reading each source.";
-  }
   if (kase.route === "ledger" && hasEditableContent) {
     return "Fixed: this mission's ledger layout — every record shown on one screen. Editable below: each record's source card and its one question.";
   }
@@ -2779,10 +2900,9 @@ function missionFlowSummary(kase, hasEditableContent) {
 
 const AUTHORING_TYPE_LABELS = {
   source: "source",
-  mcq: "multiple-choice question",
-  sequencing: "sequencing question",
-  "evidence-organizing": "evidence-organizing question",
-  hipp: "HIPP source-analysis question",
+  ...Object.fromEntries(
+    Object.entries(QUEST_TYPE_DISPLAY_NAMES).map(([key, name]) => [key, `${name} question`])
+  ),
   "ledger-record": "ledger record",
 };
 
@@ -3011,23 +3131,28 @@ function authoringFieldsMarkup(auth) {
 function manageContentAuthoringFormMarkup() {
   const auth = manageContentAuthoring;
   if (!auth) return "";
-  const heading = `${auth.formMode === "add" ? "Add a new" : "Edit"} question${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}`;
+  const verb =
+    auth.formMode === "add" ? "Add a new" : auth.formMode === "replace" ? "Replace this" : "Edit";
+  const heading = `${verb} question${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}`;
   if (!auth.slotKind) {
+    const typeCards = Object.entries(QUEST_TYPE_DISPLAY_NAMES)
+      .map(
+        ([key, name]) =>
+          `<button class="manage-content-type-card" data-action="pick-question-type" data-slot-kind="${esc(key)}" type="button"><strong>${esc(name)}</strong><span>${esc(QUEST_TYPE_DESCRIPTIONS[key])}</span></button>`
+      )
+      .join("");
     return `<div class="manage-content-authoring-form manage-content-type-picker">
 <h4>${heading}</h4>
 <p>Choose a question type:</p>
 <div class="manage-content-type-picker-options">
-<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="mcq" type="button">Multiple choice</button>
-<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="sequencing" type="button">Sequencing</button>
-<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="evidence-organizing" type="button">Evidence organizing</button>
-<button class="btn btn-outline" data-action="pick-question-type" data-slot-kind="hipp" type="button">HIPP source analysis</button>
+${typeCards}
 <button class="btn btn-plain" disabled title="SAQ doesn't exist as a quest type in the engine yet — a separate, larger effort, not part of this editor." type="button">SAQ — not available yet</button>
 </div>
 <button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>
 </div>`;
   }
   return `<div class="manage-content-authoring-form">
-<h4>${auth.formMode === "add" ? "Add a new" : "Edit"} ${esc(AUTHORING_TYPE_LABELS[auth.slotKind])}${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}</h4>
+<h4>${verb} ${esc(AUTHORING_TYPE_LABELS[auth.slotKind])}${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}</h4>
 ${auth.errors.length ? `<ul class="manage-content-authoring-errors">${auth.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
 <div data-authoring-form>
 ${authoringFieldsMarkup(auth)}
@@ -3063,7 +3188,18 @@ function manageContentCaseScreen() {
   if (!activeCase) {
     return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← All cases</button></section></main>${authorPanel()}`;
   }
-  const groups = manageContentSourceGroups(activeCase);
+  if (activeCase.route === "field") {
+    return `${chrome()}<main class="shell manage-content-shell"><section>
+<button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>
+<p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
+<h1>${esc(resolvedCaseTitle(activeCase))}</h1>
+<p>${esc(activeCase.summary)}</p>
+${missionRenameControlMarkup(activeCase)}
+<p class="locked-note">Map Missions are entirely fixed content — the walkable map, its NPCs and sources, and its Practice Check questions are all locked. Nothing here is editable.</p>
+<button class="btn btn-outline" data-action="toggle-content-preview" type="button">Preview as student →</button>
+</section></main>${authorPanel()}`;
+  }
+  const groups = manageContentSourceGroups();
   const groupIds = new Set(groups.map((g) => g.id));
   const questionSlots = contentUiState.slots.filter((s) => s.slotKind !== "source");
   const generalQuestions = [
@@ -3104,7 +3240,8 @@ function manageContentCaseScreen() {
           kicker: groups.length ? "Not tied to a single source" : undefined,
           bodyMarkup: manageContentGeneralGroupBodyMarkup(
             generalQuestions,
-            isLedgerCase ? "No ledger records yet." : undefined
+            isLedgerCase ? "No ledger records yet." : undefined,
+            Boolean(activeCase.archiveChallenge)
           ),
         })
       : "";
@@ -3112,8 +3249,9 @@ function manageContentCaseScreen() {
   return `${chrome()}<main class="shell manage-content-shell"><section>
 <button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>
 <p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
-<h1>${esc(activeCase.title)}</h1>
+<h1>${esc(resolvedCaseTitle(activeCase))}</h1>
 <p>${esc(activeCase.summary)}</p>
+${missionRenameControlMarkup(activeCase)}
 <p class="manage-content-flow-strip">${esc(missionFlowSummary(activeCase, hasEditableContent))}</p>
 ${
   hasEditableContent
@@ -3132,9 +3270,14 @@ async function loadManageContentCaseData(caseId) {
   contentUiState.selectedCaseId = caseId;
   contentUiState.error = "";
   const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+  const kase = caseById(caseId);
+  // Map Missions are fully locked — manageContentCaseScreen() never renders
+  // slot UI for them, so there's nothing worth a network round-trip for.
+  if (kase?.route === "field") {
+    render();
+    return;
+  }
   try {
-    const kase = caseById(caseId);
-    const isMapCase = kase?.route === "field";
     const classroomId = teacherUiState.selectedClassroomId;
     const [rows, customItems] = await Promise.all([
       listSelectionsForCase(classroomId, caseId),
@@ -3149,51 +3292,54 @@ async function loadManageContentCaseData(caseId) {
       };
     }
     const customById = new Map(customItems.map((item) => [item.id, item]));
+    // Keyed by the replaced official id alone (never type-prefixed) —
+    // unlike bySlot's key, a replacement's own item.slot_kind may
+    // legitimately differ from the official slot's type it replaces (a
+    // teacher swapping in a different quest type — see
+    // resolveQuestSlotWithType() in remote-content-selection-repository.js),
+    // so it can't be part of the lookup key. Official quest/source ids are
+    // globally unique, case-prefixed strings, so this stays unambiguous.
     const customReplacementsBySlot = {};
     for (const item of customItems) {
       if (item.mode !== "replacement") continue;
-      const key = `${item.slot_kind}:${item.replaces_official_id}`;
-      (customReplacementsBySlot[key] ??= []).push(item);
+      (customReplacementsBySlot[item.replaces_official_id] ??= []).push(item);
     }
 
-    contentUiState.lockedSources = isMapCase ? UNIT_SOURCES[caseId] || [] : [];
-    const sourceSlots = isMapCase
-      ? []
-      : (UNIT_SOURCES[caseId] || []).map((source) => {
-          const key = `source:${source.id}`;
-          const draft = bySlot[key]?.draft || null;
-          const published = bySlot[key]?.published || null;
-          const customAlts = (customReplacementsBySlot[key] || []).map((item) => ({
-            id: item.id,
-            label: item.content.title || "Custom",
-            kind: "custom",
-          }));
-          const previewContent =
-            draft && draft.kind === "custom"
-              ? customById.get(draft.id)?.content || source
-              : draft
-                ? sourceAlternateById(draft.id) || source
-                : source;
-          return {
-            slotKind: "source",
-            officialId: source.id,
-            officialLabel: source.title,
-            relatedSourceId: source.id,
-            draftAltId: draft?.id || null,
-            draftAltKind: draft?.kind || "curated",
-            publishedAltId: published?.id || null,
-            alternatives: [
-              ...alternativesForSourceSlot(source.id).map((a) => ({ ...a, kind: "curated" })),
-              ...customAlts,
-            ],
-            previewContent,
-          };
-        });
+    const sourceSlots = (UNIT_SOURCES[caseId] || []).map((source) => {
+      const key = `source:${source.id}`;
+      const draft = bySlot[key]?.draft || null;
+      const published = bySlot[key]?.published || null;
+      const customAlts = (customReplacementsBySlot[source.id] || []).map((item) => ({
+        id: item.id,
+        label: item.content.title || "Custom",
+        kind: "custom",
+      }));
+      const previewContent =
+        draft && draft.kind === "custom"
+          ? customById.get(draft.id)?.content || source
+          : draft
+            ? sourceAlternateById(draft.id) || source
+            : source;
+      return {
+        slotKind: "source",
+        officialId: source.id,
+        officialLabel: source.title,
+        relatedSourceId: source.id,
+        draftAltId: draft?.id || null,
+        draftAltKind: draft?.kind || "curated",
+        publishedAltId: published?.id || null,
+        alternatives: [
+          ...alternativesForSourceSlot(source.id).map((a) => ({ ...a, kind: "curated" })),
+          ...customAlts,
+        ],
+        previewContent,
+      };
+    });
     const questSlots = officialQuestSlotsForCase(caseId).map(({ questType, quest }) => {
       const key = `${questType}:${quest.id}`;
       const draft = bySlot[key]?.draft || null;
       const published = bySlot[key]?.published || null;
-      const customAlts = (customReplacementsBySlot[key] || []).map((item) => {
+      const customAlts = (customReplacementsBySlot[quest.id] || []).map((item) => {
         const label = item.content.prompt || item.content.question;
         return { id: item.id, label: label ? label.slice(0, 80) : "Custom", kind: "custom" };
       });
@@ -3203,8 +3349,21 @@ async function loadManageContentCaseData(caseId) {
           : draft
             ? questAlternateById(questType, draft.id) || quest
             : quest;
+      // The type previewContent should actually be interpreted/rendered as
+      // right now — usually questType (the stable official type), but a
+      // custom draft's own slot_kind can genuinely differ (a teacher-
+      // authored type-changing replacement — see resolveQuestSlotWithType()
+      // in remote-content-selection-repository.js for the student-facing
+      // equivalent). slotKind below stays the stable identifier; this is
+      // what the guided flow/quick-edit read to know what type they're
+      // actually looking at.
+      const currentSlotKind =
+        draft && draft.kind === "custom"
+          ? customById.get(draft.id)?.slot_kind || questType
+          : questType;
       return {
         slotKind: questType,
+        currentSlotKind,
         officialId: quest.id,
         officialLabel: questType === "ledger-record" ? quest.question : quest.prompt,
         relatedSourceId: OFFICIAL_QUEST_SOURCE_LINKS[quest.id] || null,
@@ -3336,7 +3495,16 @@ function handleSaveAuthoring() {
   const classroomId = teacherUiState.selectedClassroomId;
   const caseId = contentUiState.selectedCaseId;
   const isReplacement = Boolean(auth.editingOfficialId);
-  const persist = auth.editingCustomId
+  // A previously-saved custom row's slot_kind is fixed at creation
+  // (updateCustomContent never changes it) — reusing it via update is only
+  // safe when the currently-chosen type still matches what it was created
+  // as. Picking a genuinely different type (via the guided replace flow's
+  // type picker) always creates a fresh row instead, even if one already
+  // existed for this slot, so its stored slot_kind always matches its
+  // content shape.
+  const canReuseExistingCustomRow =
+    auth.editingCustomId && auth.slotKind === auth.currentSlotKindAtStart;
+  const persist = canReuseExistingCustomRow
     ? updateCustomContent(auth.editingCustomId, { content: result.content, relatedSourceId })
     : createCustomContent({
         classroomId,
@@ -3353,7 +3521,7 @@ function handleSaveAuthoring() {
         ? setDraftSelection(
             classroomId,
             caseId,
-            auth.slotKind,
+            auth.officialSlotKind || auth.slotKind,
             auth.editingOfficialId,
             row.id,
             "custom"
@@ -3436,7 +3604,6 @@ function handleManageContentClick(target, action) {
       selectedCaseId: target.dataset.caseId,
       slots: [],
       additionSlots: [],
-      lockedSources: [],
       error: "",
       pending: false,
     };
@@ -3486,20 +3653,19 @@ function handleManageContentClick(target, action) {
     render();
     return true;
   }
-  // Unreachable via UI: both "+ Add new question" triggers are rendered
-  // disabled (see manageContentGroupBodyMarkup()/manageContentGeneralGroupBodyMarkup())
-  // because a teacher-added "addition" question (no official counterpart)
-  // is a confirmed dead end — neither archiveChallengesScreen() nor
-  // practiceCheckScreen() ever reads contentUiState.additionSlots, so it
-  // would save successfully and then never appear to a real student or in
-  // "Preview as student" (which reuses those same real screens). Kept in
-  // place, not deleted, since it's cheap to re-enable once that render-path
-  // gap is closed — a larger, separately-scoped fix.
+  // Reachable only from manageContentGeneralGroupBodyMarkup()'s "+ Add new
+  // question" button on a case with a real case.archiveChallenge —
+  // archiveChallengesScreen() is the only real student-facing screen that
+  // renders addition-slot questions (via resolvedAdditionsForCase()).
+  // manageContentGroupBodyMarkup()'s per-source "+ Add new question about
+  // this source" stays disabled: it only ever renders for Map Missions'
+  // sources, which are fully locked (see manageContentCaseScreen()'s
+  // route === "field" branch) and never reach this handler.
   if (action === "start-add-question") {
     const relatedSourceId = target.dataset.relatedSourceId || null;
     const activeCase = caseById(contentUiState.selectedCaseId);
     const group = activeCase
-      ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId)
+      ? manageContentSourceGroups().find((g) => g.id === relatedSourceId)
       : null;
     manageContentAuthoring = {
       formMode: "add",
@@ -3518,12 +3684,18 @@ function handleManageContentClick(target, action) {
   if (action === "pick-question-type") {
     if (!manageContentAuthoring) return true;
     const slotKind = target.dataset.slotKind;
-    manageContentAuthoring = {
-      ...manageContentAuthoring,
-      slotKind,
-      fields: defaultAuthoringFields(slotKind),
-      errors: [],
-    };
+    const auth = manageContentAuthoring;
+    // Picking the type the slot is CURRENTLY authored as (only possible in
+    // "replace" mode — "add" has no existing content to match) re-uses its
+    // current content as a starting point, same as the quick-edit shortcut;
+    // any other choice is a genuinely different type and starts blank.
+    const fields =
+      auth.formMode === "replace" &&
+      slotKind === auth.currentSlotKindAtStart &&
+      auth.originalPreviewContent
+        ? authoringFieldsFromContent(slotKind, auth.originalPreviewContent)
+        : defaultAuthoringFields(slotKind);
+    manageContentAuthoring = { ...auth, slotKind, fields, errors: [] };
     render();
     return true;
   }
@@ -3537,17 +3709,109 @@ function handleManageContentClick(target, action) {
     if (!slot) return true;
     const activeCase = caseById(contentUiState.selectedCaseId);
     const group = activeCase
-      ? manageContentSourceGroups(activeCase).find((g) => g.id === relatedSourceId)
+      ? manageContentSourceGroups().find((g) => g.id === relatedSourceId)
       : null;
+    // The quick "Edit →" shortcut edits whatever this slot is CURRENTLY
+    // authored as, not necessarily its original type — currentSlotKind
+    // diverges from the stable slotKind only for an already type-changed
+    // custom replacement (see currentSlotKind's doc comment above). slotKind
+    // (stable) is kept separately as officialSlotKind for the DB write.
+    const authoringType = slot.currentSlotKind || slotKind;
     manageContentAuthoring = {
       formMode: "edit",
-      slotKind,
+      slotKind: authoringType,
+      officialSlotKind: slotKind,
+      currentSlotKindAtStart: authoringType,
+      originalPreviewContent: slot.previewContent,
       relatedSourceId,
       relatedSourceLabel: group?.source.title || null,
       editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
       editingOfficialId: officialId,
       sourceWiring: null,
-      fields: authoringFieldsFromContent(slotKind, slot.previewContent),
+      fields: authoringFieldsFromContent(authoringType, slot.previewContent),
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  // The guided Keep/Add/Replace flow's entry point — see
+  // manageContentGuidedPromptMarkup(). Only reachable for the 4 real quest
+  // types (manageContentCardSummaryMarkup() gates the button accordingly).
+  if (action === "start-guided-change") {
+    manageContentAuthoring = null;
+    manageContentGuidedPrompt = {
+      slotKind: target.dataset.slotKind,
+      officialId: target.dataset.officialId,
+      relatedSourceId: target.dataset.relatedSourceId || null,
+      step: "keep-or-not",
+    };
+    render();
+    return true;
+  }
+  if (action === "cancel-guided-prompt") {
+    manageContentGuidedPrompt = null;
+    render();
+    return true;
+  }
+  if (action === "guided-keep-yes") {
+    if (manageContentGuidedPrompt) manageContentGuidedPrompt.step = "add-one";
+    render();
+    return true;
+  }
+  if (action === "guided-add-no") {
+    manageContentGuidedPrompt = null;
+    render();
+    return true;
+  }
+  if (action === "guided-add-yes") {
+    const relatedSourceId = manageContentGuidedPrompt?.relatedSourceId || null;
+    manageContentGuidedPrompt = null;
+    const activeCase = caseById(contentUiState.selectedCaseId);
+    const group = activeCase
+      ? manageContentSourceGroups().find((g) => g.id === relatedSourceId)
+      : null;
+    manageContentAuthoring = {
+      formMode: "add",
+      slotKind: null,
+      relatedSourceId,
+      relatedSourceLabel: group?.source.title || null,
+      editingCustomId: null,
+      editingOfficialId: null,
+      sourceWiring: null,
+      fields: {},
+      errors: [],
+    };
+    render();
+    return true;
+  }
+  // "No, replace it" — opens the type picker with no type chosen yet
+  // (slotKind stays null until pick-question-type fires) so a teacher can
+  // land on the same type (pre-filled, effectively a guided edit) or a
+  // genuinely different one (blank) — see pick-question-type's fields logic.
+  if (action === "guided-keep-no") {
+    const prompt = manageContentGuidedPrompt;
+    manageContentGuidedPrompt = null;
+    if (!prompt) return true;
+    const slot = contentUiState.slots.find(
+      (s) => s.slotKind === prompt.slotKind && s.officialId === prompt.officialId
+    );
+    if (!slot) return true;
+    const activeCase = caseById(contentUiState.selectedCaseId);
+    const group = activeCase
+      ? manageContentSourceGroups().find((g) => g.id === prompt.relatedSourceId)
+      : null;
+    manageContentAuthoring = {
+      formMode: "replace",
+      slotKind: null,
+      officialSlotKind: prompt.slotKind,
+      currentSlotKindAtStart: slot.currentSlotKind || prompt.slotKind,
+      originalPreviewContent: slot.previewContent,
+      relatedSourceId: prompt.relatedSourceId,
+      relatedSourceLabel: group?.source.title || null,
+      editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
+      editingOfficialId: prompt.officialId,
+      sourceWiring: null,
+      fields: {},
       errors: [],
     };
     render();
@@ -3567,6 +3831,8 @@ function handleManageContentClick(target, action) {
     manageContentAuthoring = {
       formMode: "edit",
       slotKind: "source",
+      officialSlotKind: "source",
+      currentSlotKindAtStart: "source",
       relatedSourceId: officialId,
       relatedSourceLabel: officialSource.title,
       editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
@@ -3584,11 +3850,12 @@ function handleManageContentClick(target, action) {
     if (!item) return true;
     const activeCase = caseById(contentUiState.selectedCaseId);
     const group = activeCase
-      ? manageContentSourceGroups(activeCase).find((g) => g.id === item.relatedSourceId)
+      ? manageContentSourceGroups().find((g) => g.id === item.relatedSourceId)
       : null;
     manageContentAuthoring = {
       formMode: "edit",
       slotKind: item.slotKind,
+      currentSlotKindAtStart: item.slotKind,
       relatedSourceId: item.relatedSourceId,
       relatedSourceLabel: group?.source.title || null,
       editingCustomId: item.id,
@@ -4521,21 +4788,26 @@ function archiveRoomScreen() {
   return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p></section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down archive records room with a record shelf, a wine-rack-style record cabinet, and a reading table (Medieval Tavern tileset)"></canvas><button class="hub-table ${near("terminal") ? "is-near" : ""}" style="${pos(targets.terminal)}" data-action="hub-interact" data-target="terminal" data-hub-target="terminal" aria-label="Open Archive Terminal"><span>▤</span><b>Archive Terminal</b></button><button class="hub-table ${near("exitDoor") ? "is-near" : ""}" style="${pos(targets.exitDoor)}" data-action="hub-interact" data-target="exitDoor" data-hub-target="exitDoor" aria-label="Leave the Archive Room"><span>⤴</span><b>Leave Archive</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
 }
 
-// Shared card renderer for one Archive Challenge, used for both case-level
-// challenges (case.archiveChallenge — completing one unlocks the next case,
-// same as the bespoke screen it replaced, e.g. regionsScreen()) and
-// unit-level bonus challenges (unit.archiveChallenges[] — not tied to any
-// case, so there's nothing to unlock via onComplete). A case-level challenge
-// already in progress.completedCases from before its migration is shown as
-// complete without replay, preserving old-save completion (alreadyComplete).
-function archiveChallengeCard(
+// Shared render/grade/completion-tracking core for one Archive Challenge
+// card, used for case-level challenges (case.archiveChallenge — completing
+// one unlocks the next case, same as the bespoke screen it replaced, e.g.
+// regionsScreen()), unit-level bonus challenges (unit.archiveChallenges[] —
+// not tied to any case, so there's nothing to unlock via onComplete), and
+// teacher-added addition-slot questions (no official questId to look up —
+// see resolvedAdditionsForCase() in remote-content-selection-repository.js).
+// A case-level challenge already in progress.completedCases from before its
+// migration is shown as complete without replay, preserving old-save
+// completion (alreadyComplete). archiveChallengeCard()/
+// archiveChallengeAdditionCard() below are thin wrappers that resolve the
+// quest object this core needs.
+function archiveChallengeQuestCard(
   kicker,
   questType,
-  questId,
+  quest,
   { alreadyComplete = false, onComplete } = {}
 ) {
-  const quest = archiveChallengeQuestFor(questType, questId);
   if (!quest) return "";
+  const questId = quest.id;
   const state = progress.questResponses[questId] || {};
   const result = alreadyComplete ? { complete: true } : gradeQuest(questType, quest, state);
   const complete = alreadyComplete || isChallengeQuestComplete(questType, result);
@@ -4559,6 +4831,18 @@ function archiveChallengeCard(
       ? "in-progress"
       : "unanswered";
   return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}</div>`;
+}
+
+function archiveChallengeCard(kicker, questType, questId, opts) {
+  const resolved = archiveChallengeQuestFor(questType, questId);
+  return archiveChallengeQuestCard(kicker, resolved?.questType || questType, resolved?.quest, opts);
+}
+
+// A teacher-added question with no official counterpart — already the full
+// resolved content (no questId lookup needed), so it skips straight to the
+// shared core.
+function archiveChallengeAdditionCard(kicker, addition) {
+  return archiveChallengeQuestCard(kicker, addition.slotKind, addition.content);
 }
 // Archive Challenges list for the active unit, reached from the Archive Terminal.
 // Follows the same live-graded renderQuest/gradeQuest pattern practiceCheckScreen()
@@ -4589,7 +4873,12 @@ function archiveChallengesScreen() {
       challenge.questId
     )
   );
-  const cards = [...caseCards, ...bonusCards].join("");
+  const additionCards = unit.cases.flatMap((c) =>
+    resolvedAdditionsForCase(c.id).map((addition) =>
+      archiveChallengeAdditionCard(`${c.shortTitle} · Archive Challenge`, addition)
+    )
+  );
+  const cards = [...caseCards, ...bonusCards, ...additionCards].join("");
   return `${chrome()}<main class="shell activity-shell quest-practice-shell archive-challenges-shell"><section class="activity-copy"><button class="back-link" data-action="archive-room">← Return to Archive Terminal</button><p class="kicker">${esc(resolvedUnitTitle(unit))} · Institute Archive</p><h1>Archive Challenges</h1><p>Restore each unit's damaged record display using evidence secured in the field. Completing a unit's Archive Challenges preserves its case record and is required to fully archive the unit.</p></section><section class="activity-board quest-practice-board">${cards || '<p class="bank-empty">Archive Challenges for this unit are still being cataloged. Check back soon.</p>'}</section></main>${authorPanel()}`;
 }
 
@@ -4676,7 +4965,7 @@ function atlasSvgMarkup(view, viewport, ariaLabel) {
 function caseMarker(c, xy, viewport) {
   const state = isComplete(c.id) ? "complete" : isUnlocked(c.id) ? "available" : "locked";
   const { left, top } = xyToPercent(xy, viewport);
-  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(c.title)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
+  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(resolvedCaseTitle(c))}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
 }
 
 // Whether every unit-level Archive Challenge (unit.archiveChallenges[] — bonus
@@ -5154,7 +5443,7 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(activeCase.title)}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -5311,7 +5600,7 @@ function practiceCheckScreen() {
     })
     .join("");
 
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(activeCase.title)} interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(activeCase.title)}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseTitle(activeCase))} interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseTitle(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 function sourceVisual(source) {
@@ -5501,14 +5790,14 @@ function triangleScreen() {
         ""
       )}<button class="btn btn-gold" data-action="check-triangle-mcq">Validate the circuit record →</button><p class="feedback" id="triangleMcqFeedback"></p></section>`
     : "";
-  return `${chrome()}<main class="shell triangle-shell"><section class="triangle-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · The Atlantic circuit</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>Read each cargo record, then drag it onto the leg of the triangular trade that carried it. The Middle Passage records are testimony — the Archive preserves them as human accounts, not cargo lists.</p><div class="evidence-bank"><div class="bank-heading"><h2>Cargo records</h2><button class="text-button" data-action="clear-triangle">Reset chart</button></div><div class="bank-cards">${tray.map(triangleCargoChip).join("") || '<p class="bank-empty">All records are on the chart.</p>'}</div></div></section><section class="triangle-board"><div class="triangle-legs">${legs}</div>${state.charted ? "" : `<button class="btn btn-gold" data-action="check-triangle">Chart the circuit →</button><p class="feedback" id="triangleFeedback"></p>`}${mcqPhase}</section></main>`;
+  return `${chrome()}<main class="shell triangle-shell"><section class="triangle-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · The Atlantic circuit</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p>${esc(activeCase.question)}</p><p>Read each cargo record, then drag it onto the leg of the triangular trade that carried it. The Middle Passage records are testimony — the Archive preserves them as human accounts, not cargo lists.</p><div class="evidence-bank"><div class="bank-heading"><h2>Cargo records</h2><button class="text-button" data-action="clear-triangle">Reset chart</button></div><div class="bank-cards">${tray.map(triangleCargoChip).join("") || '<p class="bank-empty">All records are on the chart.</p>'}</div></div></section><section class="triangle-board"><div class="triangle-legs">${legs}</div>${state.charted ? "" : `<button class="btn btn-gold" data-action="check-triangle">Chart the circuit →</button><p class="feedback" id="triangleFeedback"></p>`}${mcqPhase}</section></main>`;
 }
 
 function exchangeLedgerScreen() {
   const answers = progress.exchangeLedger.answers || {};
   const records = resolvedExchangeRecords();
   const allAnswered = records.every((record) => answers[record.id] !== undefined);
-  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>The Exchange Ledger</h1><p>${esc(caseById("case-002").question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini">${atlasSvgMarkup(MAP_VIEWS["atlantic-wide"], NAV_TABLE_VIEWPORT, "Atlantic map used for Exchange Ledger")}<div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${records.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`).join("")}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? "" : ""}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
+  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>${esc(resolvedCaseTitle(caseById("case-002")))}</h1><p>${esc(caseById("case-002").question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini">${atlasSvgMarkup(MAP_VIEWS["atlantic-wide"], NAV_TABLE_VIEWPORT, "Atlantic map used for Exchange Ledger")}<div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${records.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`).join("")}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? "" : ""}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
 }
 
 function ledgerSuccessScreen() {
@@ -5518,7 +5807,7 @@ function ledgerSuccessScreen() {
 function foundingScreen() {
   const activeCase = caseById("case-008");
   const answers = progress.foundingLedger.answers || {};
-  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · ${esc(activeCase.date)}</p><h1>${esc(activeCase.title)}</h1><p>${esc(activeCase.question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p></section><section class="ledger-list ledger-list--sources">${FOUNDING_RECORDS.map(
+  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · ${esc(activeCase.date)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p>${esc(activeCase.question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p></section><section class="ledger-list ledger-list--sources">${FOUNDING_RECORDS.map(
     (record, index) =>
       `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="founding-${record.id}" data-founding-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`
   ).join(
@@ -5534,7 +5823,7 @@ function empireScreen() {
     const card = byId[order[index]];
     return `<div class="system-slot ${card ? "is-filled" : ""}" data-drop-index="${index}">${card ? `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>` : `<span>Drop a record here</span>`}</div>${index < EMPIRE_EVIDENCE.length - 1 ? '<i class="system-arrow">→</i>' : ""}`;
   }).join("");
-  return `${chrome()}<main class="shell empire-shell empire-shell--drag"><section class="empire-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.03 · Spanish Caribbean</p><h1>Empire’s Foundations</h1><p>${esc(caseById("case-003").question)}</p><p>Move the evidence records into a defensible order. Each connection should show how conquest, labor, forced migration, hierarchy, resistance, and cultural interaction shaped colonial society.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="empireReflection" placeholder="Explain one connection using evidence from two records…">${esc(progress.responses["empire-reflection"] || "")}</textarea></div></section><section class="empire-board empire-board--drag"><div class="evidence-bank"><div class="bank-heading"><h2>Evidence records</h2><button class="text-button" data-action="clear-empire">Reset layout</button></div><div class="bank-cards">${remaining.map((card) => `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>`).join("") || '<p class="bank-empty">All records are on the system table. Drag any card to a new position to revise it.</p>'}</div></div><section class="system-table"><div class="system-table__head"><h2>Build the colonial system</h2><p>Drag records into the sequence. The arrows represent a claim you can defend, not a claim that history was simple.</p></div><div class="system-track">${slots}</div><button class="btn btn-gold" data-action="check-empire">Submit system to Archive →</button><p class="feedback" id="empireFeedback"></p></section></section></main>`;
+  return `${chrome()}<main class="shell empire-shell empire-shell--drag"><section class="empire-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.03 · Spanish Caribbean</p><h1>${esc(resolvedCaseTitle(caseById("case-003")))}</h1><p>${esc(caseById("case-003").question)}</p><p>Move the evidence records into a defensible order. Each connection should show how conquest, labor, forced migration, hierarchy, resistance, and cultural interaction shaped colonial society.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="empireReflection" placeholder="Explain one connection using evidence from two records…">${esc(progress.responses["empire-reflection"] || "")}</textarea></div></section><section class="empire-board empire-board--drag"><div class="evidence-bank"><div class="bank-heading"><h2>Evidence records</h2><button class="text-button" data-action="clear-empire">Reset layout</button></div><div class="bank-cards">${remaining.map((card) => `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>`).join("") || '<p class="bank-empty">All records are on the system table. Drag any card to a new position to revise it.</p>'}</div></div><section class="system-table"><div class="system-table__head"><h2>Build the colonial system</h2><p>Drag records into the sequence. The arrows represent a claim you can defend, not a claim that history was simple.</p></div><div class="system-track">${slots}</div><button class="btn btn-gold" data-action="check-empire">Submit system to Archive →</button><p class="feedback" id="empireFeedback"></p></section></section></main>`;
 }
 
 function uploadScreen() {
@@ -5906,7 +6195,7 @@ function sequencingQuestItemsFor(questId) {
     .find((quest) => quest.id === questId);
   return (
     practiceQuest?.items ||
-    archiveChallengeQuestFor("sequencing", questId)?.items ||
+    archiveChallengeQuestFor("sequencing", questId)?.quest?.items ||
     investigationQuestFor("sequencing", questId)?.items ||
     []
   );
@@ -7145,7 +7434,6 @@ function handleAuthScreenClick(target, action) {
       contentUiState = {
         selectedCaseId: null,
         slots: [],
-        lockedSources: [],
         error: "",
         pending: false,
       };
@@ -7294,6 +7582,9 @@ function handleAppChange(event) {
       setTeacherOverride(mapping.contentId, mapping.fieldName, field.value);
       render();
     }
+  } else if (field.matches("[data-case-title]")) {
+    setTeacherOverride(field.dataset.caseTitle, "title", field.value);
+    render();
   } else if (field.matches("[data-sequence-position-select]")) {
     const formEl = field.closest("[data-authoring-form]");
     const fields = syncAuthoringFieldsFromDom("sequencing", formEl);
