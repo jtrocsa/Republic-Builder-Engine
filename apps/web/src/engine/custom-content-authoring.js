@@ -28,7 +28,11 @@ import {
   EvidenceOrganizingQuestSchema,
   SKILL_CATEGORIES,
 } from "../quest-types/history/evidence-organizing-quest.js";
-import { SourceAnalysisQuestSchema, HIPP_DIMENSIONS } from "../quest-types/history/source-analysis-quest.js";
+import {
+  SourceAnalysisQuestSchema,
+  HIPP_DIMENSIONS,
+} from "../quest-types/history/source-analysis-quest.js";
+import { ExchangeRecordSchema } from "../content/schemas/exchange-record.schema.js";
 
 export function slugify(text, fallback = "item") {
   const slug = (text || "")
@@ -119,7 +123,10 @@ export function buildMcqContent(fields) {
   }
   const correctCount = choices.filter((choice) => choice.correct).length;
   if (correctCount !== 1) {
-    return { ok: false, errors: [`choices: mark exactly one choice correct (found ${correctCount})`] };
+    return {
+      ok: false,
+      errors: [`choices: mark exactly one choice correct (found ${correctCount})`],
+    };
   }
   const content = {
     id: shortId(fields.prompt),
@@ -162,7 +169,10 @@ export function buildSequencingContent(fields) {
   const isValidPermutation =
     new Set(positions).size === rows.length && positions.every((p) => p >= 0 && p < rows.length);
   if (!isValidPermutation) {
-    return { ok: false, errors: ["items: each item must have a unique position from 1 to the number of items"] };
+    return {
+      ok: false,
+      errors: ["items: each item must have a unique position from 1 to the number of items"],
+    };
   }
   // Shuffle the stored order so the authored (correct) order isn't handed
   // to the student for free — `position` (set directly by the teacher) is
@@ -195,7 +205,15 @@ export function defaultEvidenceOrganizingFields() {
   return {
     prompt: "",
     slots: [{ label: "" }, { label: "" }],
-    sources: [{ label: "", attribution: "", excerpt: "", skillCategory: SKILL_CATEGORIES[0], correctSlotId: "" }],
+    sources: [
+      {
+        label: "",
+        attribution: "",
+        excerpt: "",
+        skillCategory: SKILL_CATEGORIES[0],
+        correctSlotId: "",
+      },
+    ],
     reflectionPrompt: "",
   };
 }
@@ -220,7 +238,10 @@ export function buildEvidenceOrganizingContent(fields) {
   if (slotRows.length < 2) {
     return { ok: false, errors: ["slots: add at least 2 slots"] };
   }
-  const slots = slotRows.map((row) => ({ id: slugify(row.label), label: (row.label || "").trim() }));
+  const slots = slotRows.map((row) => ({
+    id: slugify(row.label),
+    label: (row.label || "").trim(),
+  }));
   const slotIds = new Set(slots.map((slot) => slot.id));
 
   const sourceRows = Array.isArray(fields.sources) ? fields.sources : [];
@@ -257,7 +278,8 @@ export function buildEvidenceOrganizingContent(fields) {
     rubric: {
       skillCategories: usedSkillCategories,
       pointsTotal: sources.length,
-      description: "Earn 1 point per record correctly matched to the slot its evidence best supports.",
+      description:
+        "Earn 1 point per record correctly matched to the slot its evidence best supports.",
     },
   };
   const result = EvidenceOrganizingQuestSchema.safeParse(content);
@@ -341,6 +363,74 @@ export function buildHippContent(fields) {
   return { ok: true, content: result.data };
 }
 
+// --- Ledger record (Case 1.02's Exchange Ledger) ---
+//
+// Combines a small source card and its one inline MCQ in a single object —
+// see ledgerRecordFieldsMarkup()'s doc comment in main.js. Choices are
+// authored the same [{ text, correct }] shape as MCQ's, flattened to
+// ExchangeRecordSchema's { choices: string[], answer: index } at build time.
+
+export function defaultLedgerRecordFields() {
+  return {
+    label: "",
+    icon: "",
+    sourceTitle: "",
+    sourceMeta: "",
+    excerpt: "",
+    sourceNote: "",
+    question: "",
+    choices: [
+      { text: "", correct: true },
+      { text: "", correct: false },
+    ],
+    citation: "",
+  };
+}
+
+export function ledgerRecordToFields(record) {
+  return {
+    label: record.label || "",
+    icon: record.icon || "",
+    sourceTitle: record.sourceTitle || "",
+    sourceMeta: record.sourceMeta || "",
+    excerpt: record.excerpt || "",
+    sourceNote: record.sourceNote || "",
+    question: record.question || "",
+    choices: (record.choices || []).map((text, i) => ({ text, correct: i === record.answer })),
+    citation: record.citation || "",
+  };
+}
+
+export function buildLedgerRecordContent(fields) {
+  const choices = Array.isArray(fields.choices) ? fields.choices : [];
+  if (choices.length < 2) {
+    return { ok: false, errors: ["choices: add at least 2 choices"] };
+  }
+  const correctCount = choices.filter((choice) => choice.correct).length;
+  if (correctCount !== 1) {
+    return {
+      ok: false,
+      errors: [`choices: mark exactly one choice correct (found ${correctCount})`],
+    };
+  }
+  const content = {
+    id: shortId(fields.label),
+    label: (fields.label || "").trim(),
+    icon: (fields.icon || "").trim(),
+    sourceTitle: (fields.sourceTitle || "").trim(),
+    sourceMeta: (fields.sourceMeta || "").trim(),
+    excerpt: (fields.excerpt || "").trim(),
+    sourceNote: (fields.sourceNote || "").trim(),
+    question: (fields.question || "").trim(),
+    choices: choices.map((choice) => (choice.text || "").trim()),
+    answer: choices.findIndex((choice) => choice.correct),
+    citation: (fields.citation || "").trim(),
+  };
+  const result = ExchangeRecordSchema.safeParse(content);
+  if (!result.success) return { ok: false, errors: issuesToMessages(result.error) };
+  return { ok: true, content: result.data };
+}
+
 // --- Dispatch ---
 
 const BUILDERS = {
@@ -349,6 +439,7 @@ const BUILDERS = {
   sequencing: buildSequencingContent,
   "evidence-organizing": buildEvidenceOrganizingContent,
   hipp: buildHippContent,
+  "ledger-record": buildLedgerRecordContent,
 };
 
 const DEFAULT_FIELDS = {
@@ -357,6 +448,7 @@ const DEFAULT_FIELDS = {
   sequencing: defaultSequencingFields,
   "evidence-organizing": defaultEvidenceOrganizingFields,
   hipp: defaultHippFields,
+  "ledger-record": defaultLedgerRecordFields,
 };
 
 const TO_FIELDS = {
@@ -365,6 +457,7 @@ const TO_FIELDS = {
   sequencing: sequencingToFields,
   "evidence-organizing": evidenceOrganizingToFields,
   hipp: hippToFields,
+  "ledger-record": ledgerRecordToFields,
 };
 
 export function buildAuthoredContent(slotKind, fields, sourceWiring) {

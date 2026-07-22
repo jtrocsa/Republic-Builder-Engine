@@ -44,12 +44,23 @@ import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-seque
 import { CASE_001_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-001-evidence-organizing-alternates.js";
 import { CASE_001_HIPP_ALTERNATES } from "../content/quests/case-001-hipp-alternates.js";
 import { CASE_006_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-006-evidence-organizing-alternates.js";
+import { CASE_002_LEDGER_ALTERNATES } from "../content/quests/case-002-ledger-alternates.js";
 
 const QUEST_ALTERNATE_ENTRIES_BY_TYPE = {
   mcq: CASE_001_MCQ_ALTERNATES,
   sequencing: CASE_001_SEQUENCING_ALTERNATES,
-  "evidence-organizing": [...CASE_001_EVIDENCE_ORGANIZING_ALTERNATES, ...CASE_006_EVIDENCE_ORGANIZING_ALTERNATES],
+  "evidence-organizing": [
+    ...CASE_001_EVIDENCE_ORGANIZING_ALTERNATES,
+    ...CASE_006_EVIDENCE_ORGANIZING_ALTERNATES,
+  ],
   hipp: CASE_001_HIPP_ALTERNATES,
+  // Not a real quest-types/index.js QUEST_TYPES key — ledger records have
+  // their own bespoke rendering (exchangeLedgerScreen() in main.js), never
+  // renderQuest()/gradeQuest(). "ledger-record" is used only within this
+  // file's and Manage Content's own generic slot-resolution plumbing, which
+  // is type-agnostic (resolveQuestSlot/alternativesForQuestSlot/
+  // questAlternateById below don't care what the string means).
+  "ledger-record": CASE_002_LEDGER_ALTERNATES,
 };
 
 const SOURCE_ALTERNATES_BY_ALT_ID = new Map(
@@ -64,7 +75,11 @@ const QUEST_ALTERNATES_BY_ALT_ID_BY_TYPE = Object.fromEntries(
 
 // contentId -> [{id, label}] curated alternates a teacher may pick for that
 // official slot, used to render the Manage Content dropdowns.
-const SOURCE_ALTERNATIVES_BY_SLOT = groupAlternativesBySlot(CASE_001_SOURCE_ALTERNATES, "replacesSourceId", "source");
+const SOURCE_ALTERNATIVES_BY_SLOT = groupAlternativesBySlot(
+  CASE_001_SOURCE_ALTERNATES,
+  "replacesSourceId",
+  "source"
+);
 const QUEST_ALTERNATIVES_BY_SLOT_BY_TYPE = Object.fromEntries(
   Object.entries(QUEST_ALTERNATE_ENTRIES_BY_TYPE).map(([questType, entries]) => [
     questType,
@@ -76,7 +91,10 @@ function groupAlternativesBySlot(entries, replacesKey, contentKey) {
   const bySlot = {};
   for (const entry of entries) {
     const content = entry[contentKey];
-    (bySlot[entry[replacesKey]] ??= []).push({ id: content.id, label: content.title || content.prompt });
+    (bySlot[entry[replacesKey]] ??= []).push({
+      id: content.id,
+      label: content.title || content.prompt,
+    });
   }
   return bySlot;
 }
@@ -127,7 +145,9 @@ export async function loadSelectionsForResolution(classroomId, status = "publish
     else (questSelectionsByType[row.slot_kind] ??= {})[row.slot_content_id] = entry;
   }
 
-  const customAltIds = data.filter((row) => row.alt_kind === "custom").map((row) => row.alt_content_id);
+  const customAltIds = data
+    .filter((row) => row.alt_kind === "custom")
+    .map((row) => row.alt_content_id);
   if (customAltIds.length) {
     const { data: customRows, error: customError } = await supabase
       .from("custom_content_items")
@@ -143,11 +163,15 @@ export async function loadSelectionsForResolution(classroomId, status = "publish
 
 function resolveAlt(entry, curatedLookup) {
   if (!entry) return undefined;
-  return entry.altKind === "custom" ? customContentById.get(entry.altId) : curatedLookup(entry.altId);
+  return entry.altKind === "custom"
+    ? customContentById.get(entry.altId)
+    : curatedLookup(entry.altId);
 }
 
 export function resolveSourceSlot(officialSource) {
-  const alt = resolveAlt(sourceSelections[officialSource.id], (id) => SOURCE_ALTERNATES_BY_ALT_ID.get(id));
+  const alt = resolveAlt(sourceSelections[officialSource.id], (id) =>
+    SOURCE_ALTERNATES_BY_ALT_ID.get(id)
+  );
   return alt ? { ...alt, id: officialSource.id } : officialSource;
 }
 
@@ -176,7 +200,14 @@ export async function listSelectionsForCase(classroomId, caseId) {
   return data;
 }
 
-export async function setDraftSelection(classroomId, caseId, slotKind, slotContentId, altContentId, altKind = "curated") {
+export async function setDraftSelection(
+  classroomId,
+  caseId,
+  slotKind,
+  slotContentId,
+  altContentId,
+  altKind = "curated"
+) {
   if (altContentId === null) {
     const { error } = await supabase
       .from("classroom_content_selections")
