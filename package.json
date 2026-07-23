@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,15 +15,19 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "assets:audit": "node scripts/assets/audit.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "csv-stringify": "^6.8.1",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.1.1",
+    "picomatch": "^4.0.5",
     "playwright": "^1.61.1",
     "prettier": "^3.9.5",
+    "sharp": "^0.35.3",
     "vite": "^7.0.0",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"

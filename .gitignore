@@ -7,3 +7,4 @@ dist/
 coverage/
 .vscode/*.log
 .playwright-mcp/
+reports/
