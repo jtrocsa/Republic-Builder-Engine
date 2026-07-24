@@ -61,6 +61,15 @@ export default [
     },
   },
   {
+    // Root-level tool configs also run under plain Node, not the browser
+    files: ["vite.config.js", "playwright.config.js"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+  {
     // Don't lint build output, vendor code, or asset folders
     ignores: ["**/dist/**", "node_modules/**", "vendor/**", "**/*.min.js"],
   },
