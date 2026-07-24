@@ -1874,12 +1874,12 @@ const esc = (value) =>
 // "Preview as student" mode (see manageContentCaseScreen()) never persists
 // anything to the teacher's own save — see previewSession's own comment.
 const save = () => {
-  if (previewSession.active) return;
+  if (isPreviewingContent()) return;
   saveProgress(progress);
 };
 
 function chrome() {
-  const previewBanner = previewSession.active
+  const previewBanner = isPreviewingContent()
     ? `<div class="field-preview-banner" role="status"><span>Previewing as student — draft content shown, nothing you do here is saved.</span><button class="btn btn-outline" data-action="exit-content-preview" type="button">Exit preview</button></div>`
     : "";
   return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><small>${esc(BRAND.engine)}</small><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="text-button" data-action="open-main-menu">Menu</button><button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" aria-label="Toggle Chronicle music">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button><button class="author-toggle ${authorMode ? "active" : ""}" data-action="author">✦ ${authorMode ? "Author Mode On" : "Author Mode"}</button></div></header>${previewBanner}`;
@@ -3603,6 +3603,23 @@ function exitContentPreview() {
     progress.currentScreen = "manage-content-case";
   }
   loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published").then(render);
+}
+
+// Shared predicate for the ~6 places that used to read `previewSession.active`
+// directly — centralized so every read agrees on what "currently previewing"
+// means without each call site reaching into previewSession's internals.
+function isPreviewingContent() {
+  return previewSession.active;
+}
+
+// Shared "escape hatch" guard for the 3 call sites (home, archive-room,
+// global Escape) that must exit an active preview instead of performing
+// their normal action. Returns whether it handled the click/keypress so
+// callers can `if (exitPreviewIfActive()) return ...;`.
+function exitPreviewIfActive() {
+  if (!isPreviewingContent()) return false;
+  exitContentPreview();
+  return true;
 }
 
 function handleManageContentClick(target, action) {
@@ -5668,7 +5685,7 @@ async function runEvaluation(taskId, requestBody) {
     // source reading while previewing a map mission (see previewSession's
     // own comment) must not create a real submissions/evaluations row
     // against their classroom.
-    if (previewSession.active) return;
+    if (isPreviewingContent()) return;
     getCurrentClassroomId().then((classroomId) => {
       if (!classroomId) return;
       recordSubmission({
@@ -6277,10 +6294,7 @@ function handleChromeClick(target, action) {
     // preview banner's "Exit preview" — either must cleanly end the
     // ephemeral preview session (see previewSession's own comment) rather
     // than stranding it active on the real institute screen.
-    if (previewSession.active) {
-      exitContentPreview();
-      return true;
-    }
+    if (exitPreviewIfActive()) return true;
     progress.activeFieldNpc = null;
     safeInstituteSpawn(7, 9, "up");
     progress.currentScreen = "institute";
@@ -6289,10 +6303,7 @@ function handleChromeClick(target, action) {
     return true;
   }
   if (action === "archive-room") {
-    if (previewSession.active) {
-      exitContentPreview();
-      return true;
-    }
+    if (exitPreviewIfActive()) return true;
     // Unlike "home", deliberately does not touch currentHubRoom/spawn position —
     // this only returns from the archive-challenges screen back into whichever
     // room the player was already standing in (always "archive" in practice,
@@ -7828,10 +7839,7 @@ function handleAppDrop(event) {
 // that aren't a real <dialog> element.
 function handleEscapeDismiss() {
   if (document.querySelector("dialog[open]")) return;
-  if (previewSession.active) {
-    exitContentPreview();
-    return;
-  }
+  if (exitPreviewIfActive()) return;
   if (progress.currentScreen === "field" && progress.activeFieldNpc) {
     progress.activeFieldNpc = null;
     save();
