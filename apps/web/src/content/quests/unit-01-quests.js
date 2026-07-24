@@ -241,12 +241,16 @@ export const UNIT_01_INVESTIGATION_SEQUENCING_QUESTS = [
 ];
 
 // Archive Challenge content (Phase B of the Investigation/Archive Challenge
-// plan's catalog-expansion pass) — case-003's Archive Challenge, migrating
-// EMPIRE_CONNECTIONS' real causal chain (also in
-// apps/web/src/content/unit-01-campaign.js) onto the sequencing quest-type
-// contract. empireScreen()/the "empire" route stays case-003's primary
-// Navigation Table experience — this is a parallel, additional way to
-// engage the same content, not a replacement.
+// plan's catalog-expansion pass) — originally authored as a duplicate of
+// case-003's bespoke EMPIRE_CONNECTIONS causal chain (also in
+// apps/web/src/content/unit-01-campaign.js), migrated onto the sequencing
+// quest-type contract. The bespoke empireScreen()/"empire" route and
+// EMPIRE_EVIDENCE/EMPIRE_CONNECTIONS arrays were later deleted (Manage
+// Content wizard redesign, Phase A) once this quest was confirmed to fully
+// preserve their content — reflectionPrompt below was added at the same time
+// to preserve empireScreen()'s original graded reflection field, which the
+// sequencing quest type had no equivalent for until then. This is now Case
+// 1.03's entire mechanic, not a parallel bonus path.
 export const UNIT_01_ARCHIVE_CHALLENGE_QUESTS = [
   {
     id: "case-003-archive-empire-system",
@@ -298,6 +302,8 @@ export const UNIT_01_ARCHIVE_CHALLENGE_QUESTS = [
     ],
     explanation:
       "Each step enables the next: the Requerimiento's assertion of Spanish authority over Indigenous communities is what colonists used to justify demanding their labor and tribute under the encomienda; encomienda's labor demands, combined with Indigenous population losses, are what drove colonists to rely increasingly on forced African migration; the labor systems built on both encomienda tribute and African slavery are what produced a caste hierarchy ranking people by ancestry, legal status, and birthplace; that same hierarchy is what Indigenous and African communities resisted and adapted within and against; and it was precisely that ongoing conflict, coercion, and adaptation that reshaped language, religion, foodways, and customs into the new cultural forms of the Atlantic world.",
+    reflectionPrompt:
+      "Explain one connection in the chain above using evidence from two of the records.",
   },
 ];
 

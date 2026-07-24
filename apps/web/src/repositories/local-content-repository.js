@@ -29,8 +29,6 @@ export function loadChronicleContent() {
       unit: unit01Campaign.UNIT_01,
       sources: unit01Campaign.CASE_001_SOURCES,
       exchangeRecords: unit01Campaign.EXCHANGE_RECORDS,
-      empireEvidence: unit01Campaign.EMPIRE_EVIDENCE,
-      empireConnections: unit01Campaign.EMPIRE_CONNECTIONS,
       review: unit01Campaign.REVIEW,
       mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
       evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,

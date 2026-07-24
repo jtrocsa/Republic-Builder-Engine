@@ -203,7 +203,6 @@ select {
 .codex-head h1,
 .puzzle-copy h1,
 .ledger-copy h1,
-.empire-copy h1,
 .review-copy h1,
 .completion-shell h1 {
   margin: 0;
@@ -218,7 +217,6 @@ select {
 .travel-copy p,
 .field-intro > p:not(.kicker):not(.field-question),
 .ledger-copy > p:not(.kicker),
-.empire-copy > p:not(.kicker),
 .review-copy > p:not(.kicker) {
   max-width: 56ch;
   color: #d1dcda;
@@ -1521,7 +1519,6 @@ dd {
   text-transform: uppercase;
 }
 .response-label textarea,
-.empire-prompt textarea,
 .saq-block textarea {
   width: 100%;
   min-height: 130px;
@@ -1614,7 +1611,6 @@ dd {
 }
 .puzzle-shell,
 .ledger-shell,
-.empire-shell,
 .review-shell {
   display: grid;
   grid-template-columns: minmax(270px, 0.58fr) minmax(580px, 1.42fr);
@@ -1623,14 +1619,12 @@ dd {
 }
 .puzzle-copy,
 .ledger-copy,
-.empire-copy,
 .review-copy {
   position: sticky;
   top: 20px;
 }
 .puzzle-copy h1,
 .ledger-copy h1,
-.empire-copy h1,
 .review-copy h1 {
   font-size: clamp(2.7rem, 4.3vw, 4.7rem);
 }
@@ -1795,10 +1789,6 @@ dd {
   transform: rotate(-20deg);
   animation: routeFlow 2s linear infinite;
 }
-.empire-board {
-  display: grid;
-  gap: 18px;
-}
 .evidence-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1853,21 +1843,6 @@ dd {
 }
 .connection-builder .btn {
   margin-top: 18px;
-}
-.empire-prompt {
-  margin-top: 20px;
-  padding: 14px;
-  border-left: 3px solid var(--gold);
-  background: rgba(255, 255, 255, 0.035);
-}
-.empire-prompt b {
-  font:
-    700 0.7rem "Cinzel",
-    serif;
-  color: #f0cf7a;
-}
-.empire-prompt textarea {
-  margin-top: 10px;
 }
 .review-work {
   display: grid;
@@ -2863,7 +2838,6 @@ dd {
   .case-field,
   .puzzle-shell,
   .ledger-shell,
-  .empire-shell,
   .review-shell,
   .institute-home,
   .chronotravel-screen,
@@ -2873,7 +2847,6 @@ dd {
   .archive-copy,
   .puzzle-copy,
   .ledger-copy,
-  .empire-copy,
   .review-copy {
     position: static;
   }
@@ -2934,7 +2907,6 @@ dd {
   .codex-head h1,
   .puzzle-copy h1,
   .ledger-copy h1,
-  .empire-copy h1,
   .review-copy h1,
   .completion-shell h1 {
     font-size: 2.85rem;
@@ -3152,123 +3124,6 @@ dd {
     sans-serif;
 }
 
-.empire-shell--drag {
-  grid-template-columns: minmax(260px, 0.55fr) minmax(650px, 1.5fr);
-}
-.empire-board--drag {
-  display: grid;
-  gap: 18px;
-}
-.evidence-bank,
-.system-table {
-  border: 1px solid rgba(239, 204, 122, 0.3);
-  border-radius: 17px;
-  padding: 18px;
-  background: rgba(5, 33, 47, 0.84);
-}
-.bank-heading,
-.system-table__head {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.bank-heading h2,
-.system-table__head h2 {
-  margin: 0;
-  color: #f6e5b8;
-  font:
-    700 1.45rem "Spectral",
-    serif;
-}
-.system-table__head p {
-  margin: 4px 0 0;
-  max-width: 570px;
-  color: #b9cbc7;
-  font:
-    0.8rem/1.5 "DM Sans",
-    sans-serif;
-}
-.bank-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  margin-top: 14px;
-}
-.system-card {
-  cursor: grab;
-  padding: 13px;
-  border: 1px solid rgba(239, 204, 122, 0.28);
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(18, 67, 79, 0.92), rgba(5, 31, 44, 0.95));
-  box-shadow: 0 9px 18px rgba(0, 0, 0, 0.15);
-}
-.system-card:active {
-  cursor: grabbing;
-}
-.system-card span {
-  color: #e8c56d;
-  font:
-    700 0.57rem "Cinzel",
-    serif;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.system-card h3 {
-  margin: 6px 0;
-  color: #f4e5be;
-  font:
-    700 1.02rem/1.15 "Spectral",
-    serif;
-}
-.system-card p {
-  margin: 0;
-  color: #c0d0cd;
-  font:
-    0.76rem/1.45 "DM Sans",
-    sans-serif;
-}
-.system-track {
-  display: grid;
-  grid-template-columns: repeat(11, minmax(0, 1fr));
-  align-items: center;
-  gap: 6px;
-  margin: 18px 0;
-  overflow-x: auto;
-  padding-bottom: 8px;
-}
-.system-slot {
-  grid-column: span 1;
-  min-width: 132px;
-  min-height: 136px;
-  padding: 8px;
-  border: 1px dashed rgba(239, 204, 122, 0.38);
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  color: #a9bcb8;
-  background: rgba(255, 255, 255, 0.025);
-  transition: 0.16s ease;
-}
-.system-slot.is-over {
-  border-color: #f5d680;
-  background: rgba(239, 204, 122, 0.11);
-  transform: translateY(-2px);
-}
-.system-slot.is-filled {
-  padding: 0;
-  border-style: solid;
-}
-.system-slot .system-card {
-  min-height: 134px;
-  width: 100%;
-}
-.system-arrow {
-  color: #ebc870;
-  font-size: 1.3rem;
-  text-align: center;
-  font-style: normal;
-}
 .bank-empty {
   color: #b8c9c5;
   font:
@@ -3766,12 +3621,8 @@ dd {
 }
 @media (max-width: 1180px) {
   .ledger-shell--source-driven,
-  .empire-shell--drag,
   .return-warp-shell {
     grid-template-columns: 1fr;
-  }
-  .system-track {
-    grid-template-columns: repeat(11, minmax(132px, 1fr));
   }
   .return-warp-vortex {
     min-height: 420px;

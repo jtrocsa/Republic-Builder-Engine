@@ -16,10 +16,6 @@ import {
   ExchangeRecordSchema,
   ExchangeRecordsSchema,
 } from "../apps/web/src/content/schemas/exchange-record.schema.js";
-import {
-  EmpireEvidenceListSchema,
-  buildEmpireConnectionsSchema,
-} from "../apps/web/src/content/schemas/empire.schema.js";
 import { ReviewSchema } from "../apps/web/src/content/schemas/review.schema.js";
 import { CaseLanesSchema } from "../apps/web/src/content/schemas/unit02-activities.schema.js";
 import {
@@ -71,20 +67,6 @@ function main() {
       "unit-01-campaign.js: EXCHANGE_RECORDS",
       ExchangeRecordsSchema,
       content.unit01.exchangeRecords
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-campaign.js: EMPIRE_EVIDENCE",
-      EmpireEvidenceListSchema,
-      content.unit01.empireEvidence
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-campaign.js: EMPIRE_CONNECTIONS",
-      buildEmpireConnectionsSchema(content.unit01.empireEvidence.map((card) => card.id)),
-      content.unit01.empireConnections
     )
   );
   results.push(runSchema("unit-01-campaign.js: REVIEW", ReviewSchema, content.unit01.review));

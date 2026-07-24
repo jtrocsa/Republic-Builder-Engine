@@ -2,10 +2,6 @@ import { describe, it, expect } from "vitest";
 import { BrandSchema, UnitSchema } from "../../apps/web/src/content/schemas/unit.schema.js";
 import { buildSourcesSchema } from "../../apps/web/src/content/schemas/source.schema.js";
 import { ExchangeRecordsSchema } from "../../apps/web/src/content/schemas/exchange-record.schema.js";
-import {
-  EmpireEvidenceListSchema,
-  buildEmpireConnectionsSchema,
-} from "../../apps/web/src/content/schemas/empire.schema.js";
 import { ReviewSchema } from "../../apps/web/src/content/schemas/review.schema.js";
 
 const validCase = {
@@ -206,33 +202,6 @@ describe("ExchangeRecordsSchema", () => {
     const result = ExchangeRecordsSchema.safeParse([{ ...validRecord, answer: 4 }]);
     expect(result.success).toBe(false);
     expect(result.error.issues.some((issue) => issue.message.includes("out of range"))).toBe(true);
-  });
-});
-
-describe("empire evidence + connections", () => {
-  const evidence = [
-    { id: "claim", label: "Claim", source: "s", detail: "d" },
-    { id: "encomienda", label: "Encomienda", source: "s", detail: "d" },
-  ];
-
-  it("accepts a valid evidence list (normal case)", () => {
-    expect(EmpireEvidenceListSchema.safeParse(evidence).success).toBe(true);
-  });
-
-  it("accepts a connection whose from/to both reference real evidence ids (normal case)", () => {
-    const schema = buildEmpireConnectionsSchema(evidence.map((card) => card.id));
-    expect(schema.safeParse([{ from: "claim", to: "encomienda", clue: "c" }]).success).toBe(true);
-  });
-
-  it("rejects a connection referencing a nonexistent evidence id (missing referenced source)", () => {
-    const schema = buildEmpireConnectionsSchema(evidence.map((card) => card.id));
-    const result = schema.safeParse([{ from: "claim", to: "does-not-exist", clue: "c" }]);
-    expect(result.success).toBe(false);
-    expect(
-      result.error.issues.some((issue) =>
-        issue.message.includes("does not match any EMPIRE_EVIDENCE id")
-      )
-    ).toBe(true);
   });
 });
 

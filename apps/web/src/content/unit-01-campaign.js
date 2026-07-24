@@ -61,7 +61,13 @@ export const UNIT_01 = {
       question:
         "How did conquest and colonization create new systems of labor, power, and social hierarchy?",
       mechanic: "Colonial System Builder",
-      route: "empire",
+      // Relocated into the Institute Archive Room (Archive Terminal) — no
+      // longer shown as a Navigation Table marker. The mission's mechanic is
+      // now entirely its archiveChallenge quest below (see the now-deleted
+      // empireScreen()/EMPIRE_EVIDENCE/EMPIRE_CONNECTIONS note further down
+      // this file), matching the Case 1.05/1.06 precedent.
+      route: null,
+      navigationTableVisible: false,
       summary:
         "Connect evidence about conquest, labor, forced migration, hierarchy, resistance, and cultural exchange.",
       archiveChallenge: {
@@ -237,78 +243,14 @@ export const EXCHANGE_RECORDS = [
   },
 ];
 
-export const EMPIRE_EVIDENCE = [
-  {
-    id: "claim",
-    label: "Conquest and Spanish claims",
-    source: "Requerimiento, 1513",
-    detail:
-      "Spanish officials asserted authority over Indigenous communities and demanded submission to the Spanish crown and Christianity.",
-  },
-  {
-    id: "encomienda",
-    label: "Encomienda labor",
-    source: "Spanish colonial labor system",
-    detail:
-      "Spanish colonists received the right to demand labor and tribute from Indigenous communities.",
-  },
-  {
-    id: "slavery",
-    label: "Expansion of African slavery",
-    source: "Atlantic forced migration",
-    detail:
-      "Colonial demand for labor accelerated the forced migration of Africans to the Americas.",
-  },
-  {
-    id: "hierarchy",
-    label: "Caste and social hierarchy",
-    source: "Colonial social order",
-    detail:
-      "Colonial rule developed systems that ranked people by ancestry, legal status, and place of birth.",
-  },
-  {
-    id: "resistance",
-    label: "Resistance and adaptation",
-    source: "Indigenous and African communities",
-    detail:
-      "People resisted exploitation, preserved practices, adapted to change, and created new cultural forms.",
-  },
-  {
-    id: "exchange",
-    label: "Cultural interaction",
-    source: "Atlantic communities",
-    detail:
-      "Language, religion, foodways, and customs changed through conflict, coercion, adaptation, and exchange.",
-  },
-];
-
-export const EMPIRE_CONNECTIONS = [
-  {
-    from: "claim",
-    to: "encomienda",
-    clue: "Spanish claims of authority helped justify demands for tribute and labor.",
-  },
-  {
-    from: "encomienda",
-    to: "slavery",
-    clue: "Labor demands and Indigenous population losses contributed to a growing reliance on enslaved Africans.",
-  },
-  {
-    from: "slavery",
-    to: "hierarchy",
-    clue: "Colonial labor systems were tied to legal and racialized social hierarchy.",
-  },
-  {
-    from: "hierarchy",
-    to: "resistance",
-    clue: "People subjected to colonial rule acted within and against these systems.",
-  },
-  {
-    from: "resistance",
-    to: "exchange",
-    clue: "Cultural interaction developed through conflict, survival, adaptation, and exchange.",
-  },
-];
+// The "Empire's Foundations" causal-order-building content that used to live
+// here as EMPIRE_EVIDENCE/EMPIRE_CONNECTIONS (feeding the now-deleted
+// empireScreen()) was migrated onto the quest-type system — its content is
+// fully preserved in content/quests/unit-01-quests.js's
+// UNIT_01_ARCHIVE_CHALLENGE_QUESTS entry "case-003-archive-empire-system"
+// (sequencing, now with a reflectionPrompt added to preserve the original
+// screen's graded reflection), which is now Case 1.03's entire mechanic
+// rather than a parallel bonus path.
 
 export const REVIEW = {
   mcq: [

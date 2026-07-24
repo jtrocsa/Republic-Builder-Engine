@@ -4,7 +4,6 @@ import {
   UNIT_01,
   CASE_001_SOURCES,
   EXCHANGE_RECORDS,
-  EMPIRE_EVIDENCE,
   REVIEW,
 } from "./content/unit-01-campaign.js";
 import {
@@ -1465,7 +1464,6 @@ const VALID_SCREENS = new Set([
   "ledger",
   "ledger-success",
   "founding",
-  "empire",
   "upload",
   "return-warp",
   "review",
@@ -5927,17 +5925,6 @@ function foundingScreen() {
   )}<button class="btn btn-gold" data-action="check-founding">Validate Founding Ledger →</button><p class="feedback" id="foundingFeedback"></p></section></main>`;
 }
 
-function empireScreen() {
-  const order = progress.empireOrder || [];
-  const byId = Object.fromEntries(EMPIRE_EVIDENCE.map((card) => [card.id, card]));
-  const remaining = EMPIRE_EVIDENCE.filter((card) => !order.includes(card.id));
-  const slots = Array.from({ length: EMPIRE_EVIDENCE.length }, (_, index) => {
-    const card = byId[order[index]];
-    return `<div class="system-slot ${card ? "is-filled" : ""}" data-drop-index="${index}">${card ? `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>` : `<span>Drop a record here</span>`}</div>${index < EMPIRE_EVIDENCE.length - 1 ? '<i class="system-arrow">→</i>' : ""}`;
-  }).join("");
-  return `${chrome()}<main class="shell empire-shell empire-shell--drag"><section class="empire-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.03 · Spanish Caribbean</p><h1>${esc(resolvedCaseTitle(caseById("case-003")))}</h1><p>${esc(caseById("case-003").question)}</p><p>Move the evidence records into a defensible order. Each connection should show how conquest, labor, forced migration, hierarchy, resistance, and cultural interaction shaped colonial society.</p><div class="empire-prompt"><b>Chronicler reflection</b><textarea id="empireReflection" placeholder="Explain one connection using evidence from two records…">${esc(progress.responses["empire-reflection"] || "")}</textarea></div></section><section class="empire-board empire-board--drag"><div class="evidence-bank"><div class="bank-heading"><h2>Evidence records</h2><button class="text-button" data-action="clear-empire">Reset layout</button></div><div class="bank-cards">${remaining.map((card) => `<article class="system-card" draggable="true" data-empire-card="${card.id}"><span>${esc(card.source)}</span><h3>${esc(card.label)}</h3><p>${esc(card.detail)}</p></article>`).join("") || '<p class="bank-empty">All records are on the system table. Drag any card to a new position to revise it.</p>'}</div></div><section class="system-table"><div class="system-table__head"><h2>Build the colonial system</h2><p>Drag records into the sequence. The arrows represent a claim you can defend, not a claim that history was simple.</p></div><div class="system-track">${slots}</div><button class="btn btn-gold" data-action="check-empire">Submit system to Archive →</button><p class="feedback" id="empireFeedback"></p></section></section></main>`;
-}
-
 function uploadScreen() {
   const active = caseById(progress.pendingUploadCaseId || progress.activeCaseId || "case-001");
   return `${chrome()}<main class="upload-shell"><section class="upload-core"><p class="kicker">Archive connection secure</p><h1>Field record transmitting.</h1><p>Your Codex is relaying the completed ${esc(active.shortTitle)} record to the Chronicle Institute. The Archive will preserve your evidence, notes, and completed investigation before the next route opens.</p><div class="upload-beam"><div class="upload-codex">✦</div><i></i><i></i><i></i><div class="upload-archive">⌁</div></div><div class="upload-status"><span>Codex encrypted</span><span>Evidence verified</span><span>Record archived</span></div><button class="btn btn-gold" data-action="return-archive">Case archived — Return to Institute →</button></section></main>`;
@@ -6074,9 +6061,6 @@ function render() {
         break;
       case "founding":
         html = foundingScreen();
-        break;
-      case "empire":
-        html = empireScreen();
         break;
       case "archive-challenges":
         html = archiveChallengesScreen();
@@ -6811,12 +6795,6 @@ function handlePuzzleScreenClick(target, action) {
     );
     return true;
   }
-  if (action === "clear-empire") {
-    progress.empireOrder = [];
-    save();
-    render();
-    return true;
-  }
   if (action === "reconstruction") {
     progress.currentScreen = "reconstruction";
     save();
@@ -6912,27 +6890,6 @@ function handlePuzzleScreenClick(target, action) {
       showFeedback(
         "foundingFeedback",
         "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
-        "error"
-      );
-    return true;
-  }
-  if (action === "check-empire") {
-    const reflection = document.getElementById("empireReflection")?.value.trim() || "";
-    progress.responses["empire-reflection"] = reflection;
-    const expected = ["claim", "encomienda", "slavery", "hierarchy", "resistance", "exchange"];
-    const correct = JSON.stringify(progress.empireOrder || []) === JSON.stringify(expected);
-    save();
-    if (correct && reflection.length >= 20) {
-      playSfx("upload");
-      unlockNext("case-003");
-      progress.pendingUploadCaseId = "case-003";
-      progress.currentScreen = "upload";
-      save();
-      render();
-    } else
-      showFeedback(
-        "empireFeedback",
-        "Arrange all six evidence records into a defensible sequence, then write a reflection using evidence from at least two cards.",
         "error"
       );
     return true;
@@ -7736,12 +7693,6 @@ function handleAppDragstart(event) {
     event.dataTransfer.effectAllowed = "move";
     return;
   }
-  const card = event.target.closest("[data-empire-card]");
-  if (card) {
-    event.dataTransfer.setData("text/plain", card.dataset.empireCard);
-    event.dataTransfer.effectAllowed = "move";
-    return;
-  }
   const sequenceItem = event.target.closest("[data-sequence-item]");
   if (sequenceItem) {
     event.dataTransfer.setData("text/sequence-item", sequenceItem.dataset.sequenceItem);
@@ -7757,11 +7708,10 @@ function handleAppDragstart(event) {
 
 function handleAppDragover(event) {
   const mapSlot = event.target.closest("[data-map-slot]");
-  const zone = event.target.closest("[data-drop-index]");
   const sequenceItem = event.target.closest("[data-sequence-item]");
   const evidenceSlot = event.target.closest("[data-evidence-slot]");
   const cargoHold = event.target.closest("[data-cargo-hold]");
-  const dropTarget = mapSlot || zone || sequenceItem || evidenceSlot || cargoHold;
+  const dropTarget = mapSlot || sequenceItem || evidenceSlot || cargoHold;
   if (dropTarget) {
     event.preventDefault();
     dropTarget.classList.add("is-over");
@@ -7769,7 +7719,6 @@ function handleAppDragover(event) {
 }
 
 function handleAppDragleave(event) {
-  event.target.closest("[data-drop-index]")?.classList.remove("is-over");
   event.target.closest("[data-map-slot]")?.classList.remove("is-over");
   event.target.closest("[data-sequence-item]")?.classList.remove("is-over");
   event.target.closest("[data-evidence-slot]")?.classList.remove("is-over");
@@ -7833,19 +7782,7 @@ function handleAppDrop(event) {
     a.placed[mapSlot.dataset.mapSlot] = pieceId;
     save();
     render();
-    return;
   }
-  const zone = event.target.closest("[data-drop-index]");
-  if (!zone) return;
-  event.preventDefault();
-  const cardId = event.dataTransfer.getData("text/plain");
-  if (!cardId) return;
-  const index = Number(zone.dataset.dropIndex);
-  const next = (progress.empireOrder || []).filter((id) => id !== cardId);
-  next.splice(index, 0, cardId);
-  progress.empireOrder = next.slice(0, EMPIRE_EVIDENCE.length);
-  save();
-  render();
 }
 
 // Global Escape dismissal for the app's own overlay surfaces (field/hub dialogue

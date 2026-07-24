@@ -109,4 +109,69 @@ test.describe("Archive Challenge", () => {
 
     await expect(page.locator('[data-case="case-005"]')).toHaveCount(0);
   });
+
+  // case-003 "Empire's Foundations" — migrated the same way as case-005/case-006 above (bespoke
+  // empireScreen() deleted, this Archive Challenge is now its entire mechanic). Its sequencing
+  // quest also gained a reflectionPrompt in this same migration (previously only
+  // evidence-organizing had one), preserving empireScreen()'s original graded reflection field.
+  const EMPIRE_QUEST_ID = "case-003-archive-empire-system";
+
+  test("case-003: arrange the sequence via move buttons, reflect, and complete", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-01",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${EMPIRE_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+
+    // Authored order is deliberately NOT the correct order (see sequencing-quest.js's own doc
+    // comment): hierarchy(3), claim(0), resistance(4), encomienda(1), exchange(5), slavery(2).
+    // Target order by position: claim, encomienda, slavery, hierarchy, resistance, exchange.
+    const moveUp = (itemId) =>
+      quest
+        .locator(`[data-action="sequence-move"][data-sequence-item="${itemId}"][data-direction="up"]`)
+        .click();
+    await moveUp("claim");
+    await moveUp("encomienda");
+    await moveUp("encomienda");
+    await moveUp("slavery");
+    await moveUp("slavery");
+    await moveUp("slavery");
+
+    const reflection = quest.locator(`[data-sequence-reflection="${EMPIRE_QUEST_ID}"]`);
+    await reflection.fill(
+      "The Requerimiento's claim of authority is what colonists used to justify the encomienda's labor demands."
+    );
+    await reflection.blur();
+
+    await expect(page.locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+
+    const stored = await readProgress(page);
+    expect(stored.questResponses[EMPIRE_QUEST_ID].order).toEqual([
+      "claim",
+      "encomienda",
+      "slavery",
+      "hierarchy",
+      "resistance",
+      "exchange",
+    ]);
+    expect(stored.archiveChallenges[EMPIRE_QUEST_ID]?.status).toBe("complete");
+    expect(stored.completedCases).toContain("case-003");
+  });
+
+  test("case-003 no longer appears as a Navigation Table marker", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-01",
+    });
+    await loadSeededSave(page);
+
+    await expect(page.locator('[data-case="case-003"]')).toHaveCount(0);
+  });
 });
