@@ -7809,8 +7809,35 @@ function handleAppDrop(event) {
   render();
 }
 
+// Global Escape dismissal for the app's own overlay surfaces (field/hub dialogue
+// bubbles, the teacher "Preview as student" banner). A native <dialog> (e.g.
+// Manage Content's delete-confirmation, Phase 30) already closes itself on Escape
+// via the browser's own close-watcher, so this only needs to cover the surfaces
+// that aren't a real <dialog> element.
+function handleEscapeDismiss() {
+  if (document.querySelector("dialog[open]")) return;
+  if (previewSession.active) {
+    exitContentPreview();
+    return;
+  }
+  if (progress.currentScreen === "field" && progress.activeFieldNpc) {
+    progress.activeFieldNpc = null;
+    save();
+    render();
+    return;
+  }
+  if (hubDialogueId) {
+    hubDialogueId = null;
+    render();
+  }
+}
+
 function handleWindowKeydown(event) {
   const key = event.key.toLowerCase();
+  if (key === "escape") {
+    handleEscapeDismiss();
+    return;
+  }
   const moves = {
     arrowup: [0, -1],
     w: [0, -1],
