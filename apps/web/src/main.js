@@ -2734,6 +2734,24 @@ function manageContentCardSummaryMarkup(entry) {
     isOfficial && QUEST_TYPE_DISPLAY_NAMES[slotKind]
       ? `<button class="btn btn-plain manage-content-edit-btn" data-action="start-guided-change" ${editDataAttrs} type="button">Change this question →</button>`
       : "";
+  // Lets a teacher pick one of the pre-authored curated alternates (or an
+  // existing custom replacement, both merged into entry.alternatives — see
+  // loadManageContentCaseData()) without opening the full authoring form.
+  // "— Official version —" sends a null altContentId, which
+  // setDraftSelection() already treats as "delete the draft row" — this
+  // doubles as the only revert-to-official control in this screen.
+  const altPicker =
+    isOfficial && entry.alternatives?.length
+      ? `<label class="manage-content-inline-field manage-content-alt-picker">Alternate<select data-alt-select data-slot-kind="${esc(slotKind)}" data-official-id="${esc(entry.officialId)}">
+<option value="">— Official version —</option>
+${entry.alternatives
+  .map(
+    (alt) =>
+      `<option value="${esc(alt.id)}" data-kind="${esc(alt.kind)}" ${alt.id === entry.draftAltId ? "selected" : ""}>${esc(alt.label)}${alt.kind === "custom" ? " (teacher-added)" : ""}</option>`
+  )
+  .join("")}
+</select></label>`
+      : "";
   return `<article class="manage-content-slot-card manage-content-card-summary ${!isOfficial ? "manage-content-slot-card--addition" : ""}">
 <div class="manage-content-slot-head">
 <span class="case-kind-badge">${esc(kindLabel)}</span>
@@ -2743,6 +2761,7 @@ ${!isOfficial ? `<span class="case-kind-badge manage-content-badge-added">Teache
 <div class="manage-content-slot-controls">
 ${sourceLabel ? `<span class="manage-content-summary-source">${esc(sourceLabel)}</span>` : ""}
 <span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}">${isDraftUnpublished ? "Draft — not yet published" : "Published"}</span>
+${altPicker}
 <button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" ${editDataAttrs} type="button">Edit →</button>
 ${guidedButton}
 ${deleteControls}
@@ -7599,6 +7618,19 @@ function handleAppChange(event) {
       manageContentAuthoring = { ...manageContentAuthoring, fields };
       render();
     }
+  } else if (field.matches("[data-alt-select]")) {
+    const slotKind = field.dataset.slotKind;
+    const officialId = field.dataset.officialId;
+    const altId = field.value || null;
+    const altKind = altId ? field.selectedOptions[0]?.dataset.kind || "curated" : "curated";
+    const classroomId = teacherUiState.selectedClassroomId;
+    const caseId = contentUiState.selectedCaseId;
+    setDraftSelection(classroomId, caseId, slotKind, officialId, altId, altKind)
+      .then(() => loadManageContentCaseData(caseId))
+      .catch((err) => {
+        contentUiState.error = err.message || "Could not update this selection.";
+        render();
+      });
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
     progress.questResponses[questId] = { selected: field.value };

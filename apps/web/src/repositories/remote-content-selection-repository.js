@@ -93,7 +93,9 @@ function groupAlternativesBySlot(entries, replacesKey, contentKey) {
     const content = entry[contentKey];
     (bySlot[entry[replacesKey]] ??= []).push({
       id: content.id,
-      label: content.title || content.prompt,
+      // ledger-record alternates (case-002-ledger-alternates.js) use `label`
+      // rather than `title`/`prompt` — every other quest type has a `prompt`.
+      label: content.title || content.prompt || content.label,
     });
   }
   return bySlot;
