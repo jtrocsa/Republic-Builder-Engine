@@ -1,7 +1,11 @@
 import { z } from "zod";
 
-// A single source-driven MCQ card in the Exchange Ledger (Case 1.02 /
-// `exchangeLedgerScreen()` in main.js).
+// A single source-driven MCQ card. Originally modeled on Case 1.02's Exchange
+// Ledger (EXCHANGE_RECORDS/exchangeLedgerScreen() in main.js), which has
+// since been migrated onto the quest-type system and no longer uses this
+// schema — kept alive only because Case 1.08's Founding Debate ledger
+// (FOUNDING_RECORDS/foundingScreen()) shares the exact same record shape and
+// hasn't been migrated yet. Retire this file for good once case-008 is.
 export const ExchangeRecordSchema = z
   .object({
     id: z.string().min(1, "exchangeRecord.id is required"),

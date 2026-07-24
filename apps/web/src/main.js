@@ -1,11 +1,5 @@
 import "./styles/global.css";
-import {
-  BRAND,
-  UNIT_01,
-  CASE_001_SOURCES,
-  EXCHANGE_RECORDS,
-  REVIEW,
-} from "./content/unit-01-campaign.js";
+import { BRAND, UNIT_01, CASE_001_SOURCES, REVIEW } from "./content/unit-01-campaign.js";
 import {
   UNIT_02,
   CASE_004_SOURCES,
@@ -1461,7 +1455,6 @@ const VALID_SCREENS = new Set([
   "source",
   "codex",
   "reconstruction",
-  "ledger",
   "ledger-success",
   "founding",
   "upload",
@@ -1843,14 +1836,6 @@ const caseById = (id) => {
 // classroom customization is active, so official content renders unchanged
 // by default — see remote-content-selection-repository.js.
 export const sourcesForCase = (caseId) => (UNIT_SOURCES[caseId] || []).map(resolveSourceSlot);
-// Same idea for Case 1.02's Exchange Ledger records — resolveQuestSlot()
-// preserves each record's official id even when swapped (see its own doc
-// comment), so progress.exchangeLedger.answers keys (keyed by record.id)
-// stay valid whichever version is showing. Case 1.08's Founding Debate
-// ledger (FOUNDING_RECORDS) has no wired slots yet, so it isn't resolved
-// here — see officialQuestSlotsForCase()'s case-002-only branch.
-const resolvedExchangeRecords = () =>
-  EXCHANGE_RECORDS.map((record) => resolveQuestSlot("ledger-record", record));
 export const sourceById = (id) => {
   const official =
     CASE_001_SOURCES.find((item) => item.id === id) ||
@@ -2491,16 +2476,6 @@ const QUEST_SLOT_TYPES = [
 // classroom's selection cache — the editor needs the true official baseline
 // to build officialId/officialLabel from, not whatever is currently swapped.
 function officialQuestSlotsForCase(caseId) {
-  // Case 1.02's Exchange Ledger records are the one ledger-style mission
-  // wired into real (swap-only) editing so far — see LEDGER_PREVIEW_RECORDS_BY_CASE's
-  // comment for why Case 1.08's Founding Debate ledger still uses the old
-  // read-only preview path instead. Each record is its own self-contained
-  // slot (no separate source to group it under), so it short-circuits the
-  // rest of this function rather than combining with PRACTICE_CHECK_QUESTS/
-  // archiveChallenge, neither of which case-002 has.
-  if (caseId === "case-002") {
-    return EXCHANGE_RECORDS.map((record) => ({ questType: "ledger-record", quest: record }));
-  }
   const questSet = PRACTICE_CHECK_QUESTS[caseId];
   const practiceSlots = questSet
     ? QUEST_SLOT_TYPES.flatMap(({ questType, practiceKey }) =>
@@ -2519,15 +2494,14 @@ function officialQuestSlotsForCase(caseId) {
 }
 
 // Canonical display names for the 4 real quest-types/index.js QUEST_TYPES
-// keys — every other display string in Manage Content (QUEST_SLOT_LABELS,
-// AUTHORING_TYPE_LABELS, the type-picker cards) derives from this single
-// table so "Multiple Choice" vs "multiple-choice question" vs "MCQ" can't
-// drift apart again. The stable string KEYS themselves (mcq/sequencing/
-// evidence-organizing/hipp) never change — see quest-types/index.js's own
-// comment on why evidence-organizing's key was kept as-is. "ledger-record"
-// is a 5th, unrelated quasi-type (case-002 only, its own bespoke render
-// path, never routed through QUEST_TYPES/renderQuest) and deliberately has
-// no entry here — it's never offered as a pickable quest type.
+// keys — every other display string in Manage Content (AUTHORING_TYPE_LABELS,
+// the type-picker cards) derives from this single table so "Multiple Choice"
+// vs "multiple-choice question" vs "MCQ" can't drift apart again. The stable
+// string KEYS themselves (mcq/sequencing/evidence-organizing/hipp) never
+// change — see quest-types/index.js's own comment on why evidence-organizing's
+// key was kept as-is. (A 5th, unrelated "ledger-record" quasi-type used to
+// live here for case-002's bespoke ledger — retired once case-002 was
+// migrated onto a real quest type; see docs/architecture/ARCHITECTURE-QUICKREF.md.)
 const QUEST_TYPE_DISPLAY_NAMES = {
   mcq: "Multiple Choice",
   sequencing: "Sequencing",
@@ -2539,10 +2513,6 @@ const QUEST_TYPE_DESCRIPTIONS = {
   sequencing: "Arrange records in the order that reflects cause and effect.",
   "evidence-organizing": "Sort sources into the historical-thinking skill each best demonstrates.",
   hipp: "Analyze a document's Historical situation, Intended audience, Purpose, and Point of view.",
-};
-const QUEST_SLOT_LABELS = {
-  ...QUEST_TYPE_DISPLAY_NAMES,
-  "ledger-record": "Ledger Record",
 };
 
 // Presentational-only grouping: which source card a question's Manage
@@ -2626,11 +2596,11 @@ ${quest ? renderQuest(source.investigationMode, quest, {}) : `<p class="bank-emp
 
 // Bespoke non-quest-type mechanic with zero swappable content today (see
 // officialQuestSlotsForCase()) — case-008's Founding Debate ledger. Case
-// 1.02's Exchange Ledger used to be here too, but is now wired into real
-// (swap-only) editing via the "ledger-record" slot kind — see
-// officialQuestSlotsForCase()'s case-002 branch — so it no longer needs
-// this read-only fallback. Case-008 deliberately stays on this path until a
-// future pass extends the same editing pattern to it.
+// 1.02's Exchange Ledger used to be here too and used a bespoke
+// "ledger-record" slot kind before that, but is now fully migrated onto the
+// real quest-type system (an archiveChallenge, same as every other
+// non-map mission), so it no longer needs this read-only fallback.
+// Case-008 deliberately stays on this path until it gets the same migration.
 const LEDGER_PREVIEW_RECORDS_BY_CASE = {
   "case-008": FOUNDING_RECORDS,
 };
@@ -2718,20 +2688,16 @@ function manageContentCardSummaryMarkup(entry) {
   // doc comment in loadManageContentCaseData()).
   const displaySlotKind = entry.currentSlotKind || slotKind;
   const kindLabel =
-    displaySlotKind === "source" ? "Source" : QUEST_SLOT_LABELS[displaySlotKind] || displaySlotKind;
+    displaySlotKind === "source"
+      ? "Source"
+      : QUEST_TYPE_DISPLAY_NAMES[displaySlotKind] || displaySlotKind;
   const promptText = isOfficial
     ? entry.officialLabel
     : entry.content.prompt || entry.content.title || "";
   const truncatedPrompt = promptText.length > 140 ? `${promptText.slice(0, 140)}…` : promptText;
-  // A ledger record combines its own source card and question in one slot
-  // (see ledgerRecordFieldsMarkup()'s doc comment) — "no linked source"
-  // would misleadingly suggest it's missing something, so it gets no
-  // source-grouping label at all.
   const sourceLabel =
-    slotKind === "ledger-record"
-      ? ""
-      : resolvedSourceTitle(contentUiState.selectedCaseId, entry.relatedSourceId) ||
-        "No linked source — general question";
+    resolvedSourceTitle(contentUiState.selectedCaseId, entry.relatedSourceId) ||
+    "No linked source — general question";
   const isDraftUnpublished = isOfficial
     ? entry.draftAltId !== entry.publishedAltId
     : entry.status !== "published";
@@ -2917,9 +2883,6 @@ ${showAddForm ? manageContentAuthoringFormMarkup() : addButton}`;
 // manageContentCaseScreen()'s early return, which shows its own fixed
 // locked-panel copy instead.
 function missionFlowSummary(kase, hasEditableContent) {
-  if (kase.route === "ledger" && hasEditableContent) {
-    return "Fixed: this mission's ledger layout — every record shown on one screen. Editable below: each record's source card and its one question.";
-  }
   if (!hasEditableContent && LEDGER_PREVIEW_RECORDS_BY_CASE[kase.id]) {
     return "Fixed: this mission is a bespoke ledger activity shown read-only below — its records aren't one of the swappable quest types yet.";
   }
@@ -2931,7 +2894,6 @@ const AUTHORING_TYPE_LABELS = {
   ...Object.fromEntries(
     Object.entries(QUEST_TYPE_DISPLAY_NAMES).map(([key, name]) => [key, `${name} question`])
   ),
-  "ledger-record": "ledger record",
 };
 
 // Which real source document (if any) a question is grouped under — shown
@@ -3163,36 +3125,6 @@ function hippFieldsMarkup(fields) {
 <button type="button" class="manage-content-add-row-btn" data-action="add-hipp-prompt" ${prompts.length >= 2 ? "disabled" : ""}>+ Add HIPP prompt</button>`;
 }
 
-// A ledger record (Case 1.02's Exchange Ledger) combines a small source
-// card and its one inline MCQ in a single object — unlike every other slot
-// kind, there's no separate "source" for this to group under, so its
-// fields cover both halves in one form: the source-card fields (icon,
-// titles, excerpt, note, citation) plus a choices/correct-answer row list
-// styled the same as mcqFieldsMarkup()'s.
-function ledgerRecordFieldsMarkup(fields) {
-  const choices = fields.choices || [];
-  const rows = choices
-    .map(
-      (choice, i) => `<div class="manage-content-mcq-row">
-<input type="radio" name="ledger-record-correct" data-ledger-record-correct ${choice.correct ? "checked" : ""} title="Mark as the correct choice">
-<input type="text" data-ledger-record-choice-text value="${esc(choice.text)}" placeholder="Choice text">
-<button type="button" class="manage-content-row-delete-btn" data-action="remove-ledger-record-choice" data-row-index="${i}" ${choices.length <= 2 ? "disabled" : ""} title="Remove this choice">×</button>
-</div>`
-    )
-    .join("");
-  return `<label>Record label (short tag, e.g. "Maize")<input type="text" data-authoring-field="label" value="${esc(fields.label)}"></label>
-<label>Icon (a single emoji)<input type="text" data-authoring-field="icon" value="${esc(fields.icon)}"></label>
-<label>Source title<input type="text" data-authoring-field="sourceTitle" value="${esc(fields.sourceTitle)}"></label>
-<label>Source meta (creator · date · kind)<input type="text" data-authoring-field="sourceMeta" value="${esc(fields.sourceMeta)}"></label>
-<label>Excerpt shown to students<textarea data-authoring-field="excerpt" rows="3">${esc(fields.excerpt)}</textarea></label>
-<label>Source note (how to read this record)<textarea data-authoring-field="sourceNote" rows="2">${esc(fields.sourceNote)}</textarea></label>
-<label>Question<textarea data-authoring-field="question" rows="2">${esc(fields.question)}</textarea></label>
-<div class="manage-content-field-label">Choices — mark the correct one</div>
-<div class="manage-content-row-list" data-authoring-rows="ledgerRecordChoices">${rows}</div>
-<button type="button" class="manage-content-add-row-btn" data-action="add-ledger-record-choice">+ Add choice</button>
-<label>Citation<input type="text" data-authoring-field="citation" value="${esc(fields.citation)}"></label>`;
-}
-
 function authoringFieldsMarkup(auth) {
   const { slotKind, fields } = auth;
   if (slotKind === "source") {
@@ -3204,10 +3136,6 @@ function authoringFieldsMarkup(auth) {
 <label>Source text (shown to students)<textarea data-authoring-field="excerpt" rows="6">${esc(fields.excerpt)}</textarea></label>
 <label>Reading question<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
   }
-  // No "Grouped under" label — a ledger record isn't grouped under a
-  // separate source, it combines both in one card (see
-  // ledgerRecordFieldsMarkup()'s doc comment).
-  if (slotKind === "ledger-record") return ledgerRecordFieldsMarkup(fields);
   const linkedSource = linkedSourceFieldMarkup(auth);
   if (slotKind === "mcq") return linkedSource + mcqFieldsMarkup(fields);
   if (slotKind === "sequencing") return linkedSource + sequencingFieldsMarkup(fields);
@@ -3253,10 +3181,8 @@ ${authoringFieldsMarkup(auth)}
 }
 
 // Single source of truth for whether "Preview as student" can show anything
-// real: a map case always can (the real field screen); a ledger case only
-// if it actually has ledger-record slots wired up (today, only case-002 —
-// case-008 still has none, see officialQuestSlotsForCase()); any other
-// non-map case only if it has a case-level archiveChallenge (the only thing
+// real: a map case always can (the real field screen); any other non-map
+// case only if it has a case-level archiveChallenge (the only thing
 // archiveChallengesScreen() actually renders per case, see enterContentPreview()
 // below). Deliberately does NOT include addition-slot/hasEditableContent —
 // those aren't read by any student-facing screen (see Phase 3 of the
@@ -3264,7 +3190,6 @@ ${authoringFieldsMarkup(auth)}
 // no archiveChallenge has nothing to preview yet, and the button must say so.
 function caseIsPreviewable(kase) {
   if (kase.route === "field") return true;
-  if (kase.route === "ledger") return officialQuestSlotsForCase(kase.id).length > 0;
   return Boolean(kase.archiveChallenge);
 }
 
@@ -3319,16 +3244,15 @@ ${missionRenameControlMarkup(activeCase)}
       })
     )
     .join("");
-  const isLedgerCase = activeCase.route === "ledger";
   const generalSection =
     generalQuestions.length || !groups.length
       ? manageContentSectionMarkup({
           id: "general",
-          title: isLedgerCase ? "Ledger records" : "General questions",
+          title: "General questions",
           kicker: groups.length ? "Not tied to a single source" : undefined,
           bodyMarkup: manageContentGeneralGroupBodyMarkup(
             generalQuestions,
-            isLedgerCase ? "No ledger records yet." : undefined,
+            undefined,
             Boolean(activeCase.archiveChallenge)
           ),
         })
@@ -3472,7 +3396,7 @@ async function loadManageContentCaseData(caseId) {
         slotKind: questType,
         currentSlotKind,
         officialId: quest.id,
-        officialLabel: questType === "ledger-record" ? quest.question : quest.prompt,
+        officialLabel: quest.prompt,
         relatedSourceId: OFFICIAL_QUEST_SOURCE_LINKS[quest.id] || null,
         draftAltId: draft?.id || null,
         draftAltKind: draft?.kind || "curated",
@@ -3561,15 +3485,6 @@ function syncAuthoringFieldsFromDom(slotKind, formEl) {
         identificationOnly: optionRow.querySelector("[data-hipp-identification]").checked,
       })),
     }));
-  } else if (slotKind === "ledger-record") {
-    fields.choices = [
-      ...formEl.querySelectorAll(
-        '[data-authoring-rows="ledgerRecordChoices"] .manage-content-mcq-row'
-      ),
-    ].map((row) => ({
-      text: row.querySelector("[data-ledger-record-choice-text]").value,
-      correct: row.querySelector("[data-ledger-record-correct]").checked,
-    }));
   }
   return fields;
 }
@@ -3645,16 +3560,14 @@ function handleSaveAuthoring() {
 // Real "Preview as student" — no bespoke preview markup. Switches the
 // resolution cache to draft and navigates into the actual screen a student
 // would land on: the real walkable field screen for map missions (fully
-// playable — movement, collision, NPCs, Practice Check), the real Exchange
-// Ledger screen for case-002, or the real Archive Challenges screen for a
-// mission whose only editable content is a case-level Archive Challenge.
-// Nothing here is persisted — see previewSession's own comment and the
-// save() guard above.
+// playable — movement, collision, NPCs, Practice Check), or the real
+// Archive Challenges screen for a mission whose only editable content is a
+// case-level Archive Challenge. Nothing here is persisted — see
+// previewSession's own comment and the save() guard above.
 function enterContentPreview(caseId) {
   const kase = caseById(caseId);
   if (!kase) return;
   const isMapCase = kase.route === "field";
-  const isLedgerCase = kase.route === "ledger";
   if (!caseIsPreviewable(kase)) return;
   loadSelectionsForResolution(teacherUiState.selectedClassroomId, "draft").then(() => {
     previewSession = {
@@ -3671,9 +3584,6 @@ function enterContentPreview(caseId) {
     if (isMapCase) {
       progress.currentScreen = "field";
       resetFieldPosition();
-    } else if (isLedgerCase) {
-      progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
-      progress.currentScreen = "ledger";
     } else {
       progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
       progress.currentScreen = "archive-challenges";
@@ -4035,26 +3945,6 @@ function handleManageContentClick(target, action) {
   }
   if (action === "remove-mcq-choice") {
     const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
-    const index = Number(target.dataset.rowIndex);
-    if (fields.choices.length > 2) {
-      const removedWasCorrect = fields.choices[index].correct;
-      fields.choices.splice(index, 1);
-      if (removedWasCorrect && !fields.choices.some((c) => c.correct))
-        fields.choices[0].correct = true;
-    }
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "add-ledger-record-choice") {
-    const fields = syncAuthoringFieldsFromDom("ledger-record", currentAuthoringFormEl());
-    fields.choices.push({ text: "", correct: false });
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-ledger-record-choice") {
-    const fields = syncAuthoringFieldsFromDom("ledger-record", currentAuthoringFormEl());
     const index = Number(target.dataset.rowIndex);
     if (fields.choices.length > 2) {
       const removedWasCorrect = fields.choices[index].correct;
@@ -5903,13 +5793,6 @@ function ensureActivityState(caseId, defaults) {
   return progress.activityState[caseId];
 }
 
-function exchangeLedgerScreen() {
-  const answers = progress.exchangeLedger.answers || {};
-  const records = resolvedExchangeRecords();
-  const allAnswered = records.every((record) => answers[record.id] !== undefined);
-  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">Case 1.02 · Atlantic routes</p><h1>${esc(resolvedCaseTitle(caseById("case-002")))}</h1><p>${esc(caseById("case-002").question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p><div class="atlantic-mini">${atlasSvgMarkup(MAP_VIEWS["atlantic-wide"], NAV_TABLE_VIEWPORT, "Atlantic map used for Exchange Ledger")}<div class="ledger-route"></div></div></section><section class="ledger-list ledger-list--sources">${records.map((record, index) => `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="ledger-${record.id}" data-ledger-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`).join("")}<button class="btn btn-gold" data-action="check-ledger" ${allAnswered ? "" : ""}>Validate Evidence Ledger →</button><p class="feedback" id="ledgerFeedback"></p></section></main>`;
-}
-
 function ledgerSuccessScreen() {
   return `${chrome()}<main class="ledger-success-shell"><section class="ledger-success-core" aria-live="polite"><p class="kicker">Evidence ledger verified</p><div class="ledger-success-orbit" aria-hidden="true"><i></i><i></i><i></i><span>✓</span></div><h1>Correct record match.</h1><p>Your source interpretations held together. The Archive has confirmed the ledger and is opening a secure transmission channel.</p><div class="ledger-success-steps"><span>Sources read</span><span>Claims checked</span><span>Route verified</span></div></section></main>`;
 }
@@ -6047,9 +5930,6 @@ function render() {
         break;
       case "reconstruction":
         html = reconstructionScreen();
-        break;
-      case "ledger":
-        html = exchangeLedgerScreen();
         break;
       case "ledger-success":
         html = ledgerSuccessScreen();
@@ -6821,39 +6701,6 @@ function handlePuzzleScreenClick(target, action) {
       showFeedback(
         "reconstructionFeedback",
         "Revisit the source type and date. Each record belongs in a different evidentiary lane.",
-        "error"
-      );
-    return true;
-  }
-  if (action === "check-ledger") {
-    progress.exchangeLedger.answers ??= {};
-    document.querySelectorAll("[data-ledger-question]:checked").forEach((s) => {
-      progress.exchangeLedger.answers[s.dataset.ledgerQuestion] = Number(s.value);
-    });
-    const records = resolvedExchangeRecords();
-    const unanswered = records.filter((r) => progress.exchangeLedger.answers[r.id] === undefined);
-    if (unanswered.length) {
-      save();
-      showFeedback(
-        "ledgerFeedback",
-        "Read and answer every source record before validating the Ledger.",
-        "error"
-      );
-      return true;
-    }
-    const correct = records.every((r) => progress.exchangeLedger.answers[r.id] === r.answer);
-    save();
-    if (correct) {
-      playSfx("secure");
-      unlockNext("case-002");
-      progress.pendingUploadCaseId = "case-002";
-      progress.currentScreen = "ledger-success";
-      save();
-      render();
-    } else
-      showFeedback(
-        "ledgerFeedback",
-        "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
         "error"
       );
     return true;

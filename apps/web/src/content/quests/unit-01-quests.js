@@ -382,6 +382,74 @@ export const UNIT_01_ARCHIVE_EVIDENCE_QUESTS = [
         "Earn 1 point per record correctly matched to the claim its evidence best supports.",
     },
   },
+  // Case 1.02's own Archive Challenge (Manage Content wizard redesign, Phase
+  // A) — a fresh duplicate of the same EXCHANGE_RECORDS content and
+  // claim/slot shape as the "unit-01-archive-claim-and-evidence-builder"
+  // quest above, given its own id so a teacher editing Case 1.02's mission
+  // in Manage Content doesn't also silently edit that separate unit-level
+  // bonus challenge (same duplication-over-sharing convention this file
+  // already uses elsewhere). Replaces case-002's bespoke exchangeLedgerScreen()
+  // (4 independent per-record MCQ questions) with the same "sort each record
+  // under the claim it supports" mechanic as the quest above — real content
+  // preserved, framing changed from independent per-record MCQs to a single
+  // claim-sorting exercise.
+  {
+    id: "case-002-archive-exchange-claims",
+    prompt:
+      "The Archive's claim board for the Columbian Exchange has come apart from its evidence. Sort each record beneath the claim about the Exchange's impact that its content most directly supports.",
+    slots: [
+      { id: "agriculture-diet", label: "Transformed Agriculture and Diet" },
+      { id: "demographic-catastrophe", label: "Caused Demographic Catastrophe" },
+      { id: "mobility-warfare", label: "Reshaped Mobility, Warfare, and Transport" },
+      { id: "forced-labor", label: "Built Systems of Forced Labor" },
+    ],
+    sources: [
+      {
+        id: "case-002-maize-claim",
+        label: "Maize",
+        attribution: "José de Acosta, Natural and Moral History of the Indies, 1590",
+        excerpt:
+          "“The principal grain of the Indies is maize … whereof the Indians make their bread.”",
+        skillCategory: "Continuity and Change",
+        correctSlotId: "agriculture-diet",
+      },
+      {
+        id: "case-002-smallpox-claim",
+        label: "Smallpox",
+        attribution:
+          "Toribio de Benavente “Motolinía,” History of the Indians of New Spain, c. 1541",
+        excerpt: "“In the year 1520 came the smallpox … and a very great many Indians died of it.”",
+        skillCategory: "Causation",
+        correctSlotId: "demographic-catastrophe",
+      },
+      {
+        id: "case-002-horses-claim",
+        label: "Horses",
+        attribution:
+          "Bernal Díaz del Castillo, True History of the Conquest of New Spain, completed c. 1568",
+        excerpt: "“The sight of the horses caused them great wonder.”",
+        skillCategory: "Contextualization",
+        correctSlotId: "mobility-warfare",
+      },
+      {
+        id: "case-002-enslaved-africans-claim",
+        label: "Enslaved Africans",
+        attribution: "Spanish Crown license for African captives to the Indies, 1518",
+        excerpt:
+          "The Crown authorized the transport of African captives to “the Indies” under royal license.",
+        skillCategory: "Sourcing",
+        correctSlotId: "forced-labor",
+      },
+    ],
+    reflectionPrompt:
+      "In 2–3 sentences, choose one claim above and explain why its record is the strongest possible evidence for that claim specifically — not just plausible evidence for the Columbian Exchange in general.",
+    rubric: {
+      skillCategories: ["Continuity and Change", "Causation", "Contextualization", "Sourcing"],
+      pointsTotal: 4,
+      description:
+        "Earn 1 point per record correctly matched to the claim its evidence best supports.",
+    },
+  },
 ];
 
 export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [

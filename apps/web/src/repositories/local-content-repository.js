@@ -20,7 +20,6 @@ import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-seque
 import { CASE_001_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-001-evidence-organizing-alternates.js";
 import { CASE_001_HIPP_ALTERNATES } from "../content/quests/case-001-hipp-alternates.js";
 import { CASE_006_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-006-evidence-organizing-alternates.js";
-import { CASE_002_LEDGER_ALTERNATES } from "../content/quests/case-002-ledger-alternates.js";
 
 export function loadChronicleContent() {
   return {
@@ -28,7 +27,6 @@ export function loadChronicleContent() {
       brand: unit01Campaign.BRAND,
       unit: unit01Campaign.UNIT_01,
       sources: unit01Campaign.CASE_001_SOURCES,
-      exchangeRecords: unit01Campaign.EXCHANGE_RECORDS,
       review: unit01Campaign.REVIEW,
       mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
       evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
@@ -47,7 +45,6 @@ export function loadChronicleContent() {
       sequencingAlternates: CASE_001_SEQUENCING_ALTERNATES,
       evidenceOrganizingAlternates: CASE_001_EVIDENCE_ORGANIZING_ALTERNATES,
       sourceAnalysisAlternates: CASE_001_HIPP_ALTERNATES,
-      ledgerRecordAlternates: CASE_002_LEDGER_ALTERNATES,
     },
     unit02: {
       unit: unit02Campaign.UNIT_02,

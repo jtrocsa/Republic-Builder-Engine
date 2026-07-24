@@ -47,9 +47,19 @@ export const UNIT_01 = {
       question:
         "How did the movement of crops, diseases, animals, and people transform the Atlantic world?",
       mechanic: "Atlantic Route Puzzle",
-      route: "ledger",
+      // Relocated into the Institute Archive Room (Archive Terminal) — no
+      // longer shown as a Navigation Table marker. The mission's mechanic is
+      // now entirely its archiveChallenge quest below (see the now-deleted
+      // exchangeLedgerScreen()/EXCHANGE_RECORDS note further down this
+      // file), matching the Case 1.03/1.05/1.06 precedent.
+      route: null,
+      navigationTableVisible: false,
       summary:
         "Build a route ledger that distinguishes movement across the Atlantic from its historical consequences.",
+      archiveChallenge: {
+        questType: "evidence-organizing",
+        questId: "case-002-archive-exchange-claims",
+      },
     },
     {
       id: "case-003",
@@ -159,90 +169,18 @@ export const CASE_001_SOURCES = [
   },
 ];
 
-export const EXCHANGE_RECORDS = [
-  {
-    id: "maize",
-    label: "Maize",
-    icon: "🌽",
-    sourceTitle: "José de Acosta, Natural and Moral History of the Indies",
-    sourceMeta: "Spanish Jesuit observer · 1590 · primary-source excerpt",
-    excerpt: "“The principal grain of the Indies is maize … whereof the Indians make their bread.”",
-    sourceNote:
-      "Acosta wrote after contact, but his wording identifies maize as a staple cultivated in the Americas rather than a European introduction.",
-    question: "Which claim is best supported by this record?",
-    choices: [
-      "Maize was already an important American crop before European contact.",
-      "Maize entered the Americas only after Spanish conquest.",
-      "Maize caused the first epidemics in the Caribbean.",
-      "Maize was transported through forced migration from Africa.",
-    ],
-    answer: 0,
-    citation:
-      "José de Acosta, The Natural and Moral History of the Indies (1590), public-domain English translation; wording varies by translation.",
-  },
-  {
-    id: "smallpox",
-    label: "Smallpox",
-    icon: "✦",
-    sourceTitle: "Toribio de Benavente “Motolinía,” History of the Indians of New Spain",
-    sourceMeta: "Franciscan chronicler · c. 1541 · primary-source excerpt",
-    excerpt: "“In the year 1520 came the smallpox … and a very great many Indians died of it.”",
-    sourceNote:
-      "Motolinía’s account records an epidemic after European contact. It must be read as a colonial observer’s testimony, not as an Indigenous voice.",
-    question: "Which development most directly explains the devastation described?",
-    choices: [
-      "Indigenous communities had long-established immunity to the disease.",
-      "Many American populations lacked prior exposure to Old World pathogens.",
-      "Smallpox spread only among European settlers.",
-      "The epidemic was caused by the expansion of maize cultivation.",
-    ],
-    answer: 1,
-    citation:
-      "Toribio de Benavente “Motolinía,” History of the Indians of New Spain, c. 1541, public-domain English translation; wording varies by translation.",
-  },
-  {
-    id: "horses",
-    label: "Horses",
-    icon: "♞",
-    sourceTitle: "Bernal Díaz del Castillo, True History of the Conquest of New Spain",
-    sourceMeta: "Spanish conquistador · completed c. 1568 · primary-source excerpt",
-    excerpt: "“The sight of the horses caused them great wonder.”",
-    sourceNote:
-      "Díaz wrote from the viewpoint of a Spanish participant. His account can help document early encounter, but it does not justify treating Indigenous societies as passive or uniform.",
-    question: "Which interpretation best follows from the introduction of horses?",
-    choices: [
-      "Horses had no effect outside Spanish military units.",
-      "Horses reshaped mobility, hunting, warfare, and transportation in some American societies over time.",
-      "Horses were native to the Americas before 1492.",
-      "Horses caused the immediate transfer of European political systems to Indigenous communities.",
-    ],
-    answer: 1,
-    citation:
-      "Bernal Díaz del Castillo, True History of the Conquest of New Spain, completed c. 1568; public-domain English translations vary.",
-  },
-  {
-    id: "enslaved-africans",
-    label: "Enslaved Africans",
-    icon: "⛓",
-    sourceTitle: "Spanish Crown license for African captives to the Indies",
-    sourceMeta: "Royal authorization · 1518 · primary administrative record",
-    excerpt:
-      "The Crown authorized the transport of African captives to “the Indies” under royal license.",
-    sourceNote:
-      "The administrative language hides the human violence of forced migration. Read it alongside the effects of colonial labor demands and racial hierarchy.",
-    question: "Which conclusion is best supported by this record?",
-    choices: [
-      "Atlantic slavery was a voluntary exchange among equal societies.",
-      "Colonial governments treated enslaved Africans as a labor force to be moved for imperial economies.",
-      "African migration to the Americas began only after the United States became independent.",
-      "The Crown license ended coercive labor systems in the Spanish Caribbean.",
-    ],
-    answer: 1,
-    citation:
-      "Spanish Crown license authorizing the transport of African captives to the Indies, 1518; see early Atlantic slavery source collections and transcriptions.",
-  },
-];
-
+// The "Exchange Ledger" per-record MCQ content that used to live here as
+// EXCHANGE_RECORDS (feeding the now-deleted exchangeLedgerScreen()) was
+// migrated onto the quest-type system — its content is fully preserved in
+// content/quests/unit-01-quests.js's UNIT_01_ARCHIVE_EVIDENCE_QUESTS entry
+// "case-002-archive-exchange-claims" (evidence-organizing), which is now
+// Case 1.02's entire mechanic rather than a bespoke ledger screen. The
+// mechanic itself changed from 4 independent per-record MCQ questions to a
+// single "sort each record under the claim it supports" exercise — the same
+// real historical content and citations, reframed the same way the
+// pre-existing "unit-01-archive-claim-and-evidence-builder" unit-level bonus
+// challenge (also in unit-01-quests.js) already reframed this exact content.
+//
 // The "Empire's Foundations" causal-order-building content that used to live
 // here as EMPIRE_EVIDENCE/EMPIRE_CONNECTIONS (feeding the now-deleted
 // empireScreen()) was migrated onto the quest-type system — its content is

@@ -32,7 +32,6 @@ import {
   SourceAnalysisQuestSchema,
   HIPP_DIMENSIONS,
 } from "../quest-types/history/source-analysis-quest.js";
-import { ExchangeRecordSchema } from "../content/schemas/exchange-record.schema.js";
 
 export function slugify(text, fallback = "item") {
   const slug = (text || "")
@@ -363,74 +362,6 @@ export function buildHippContent(fields) {
   return { ok: true, content: result.data };
 }
 
-// --- Ledger record (Case 1.02's Exchange Ledger) ---
-//
-// Combines a small source card and its one inline MCQ in a single object —
-// see ledgerRecordFieldsMarkup()'s doc comment in main.js. Choices are
-// authored the same [{ text, correct }] shape as MCQ's, flattened to
-// ExchangeRecordSchema's { choices: string[], answer: index } at build time.
-
-export function defaultLedgerRecordFields() {
-  return {
-    label: "",
-    icon: "",
-    sourceTitle: "",
-    sourceMeta: "",
-    excerpt: "",
-    sourceNote: "",
-    question: "",
-    choices: [
-      { text: "", correct: true },
-      { text: "", correct: false },
-    ],
-    citation: "",
-  };
-}
-
-export function ledgerRecordToFields(record) {
-  return {
-    label: record.label || "",
-    icon: record.icon || "",
-    sourceTitle: record.sourceTitle || "",
-    sourceMeta: record.sourceMeta || "",
-    excerpt: record.excerpt || "",
-    sourceNote: record.sourceNote || "",
-    question: record.question || "",
-    choices: (record.choices || []).map((text, i) => ({ text, correct: i === record.answer })),
-    citation: record.citation || "",
-  };
-}
-
-export function buildLedgerRecordContent(fields) {
-  const choices = Array.isArray(fields.choices) ? fields.choices : [];
-  if (choices.length < 2) {
-    return { ok: false, errors: ["choices: add at least 2 choices"] };
-  }
-  const correctCount = choices.filter((choice) => choice.correct).length;
-  if (correctCount !== 1) {
-    return {
-      ok: false,
-      errors: [`choices: mark exactly one choice correct (found ${correctCount})`],
-    };
-  }
-  const content = {
-    id: shortId(fields.label),
-    label: (fields.label || "").trim(),
-    icon: (fields.icon || "").trim(),
-    sourceTitle: (fields.sourceTitle || "").trim(),
-    sourceMeta: (fields.sourceMeta || "").trim(),
-    excerpt: (fields.excerpt || "").trim(),
-    sourceNote: (fields.sourceNote || "").trim(),
-    question: (fields.question || "").trim(),
-    choices: choices.map((choice) => (choice.text || "").trim()),
-    answer: choices.findIndex((choice) => choice.correct),
-    citation: (fields.citation || "").trim(),
-  };
-  const result = ExchangeRecordSchema.safeParse(content);
-  if (!result.success) return { ok: false, errors: issuesToMessages(result.error) };
-  return { ok: true, content: result.data };
-}
-
 // --- Dispatch ---
 
 const BUILDERS = {
@@ -439,7 +370,6 @@ const BUILDERS = {
   sequencing: buildSequencingContent,
   "evidence-organizing": buildEvidenceOrganizingContent,
   hipp: buildHippContent,
-  "ledger-record": buildLedgerRecordContent,
 };
 
 const DEFAULT_FIELDS = {
@@ -448,7 +378,6 @@ const DEFAULT_FIELDS = {
   sequencing: defaultSequencingFields,
   "evidence-organizing": defaultEvidenceOrganizingFields,
   hipp: defaultHippFields,
-  "ledger-record": defaultLedgerRecordFields,
 };
 
 const TO_FIELDS = {
@@ -457,7 +386,6 @@ const TO_FIELDS = {
   sequencing: sequencingToFields,
   "evidence-organizing": evidenceOrganizingToFields,
   hipp: hippToFields,
-  "ledger-record": ledgerRecordToFields,
 };
 
 export function buildAuthoredContent(slotKind, fields, sourceWiring) {

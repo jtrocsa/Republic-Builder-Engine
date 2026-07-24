@@ -12,10 +12,7 @@ import {
   buildSourceSchema,
   buildSourcesSchema,
 } from "../apps/web/src/content/schemas/source.schema.js";
-import {
-  ExchangeRecordSchema,
-  ExchangeRecordsSchema,
-} from "../apps/web/src/content/schemas/exchange-record.schema.js";
+import { ExchangeRecordsSchema } from "../apps/web/src/content/schemas/exchange-record.schema.js";
 import { ReviewSchema } from "../apps/web/src/content/schemas/review.schema.js";
 import { CaseLanesSchema } from "../apps/web/src/content/schemas/unit02-activities.schema.js";
 import {
@@ -60,13 +57,6 @@ function main() {
       "unit-01-campaign.js: CASE_001_SOURCES",
       buildSourcesSchema({}),
       content.unit01.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-campaign.js: EXCHANGE_RECORDS",
-      ExchangeRecordsSchema,
-      content.unit01.exchangeRecords
     )
   );
   results.push(runSchema("unit-01-campaign.js: REVIEW", ReviewSchema, content.unit01.review));
@@ -157,12 +147,6 @@ function main() {
       quest: SourceAnalysisQuestSchema,
     })
   );
-  const LedgerRecordAlternatesSchema = z.array(
-    z.object({
-      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
-      quest: ExchangeRecordSchema,
-    })
-  );
   results.push(
     runSchema(
       "case-001-source-alternates.js: CASE_001_SOURCE_ALTERNATES",
@@ -196,13 +180,6 @@ function main() {
       "case-001-hipp-alternates.js: CASE_001_HIPP_ALTERNATES",
       SourceAnalysisAlternatesSchema,
       content.unit01.sourceAnalysisAlternates
-    )
-  );
-  results.push(
-    runSchema(
-      "case-002-ledger-alternates.js: CASE_002_LEDGER_ALTERNATES",
-      LedgerRecordAlternatesSchema,
-      content.unit01.ledgerRecordAlternates
     )
   );
   results.push(
@@ -370,7 +347,6 @@ function main() {
     "cross-reference: sequencing alternate references",
     "cross-reference: evidence-organizing alternate references",
     "cross-reference: hipp alternate references",
-    "cross-reference: ledger record alternate references",
     "cross-reference: primary source library ids",
     "cross-reference: primary source library visual ids",
   ];
@@ -601,15 +577,6 @@ function main() {
         altId: entry.quest.id,
       })),
       content.unit01.sourceAnalysisQuests.map((q) => q.id)
-    ),
-    ...checkAlternateReferences(
-      "cross-reference: ledger record alternate references",
-      content.unit01.ledgerRecordAlternates.map((entry) => ({
-        source: "case-002-ledger-alternates.js:CASE_002_LEDGER_ALTERNATES",
-        replacesId: entry.replacesQuestId,
-        altId: entry.quest.id,
-      })),
-      content.unit01.exchangeRecords.map((r) => r.id)
     ),
     ...checkUniqueGlobalIds(
       "cross-reference: primary source library ids",

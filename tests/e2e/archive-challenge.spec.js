@@ -174,4 +174,57 @@ test.describe("Archive Challenge", () => {
 
     await expect(page.locator('[data-case="case-003"]')).toHaveCount(0);
   });
+
+  // case-002 "The Exchange Ledger" — migrated the same way as case-003/1.05/1.06 above (bespoke
+  // exchangeLedgerScreen() deleted, this Archive Challenge is now its entire mechanic). Also
+  // retired the bespoke "ledger-record" Manage Content slot kind in the same migration.
+  const EXCHANGE_QUEST_ID = "case-002-archive-exchange-claims";
+  const EXCHANGE_CORRECT_PLACEMENTS = {
+    "case-002-maize-claim": "agriculture-diet",
+    "case-002-smallpox-claim": "demographic-catastrophe",
+    "case-002-horses-claim": "mobility-warfare",
+    "case-002-enslaved-africans-claim": "forced-labor",
+  };
+
+  test("case-002: place all records via the select fallback, reflect, and complete", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-01",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${EXCHANGE_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+
+    for (const [sourceId, slotId] of Object.entries(EXCHANGE_CORRECT_PLACEMENTS)) {
+      await quest.locator(`[data-evidence-select="${sourceId}"]`).selectOption(slotId);
+    }
+
+    const reflection = quest.locator(`[data-evidence-reflection="${EXCHANGE_QUEST_ID}"]`);
+    await reflection.fill(
+      "The smallpox record is the strongest evidence for demographic catastrophe specifically, since it directly describes mass death from a new disease rather than just describing contact in general."
+    );
+    await reflection.blur();
+
+    await expect(page.locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+
+    const stored = await readProgress(page);
+    expect(stored.archiveChallenges[EXCHANGE_QUEST_ID]?.status).toBe("complete");
+    expect(stored.completedCases).toContain("case-002");
+    expect(stored.unlocked).toContain("case-003");
+  });
+
+  test("case-002 no longer appears as a Navigation Table marker", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-01",
+    });
+    await loadSeededSave(page);
+
+    await expect(page.locator('[data-case="case-002"]')).toHaveCount(0);
+  });
 });

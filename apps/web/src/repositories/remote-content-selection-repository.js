@@ -44,7 +44,6 @@ import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-seque
 import { CASE_001_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-001-evidence-organizing-alternates.js";
 import { CASE_001_HIPP_ALTERNATES } from "../content/quests/case-001-hipp-alternates.js";
 import { CASE_006_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-006-evidence-organizing-alternates.js";
-import { CASE_002_LEDGER_ALTERNATES } from "../content/quests/case-002-ledger-alternates.js";
 
 const QUEST_ALTERNATE_ENTRIES_BY_TYPE = {
   mcq: CASE_001_MCQ_ALTERNATES,
@@ -54,13 +53,6 @@ const QUEST_ALTERNATE_ENTRIES_BY_TYPE = {
     ...CASE_006_EVIDENCE_ORGANIZING_ALTERNATES,
   ],
   hipp: CASE_001_HIPP_ALTERNATES,
-  // Not a real quest-types/index.js QUEST_TYPES key — ledger records have
-  // their own bespoke rendering (exchangeLedgerScreen() in main.js), never
-  // renderQuest()/gradeQuest(). "ledger-record" is used only within this
-  // file's and Manage Content's own generic slot-resolution plumbing, which
-  // is type-agnostic (resolveQuestSlot/alternativesForQuestSlot/
-  // questAlternateById below don't care what the string means).
-  "ledger-record": CASE_002_LEDGER_ALTERNATES,
 };
 
 const SOURCE_ALTERNATES_BY_ALT_ID = new Map(
@@ -93,9 +85,7 @@ function groupAlternativesBySlot(entries, replacesKey, contentKey) {
     const content = entry[contentKey];
     (bySlot[entry[replacesKey]] ??= []).push({
       id: content.id,
-      // ledger-record alternates (case-002-ledger-alternates.js) use `label`
-      // rather than `title`/`prompt` — every other quest type has a `prompt`.
-      label: content.title || content.prompt || content.label,
+      label: content.title || content.prompt,
     });
   }
   return bySlot;
@@ -236,8 +226,9 @@ export function resolveQuestSlot(questType, officialQuest) {
 // replaces. Curated alternates are always the same type as the slot they
 // replace (one static pool per type), so that branch never changes type.
 // Left as a sibling to resolveQuestSlot() rather than replacing it, since
-// "ledger-record" (case-002) has no type-swap concept and still wants the
-// simpler, type-fixed behavior.
+// Practice Check's per-type question arrays (mcq/sequencing/evidence-organizing/
+// hipp) have no type-swap concept and still want the simpler, type-fixed
+// behavior resolveQuestSlot() already provides.
 export function resolveQuestSlotWithType(officialQuestType, officialQuest) {
   const entry = questSelectionsByType[officialQuestType]?.[officialQuest.id];
   if (!entry) return { questType: officialQuestType, quest: officialQuest };
