@@ -6,12 +6,7 @@ import {
   CASE_004_LANES,
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
-import {
-  UNIT_03,
-  CASE_007_SOURCES,
-  CASE_007_LANES,
-  FOUNDING_RECORDS,
-} from "./content/unit-03-campaign.js";
+import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
 import {
   loadProgress,
   saveProgress,
@@ -1455,8 +1450,6 @@ const VALID_SCREENS = new Set([
   "source",
   "codex",
   "reconstruction",
-  "ledger-success",
-  "founding",
   "upload",
   "return-warp",
   "review",
@@ -2594,27 +2587,6 @@ ${quest ? renderQuest(source.investigationMode, quest, {}) : `<p class="bank-emp
 </div>`;
 }
 
-// Bespoke non-quest-type mechanic with zero swappable content today (see
-// officialQuestSlotsForCase()) — case-008's Founding Debate ledger. Case
-// 1.02's Exchange Ledger used to be here too and used a bespoke
-// "ledger-record" slot kind before that, but is now fully migrated onto the
-// real quest-type system (an archiveChallenge, same as every other
-// non-map mission), so it no longer needs this read-only fallback.
-// Case-008 deliberately stays on this path until it gets the same migration.
-const LEDGER_PREVIEW_RECORDS_BY_CASE = {
-  "case-008": FOUNDING_RECORDS,
-};
-
-function ledgerPreviewCardMarkup(record, index) {
-  const choices = record.choices
-    .map(
-      (choice, ci) =>
-        `<label class="ledger-choice ledger-choice--preview ${ci === record.answer ? "is-correct-preview" : ""}"><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`
-    )
-    .join("");
-  return `<div class="quest-preview-frozen"><p class="quest-preview-label">Student view preview</p><article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${choices}</fieldset><small>${esc(record.citation)}</small></article></div>`;
-}
-
 function manageContentMissionCardMarkup(c) {
   return `<article class="manage-content-mission-card">
 <div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p><span class="case-kind-badge">${esc(caseKindLabel(c))}</span></div>
@@ -2882,10 +2854,7 @@ ${showAddForm ? manageContentAuthoringFormMarkup() : addButton}`;
 // Map Missions (route === "field") never reach this function — see
 // manageContentCaseScreen()'s early return, which shows its own fixed
 // locked-panel copy instead.
-function missionFlowSummary(kase, hasEditableContent) {
-  if (!hasEditableContent && LEDGER_PREVIEW_RECORDS_BY_CASE[kase.id]) {
-    return "Fixed: this mission is a bespoke ledger activity shown read-only below — its records aren't one of the swappable quest types yet.";
-  }
+function missionFlowSummary() {
   return "Fixed: this mission's activity mechanic and layout. Editable below: its sources (if any) and its practice or Archive Challenge questions.";
 }
 
@@ -3223,9 +3192,6 @@ ${missionRenameControlMarkup(activeCase)}
   ];
   const hasEditableContent =
     groups.length > 0 || questionSlots.length > 0 || contentUiState.additionSlots.length > 0;
-  const ledgerRecords = LEDGER_PREVIEW_RECORDS_BY_CASE[activeCase.id];
-  const ledgerPreviewCards =
-    !hasEditableContent && ledgerRecords ? ledgerRecords.map(ledgerPreviewCardMarkup).join("") : "";
   const hasUnpublishedDraft =
     contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId) ||
     contentUiState.additionSlots.some((a) => a.status === "draft");
@@ -3264,13 +3230,11 @@ ${missionRenameControlMarkup(activeCase)}
 <h1>${esc(resolvedCaseTitle(activeCase))}</h1>
 <p>${esc(activeCase.summary)}</p>
 ${missionRenameControlMarkup(activeCase)}
-<p class="manage-content-flow-strip">${esc(missionFlowSummary(activeCase, hasEditableContent))}</p>
+<p class="manage-content-flow-strip">${esc(missionFlowSummary())}</p>
 ${
   hasEditableContent
     ? `${groupSections}${generalSection}`
-    : ledgerPreviewCards
-      ? `<p class="locked-note">This mission's questions are a bespoke activity, not one of the swappable quest types yet — shown here read-only.</p><div class="manage-content-preview-grid">${ledgerPreviewCards}</div>`
-      : "<p>This mission has no swappable content yet.</p>"
+    : "<p>This mission has no swappable content yet.</p>"
 }
 ${feedbackError(contentUiState)}
 <button class="btn btn-gold" data-action="publish-case-content" type="button" ${hasUnpublishedDraft ? "" : "disabled"}>Publish to students</button>
@@ -5793,21 +5757,6 @@ function ensureActivityState(caseId, defaults) {
   return progress.activityState[caseId];
 }
 
-function ledgerSuccessScreen() {
-  return `${chrome()}<main class="ledger-success-shell"><section class="ledger-success-core" aria-live="polite"><p class="kicker">Evidence ledger verified</p><div class="ledger-success-orbit" aria-hidden="true"><i></i><i></i><i></i><span>✓</span></div><h1>Correct record match.</h1><p>Your source interpretations held together. The Archive has confirmed the ledger and is opening a secure transmission channel.</p><div class="ledger-success-steps"><span>Sources read</span><span>Claims checked</span><span>Route verified</span></div></section></main>`;
-}
-
-function foundingScreen() {
-  const activeCase = caseById("case-008");
-  const answers = progress.foundingLedger.answers || {};
-  return `${chrome()}<main class="shell ledger-shell ledger-shell--source-driven"><section class="ledger-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · ${esc(activeCase.date)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p>${esc(activeCase.question)}</p><p>Every entry begins with a record. Read the short source card, then answer one evidence-based question. Each question tests a different historical claim—there is no shared answer bank to eliminate.</p></section><section class="ledger-list ledger-list--sources">${FOUNDING_RECORDS.map(
-    (record, index) =>
-      `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${record.icon}</div><div><p class="kicker">${esc(record.label)} · Record ${index + 1}</p><h2>${esc(record.sourceTitle)}</h2><span>${esc(record.sourceMeta)}</span></div></header><blockquote>${esc(record.excerpt)}</blockquote><p class="source-note">${esc(record.sourceNote)}</p><fieldset><legend>${esc(record.question)}</legend>${record.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="founding-${record.id}" data-founding-question="${record.id}" value="${ci}" ${String(answers[record.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(record.citation)}</small></article>`
-  ).join(
-    ""
-  )}<button class="btn btn-gold" data-action="check-founding">Validate Founding Ledger →</button><p class="feedback" id="foundingFeedback"></p></section></main>`;
-}
-
 function uploadScreen() {
   const active = caseById(progress.pendingUploadCaseId || progress.activeCaseId || "case-001");
   return `${chrome()}<main class="upload-shell"><section class="upload-core"><p class="kicker">Archive connection secure</p><h1>Field record transmitting.</h1><p>Your Codex is relaying the completed ${esc(active.shortTitle)} record to the Chronicle Institute. The Archive will preserve your evidence, notes, and completed investigation before the next route opens.</p><div class="upload-beam"><div class="upload-codex">✦</div><i></i><i></i><i></i><div class="upload-archive">⌁</div></div><div class="upload-status"><span>Codex encrypted</span><span>Evidence verified</span><span>Record archived</span></div><button class="btn btn-gold" data-action="return-archive">Case archived — Return to Institute →</button></section></main>`;
@@ -5930,17 +5879,6 @@ function render() {
         break;
       case "reconstruction":
         html = reconstructionScreen();
-        break;
-      case "ledger-success":
-        html = ledgerSuccessScreen();
-        activeTravelTimeout = setTimeout(() => {
-          progress.currentScreen = "upload";
-          save();
-          render();
-        }, 2300);
-        break;
-      case "founding":
-        html = foundingScreen();
         break;
       case "archive-challenges":
         html = archiveChallengesScreen();
@@ -6701,42 +6639,6 @@ function handlePuzzleScreenClick(target, action) {
       showFeedback(
         "reconstructionFeedback",
         "Revisit the source type and date. Each record belongs in a different evidentiary lane.",
-        "error"
-      );
-    return true;
-  }
-  if (action === "check-founding") {
-    progress.foundingLedger.answers ??= {};
-    document.querySelectorAll("[data-founding-question]:checked").forEach((s) => {
-      progress.foundingLedger.answers[s.dataset.foundingQuestion] = Number(s.value);
-    });
-    const unanswered = FOUNDING_RECORDS.filter(
-      (r) => progress.foundingLedger.answers[r.id] === undefined
-    );
-    if (unanswered.length) {
-      save();
-      showFeedback(
-        "foundingFeedback",
-        "Read and answer every source record before validating the Ledger.",
-        "error"
-      );
-      return true;
-    }
-    const correct = FOUNDING_RECORDS.every(
-      (r) => progress.foundingLedger.answers[r.id] === r.answer
-    );
-    save();
-    if (correct) {
-      playSfx("secure");
-      unlockNext("case-008");
-      progress.pendingUploadCaseId = "case-008";
-      progress.currentScreen = "ledger-success";
-      save();
-      render();
-    } else
-      showFeedback(
-        "foundingFeedback",
-        "At least one interpretation needs revision. Re-read the source language and test what claim the evidence supports—not just where an item moved.",
         "error"
       );
     return true;

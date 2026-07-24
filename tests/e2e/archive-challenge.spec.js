@@ -227,4 +227,57 @@ test.describe("Archive Challenge", () => {
 
     await expect(page.locator('[data-case="case-002"]')).toHaveCount(0);
   });
+
+  // case-008 "The Founding Debate" — migrated the same way as case-002/1.03/1.05/1.06 above
+  // (bespoke foundingScreen() deleted, this Archive Challenge is now its entire mechanic).
+  // Unlike the other three, case-008 had zero editable/previewable surface before this
+  // migration — this content is freshly authored, not a duplicate of an existing quest.
+  const FOUNDING_QUEST_ID = "case-008-archive-ratification-claims";
+  const FOUNDING_CORRECT_PLACEMENTS = {
+    "case-008-federalist-10-claim": "large-republic-defense",
+    "case-008-brutus-1-claim": "large-republic-opposition",
+    "case-008-connecticut-compromise-claim": "representation-compromise",
+    "case-008-mason-bill-of-rights-claim": "bill-of-rights-origin",
+  };
+
+  test("case-008: place all records via the select fallback, reflect, and complete", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${FOUNDING_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+
+    for (const [sourceId, slotId] of Object.entries(FOUNDING_CORRECT_PLACEMENTS)) {
+      await quest.locator(`[data-evidence-select="${sourceId}"]`).selectOption(slotId);
+    }
+
+    const reflection = quest.locator(`[data-evidence-reflection="${FOUNDING_QUEST_ID}"]`);
+    await reflection.fill(
+      "The Brutus No. I excerpt is the strongest evidence for opposition to a large republic specifically, since it directly warns that a republic spread over such a vast territory could not govern well or protect liberty."
+    );
+    await reflection.blur();
+
+    await expect(page.locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+
+    const stored = await readProgress(page);
+    expect(stored.archiveChallenges[FOUNDING_QUEST_ID]?.status).toBe("complete");
+    expect(stored.completedCases).toContain("case-008");
+  });
+
+  test("case-008 no longer appears as a Navigation Table marker", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    await expect(page.locator('[data-case="case-008"]')).toHaveCount(0);
+  });
 });

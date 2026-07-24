@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { BrandSchema, UnitSchema } from "../../apps/web/src/content/schemas/unit.schema.js";
 import { buildSourcesSchema } from "../../apps/web/src/content/schemas/source.schema.js";
-import { ExchangeRecordsSchema } from "../../apps/web/src/content/schemas/exchange-record.schema.js";
 import { ReviewSchema } from "../../apps/web/src/content/schemas/review.schema.js";
 
 const validCase = {
@@ -172,36 +171,6 @@ describe("source schema (buildSourcesSchema)", () => {
     const result = schema.safeParse([gated]);
     expect(result.success).toBe(true);
     expect(result.data[0].investigationMode).toBe("mcq");
-  });
-});
-
-describe("ExchangeRecordsSchema", () => {
-  const validRecord = {
-    id: "maize",
-    label: "Maize",
-    icon: "🌽",
-    sourceTitle: "Natural and Moral History of the Indies",
-    sourceMeta: "1590 · primary-source excerpt",
-    excerpt: "The principal grain of the Indies is maize.",
-    sourceNote: "Identifies maize as an American crop.",
-    question: "Which claim is best supported?",
-    choices: ["A", "B", "C", "D"],
-    answer: 0,
-    citation: "José de Acosta, 1590.",
-  };
-
-  it("accepts a valid exchange record (normal case)", () => {
-    expect(ExchangeRecordsSchema.safeParse([validRecord]).success).toBe(true);
-  });
-
-  it("accepts an answer index on the last valid choice (boundary case)", () => {
-    expect(ExchangeRecordsSchema.safeParse([{ ...validRecord, answer: 3 }]).success).toBe(true);
-  });
-
-  it("rejects an answer index equal to choices.length (invalid answer index)", () => {
-    const result = ExchangeRecordsSchema.safeParse([{ ...validRecord, answer: 4 }]);
-    expect(result.success).toBe(false);
-    expect(result.error.issues.some((issue) => issue.message.includes("out of range"))).toBe(true);
   });
 });
 

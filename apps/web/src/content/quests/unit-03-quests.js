@@ -352,6 +352,75 @@ export const UNIT_03_ARCHIVE_CHALLENGE_QUESTS = [
       description: "Earn 1 point per record correctly matched to the form of appeal it made.",
     },
   },
+  // Case 1.08's own Archive Challenge (Manage Content wizard redesign,
+  // Phase A) — case-008 had no archiveChallenge at all before this (zero
+  // editable/previewable surface in Manage Content), so this is freshly
+  // authored rather than a duplicate of an existing quest, unlike case-002/
+  // 1.03/1.05's migrations. Duplicates FOUNDING_RECORDS' real content (also
+  // in apps/web/src/content/unit-03-campaign.js) into the same "sort each
+  // record under the claim/outcome it supports" shape those other
+  // migrations already established for this kind of bespoke per-record-MCQ
+  // ledger mechanic. Replaces case-008's bespoke foundingScreen() (4
+  // independent per-record MCQ questions) with this claim-sorting exercise —
+  // real content preserved, framing changed.
+  {
+    id: "case-008-archive-ratification-claims",
+    prompt:
+      "The Archive's record of the ratification debate has come loose from its claims. Sort each record beneath the outcome or argument in the debate that its content most directly supports.",
+    slots: [
+      { id: "large-republic-defense", label: "Defended a Large, Diverse Republic" },
+      { id: "large-republic-opposition", label: "Opposed a Large Republic" },
+      { id: "representation-compromise", label: "Resolved the Representation Dispute" },
+      { id: "bill-of-rights-origin", label: "Led to the Promise of a Bill of Rights" },
+    ],
+    sources: [
+      {
+        id: "case-008-federalist-10-claim",
+        label: "Federalist Argument",
+        attribution: 'James Madison, writing as "Publius," Federalist No. 10, November 22, 1787',
+        excerpt:
+          "By a faction, I understand a number of citizens… united and actuated by some common impulse of passion, or of interest, adverse to the rights of other citizens… Extend the sphere, and you take in a greater variety of parties and interests; you make it less probable that a majority of the whole will have a common motive to invade the rights of other citizens.",
+        skillCategory: "Comparison",
+        correctSlotId: "large-republic-defense",
+      },
+      {
+        id: "case-008-brutus-1-claim",
+        label: "Anti-Federalist Argument",
+        attribution: '"Brutus," No. I, New York Journal, October 18, 1787',
+        excerpt:
+          "In a republic, the manners, sentiments, and interests of the people should be similar. If this be not the case, there will be a constant clashing of opinions; and the representatives of one part will be continually striving against those of the other.",
+        skillCategory: "Causation",
+        correctSlotId: "large-republic-opposition",
+      },
+      {
+        id: "case-008-connecticut-compromise-claim",
+        label: "Convention Debate",
+        attribution:
+          "James Madison, Notes of Debates in the Federal Convention, entry for June 11, 1787",
+        excerpt:
+          "Mr. Sherman proposed that the proportion of suffrage in the 1st. branch should be according to the respective numbers of free inhabitants; and that in the 2d. branch or Senate, each State should have one vote and no more.",
+        skillCategory: "Contextualization",
+        correctSlotId: "representation-compromise",
+      },
+      {
+        id: "case-008-mason-bill-of-rights-claim",
+        label: "Bill of Rights Origin",
+        attribution: "George Mason, Objections to This Constitution of Government, 1787",
+        excerpt:
+          "There is no Declaration of Rights, and the laws of the general government being paramount to the laws and constitution of the several States, the Declaration of Rights in the separate States are no security.",
+        skillCategory: "Sourcing",
+        correctSlotId: "bill-of-rights-origin",
+      },
+    ],
+    reflectionPrompt:
+      "In 2–3 sentences, choose one outcome above and explain why its record is the strongest possible evidence for that outcome specifically — not just plausible evidence for the ratification debate in general.",
+    rubric: {
+      skillCategories: ["Comparison", "Causation", "Contextualization", "Sourcing"],
+      pointsTotal: 4,
+      description:
+        "Earn 1 point per record correctly matched to the debate outcome it best supports.",
+    },
+  },
 ];
 
 export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [

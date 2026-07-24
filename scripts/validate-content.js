@@ -12,7 +12,6 @@ import {
   buildSourceSchema,
   buildSourcesSchema,
 } from "../apps/web/src/content/schemas/source.schema.js";
-import { ExchangeRecordsSchema } from "../apps/web/src/content/schemas/exchange-record.schema.js";
 import { ReviewSchema } from "../apps/web/src/content/schemas/review.schema.js";
 import { CaseLanesSchema } from "../apps/web/src/content/schemas/unit02-activities.schema.js";
 import {
@@ -304,13 +303,6 @@ function main() {
       "unit-03-quests.js: UNIT_03_ARCHIVE_CHALLENGE_QUESTS",
       EvidenceOrganizingQuestListSchema,
       content.unit03.archiveChallengeQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-campaign.js: FOUNDING_RECORDS",
-      ExchangeRecordsSchema,
-      content.unit03.foundingRecords
     )
   );
 
