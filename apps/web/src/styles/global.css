@@ -8363,6 +8363,14 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-color: var(--gold);
   background: rgba(4, 26, 38, 0.45);
 }
+.manage-content-type-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.manage-content-type-card:disabled:hover {
+  border-color: rgba(239, 204, 122, 0.28);
+  background: rgba(4, 26, 38, 0.28);
+}
 .manage-content-type-card strong {
   color: var(--gold-soft);
   font-size: 0.95rem;
@@ -8370,6 +8378,34 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-type-card span {
   font-size: 0.8rem;
   color: #b9c7c2;
+}
+.manage-content-wizard-choice {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(239, 204, 122, 0.28);
+  border-radius: 12px;
+  background: rgba(4, 26, 38, 0.28);
+}
+.manage-content-wizard-choice-prompt {
+  margin: 0 0 12px;
+  color: #f0e4c4;
+  font-size: 1rem;
+}
+.manage-content-wizard-choice-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.manage-content-select-original {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 4px 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: rgba(4, 26, 38, 0.4);
 }
 .manage-content-guided-prompt {
   display: flex;
