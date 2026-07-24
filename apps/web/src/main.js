@@ -1616,6 +1616,24 @@ let gradingUiState = {
   error: "",
 };
 
+// Shared async/error-state helper for the teacher screens above
+// (teacherUiState/gradingUiState/contentUiState) — every one of their
+// loaders/actions only ever needs to stash a human-readable message on
+// `.error` on failure and re-render; centralized so each call site doesn't
+// hand-roll its own try/catch or `.catch()` for that.
+function reportUiError(state, err, fallback) {
+  state.error = err?.message || fallback;
+}
+function catchUiError(state, fallback) {
+  return (err) => {
+    reportUiError(state, err, fallback);
+    render();
+  };
+}
+function feedbackError(state) {
+  return state.error ? `<p class="feedback error">${esc(state.error)}</p>` : "";
+}
+
 onAuthStateChange((_event, session) => {
   if (!session) {
     currentProfile = null;
@@ -2148,7 +2166,7 @@ function teacherDashboardScreen() {
 <h1>Teacher Dashboard</h1>
 <p>Signed in as ${esc(currentProfile.displayName)}.</p>
 <div class="completion-actions">${classroomButtons}</div>
-${teacherUiState.error ? `<p class="feedback error">${esc(teacherUiState.error)}</p>` : ""}
+${feedbackError(teacherUiState)}
 ${teacherDashboardTabsMarkup()}
 ${activeTabBody}
 <button class="btn btn-outline" data-action="teacher-sign-out" type="button">Sign out</button>
@@ -2361,7 +2379,7 @@ ${archiveFeedbackMarkup(submission.feedback)}
 ${grades}
 <label>Grade<input id="grade-label" placeholder="e.g. 3/3 or Meets expectations" autocomplete="off"></label>
 <label>Feedback to student (optional)<textarea id="grade-teacher-feedback" placeholder="Additional notes for the student"></textarea></label>
-${gradingUiState.error ? `<p class="feedback error">${esc(gradingUiState.error)}</p>` : ""}
+${feedbackError(gradingUiState)}
 <button class="btn btn-gold" data-action="save-manual-grade" type="button">Save grade</button>
 </section></main>${authorPanel()}`;
 }
@@ -2381,7 +2399,7 @@ async function loadTeacherDashboardData() {
     await setActiveOverrideClassroom(selected);
     teacherUiState.error = "";
   } catch (err) {
-    teacherUiState.error = err.message || "Could not load your classrooms.";
+    reportUiError(teacherUiState, err, "Could not load your classrooms.");
   }
   render();
 }
@@ -2416,7 +2434,7 @@ async function openGradingScreen(submissionId) {
   try {
     gradingUiState.submission = await getSubmissionWithGrades(submissionId);
   } catch (err) {
-    gradingUiState.error = err.message || "Could not load this submission.";
+    reportUiError(gradingUiState, err, "Could not load this submission.");
   }
   render();
 }
@@ -3258,7 +3276,7 @@ ${
       ? `<p class="locked-note">This mission's questions are a bespoke activity, not one of the swappable quest types yet — shown here read-only.</p><div class="manage-content-preview-grid">${ledgerPreviewCards}</div>`
       : "<p>This mission has no swappable content yet.</p>"
 }
-${contentUiState.error ? `<p class="feedback error">${esc(contentUiState.error)}</p>` : ""}
+${feedbackError(contentUiState)}
 <button class="btn btn-gold" data-action="publish-case-content" type="button" ${hasUnpublishedDraft ? "" : "disabled"}>Publish to students</button>
 <button class="btn btn-outline" data-action="toggle-content-preview" type="button" ${canPreview ? "" : "disabled"}>Preview as student →</button>
 </section></main>${authorPanel()}`;
@@ -3386,7 +3404,7 @@ async function loadManageContentCaseData(caseId) {
         status: item.status,
       }));
   } catch (err) {
-    contentUiState.error = err.message || "Could not load this case's content.";
+    reportUiError(contentUiState, err, "Could not load this case's content.");
   }
   render();
   if (typeof window !== "undefined") window.scrollTo(0, scrollY);
@@ -3530,10 +3548,7 @@ function handleSaveAuthoring() {
       manageContentAuthoring = null;
       return loadManageContentCaseData(caseId);
     })
-    .catch((err) => {
-      contentUiState.error = err.message || "Could not save this question.";
-      render();
-    });
+    .catch(catchUiError(contentUiState, "Could not save this question."));
 }
 
 // Real "Preview as student" — no bespoke preview markup. Switches the
@@ -3629,10 +3644,7 @@ function handleManageContentClick(target, action) {
     ])
       .then(() => loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published"))
       .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
-      .catch((err) => {
-        contentUiState.error = err.message || "Could not publish these changes.";
-        render();
-      });
+      .catch(catchUiError(contentUiState, "Could not publish these changes."));
     return true;
   }
   if (action === "toggle-content-preview") {
@@ -3883,10 +3895,7 @@ function handleManageContentClick(target, action) {
     document.getElementById(`delete-confirm-dialog-${id}`)?.close();
     deleteCustomContent(id)
       .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
-      .catch((err) => {
-        contentUiState.error = err.message || "Could not delete this question.";
-        render();
-      });
+      .catch(catchUiError(contentUiState, "Could not delete this question."));
     return true;
   }
   if (action === "add-mcq-choice") {
@@ -7253,9 +7262,7 @@ function handleAuthScreenClick(target, action) {
       loadSelectedClassroomDetails(),
       setActiveOverrideClassroom(target.dataset.classroomId),
     ])
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not load this classroom.";
-      })
+      .catch((err) => reportUiError(teacherUiState, err, "Could not load this classroom."))
       .finally(() => render());
     return true;
   }
@@ -7273,10 +7280,7 @@ function handleAuthScreenClick(target, action) {
         setSelectedClassroomId(classroom.id);
         return loadTeacherDashboardData();
       })
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not create classroom.";
-        render();
-      });
+      .catch(catchUiError(teacherUiState, "Could not create classroom."));
     return true;
   }
   if (action === "provision-roster") {
@@ -7293,10 +7297,7 @@ function handleAuthScreenClick(target, action) {
         return loadSelectedClassroomDetails();
       })
       .then(() => render())
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not add roster slots.";
-        render();
-      });
+      .catch(catchUiError(teacherUiState, "Could not add roster slots."));
     return true;
   }
   if (action === "reset-student-password") {
@@ -7307,10 +7308,7 @@ function handleAuthScreenClick(target, action) {
         teacherUiState.lastReissuedPassword = tempPassword;
         render();
       })
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not reset this student's password.";
-        render();
-      });
+      .catch(catchUiError(teacherUiState, "Could not reset this student's password."));
     return true;
   }
   if (action === "disable-student") {
@@ -7319,10 +7317,7 @@ function handleAuthScreenClick(target, action) {
     disableStudentSlot(rosterSlotId)
       .then(() => loadSelectedClassroomDetails())
       .then(() => render())
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not remove this student.";
-        render();
-      });
+      .catch(catchUiError(teacherUiState, "Could not remove this student."));
     return true;
   }
   if (action === "advance-classroom-unit") {
@@ -7333,10 +7328,7 @@ function handleAuthScreenClick(target, action) {
         teacherUiState.enabledUnitIndex = newIndex;
         render();
       })
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not advance the unit.";
-        render();
-      });
+      .catch(catchUiError(teacherUiState, "Could not advance the unit."));
     return true;
   }
   if (action === "select-teacher-tab") {
@@ -7359,10 +7351,7 @@ function handleAuthScreenClick(target, action) {
           teacherUiState.sourcePoolByUnit[unitNumber] = ids;
           render();
         })
-        .catch((err) => {
-          teacherUiState.error = err.message || "Could not load this unit's source pool.";
-          render();
-        });
+        .catch(catchUiError(teacherUiState, "Could not load this unit's source pool."));
     }
     return true;
   }
@@ -7386,10 +7375,7 @@ function handleAuthScreenClick(target, action) {
         else pool.delete(sourceId);
         render();
       })
-      .catch((err) => {
-        teacherUiState.error = err.message || "Could not update this source's pool status.";
-        render();
-      });
+      .catch(catchUiError(teacherUiState, "Could not update this source's pool status."));
     return true;
   }
   if (action === "toggle-source-preview") {
@@ -7481,10 +7467,7 @@ function handleGradingScreenClick(target, action) {
         gradingUiState.submission = submission;
         render();
       })
-      .catch((err) => {
-        gradingUiState.error = err.message || "Could not save this grade.";
-        render();
-      });
+      .catch(catchUiError(gradingUiState, "Could not save this grade."));
     return true;
   }
   return false;
@@ -7627,10 +7610,7 @@ function handleAppChange(event) {
     const caseId = contentUiState.selectedCaseId;
     setDraftSelection(classroomId, caseId, slotKind, officialId, altId, altKind)
       .then(() => loadManageContentCaseData(caseId))
-      .catch((err) => {
-        contentUiState.error = err.message || "Could not update this selection.";
-        render();
-      });
+      .catch(catchUiError(contentUiState, "Could not update this selection."));
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
     progress.questResponses[questId] = { selected: field.value };
