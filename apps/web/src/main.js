@@ -1595,11 +1595,6 @@ let manageContentAuthoring = null;
 // types (mcq/sequencing/evidence-organizing/hipp); sources and ledger
 // records keep their existing one-click "Edit →" only.
 let manageContentGuidedPrompt = null;
-// Two-click "Delete" confirmation for teacher-added (mode: "addition")
-// questions — holds the custom_content_items.id currently showing its
-// "Confirm delete?" state, or null. The app has no window.confirm()
-// precedent elsewhere, so this mirrors the rest of its custom-UI approach.
-let manageContentConfirmDeleteId = null;
 // Ephemeral "Preview as student" session for map (route: "field") cases —
 // drops the teacher into the real, walkable field screen instead of a
 // bespoke preview card, per CLAUDE.md's standing rule against duplicating
@@ -2718,11 +2713,19 @@ function manageContentCardSummaryMarkup(entry) {
   const editDataAttrs = isOfficial
     ? `data-slot-kind="${esc(slotKind)}" data-official-id="${esc(entry.officialId)}" data-related-source-id="${esc(entry.relatedSourceId || "")}"`
     : `data-custom-id="${esc(entry.id)}"`;
-  const confirmingDelete = !isOfficial && manageContentConfirmDeleteId === entry.id;
+  // Native <dialog> (see handleManageContentClick's "open-delete-addition-dialog"/
+  // "confirm-delete-addition" handlers) rather than a hand-rolled two-click
+  // Confirm/Cancel button swap — showModal() gives focus trapping and
+  // Escape-to-cancel for free, which the prior inline swap had neither of.
   const deleteControls = !isOfficial
-    ? confirmingDelete
-      ? `<button class="btn btn-outline" data-action="delete-custom-addition" data-custom-id="${esc(entry.id)}" type="button">Confirm delete</button><button class="btn btn-plain" data-action="cancel-delete-addition" type="button">Cancel</button>`
-      : `<button class="btn btn-plain manage-content-delete-btn" data-action="delete-custom-addition" data-custom-id="${esc(entry.id)}" type="button">Delete</button>`
+    ? `<button class="btn btn-plain manage-content-delete-btn" data-action="open-delete-addition-dialog" data-custom-id="${esc(entry.id)}" type="button">Delete</button>
+<dialog class="manage-content-delete-dialog" id="delete-confirm-dialog-${esc(entry.id)}">
+<p>Delete this question? This can't be undone.</p>
+<form method="dialog" class="manage-content-delete-dialog-actions">
+<button class="btn btn-plain" type="submit">Cancel</button>
+<button class="btn btn-outline manage-content-delete-btn" data-action="confirm-delete-addition" data-custom-id="${esc(entry.id)}" type="button">Confirm delete</button>
+</form>
+</dialog>`
     : "";
   // The guided Keep/Add/Replace flow only applies to the 4 real quest
   // types — sources and ledger records (case-002's fixed grid layout) keep
@@ -3585,7 +3588,6 @@ function handleManageContentClick(target, action) {
     };
     manageContentExpandedSectionIds = new Set();
     manageContentAuthoring = null;
-    manageContentConfirmDeleteId = null;
     progress.currentScreen = "manage-content-case";
     save();
     render();
@@ -3852,25 +3854,20 @@ function handleManageContentClick(target, action) {
     handleSaveAuthoring();
     return true;
   }
-  if (action === "delete-custom-addition") {
+  if (action === "open-delete-addition-dialog") {
     const id = target.dataset.customId;
-    if (manageContentConfirmDeleteId === id) {
-      manageContentConfirmDeleteId = null;
-      deleteCustomContent(id)
-        .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
-        .catch((err) => {
-          contentUiState.error = err.message || "Could not delete this question.";
-          render();
-        });
-    } else {
-      manageContentConfirmDeleteId = id;
-      render();
-    }
+    document.getElementById(`delete-confirm-dialog-${id}`)?.showModal();
     return true;
   }
-  if (action === "cancel-delete-addition") {
-    manageContentConfirmDeleteId = null;
-    render();
+  if (action === "confirm-delete-addition") {
+    const id = target.dataset.customId;
+    document.getElementById(`delete-confirm-dialog-${id}`)?.close();
+    deleteCustomContent(id)
+      .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
+      .catch((err) => {
+        contentUiState.error = err.message || "Could not delete this question.";
+        render();
+      });
     return true;
   }
   if (action === "add-mcq-choice") {
