@@ -16,7 +16,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "assets:audit": "node scripts/assets/audit.js"
+    "assets:audit": "node scripts/assets/audit.js",
+    "assets:optimize:waldseemuller": "node scripts/assets/optimize-waldseemuller.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -8,3 +8,4 @@ coverage/
 .vscode/*.log
 .playwright-mcp/
 reports/
+apps/web/src/assets/generated/
