@@ -4,6 +4,10 @@ import {
   EvidenceOrganizingQuestListSchema,
   renderEvidenceOrganizingQuest,
   gradeEvidenceOrganizingQuest,
+  evidenceOrganizingAnsweredAny,
+  isEvidenceOrganizingComplete,
+  evidenceOrganizingPartialSuccess,
+  evidenceOrganizingHint,
 } from "../../apps/web/src/quest-types/history/evidence-organizing-quest.js";
 import { UNIT_01_EVIDENCE_ORGANIZING_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -198,5 +202,61 @@ describe("gradeEvidenceOrganizingQuest", () => {
     });
     expect(result.reflectionOk).toBe(true);
     expect(result.complete).toBe(true);
+  });
+});
+
+describe("evidenceOrganizingAnsweredAny", () => {
+  it("is true once any source has been placed (normal case)", () => {
+    expect(evidenceOrganizingAnsweredAny({ placements: { "source-1": "slot-a" } })).toBe(true);
+  });
+
+  it("is false with no state or no placements (normal case)", () => {
+    expect(evidenceOrganizingAnsweredAny({})).toBe(false);
+    expect(evidenceOrganizingAnsweredAny()).toBe(false);
+  });
+});
+
+describe("isEvidenceOrganizingComplete", () => {
+  it("matches gradeEvidenceOrganizingQuest's complete field (normal case)", () => {
+    const correctPlacements = { "source-1": "slot-a", "source-2": "slot-b" };
+    const complete = gradeEvidenceOrganizingQuest(validQuest, {
+      placements: correctPlacements,
+      reflection: "This is a sufficiently long reflection response for the gate.",
+    });
+    expect(isEvidenceOrganizingComplete(complete)).toBe(true);
+    const incomplete = gradeEvidenceOrganizingQuest(validQuest, { placements: {} });
+    expect(isEvidenceOrganizingComplete(incomplete)).toBe(false);
+  });
+});
+
+describe("evidenceOrganizingPartialSuccess", () => {
+  it("is true when all sources are placed correctly but the reflection gate isn't met yet (normal case)", () => {
+    const correctPlacements = { "source-1": "slot-a", "source-2": "slot-b" };
+    const result = gradeEvidenceOrganizingQuest(validQuest, {
+      placements: correctPlacements,
+      reflection: "Too short",
+    });
+    expect(evidenceOrganizingPartialSuccess(result)).toBe(true);
+  });
+
+  it("is false when placements are still wrong (normal case)", () => {
+    const result = gradeEvidenceOrganizingQuest(validQuest, { placements: {} });
+    expect(evidenceOrganizingPartialSuccess(result)).toBe(false);
+  });
+});
+
+describe("evidenceOrganizingHint", () => {
+  it("returns the reflection-specific hint during partial success (normal case)", () => {
+    const correctPlacements = { "source-1": "slot-a", "source-2": "slot-b" };
+    const result = gradeEvidenceOrganizingQuest(validQuest, {
+      placements: correctPlacements,
+      reflection: "Too short",
+    });
+    expect(evidenceOrganizingHint(result)).toContain("reflection");
+  });
+
+  it("returns the placement instruction otherwise (normal case)", () => {
+    const result = gradeEvidenceOrganizingQuest(validQuest, { placements: {} });
+    expect(evidenceOrganizingHint(result)).toContain("slot");
   });
 });

@@ -214,3 +214,29 @@ export function gradeEvidenceOrganizingQuest(quest, state = {}) {
     complete: allPlacedCorrectly && reflectionOk,
   };
 }
+
+/** @param {{ placements?: Record<string,string> }} [state] */
+export function evidenceOrganizingAnsweredAny(state = {}) {
+  return Object.keys(state.placements || {}).length > 0;
+}
+
+/** @param {ReturnType<typeof gradeEvidenceOrganizingQuest>} result */
+export function isEvidenceOrganizingComplete(result) {
+  return !!result.complete;
+}
+
+// The one quest type with a real partial-credit UI state: every source is in
+// the right slot, but the (optional) reflection gate still isn't satisfied.
+// Callers use this to keep the "success"-styled feedback for that specific
+// state rather than the plain not-yet-answered instruction.
+/** @param {ReturnType<typeof gradeEvidenceOrganizingQuest>} result */
+export function evidenceOrganizingPartialSuccess(result) {
+  return !!result.allPlacedCorrectly && !result.reflectionOk;
+}
+
+/** @param {ReturnType<typeof gradeEvidenceOrganizingQuest>} result */
+export function evidenceOrganizingHint(result) {
+  return evidenceOrganizingPartialSuccess(result)
+    ? "All records restored to the right slot. Add a reflection of at least a sentence to complete this challenge."
+    : 'Drag each record into the slot it belongs in (or use the "Place in" menu on each card).';
+}

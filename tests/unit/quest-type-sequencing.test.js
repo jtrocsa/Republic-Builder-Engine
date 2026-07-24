@@ -5,6 +5,10 @@ import {
   SequencingQuestListSchema,
   renderSequencingQuest,
   gradeSequencingQuest,
+  sequencingAnsweredAny,
+  isSequencingComplete,
+  sequencingPartialSuccess,
+  sequencingHint,
 } from "../../apps/web/src/quest-types/generic/sequencing-quest.js";
 import { UNIT_01_SEQUENCING_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -178,5 +182,47 @@ describe("gradeSequencingQuest", () => {
   it("reports unanswered when no order is given at all (boundary case)", () => {
     const result = gradeSequencingQuest(validQuest, {});
     expect(result).toEqual({ answered: false, correct: false });
+  });
+});
+
+describe("sequencingAnsweredAny", () => {
+  it("is true once any order has been written, including a partial one (normal case)", () => {
+    expect(sequencingAnsweredAny({ order: ["item-a", "item-b", "item-c"] })).toBe(true);
+  });
+
+  it("is true for a partial order even though gradeSequencingQuest still calls it unanswered (boundary case — deliberate, see module doc comment)", () => {
+    expect(sequencingAnsweredAny({ order: ["item-a"] })).toBe(true);
+    expect(gradeSequencingQuest(validQuest, { order: ["item-a"] }).answered).toBe(false);
+  });
+
+  it("is false with no state or an empty order (normal case)", () => {
+    expect(sequencingAnsweredAny({})).toBe(false);
+    expect(sequencingAnsweredAny()).toBe(false);
+  });
+});
+
+describe("isSequencingComplete", () => {
+  it("matches gradeSequencingQuest's correct field (normal case)", () => {
+    const correctResult = gradeSequencingQuest(validQuest, {
+      order: ["item-a", "item-b", "item-c"],
+    });
+    expect(isSequencingComplete(correctResult)).toBe(true);
+    const wrongResult = gradeSequencingQuest(validQuest, {
+      order: ["item-a", "item-c", "item-b"],
+    });
+    expect(isSequencingComplete(wrongResult)).toBe(false);
+  });
+});
+
+describe("sequencingPartialSuccess", () => {
+  it("is always false — sequencing is all-or-nothing (normal case)", () => {
+    const result = gradeSequencingQuest(validQuest, { order: ["item-a", "item-c", "item-b"] });
+    expect(sequencingPartialSuccess(result)).toBe(false);
+  });
+});
+
+describe("sequencingHint", () => {
+  it("returns a non-empty instructive string (normal case)", () => {
+    expect(sequencingHint().length).toBeGreaterThan(0);
   });
 });

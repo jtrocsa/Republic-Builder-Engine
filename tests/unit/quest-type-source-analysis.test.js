@@ -6,6 +6,10 @@ import {
   SourceAnalysisQuestListSchema,
   renderSourceAnalysisQuest,
   gradeSourceAnalysisQuest,
+  hippAnsweredAny,
+  isHippComplete,
+  hippPartialSuccess,
+  hippHint,
 } from "../../apps/web/src/quest-types/history/source-analysis-quest.js";
 import { UNIT_01_SOURCE_ANALYSIS_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -295,5 +299,38 @@ describe("gradeSourceAnalysisQuest", () => {
     });
     expect(full.pointsEarned).toBe(full.pointsPossible);
     expect(full.complete).toBe(true);
+  });
+});
+
+describe("hippAnsweredAny", () => {
+  it("is true once any prompt has a selection (normal case)", () => {
+    expect(hippAnsweredAny({ selected: { "columbus-audience": "explained" } })).toBe(true);
+  });
+
+  it("is false with no state or no selections (normal case)", () => {
+    expect(hippAnsweredAny({})).toBe(false);
+    expect(hippAnsweredAny()).toBe(false);
+  });
+});
+
+describe("isHippComplete", () => {
+  it("matches gradeSourceAnalysisQuest's complete field (normal case)", () => {
+    const shippedQuest = UNIT_01_SOURCE_ANALYSIS_QUESTS[0];
+    const incomplete = gradeSourceAnalysisQuest(shippedQuest, { selected: {} });
+    expect(isHippComplete(incomplete)).toBe(false);
+  });
+});
+
+describe("hippPartialSuccess", () => {
+  it("is always false — HIPP scoring is binary per dimension, no invented partial-credit scale (normal case)", () => {
+    const shippedQuest = UNIT_01_SOURCE_ANALYSIS_QUESTS[0];
+    const result = gradeSourceAnalysisQuest(shippedQuest, { selected: {} });
+    expect(hippPartialSuccess(result)).toBe(false);
+  });
+});
+
+describe("hippHint", () => {
+  it("returns a non-empty instructive string (normal case)", () => {
+    expect(hippHint().length).toBeGreaterThan(0);
   });
 });

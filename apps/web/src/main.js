@@ -38,7 +38,14 @@ import {
 } from "./repositories/teacher-override-repository.js";
 import { CHRONICLE_OPENING_DEFAULTS } from "./content/chronicle-opening.defaults.js";
 import { CHRONICLE_IDENTITY_DEFAULTS } from "./content/chronicle-identity.defaults.js";
-import { renderQuest, gradeQuest } from "./quest-types/index.js";
+import {
+  renderQuest,
+  gradeQuest,
+  questAnsweredAny,
+  isQuestComplete,
+  questPartialSuccess,
+  questHint,
+} from "./quest-types/index.js";
 import {
   REFLECTION_MIN_LENGTH,
   SKILL_CATEGORIES,
@@ -1801,45 +1808,14 @@ const INVESTIGATION_QUESTS_BY_TYPE = {
 function investigationQuestFor(questType, questId) {
   return (INVESTIGATION_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
 }
-// gradeQuest()'s result shape differs by quest type: evidence-organizing
-// ({allPlacedCorrectly, reflectionOk, complete}) and hipp ({results,
-// pointsEarned, pointsPossible, complete}) both carry a `complete` field,
-// but mcq and sequencing only return {answered, correct} — no `complete`.
-// investigationScreen()/archiveChallengesScreen() need one completion
-// signal that works across all four, since case-003's Archive Challenge
-// (sequencing) and taino-context/waldseemuller-map/dickinson-letter's
-// Investigation Challenges (mcq/sequencing) were the first quests of those
-// types ever reached through either screen.
-function isChallengeQuestComplete(questType, result) {
-  return questType === "mcq" || questType === "sequencing" ? !!result.correct : !!result.complete;
-}
-// Same cross-type problem for "has the player started answering yet":
-// mcq/hipp state lives in state.selected, sequencing in state.order,
-// evidence-organizing in state.placements.
-function challengeQuestAnsweredAny(questType, state) {
-  if (questType === "sequencing") return Array.isArray(state.order) && state.order.length > 0;
-  if (questType === "evidence-organizing") return Object.keys(state.placements || {}).length > 0;
-  return Object.keys(state.selected || {}).length > 0;
-}
-// True when the incomplete-state hint below represents a partial-success
-// state (all placements correct, only the reflection missing) rather than a
-// plain not-yet-answered instruction — callers use this to keep the old
-// "success"-styled feedback for that specific evidence-organizing state.
-function challengeQuestPartialSuccess(questType, result) {
-  return questType === "evidence-organizing" && !!result.allPlacedCorrectly && !result.reflectionOk;
-}
-function challengeQuestHint(questType, result) {
-  if (questType === "evidence-organizing") {
-    return challengeQuestPartialSuccess(questType, result)
-      ? "All records restored to the right slot. Add a reflection of at least a sentence to complete this challenge."
-      : 'Drag each record into the slot it belongs in (or use the "Place in" menu on each card).';
-  }
-  if (questType === "sequencing")
-    return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
-  if (questType === "hipp")
-    return "Choose the option that explains how or why this shapes the source's argument, not just names it.";
-  return "Choose the option that best explains why, not just the option that names the correct answer.";
-}
+// gradeQuest()'s result shape differs by quest type — investigationScreen()/
+// archiveChallengesScreen()/practiceCheckScreen() all need one completion/
+// answered/hint signal that works across all four without re-deriving it
+// per call site; questAnsweredAny/isQuestComplete/questPartialSuccess/
+// questHint (from ./quest-types/index.js) are that shared contract — each
+// quest-type module now owns its own answered/complete/hint logic instead of
+// main.js branching on questType by hand in two places that used to disagree
+// (see docs/architecture/FOCUSED-UI-AND-MECHANICS-REUSE-AUDIT.md §3).
 const unitById = (id) => UNITS.find((unit) => unit.id === id);
 const unitForCase = (caseId) => UNITS.find((unit) => unit.cases.some((c) => c.id === caseId));
 const caseById = (id) => {
@@ -4810,7 +4786,7 @@ function archiveChallengeQuestCard(
   const questId = quest.id;
   const state = progress.questResponses[questId] || {};
   const result = alreadyComplete ? { complete: true } : gradeQuest(questType, quest, state);
-  const complete = alreadyComplete || isChallengeQuestComplete(questType, result);
+  const complete = alreadyComplete || isQuestComplete(questType, result);
   if (complete && progress.archiveChallenges[questId]?.status !== "complete") {
     progress.archiveChallenges[questId] = {
       status: "complete",
@@ -4824,10 +4800,10 @@ function archiveChallengeQuestCard(
   }
   const feedback = complete
     ? `<p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — case record preserved.</p>`
-    : `<p class="activity-feedback${challengeQuestPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${challengeQuestHint(questType, result)}</p>`;
+    : `<p class="activity-feedback${questPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${questHint(questType, result)}</p>`;
   const status = complete
     ? "correct"
-    : challengeQuestAnsweredAny(questType, state)
+    : questAnsweredAny(questType, state)
       ? "in-progress"
       : "unanswered";
   return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}</div>`;
@@ -4900,12 +4876,12 @@ function investigationScreen() {
   const quest = investigationQuestFor(questType, questId);
   const state = progress.questResponses[questId] || {};
   const result = quest ? gradeQuest(questType, quest, state) : {};
-  const complete = quest ? isChallengeQuestComplete(questType, result) : false;
-  const answeredAny = challengeQuestAnsweredAny(questType, state);
+  const complete = quest ? isQuestComplete(questType, result) : false;
+  const answeredAny = questAnsweredAny(questType, state);
   const status = !answeredAny ? "unanswered" : complete ? "correct" : "in-progress";
   const feedback = complete
     ? `<p class="activity-feedback success" role="status" aria-live="polite">Investigation complete — this record is ready to open.</p>`
-    : `<p class="activity-feedback${challengeQuestPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${challengeQuestHint(questType, result)}</p>`;
+    : `<p class="activity-feedback${questPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${questHint(questType, result)}</p>`;
   return `${chrome()}<main class="shell activity-shell quest-practice-shell investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to field</button><p class="kicker">${esc(source.type)} · Investigation Challenge</p><h1>Begin Investigation</h1><p>Predict this record's sourcing before you open its full worksheet.</p></section><section class="activity-board quest-practice-board">${quest ? `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(questType, quest, state)}${feedback}</div>` : '<p class="bank-empty">This record\'s Investigation Challenge is still being cataloged.</p>'}${complete ? `<button class="btn btn-gold" data-action="investigation-continue" data-source="${source.id}">Source Unlocked · Continue →</button>` : ""}</section></main>${authorPanel()}`;
 }
 
@@ -5293,7 +5269,7 @@ function sourceInvestigationComplete(source) {
   const quest = investigationQuestFor(source.investigationMode, source.investigationQuestId);
   if (!quest) return true;
   const state = progress.questResponses[source.investigationQuestId] || {};
-  return isChallengeQuestComplete(
+  return isQuestComplete(
     source.investigationMode,
     gradeQuest(source.investigationMode, quest, state)
   );
@@ -5527,12 +5503,14 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("mcq", quest, state);
+      const answered = questAnsweredAny("mcq", state);
+      const correct = isQuestComplete("mcq", result);
       overallTotal += 1;
-      if (result.answered) overallComplete += 1;
-      const status = !result.answered ? "unanswered" : result.correct ? "correct" : "incorrect";
-      const feedback = result.answered
-        ? `<p class="activity-feedback ${result.correct ? "success" : "error"}" role="status" aria-live="polite">${
-            result.correct ? "Correct." : "Not quite."
+      if (answered) overallComplete += 1;
+      const status = !answered ? "unanswered" : correct ? "correct" : "incorrect";
+      const feedback = answered
+        ? `<p class="activity-feedback ${correct ? "success" : "error"}" role="status" aria-live="polite">${
+            correct ? "Correct." : "Not quite."
           } ${esc(quest.explanation || "")}</p>`
         : "";
       return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("mcq", quest, state)}${feedback}</div>`;
@@ -5544,12 +5522,14 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("sequencing", quest, state);
+      const answered = questAnsweredAny("sequencing", state);
+      const correct = isQuestComplete("sequencing", result);
       overallTotal += 1;
-      if (result.answered) overallComplete += 1;
-      const status = !result.answered ? "unanswered" : result.correct ? "correct" : "incorrect";
-      const feedback = result.answered
-        ? `<p class="activity-feedback ${result.correct ? "success" : "error"}" role="status" aria-live="polite">${
-            result.correct ? "Correct order." : "Not quite the strongest order yet."
+      if (answered) overallComplete += 1;
+      const status = !answered ? "unanswered" : correct ? "correct" : "incorrect";
+      const feedback = answered
+        ? `<p class="activity-feedback ${correct ? "success" : "error"}" role="status" aria-live="polite">${
+            correct ? "Correct order." : "Not quite the strongest order yet."
           } ${esc(quest.explanation || "")}</p>`
         : `<p class="activity-feedback" role="status" aria-live="polite">Drag the entries into order (or use the ↑/↓ buttons), then check your sequence.</p>`;
       return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest("sequencing", quest, state)}${feedback}</div>`;
@@ -5561,10 +5541,11 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("evidence-organizing", quest, state);
+      const answered = questAnsweredAny("evidence-organizing", state);
+      const complete = isQuestComplete("evidence-organizing", result);
       overallTotal += 1;
-      if (result.complete) overallComplete += 1;
-      const anyPlaced = Object.keys(state.placements || {}).length > 0;
-      const status = result.complete ? "correct" : anyPlaced ? "in-progress" : "unanswered";
+      if (complete) overallComplete += 1;
+      const status = complete ? "correct" : answered ? "in-progress" : "unanswered";
       const feedback = result.allPlacedCorrectly
         ? `<p class="activity-feedback success" role="status" aria-live="polite">All records matched to the right skill.${
             result.reflectionOk
@@ -5581,12 +5562,13 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("hipp", quest, state);
+      const answeredAny = questAnsweredAny("hipp", state);
+      const complete = isQuestComplete("hipp", result);
       overallTotal += 1;
-      if (result.complete) overallComplete += 1;
-      const answeredAny = Object.keys(state.selected || {}).length > 0;
+      if (complete) overallComplete += 1;
       const status = !answeredAny
         ? "unanswered"
-        : result.complete
+        : complete
           ? "correct"
           : result.pointsEarned > 0
             ? "partial"

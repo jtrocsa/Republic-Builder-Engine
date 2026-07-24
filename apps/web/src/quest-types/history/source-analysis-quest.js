@@ -203,3 +203,24 @@ export function gradeSourceAnalysisQuest(quest, state = {}) {
     complete: pointsEarned === pointsPossible,
   };
 }
+
+/** @param {{ selected?: Record<string,string> }} [state] */
+export function hippAnsweredAny(state = {}) {
+  return Object.keys(state.selected || {}).length > 0;
+}
+
+/** @param {ReturnType<typeof gradeSourceAnalysisQuest>} result */
+export function isHippComplete(result) {
+  return !!result.complete;
+}
+
+// HIPP scoring is binary per dimension per document (no invented
+// partial-credit scale, see the module-level doc comment above) — this
+// contract slot always returns false, kept for a uniform QUEST_TYPES shape.
+export function hippPartialSuccess() {
+  return false;
+}
+
+export function hippHint() {
+  return "Choose the option that explains how or why this shapes the source's argument, not just names it.";
+}

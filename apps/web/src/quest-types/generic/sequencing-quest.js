@@ -117,3 +117,31 @@ export function gradeSequencingQuest(quest, state = {}) {
   const correct = order.every((itemId, index) => byId.get(itemId)?.position === index);
   return { answered: true, correct };
 }
+
+// Deliberately broader than gradeSequencingQuest's own `answered` field
+// (which requires a *complete* order, one entry per item, before it's
+// gradeable): this answers "has the player started interacting with this
+// quest at all," for UI purposes (e.g. showing an "in-progress" status
+// instead of a blank "unanswered" one). In practice the app never writes a
+// partial order — applySequenceMove()/the drag handler always derive the
+// full reordered item list from every current sibling — so the two only
+// diverge on a state no real interaction produces.
+/** @param {{ order?: string[] }} [state] */
+export function sequencingAnsweredAny(state = {}) {
+  return Array.isArray(state.order) && state.order.length > 0;
+}
+
+/** @param {ReturnType<typeof gradeSequencingQuest>} result */
+export function isSequencingComplete(result) {
+  return !!result.correct;
+}
+
+// Sequencing has no partial-credit state (all-or-nothing per item set) —
+// always false, kept for a uniform QUEST_TYPES contract.
+export function sequencingPartialSuccess() {
+  return false;
+}
+
+export function sequencingHint() {
+  return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
+}

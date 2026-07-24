@@ -61,3 +61,25 @@ export function gradeMcqQuest(quest, state = {}) {
   const correct = answered && Number(selected) === quest.answer;
   return { answered, correct };
 }
+
+/** @param {{ selected?: number|string }} [state] */
+export function mcqAnsweredAny(state = {}) {
+  const { selected } = state;
+  return selected !== undefined && selected !== null && selected !== "";
+}
+
+/** @param {ReturnType<typeof gradeMcqQuest>} result */
+export function isMcqComplete(result) {
+  return !!result.correct;
+}
+
+// MCQ has no partial-credit state — always false, kept for a uniform
+// QUEST_TYPES contract across all four quest types (see evidence-organizing's
+// real partial state, the one type that needs this).
+export function mcqPartialSuccess() {
+  return false;
+}
+
+export function mcqHint() {
+  return "Choose the option that best explains why, not just the option that names the correct answer.";
+}

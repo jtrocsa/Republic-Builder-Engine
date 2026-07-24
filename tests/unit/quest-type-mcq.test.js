@@ -4,6 +4,10 @@ import {
   McqQuestListSchema,
   renderMcqQuest,
   gradeMcqQuest,
+  mcqAnsweredAny,
+  isMcqComplete,
+  mcqPartialSuccess,
+  mcqHint,
 } from "../../apps/web/src/quest-types/generic/mcq-quest.js";
 import { UNIT_01_MCQ_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -97,5 +101,40 @@ describe("gradeMcqQuest", () => {
 
   it("reports unanswered when no selection has been made (boundary case)", () => {
     expect(gradeMcqQuest(validQuest, {})).toEqual({ answered: false, correct: false });
+  });
+});
+
+describe("mcqAnsweredAny", () => {
+  it("is true once a selection is made, including index 0 (boundary case)", () => {
+    expect(mcqAnsweredAny({ selected: 0 })).toBe(true);
+    expect(mcqAnsweredAny({ selected: "0" })).toBe(true);
+    expect(mcqAnsweredAny({ selected: 2 })).toBe(true);
+  });
+
+  it("is false with no state or an empty selection (normal case)", () => {
+    expect(mcqAnsweredAny({})).toBe(false);
+    expect(mcqAnsweredAny()).toBe(false);
+    expect(mcqAnsweredAny({ selected: "" })).toBe(false);
+  });
+});
+
+describe("isMcqComplete", () => {
+  it("matches gradeMcqQuest's correct field (normal case)", () => {
+    expect(isMcqComplete(gradeMcqQuest(validQuest, { selected: 1 }))).toBe(true);
+    expect(isMcqComplete(gradeMcqQuest(validQuest, { selected: 0 }))).toBe(false);
+    expect(isMcqComplete(gradeMcqQuest(validQuest, {}))).toBe(false);
+  });
+});
+
+describe("mcqPartialSuccess", () => {
+  it("is always false — mcq has no partial-credit state (normal case)", () => {
+    expect(mcqPartialSuccess(gradeMcqQuest(validQuest, { selected: 1 }))).toBe(false);
+    expect(mcqPartialSuccess(gradeMcqQuest(validQuest, { selected: 0 }))).toBe(false);
+  });
+});
+
+describe("mcqHint", () => {
+  it("returns a non-empty instructive string (normal case)", () => {
+    expect(mcqHint().length).toBeGreaterThan(0);
   });
 });
