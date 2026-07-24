@@ -2653,6 +2653,18 @@ function manageContentMissionCardMarkup(c) {
 </article>`;
 }
 
+// Prototype of native <details>/<summary> in place of the hand-rolled
+// disclosure button+chevron used elsewhere (e.g. teacherSourcesUnitMarkup()'s
+// "manage-content-unit" pattern) — see FOCUSED-MODERNIZATION-ROADMAP.md item
+// 8. render() fully replaces app.innerHTML on every state change, so the
+// `open` attribute below still has to be driven from manageContentExpandedUnitId
+// exactly like the old aria-expanded/chevron were — it isn't relying on the
+// browser to remember native disclosure state across a re-render. What native
+// <details> actually buys here is that handleAppClick() already calls
+// event.preventDefault() before dispatching to toggle-manage-content-unit,
+// which suppresses the browser's own click-to-toggle on <summary> so there's
+// no double-toggle race with our render() — letting us drop the manual
+// aria-expanded and chevron glyph in favor of the built-in disclosure marker.
 function manageContentUnitSectionMarkup(unit) {
   const isOpen = manageContentExpandedUnitId === unit.id;
   const unitNumber = Number(unit.id.split("-")[1]);
@@ -2663,13 +2675,12 @@ ${resolvedUnitCentralQuestion(unit) ? `<p class="manage-content-central-question
 <div class="manage-content-mission-grid">${unit.cases.map(manageContentMissionCardMarkup).join("")}</div>
 </div>`
     : "";
-  return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
-<button class="manage-content-unit-toggle" data-action="toggle-manage-content-unit" data-unit-id="${esc(unit.id)}" type="button" aria-expanded="${isOpen}">
-<span class="manage-content-unit-chevron" aria-hidden="true">${isOpen ? "▾" : "▸"}</span>
+  return `<details class="manage-content-unit"${isOpen ? " open" : ""}>
+<summary class="manage-content-unit-toggle" data-action="toggle-manage-content-unit" data-unit-id="${esc(unit.id)}">
 <span class="manage-content-unit-heading"><span class="manage-content-unit-number">Unit ${unitNumber}</span><span class="manage-content-unit-title">${esc(resolvedUnitTitle(unit))}</span><span class="kicker">${esc(unit.period)}</span></span>
-</button>
+</summary>
 ${body}
-</section>`;
+</details>`;
 }
 
 // manageContentScreen() (the old standalone unit/mission listing) was

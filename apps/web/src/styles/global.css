@@ -8253,6 +8253,26 @@ button:hover,
   color: var(--gold);
   font-size: 1.1rem;
 }
+/* Native <details>/<summary> variant (Teacher Dashboard Units tab, see
+   manageContentUnitSectionMarkup()) — scoped to the "summary" tag so it
+   doesn't add a second chevron next to the Sources tab's own
+   .manage-content-unit-chevron span, which still uses a plain <button>. */
+summary.manage-content-unit-toggle {
+  list-style: none;
+}
+summary.manage-content-unit-toggle::-webkit-details-marker {
+  display: none;
+}
+summary.manage-content-unit-toggle::before {
+  content: "▸";
+  flex: none;
+  width: 1em;
+  color: var(--gold);
+  font-size: 1.1rem;
+}
+details[open] > summary.manage-content-unit-toggle::before {
+  content: "▾";
+}
 .manage-content-unit-heading {
   display: flex;
   align-items: baseline;
