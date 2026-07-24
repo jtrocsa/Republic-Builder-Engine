@@ -24,6 +24,12 @@ export const SequencingQuestSchema = z
     prompt: z.string().min(1, "prompt is required"),
     items: z.array(SequencingItemSchema).min(2, "items must contain at least 2 entries"),
     explanation: z.string().min(1).optional(),
+    // Optional free-text reflection gate, mirroring
+    // evidence-organizing-quest.js's reflectionPrompt/REFLECTION_MIN_LENGTH
+    // pattern exactly (added for Case 1.03's migration off its bespoke
+    // empireScreen(), which paired its causal-order mechanic with a graded
+    // reflection the plain all-or-nothing sequencing type had no field for).
+    reflectionPrompt: z.string().min(1).optional(),
   })
   .superRefine((quest, ctx) => {
     const firstSeenAt = new Map();
@@ -71,11 +77,14 @@ export const SequencingQuestListSchema = z
     });
   });
 
+export const REFLECTION_MIN_LENGTH = 20;
+
 /**
  * @param {import("zod").infer<typeof SequencingQuestSchema>} quest
- * @param {{ order?: string[] }} [state] - `order` is the current arrangement
- *   of item ids (post-drag). Defaults to the order items are authored in,
- *   which content authors must NOT author in already-correct order.
+ * @param {{ order?: string[], reflection?: string }} [state] - `order` is the
+ *   current arrangement of item ids (post-drag). Defaults to the order items
+ *   are authored in, which content authors must NOT author in already-correct
+ *   order.
  */
 export function renderSequencingQuest(quest, state = {}) {
   const order =
@@ -83,6 +92,7 @@ export function renderSequencingQuest(quest, state = {}) {
       ? state.order
       : quest.items.map((item) => item.id);
   const byId = new Map(quest.items.map((item) => [item.id, item]));
+  const reflectionLength = (state.reflection || "").trim().length;
 
   return `<section class="quest quest-sequencing" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="sequencing">
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
@@ -100,22 +110,36 @@ export function renderSequencingQuest(quest, state = {}) {
       })
       .join("")}
   </ol>
+  ${
+    quest.reflectionPrompt
+      ? `<label class="quest-reflection">${escapeHtml(quest.reflectionPrompt)}
+    <textarea data-sequence-reflection="${escapeHtml(quest.id)}">${escapeHtml(state.reflection || "")}</textarea>
+  </label>
+  <p class="quest-reflection-counter" data-sequence-reflection-counter="${escapeHtml(quest.id)}">${reflectionLength}/${REFLECTION_MIN_LENGTH} characters</p>`
+      : ""
+  }
 </section>`;
 }
 
 /**
  * @param {import("zod").infer<typeof SequencingQuestSchema>} quest
- * @param {{ order?: string[] }} [state]
+ * @param {{ order?: string[], reflection?: string }} [state]
  */
 export function gradeSequencingQuest(quest, state = {}) {
   const order = state.order || [];
   const answered = order.length === quest.items.length;
-  if (!answered) {
-    return { answered: false, correct: false };
-  }
   const byId = new Map(quest.items.map((item) => [item.id, item]));
-  const correct = order.every((itemId, index) => byId.get(itemId)?.position === index);
-  return { answered: true, correct };
+  const correct = answered && order.every((itemId, index) => byId.get(itemId)?.position === index);
+  // Quests without a reflectionPrompt keep the original two-field shape
+  // exactly (existing content/tests depend on this) — the reflection gate
+  // only appears in the result at all for quests that opt into it.
+  if (!quest.reflectionPrompt) {
+    return { answered, correct };
+  }
+  const reflectionOk =
+    typeof state.reflection === "string" &&
+    state.reflection.trim().length >= REFLECTION_MIN_LENGTH;
+  return { answered, correct, reflectionOk, complete: correct && reflectionOk };
 }
 
 // Deliberately broader than gradeSequencingQuest's own `answered` field
@@ -133,15 +157,22 @@ export function sequencingAnsweredAny(state = {}) {
 
 /** @param {ReturnType<typeof gradeSequencingQuest>} result */
 export function isSequencingComplete(result) {
-  return !!result.correct;
+  return "complete" in result ? !!result.complete : !!result.correct;
 }
 
-// Sequencing has no partial-credit state (all-or-nothing per item set) —
-// always false, kept for a uniform QUEST_TYPES contract.
-export function sequencingPartialSuccess() {
-  return false;
+// Sequencing without a reflection gate has no partial-credit state
+// (all-or-nothing per item set) — false. With a reflection gate, mirrors
+// evidence-organizing-quest.js's one real partial-credit state: the order is
+// correct but the reflection isn't (yet) long enough.
+/** @param {ReturnType<typeof gradeSequencingQuest>} result */
+export function sequencingPartialSuccess(result) {
+  return "complete" in result ? !!result.correct && !result.reflectionOk : false;
 }
 
-export function sequencingHint() {
+/** @param {ReturnType<typeof gradeSequencingQuest>} [result] */
+export function sequencingHint(result) {
+  if (result && "complete" in result && result.correct && !result.reflectionOk) {
+    return "The order is correct. Add a reflection of at least a sentence to complete this challenge.";
+  }
   return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
 }

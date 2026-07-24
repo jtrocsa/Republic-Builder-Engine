@@ -7668,6 +7668,12 @@ function handleAppChange(event) {
     progress.questResponses[questId] = { ...state, reflection: field.value };
     save();
     render();
+  } else if (field.matches("[data-sequence-reflection]")) {
+    const questId = field.dataset.sequenceReflection;
+    const state = progress.questResponses[questId] || {};
+    progress.questResponses[questId] = { ...state, reflection: field.value };
+    save();
+    render();
   } else if (field.matches("[data-classroom-count]")) {
     const count = Math.min(20, Math.max(1, Number(field.value) || 1));
     const rows = authUiState.classroomRows;
@@ -7699,6 +7705,14 @@ function handleAppInput(event) {
     const questId = field.dataset.evidenceReflection;
     const counter = app.querySelector(
       `[data-evidence-reflection-counter="${CSS.escape(questId)}"]`
+    );
+    if (counter) {
+      counter.textContent = `${field.value.trim().length}/${REFLECTION_MIN_LENGTH} characters`;
+    }
+  } else if (field.matches("[data-sequence-reflection]")) {
+    const questId = field.dataset.sequenceReflection;
+    const counter = app.querySelector(
+      `[data-sequence-reflection-counter="${CSS.escape(questId)}"]`
     );
     if (counter) {
       counter.textContent = `${field.value.trim().length}/${REFLECTION_MIN_LENGTH} characters`;

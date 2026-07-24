@@ -226,3 +226,68 @@ describe("sequencingHint", () => {
     expect(sequencingHint().length).toBeGreaterThan(0);
   });
 });
+
+describe("sequencing quest with a reflectionPrompt (Case 1.03 migration)", () => {
+  const reflectiveQuest = {
+    ...validQuest,
+    reflectionPrompt: "Explain one connection between two records.",
+  };
+  const correctOrder = ["item-a", "item-b", "item-c"];
+
+  it("accepts a quest with reflectionPrompt (normal case)", () => {
+    expect(SequencingQuestSchema.safeParse(reflectiveQuest).success).toBe(true);
+  });
+
+  it("gradeSequencingQuest requires both a correct order and a long-enough reflection to be complete (normal case)", () => {
+    const noReflection = gradeSequencingQuest(reflectiveQuest, { order: correctOrder });
+    expect(noReflection).toEqual({
+      answered: true,
+      correct: true,
+      reflectionOk: false,
+      complete: false,
+    });
+
+    const shortReflection = gradeSequencingQuest(reflectiveQuest, {
+      order: correctOrder,
+      reflection: "Too short.",
+    });
+    expect(shortReflection.complete).toBe(false);
+
+    const fullResult = gradeSequencingQuest(reflectiveQuest, {
+      order: correctOrder,
+      reflection: "This connection shows how one record caused the next.",
+    });
+    expect(fullResult).toEqual({
+      answered: true,
+      correct: true,
+      reflectionOk: true,
+      complete: true,
+    });
+  });
+
+  it("gradeSequencingQuest without reflectionPrompt keeps the original two-field shape (regression guard)", () => {
+    expect(gradeSequencingQuest(validQuest, { order: correctOrder })).toEqual({
+      answered: true,
+      correct: true,
+    });
+  });
+
+  it("renderSequencingQuest renders the reflection field only when reflectionPrompt is set (normal case)", () => {
+    expect(renderSequencingQuest(reflectiveQuest)).toContain("data-sequence-reflection");
+    expect(renderSequencingQuest(validQuest)).not.toContain("data-sequence-reflection");
+  });
+
+  it("isSequencingComplete/sequencingPartialSuccess/sequencingHint reflect the reflection gate (normal case)", () => {
+    const correctNoReflection = gradeSequencingQuest(reflectiveQuest, { order: correctOrder });
+    expect(isSequencingComplete(correctNoReflection)).toBe(false);
+    expect(sequencingPartialSuccess(correctNoReflection)).toBe(true);
+    expect(sequencingHint(correctNoReflection)).toMatch(/reflection/i);
+
+    const fullyComplete = gradeSequencingQuest(reflectiveQuest, {
+      order: correctOrder,
+      reflection: "This connection shows how one record caused the next.",
+    });
+    expect(isSequencingComplete(fullyComplete)).toBe(true);
+    expect(sequencingPartialSuccess(fullyComplete)).toBe(false);
+  });
+});
