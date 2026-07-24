@@ -54,7 +54,13 @@ export const UNIT_02 = {
       question:
         "What did each leg of the transatlantic trade actually carry, and who bore its human and economic costs?",
       mechanic: "Trade Route Plotter",
-      route: "triangle",
+      // Relocated into the Institute Archive Room (Archive Terminal) — no
+      // longer shown as a Navigation Table marker. The mission's mechanic is
+      // now entirely its archiveChallenge quest below (see the now-deleted
+      // triangleScreen()/TRIANGLE_LEGS/TRIANGLE_CARGO note further down this
+      // file), matching the Case 1.06 precedent.
+      route: null,
+      navigationTableVisible: false,
       summary:
         "Reconstruct the triangular trade from six real shipping and testimony records — plot each cargo onto the leg of the circuit that carried it, then weigh what each record proves about the system binding Europe, Africa, and the Americas together.",
       archiveChallenge: {
@@ -165,167 +171,19 @@ export const CASE_004_LANES = [
   { id: "exchange", label: "Trade & empire" },
 ];
 
-export const TRIANGLE_LEGS = [
-  {
-    id: "outbound",
-    label: "Outbound passage",
-    fromLabel: "England / Europe",
-    toLabel: "West Africa",
-    description:
-      "European manufactured goods — cloth, iron tools, and firearms — sailed toward West Africa to be traded for captives and gold.",
-  },
-  {
-    id: "middle",
-    label: "The Middle Passage",
-    fromLabel: "West Africa",
-    toLabel: "The Americas",
-    description:
-      "Enslaved Africans, forced aboard and shackled below deck, were carried across the Atlantic into bondage in the Americas.",
-  },
-  {
-    id: "homeward",
-    label: "Homeward passage",
-    fromLabel: "The Americas",
-    toLabel: "England / Europe",
-    description:
-      "Colonial staples produced by enslaved labor — sugar, tobacco, and other cash crops — sailed back to English and European markets.",
-  },
-];
-
-export const TRIANGLE_CARGO = [
-  {
-    id: "cloth-tools",
-    label: "Cloth & ironware",
-    icon: "🧵",
-    leg: "outbound",
-    sourceTitle: "Outward cargo consistently ran to cloth, iron, and firearms",
-    sourceMeta: "Royal African Company records · aggregate pattern, c. 1730s",
-    consequence:
-      "Royal African Company invoices for Gold Coast voyages recur with the same short list of outbound goods — Manchester and Kentish cloth, iron and copper bars, and firearms — advanced against captives and gold on the African coast. Manufactured wares, not coin, were the trade's opening currency.",
-    question:
-      "What does the recurring pattern of manufactured goods — cloth, iron, firearms — in Royal African Company outward cargo records best support?",
-    choices: [
-      "English manufacturing capacity and mercantile policy structured the outbound leg around exporting finished goods rather than raw materials or coin.",
-      "English merchants preferred to carry gold and silver bullion to Africa rather than manufactured goods.",
-      "African merchants had no established preferences for particular categories of trade goods.",
-      "The outbound leg mainly carried agricultural produce grown in the American colonies.",
-    ],
-    answer: 0,
-    citation:
-      "Representative outward cargo pattern documented in Royal African Company records and aggregated voyage data; see Voyages: The Trans-Atlantic Slave Trade Database (voyages.org, Emory University). No single voyage record is quoted verbatim here.",
-  },
-  {
-    id: "firearms",
-    label: "Firearms & powder",
-    icon: "⚙",
-    leg: "outbound",
-    sourceTitle: "A New and Accurate Description of the Coast of Guinea",
-    sourceMeta: "Willem Bosman, Dutch trader · 1705",
-    consequence:
-      "Bosman's 1705 account of the Gold Coast trade describes muskets, gunpowder, and shot as a standard part of what European traders offered African merchants alongside cloth and iron — the Dutch, English, and other nations all competing to supply arms in exchange for captives and gold.",
-    question:
-      "According to Bosman's account, what role did firearms play in the Gold Coast trade of the early 1700s?",
-    choices: [
-      "European trading nations competed with one another to supply African merchants with muskets and gunpowder as a routine part of the exchange.",
-      "European trading companies banned the sale of firearms on the Gold Coast.",
-      "African states refused to accept firearms in exchange for goods or captives.",
-      "Firearms were traded only after ships reached the Americas, not on the African coast.",
-    ],
-    answer: 0,
-    citation:
-      "Willem Bosman, A New and Accurate Description of the Coast of Guinea (London, 1705 English translation), public domain, available via archive.org; paraphrased from Bosman's description of Gold Coast trade goods.",
-  },
-  {
-    id: "captives",
-    label: "Enslaved people",
-    icon: "◆",
-    leg: "middle",
-    sourceTitle: "The Interesting Narrative of the Life of Olaudah Equiano",
-    sourceMeta: "Olaudah Equiano, Middle Passage survivor · 1789",
-    consequence:
-      "“The closeness of the place, and the heat of the climate, added to the number in the ship, which was so crowded that each had scarcely room to turn himself, almost suffocated us … This wretched situation was again aggravated by the galling of the chains … and the filth of the necessary tubs, into which the children often fell, and were almost suffocated.”",
-    question:
-      "What does Equiano's own account of the Middle Passage prove that a ship's cargo ledger cannot?",
-    choices: [
-      "The direct, first-person suffering and physical conditions endured by enslaved people below deck — evidence a tally of bodies and goods cannot convey.",
-      "The exact number of enslaved people who died on every transatlantic voyage.",
-      "That enslaved Africans received treatment comparable to paying passengers.",
-      "That every Middle Passage voyage followed an identical route and schedule.",
-    ],
-    answer: 0,
-    citation:
-      "Olaudah Equiano, The Interesting Narrative of the Life of Olaudah Equiano, or Gustavus Vassa, the African, Written by Himself (London, 1789), chapter 2; public domain.",
-  },
-  {
-    id: "shackles-record",
-    label: "The ship's own log",
-    icon: "▤",
-    leg: "middle",
-    sourceTitle: "Description of a Slave Ship (the Brooks)",
-    sourceMeta: "Society for Effecting the Abolition of the Slave Trade · 1788",
-    consequence:
-      "The 1788 broadside diagrams the Liverpool slave ship Brooks with its hold divided into measured compartments, each stamped with rows of human figures laid side by side to show the maximum number — over four hundred — the ship's own owners calculated it could carry below deck.",
-    question:
-      "What is the primary evidentiary value of the Brooks diagram for a historian studying the Middle Passage?",
-    choices: [
-      "It documents, in the traders' own measured terms, how enslaved people were spatially packed into a ship's hold to maximize capacity.",
-      "It records the personal testimony of enslaved people describing the passage in their own words.",
-      "It proves British ships carried fewer enslaved people per voyage than ships of other nations.",
-      "It shows that slave ships were designed with the comfort and safety of enslaved people in mind.",
-    ],
-    answer: 0,
-    citation:
-      "Description of a Slave Ship (the Brooks), Plymouth: Committee for the Abolition of the Slave Trade / Society for Effecting the Abolition of the Slave Trade, 1788; Library of Congress collections.",
-  },
-  {
-    id: "sugar",
-    label: "Sugar & molasses",
-    icon: "🛢",
-    leg: "homeward",
-    sourceTitle:
-      "Plantation accounts recorded hogsheads of sugar and puncheons of molasses shipped to England",
-    sourceMeta: "Representative Caribbean plantation account · c. 1730",
-    consequence:
-      "Caribbean plantation accounts compiled from the period typically list hogsheads of sugar and puncheons of molasses shipped to England or the northern colonies against the planter's account, with the proceeds used to buy more enslaved laborers, provisions, and manufactured goods — sugar wealth circulating back into the labor system that produced it.",
-    question:
-      "What does the recurring pattern in Caribbean plantation shipping accounts best reveal about the profits of the sugar trade?",
-    choices: [
-      "Sugar profits were reinvested into purchasing more enslaved labor and supplies, tying the wealth of the trade directly to its own continuation.",
-      "Sugar planters shipped their crop directly to West Africa rather than to Europe or the northern colonies.",
-      "Sugar was grown primarily by free wage laborers rather than enslaved workers.",
-      "Molasses had no commercial value distinct from raw sugar.",
-    ],
-    answer: 0,
-    citation:
-      "Modeled on the plantation invoice and cargo-account pattern documented throughout Elizabeth Donnan, ed., Documents Illustrative of the History of the Slave Trade to America, 4 vols. (Washington, D.C.: Carnegie Institution of Washington, 1930–1935); no single verbatim entry is quoted here.",
-  },
-  {
-    id: "tobacco",
-    label: "Tobacco hogsheads",
-    icon: "▦",
-    leg: "homeward",
-    sourceTitle: "An Act for the Encouraging and Increasing of Shipping and Navigation",
-    sourceMeta: "Navigation Act of 1660, Parliament of England · 12 Cha. II c. 18",
-    consequence:
-      "“…no sugars, tobacco, cotton-wool, indigo, ginger, fustic, or other dyeing wood, of the growth, production, or manufacture of any English plantations in America, Asia, or Africa, shall be shipped, carried, conveyed, or transported from any of the said English plantations to any land, island, territory, dominion, port, or place whatsoever, other than to such English plantations as do belong to his majesty … or to the kingdom of England, Ireland, or … Wales.”",
-    question: "What did this enumerated-commodities clause require colonial tobacco growers to do?",
-    choices: [
-      "Ship their enumerated crop only to England or other English possessions, rather than selling it directly to foreign markets.",
-      "Grow tobacco exclusively for domestic colonial consumption.",
-      "Pay a tax to any foreign nation willing to purchase their tobacco directly.",
-      "Transport tobacco only aboard foreign-owned ships.",
-    ],
-    answer: 0,
-    citation:
-      "An Act for the Encouraging and Increasing of Shipping and Navigation (Navigation Act), 1660, 12 Cha. II c. 18, enumerated-commodities clause; full text via the Avalon Project, Yale Law School.",
-  },
-];
-
 // Note: the "Charter & Compact" region-evidence content that used to live here
 // as REGION_RECORDS/REGION_EVIDENCE (feeding the now-deleted regionsScreen())
 // was migrated to content/quests/unit-02-quests.js's UNIT_02_ARCHIVE_CHALLENGE_QUESTS
 // in plan Phase 2; the bespoke screen/route/data here were deleted in Phase 5
 // once that migration was verified stable.
+//
+// The "Triangle Ledger" cargo-plotting content that used to live here as
+// TRIANGLE_LEGS/TRIANGLE_CARGO (feeding the now-deleted triangleScreen()) was
+// likewise migrated onto the quest-type system — its content is fully
+// preserved in content/quests/unit-02-quests.js's
+// UNIT_02_ARCHIVE_CHALLENGE_QUESTS entry "case-005-archive-triangle-cargo"
+// (evidence-organizing), which is now Case 1.05's entire mechanic rather than
+// a parallel bonus path.
 
 export const UNIT_02_REVIEW = {
   mcq: [

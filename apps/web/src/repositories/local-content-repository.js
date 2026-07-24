@@ -55,8 +55,6 @@ export function loadChronicleContent() {
       unit: unit02Campaign.UNIT_02,
       sources: unit02Campaign.CASE_004_SOURCES,
       lanes: unit02Campaign.CASE_004_LANES,
-      triangleLegs: unit02Campaign.TRIANGLE_LEGS,
-      triangleCargo: unit02Campaign.TRIANGLE_CARGO,
       review: unit02Campaign.UNIT_02_REVIEW,
       mcqQuests: unit02Quests.UNIT_02_MCQ_QUESTS,
       evidenceOrganizingQuests: unit02Quests.UNIT_02_EVIDENCE_ORGANIZING_QUESTS,

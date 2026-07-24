@@ -52,4 +52,61 @@ test.describe("Archive Challenge", () => {
     expect(stored.archiveChallenges[QUEST_ID]?.status).toBe("complete");
     expect(stored.completedCases).toContain("case-006");
   });
+
+  // case-005 "The Triangle Ledger" — migrated the same way as case-006 above (bespoke
+  // triangleScreen() deleted, this Archive Challenge is now its entire mechanic).
+  const TRIANGLE_QUEST_ID = "case-005-archive-triangle-cargo";
+  const TRIANGLE_CORRECT_PLACEMENTS = {
+    "cloth-tools": "outbound",
+    firearms: "outbound",
+    captives: "middle",
+    "shackles-record": "middle",
+    sugar: "homeward",
+    tobacco: "homeward",
+  };
+
+  test("case-005: place all cargo via the select fallback, reflect, and complete", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-02",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${TRIANGLE_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+
+    for (const [sourceId, slotId] of Object.entries(TRIANGLE_CORRECT_PLACEMENTS)) {
+      await quest.locator(`[data-evidence-select="${sourceId}"]`).selectOption(slotId);
+    }
+
+    const reflection = quest.locator(`[data-evidence-reflection="${TRIANGLE_QUEST_ID}"]`);
+    await reflection.fill(
+      "The outbound leg's cloth and firearms were traded for the captives carried on the Middle Passage, whose forced labor then produced the sugar and tobacco shipped home."
+    );
+    await reflection.blur();
+
+    await expect(page.locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+
+    const stored = await readProgress(page);
+    expect(stored.archiveChallenges[TRIANGLE_QUEST_ID]?.status).toBe("complete");
+    expect(stored.completedCases).toContain("case-005");
+    expect(stored.unlocked).toContain("case-006");
+  });
+
+  // Confirms Case 1.05's Navigation Table marker is gone now that route/navigationTableVisible
+  // were retired in the same migration (mirrors the case-006 precedent this table never
+  // separately re-checked).
+  test("case-005 no longer appears as a Navigation Table marker", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-02",
+    });
+    await loadSeededSave(page);
+
+    await expect(page.locator('[data-case="case-005"]')).toHaveCount(0);
+  });
 });

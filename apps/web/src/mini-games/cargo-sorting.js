@@ -15,12 +15,12 @@
 // docs/architecture/session-reports/2026-07-11-overnight-quest-types-and-minigames.md):
 // the default goods below are Columbian-Exchange-era Caribbean trade goods
 // and specimens (maize, cassava, pineapple, cotton, gold ore, tobacco) —
-// deliberately NOT the triangular-trade goods used by Unit 2's
-// TRIANGLE_CARGO (apps/web/src/content/unit-02-campaign.js), since Case
-// 1.01/Caribbean predates that later plantation-era system and this
-// mini-game's framing is meant to stay on period-appropriate trade
-// logistics, not risk trivializing forced labor by turning it into a
-// sorting-puzzle skin.
+// deliberately NOT the triangular-trade goods used by Unit 2's Case 1.05
+// (its "case-005-archive-triangle-cargo" quest, in
+// apps/web/src/content/quests/unit-02-quests.js), since Case 1.01/Caribbean
+// predates that later plantation-era system and this mini-game's framing is
+// meant to stay on period-appropriate trade logistics, not risk trivializing
+// forced labor by turning it into a sorting-puzzle skin.
 
 function escapeHtml(value) {
   return String(value)

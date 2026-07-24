@@ -11,8 +11,6 @@ import {
   UNIT_02,
   CASE_004_SOURCES,
   CASE_004_LANES,
-  TRIANGLE_LEGS,
-  TRIANGLE_CARGO,
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
 import {
@@ -1472,7 +1470,6 @@ const VALID_SCREENS = new Set([
   "return-warp",
   "review",
   "completion",
-  "triangle",
   "archive-challenges",
   "investigation",
   "intro-welcome",
@@ -5908,31 +5905,6 @@ function ensureActivityState(caseId, defaults) {
   return progress.activityState[caseId];
 }
 
-function triangleCargoChip(cargo) {
-  return `<article class="system-card cargo-card" draggable="true" data-cargo-card="${cargo.id}"><span>${esc(cargo.sourceMeta)}</span><h3>${cargo.icon} ${esc(cargo.label)}</h3><p>${esc(cargo.sourceTitle)}</p></article>`;
-}
-
-function triangleScreen() {
-  const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-  const activeCase = caseById("case-005");
-  const placements = state.placements || {};
-  const placedIds = new Set(Object.keys(placements));
-  const tray = TRIANGLE_CARGO.filter((cargo) => !placedIds.has(cargo.id));
-  const legs = TRIANGLE_LEGS.map((leg) => {
-    const cargoHere = TRIANGLE_CARGO.filter((cargo) => placements[cargo.id] === leg.id);
-    return `<div class="leg-drop ${cargoHere.length ? "is-filled" : ""}" data-leg-drop="${leg.id}"><header><b>${esc(leg.label)}</b><span>${esc(leg.fromLabel)} → ${esc(leg.toLabel)}</span><p>${esc(leg.description)}</p></header>${cargoHere.map(triangleCargoChip).join("") || "<i>Drop cargo records here</i>"}</div>`;
-  }).join("");
-  const mcqPhase = state.charted
-    ? `<section class="triangle-mcq"><h2>Record checkpoints</h2><p>The circuit is charted. Each record now opens its consequence — answer the evidence question attached to each.</p>${TRIANGLE_CARGO.map(
-        (cargo) =>
-          `<article class="ledger-card ledger-card--source"><header><div class="ledger-icon">${cargo.icon}</div><div><p class="kicker">${esc(cargo.label)}</p><h2>${esc(cargo.sourceTitle)}</h2><span>${esc(cargo.sourceMeta)}</span></div></header><blockquote>${esc(cargo.consequence)}</blockquote><fieldset><legend>${esc(cargo.question)}</legend>${cargo.choices.map((choice, ci) => `<label class="ledger-choice"><input type="radio" name="triangle-${cargo.id}" data-triangle-question="${cargo.id}" value="${ci}" ${String((state.answers || {})[cargo.id]) === String(ci) ? "checked" : ""}><span>${String.fromCharCode(65 + ci)}</span>${esc(choice)}</label>`).join("")}</fieldset><small>${esc(cargo.citation)}</small></article>`
-      ).join(
-        ""
-      )}<button class="btn btn-gold" data-action="check-triangle-mcq">Validate the circuit record →</button><p class="feedback" id="triangleMcqFeedback"></p></section>`
-    : "";
-  return `${chrome()}<main class="shell triangle-shell"><section class="triangle-copy"><button class="back-link" data-action="archive">← Archive map</button><p class="kicker">${esc(activeCase.shortTitle)} · The Atlantic circuit</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p>${esc(activeCase.question)}</p><p>Read each cargo record, then drag it onto the leg of the triangular trade that carried it. The Middle Passage records are testimony — the Archive preserves them as human accounts, not cargo lists.</p><div class="evidence-bank"><div class="bank-heading"><h2>Cargo records</h2><button class="text-button" data-action="clear-triangle">Reset chart</button></div><div class="bank-cards">${tray.map(triangleCargoChip).join("") || '<p class="bank-empty">All records are on the chart.</p>'}</div></div></section><section class="triangle-board"><div class="triangle-legs">${legs}</div>${state.charted ? "" : `<button class="btn btn-gold" data-action="check-triangle">Chart the circuit →</button><p class="feedback" id="triangleFeedback"></p>`}${mcqPhase}</section></main>`;
-}
-
 function exchangeLedgerScreen() {
   const answers = progress.exchangeLedger.answers || {};
   const records = resolvedExchangeRecords();
@@ -6105,9 +6077,6 @@ function render() {
         break;
       case "empire":
         html = empireScreen();
-        break;
-      case "triangle":
-        html = triangleScreen();
         break;
       case "archive-challenges":
         html = archiveChallengesScreen();
@@ -6947,69 +6916,6 @@ function handlePuzzleScreenClick(target, action) {
       );
     return true;
   }
-  if (action === "clear-triangle") {
-    progress.activityState["case-005"] = { placements: {}, answers: {}, charted: false };
-    save();
-    render();
-    return true;
-  }
-  if (action === "check-triangle") {
-    const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-    const allPlaced = TRIANGLE_CARGO.every((cargo) => state.placements[cargo.id]);
-    if (!allPlaced) {
-      showFeedback(
-        "triangleFeedback",
-        "Every cargo record needs a leg before the circuit can be charted.",
-        "error"
-      );
-      return true;
-    }
-    const correct = TRIANGLE_CARGO.every((cargo) => state.placements[cargo.id] === cargo.leg);
-    if (correct) {
-      playSfx("secure");
-      state.charted = true;
-      save();
-      render();
-    } else
-      showFeedback(
-        "triangleFeedback",
-        "At least one record sits on the wrong leg. Re-read what each record actually carried and where that leg began.",
-        "error"
-      );
-    return true;
-  }
-  if (action === "check-triangle-mcq") {
-    const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-    document.querySelectorAll("[data-triangle-question]:checked").forEach((input) => {
-      state.answers[input.dataset.triangleQuestion] = Number(input.value);
-    });
-    const unanswered = TRIANGLE_CARGO.filter((cargo) => state.answers[cargo.id] === undefined);
-    if (unanswered.length) {
-      save();
-      showFeedback(
-        "triangleMcqFeedback",
-        "Answer the evidence question attached to every record before validating.",
-        "error"
-      );
-      return true;
-    }
-    const correct = TRIANGLE_CARGO.every((cargo) => state.answers[cargo.id] === cargo.answer);
-    save();
-    if (correct) {
-      playSfx("upload");
-      unlockNext("case-005");
-      progress.pendingUploadCaseId = "case-005";
-      progress.currentScreen = "upload";
-      save();
-      render();
-    } else
-      showFeedback(
-        "triangleMcqFeedback",
-        "At least one interpretation needs revision. Re-read the record before answering again.",
-        "error"
-      );
-    return true;
-  }
   if (action === "check-empire") {
     const reflection = document.getElementById("empireReflection")?.value.trim() || "";
     progress.responses["empire-reflection"] = reflection;
@@ -7807,15 +7713,9 @@ function handleAppDragstart(event) {
     event.dataTransfer.effectAllowed = "move";
     return;
   }
-  const cargo = event.target.closest("[data-cargo-card]");
-  if (cargo) {
-    event.dataTransfer.setData("text/cargo-card", cargo.dataset.cargoCard);
-    event.dataTransfer.effectAllowed = "move";
-    return;
-  }
-  // Cargo Sorting mini-game — distinct data attribute and dataTransfer type from the
-  // data-cargo-card/"text/cargo-card" pair above (Case 1.05's unrelated triangle-trade
-  // leg-drop feature), even though both happen to use the word "cargo".
+  // Cargo Sorting mini-game — named "cargo" independently of Case 1.05's
+  // now-retired triangle-trade leg-drop feature (data-cargo-card/
+  // "text/cargo-card"), which used the same word for an unrelated mechanic.
   const cargoGood = event.target.closest("[data-cargo-good]");
   if (cargoGood) {
     event.dataTransfer.setData("text/mini-cargo-good", cargoGood.dataset.cargoGood);
@@ -7844,11 +7744,10 @@ function handleAppDragstart(event) {
 function handleAppDragover(event) {
   const mapSlot = event.target.closest("[data-map-slot]");
   const zone = event.target.closest("[data-drop-index]");
-  const legDrop = event.target.closest("[data-leg-drop]");
   const sequenceItem = event.target.closest("[data-sequence-item]");
   const evidenceSlot = event.target.closest("[data-evidence-slot]");
   const cargoHold = event.target.closest("[data-cargo-hold]");
-  const dropTarget = mapSlot || zone || legDrop || sequenceItem || evidenceSlot || cargoHold;
+  const dropTarget = mapSlot || zone || sequenceItem || evidenceSlot || cargoHold;
   if (dropTarget) {
     event.preventDefault();
     dropTarget.classList.add("is-over");
@@ -7858,7 +7757,6 @@ function handleAppDragover(event) {
 function handleAppDragleave(event) {
   event.target.closest("[data-drop-index]")?.classList.remove("is-over");
   event.target.closest("[data-map-slot]")?.classList.remove("is-over");
-  event.target.closest("[data-leg-drop]")?.classList.remove("is-over");
   event.target.closest("[data-sequence-item]")?.classList.remove("is-over");
   event.target.closest("[data-evidence-slot]")?.classList.remove("is-over");
   event.target.closest("[data-cargo-hold]")?.classList.remove("is-over");
@@ -7919,18 +7817,6 @@ function handleAppDrop(event) {
       if (a.placed[slot] === pieceId) delete a.placed[slot];
     });
     a.placed[mapSlot.dataset.mapSlot] = pieceId;
-    save();
-    render();
-    return;
-  }
-  const legDrop = event.target.closest("[data-leg-drop]");
-  if (legDrop) {
-    event.preventDefault();
-    legDrop.classList.remove("is-over");
-    const cargoId = event.dataTransfer.getData("text/cargo-card");
-    if (!cargoId) return;
-    const state = ensureActivityState("case-005", { placements: {}, answers: {}, charted: false });
-    state.placements[cargoId] = legDrop.dataset.legDrop;
     save();
     render();
     return;

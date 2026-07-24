@@ -7,10 +7,6 @@ import {
   buildEmpireConnectionsSchema,
 } from "../../apps/web/src/content/schemas/empire.schema.js";
 import { ReviewSchema } from "../../apps/web/src/content/schemas/review.schema.js";
-import {
-  TriangleLegsSchema,
-  buildTriangleCargoSchema,
-} from "../../apps/web/src/content/schemas/unit02-activities.schema.js";
 
 const validCase = {
   id: "case-001",
@@ -292,35 +288,5 @@ describe("ReviewSchema (saq rubric total)", () => {
       saq: { stimulus: "s", prompts: ["A."], rubric: "1 point total." },
     };
     expect(ReviewSchema.safeParse(review).success).toBe(false);
-  });
-});
-
-describe("unit-02 activity cross-references", () => {
-  const legs = [
-    { id: "outbound", label: "Outbound", fromLabel: "A", toLabel: "B", description: "d" },
-  ];
-  const validCargo = {
-    id: "cloth",
-    label: "Cloth",
-    icon: "🧵",
-    leg: "outbound",
-    sourceTitle: "s",
-    sourceMeta: "m",
-    consequence: "c",
-    question: "q?",
-    choices: ["A", "B"],
-    answer: 0,
-    citation: "c",
-  };
-
-  it("accepts valid legs and cargo referencing a real leg id (normal case)", () => {
-    expect(TriangleLegsSchema.safeParse(legs).success).toBe(true);
-    const schema = buildTriangleCargoSchema(legs.map((leg) => leg.id));
-    expect(schema.safeParse([validCargo]).success).toBe(true);
-  });
-
-  it("rejects cargo referencing a leg id that doesn't exist (missing referenced quest)", () => {
-    const schema = buildTriangleCargoSchema(legs.map((leg) => leg.id));
-    expect(schema.safeParse([{ ...validCargo, leg: "no-such-leg" }]).success).toBe(false);
   });
 });

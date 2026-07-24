@@ -21,11 +21,7 @@ import {
   buildEmpireConnectionsSchema,
 } from "../apps/web/src/content/schemas/empire.schema.js";
 import { ReviewSchema } from "../apps/web/src/content/schemas/review.schema.js";
-import {
-  CaseLanesSchema,
-  TriangleLegsSchema,
-  buildTriangleCargoSchema,
-} from "../apps/web/src/content/schemas/unit02-activities.schema.js";
+import { CaseLanesSchema } from "../apps/web/src/content/schemas/unit02-activities.schema.js";
 import {
   runSchema,
   checkUniqueGlobalIds,
@@ -244,16 +240,6 @@ function main() {
       "unit-02-campaign.js: CASE_004_SOURCES",
       buildSourcesSchema({ reconstructionIds: content.unit02.lanes.map((lane) => lane.id) }),
       content.unit02.sources
-    )
-  );
-  results.push(
-    runSchema("unit-02-campaign.js: TRIANGLE_LEGS", TriangleLegsSchema, content.unit02.triangleLegs)
-  );
-  results.push(
-    runSchema(
-      "unit-02-campaign.js: TRIANGLE_CARGO",
-      buildTriangleCargoSchema(content.unit02.triangleLegs.map((leg) => leg.id)),
-      content.unit02.triangleCargo
     )
   );
   results.push(

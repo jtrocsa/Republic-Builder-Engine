@@ -7,5 +7,6 @@ dist/
 coverage/
 .vscode/*.log
 .playwright-mcp/
+test-results/
 reports/
 apps/web/src/assets/generated/

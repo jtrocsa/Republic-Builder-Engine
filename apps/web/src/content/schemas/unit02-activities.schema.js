@@ -27,53 +27,13 @@ export const CaseLanesSchema = z
   .min(1, "case lanes must contain at least one lane")
   .superRefine((lanes, ctx) => assertUniqueIds(lanes, ctx, "lane"));
 
-// A single leg of the Triangle Ledger circuit (`triangleScreen()` in main.js).
-export const TriangleLegSchema = z.object({
-  id: z.string().min(1, "triangleLeg.id is required"),
-  label: z.string().min(1, "triangleLeg.label is required"),
-  fromLabel: z.string().min(1, "triangleLeg.fromLabel is required"),
-  toLabel: z.string().min(1, "triangleLeg.toLabel is required"),
-  description: z.string().min(1, "triangleLeg.description is required"),
-});
-
-export const TriangleLegsSchema = z
-  .array(TriangleLegSchema)
-  .min(1, "TRIANGLE_LEGS must contain at least one leg")
-  .superRefine((legs, ctx) => assertUniqueIds(legs, ctx, "triangle leg"));
-
-function buildTriangleCargoItemSchema(legIds) {
-  return z
-    .object({
-      id: z.string().min(1, "triangleCargo.id is required"),
-      label: z.string().min(1, "triangleCargo.label is required"),
-      icon: z.string().min(1, "triangleCargo.icon is required"),
-      leg: z.enum(legIds, { message: `triangleCargo.leg must be one of: ${legIds.join(", ")}` }),
-      sourceTitle: z.string().min(1, "triangleCargo.sourceTitle is required"),
-      sourceMeta: z.string().min(1, "triangleCargo.sourceMeta is required"),
-      consequence: z.string().min(1, "triangleCargo.consequence is required"),
-      question: z.string().min(1, "triangleCargo.question is required"),
-      choices: z.array(z.string().min(1)).min(2, "triangleCargo.choices needs at least 2 options"),
-      answer: z.number().int().nonnegative(),
-      citation: z.string().min(1, "triangleCargo.citation is required"),
-    })
-    .superRefine((cargo, ctx) => {
-      if (cargo.answer >= cargo.choices.length) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["answer"],
-          message: `triangleCargo.answer (${cargo.answer}) is out of range for ${cargo.choices.length} choices.`,
-        });
-      }
-    });
-}
-
-export function buildTriangleCargoSchema(legIds) {
-  return z.array(buildTriangleCargoItemSchema(legIds)).superRefine((cargoList, ctx) => {
-    assertUniqueIds(cargoList, ctx, "triangle cargo");
-  });
-}
-
 // RegionRecordSchema/RegionRecordsSchema/buildRegionEvidenceSchema (for the
 // "Charter & Compact" activity's regionsScreen() in main.js) were removed in
 // plan Phase 5 once that screen was deleted — its content now validates as
 // an Archive Challenge quest (evidence-organizing-quest.js's schemas) instead.
+//
+// TriangleLegSchema/TriangleLegsSchema/buildTriangleCargoSchema (for the
+// "Triangle Ledger" activity's triangleScreen() in main.js) were removed the
+// same way once that screen was deleted (Manage Content wizard redesign,
+// Phase A) — its content now validates as an Archive Challenge quest
+// (evidence-organizing-quest.js's schemas) instead too.

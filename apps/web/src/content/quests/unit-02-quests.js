@@ -217,13 +217,14 @@ export const UNIT_02_ARCHIVE_CHALLENGE_QUESTS = [
   // Second Archive Challenge (Phase B of the Investigation/Archive Challenge
   // plan's catalog-expansion pass), proving the evidence-organizing quest
   // type against a second case rather than only the case-006 pilot above.
-  // Reuses Case 5's real TRIANGLE_LEGS/TRIANGLE_CARGO content (also in
-  // apps/web/src/content/unit-02-campaign.js) — record labels/excerpts
-  // duplicated from TRIANGLE_CARGO rather than imported, matching the
-  // duplication convention the case-006 quest above already established.
-  // triangleScreen()/the "triangle" route stays the case's primary
-  // Navigation Table experience — this is a parallel, additional way to
-  // engage the same content, not a replacement.
+  // Originally authored as a duplicate of Case 5's bespoke
+  // TRIANGLE_LEGS/TRIANGLE_CARGO content (record labels/excerpts copied from
+  // TRIANGLE_CARGO rather than imported, matching the case-006 quest's own
+  // duplication convention). The bespoke triangleScreen()/"triangle" route
+  // and TRIANGLE_LEGS/TRIANGLE_CARGO arrays were later deleted (Manage
+  // Content wizard redesign, Phase A) once this quest was confirmed to fully
+  // preserve their content — this is now Case 1.05's entire mechanic, not a
+  // parallel bonus path.
   {
     id: "case-005-archive-triangle-cargo",
     prompt:
