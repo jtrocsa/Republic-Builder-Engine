@@ -148,9 +148,6 @@ import {
   resolveSourceSlot,
   resolveQuestSlot,
   resolveQuestSlotWithType,
-  alternativesForSourceSlot,
-  alternativesForQuestSlot,
-  sourceAlternateById,
   questAlternateById,
   listSelectionsForCase,
   setDraftSelection,
@@ -161,7 +158,6 @@ import {
   listCustomContentForCase,
   createCustomContent,
   updateCustomContent,
-  deleteCustomContent,
 } from "./repositories/remote-custom-content-repository.js";
 import {
   buildAuthoredContent,
@@ -1549,15 +1545,19 @@ let teacherUiState = {
 // own loader/click-handler group, mirroring how gradingUiState is split out.
 let contentUiState = {
   selectedCaseId: null,
-  // "name" -> "preview" -> "edit"/"replace", the guided per-mission wizard
-  // (see manageContentCaseScreen()'s dispatch below) — only meaningful for
-  // non-map cases; reset to "name" whenever a fresh case is opened
-  // ("open-manage-content-case"), left alone across in-place data reloads
-  // (loadManageContentCaseData(), e.g. after Save/Publish) so a teacher
-  // stays on the step they're working in.
+  // "name" -> "preview" -> "edit"/"replace" -> "published", the guided
+  // per-mission wizard (see manageContentCaseScreen()'s dispatch below) —
+  // only meaningful for non-map cases; reset to "name" whenever a fresh case
+  // is opened ("open-manage-content-case"), left alone across in-place data
+  // reloads (loadManageContentCaseData(), e.g. after Save/Publish) so a
+  // teacher stays on the step they're working in.
   wizardStep: "name",
-  slots: [], // official slots: [{slotKind, officialId, officialLabel, relatedSourceId, draftAltId, draftAltKind, publishedAltId, publishedAltKind, publishedSlotKind, publishedPreviewContent, latestCustomAltId, alternatives: [{id,label,kind}], previewContent}]
-  additionSlots: [], // teacher-added questions with no official counterpart: [{id, slotKind, relatedSourceId, content, status}]
+  // The case's one official quest slot (its Archive Challenge) — every
+  // non-map case has at most one, see officialQuestSlotsForCase()'s doc
+  // comment — or null if this case has none yet.
+  // {slotKind, currentSlotKind, officialId, officialLabel, draftAltId,
+  //  draftAltKind, publishedAltId, latestCustomAltId, previewContent}
+  slot: null,
   error: "",
   pending: false,
 };
@@ -1565,28 +1565,15 @@ let contentUiState = {
 // accordion — a single id (not a Set) so opening one unit always collapses
 // whichever was previously open. Transient UI state, never persisted.
 let manageContentExpandedUnitId = null;
-// Per-source collapsible sections inside manageContentCaseScreen() — a Set
-// of source/"general" ids the teacher has explicitly expanded (default:
-// everything collapsed, since a case screen can otherwise be a wall of text
-// before a teacher does anything). Kept as JS-tracked state rather than
-// native <details open> because render() fully replaces the screen's
-// markup on every change (a dropdown swap, a save), which would otherwise
-// reset any native disclosure state back to its default each time.
-let manageContentExpandedSectionIds = new Set();
-// In-progress "add new question" / "edit" authoring form — null when no
-// form is open. See engine/custom-content-authoring.js for the field <->
-// content-object conversion this drives.
+// In-progress "edit"/"replace" authoring form for the case's one official
+// quest slot — null when no form is open. See
+// engine/custom-content-authoring.js for the field <-> content-object
+// conversion this drives. `previewQuest` (only set once "Preview Changes"/
+// "Preview Replacement" has been clicked) holds an ephemeral, never-persisted
+// content object built straight from the form's current fields, purely so
+// the live in-editor preview can render it — see "preview-authoring-changes"
+// in handleManageContentClick().
 let manageContentAuthoring = null;
-// The guided "Keep what's here? / Add one? / Replace it?" mini-flow for one
-// official quest slot — null when no such prompt is open for any slot.
-// {slotKind, officialId, relatedSourceId, relatedSourceLabel, step}, step
-// is "keep-or-not" or "add-one". Kept separate from manageContentAuthoring
-// (which drives the actual authoring form) since the guided prompt is a
-// lightweight Yes/No panel, not a form — see
-// manageContentGuidedPromptMarkup(). Only ever set for the 4 real quest
-// types (mcq/sequencing/evidence-organizing/hipp); sources and ledger
-// records keep their existing one-click "Edit →" only.
-let manageContentGuidedPrompt = null;
 // Ephemeral "Preview as student" session for map (route: "field") cases —
 // drops the teacher into the real, walkable field screen instead of a
 // bespoke preview card, per CLAUDE.md's standing rule against duplicating
@@ -2221,8 +2208,7 @@ function sourceFullTextBlockMarkup(item) {
 
 // Full-content preview for a Sources-tab pool row — schema-matched to
 // apps/web/src/content/schemas/primary-source-library.schema.js (text vs.
-// visual entries have different fields), not the gameplay Source schema
-// (see sourcePreviewCardMarkup below, which is a different shape).
+// visual entries have different fields), not the gameplay Source schema.
 function sourcePoolPreviewMarkup(item, kind) {
   const externalLink = item.externalUrl
     ? `<a class="btn btn-outline" href="${esc(item.externalUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>`
@@ -2494,7 +2480,7 @@ function officialQuestSlotsForCase(caseId) {
 }
 
 // Canonical display names for the 4 real quest-types/index.js QUEST_TYPES
-// keys — every other display string in Manage Content (AUTHORING_TYPE_LABELS,
+// keys — every other display string in Manage Content (editor headings,
 // the type-picker cards) derives from this single table so "Multiple Choice"
 // vs "multiple-choice question" vs "MCQ" can't drift apart again. The stable
 // string KEYS themselves (mcq/sequencing/evidence-organizing/hipp) never
@@ -2514,101 +2500,6 @@ const QUEST_TYPE_DESCRIPTIONS = {
   "evidence-organizing": "Sort sources into the historical-thinking skill each best demonstrates.",
   hipp: "Analyze a document's Historical situation, Intended audience, Purpose, and Point of view.",
 };
-
-// The one quest type a mission is currently built around — every non-map
-// mission has exactly one official quest slot (its case-level Archive
-// Challenge) as of the Phase A migrations retiring the last bespoke mission
-// screens (see docs/architecture/ARCHITECTURE-QUICKREF.md), so "this
-// mission's type" is just that slot's currently-effective type
-// (currentSlotKind, which tracks a teacher's own type-changing replacement
-// if one is active). Used to constrain "+ Add new question"'s type-picker
-// so a teacher can't mix types on one mission — see
-// manageContentAuthoringFormMarkup()'s constrainToType handling. Returns
-// null for a case with no quest slot at all (nothing to constrain against
-// yet) or a Map Mission (never reaches any "+ Add" control regardless).
-function primaryQuestSlotType() {
-  const slot = contentUiState.slots.find((s) => s.slotKind !== "source");
-  return slot ? slot.currentSlotKind || slot.slotKind : null;
-}
-
-// Presentational-only grouping: which source card a question's Manage
-// Content editor sub-card nests under. Nothing in the content schemas links
-// a quest to "its" source (a question can legitimately synthesize several,
-// e.g. the sequencing/evidence-organizing quests below), so this is a small
-// hand-authored map covering the questions that really are about one
-// specific source, built by matching each question's real subject against
-// its case's real UNIT_SOURCES ids. A question with no entry here (or one
-// mapped to null) renders under "General questions" instead of erroring —
-// unmapped is the expected default for a newly-authored question until its
-// author picks a related source in the authoring form.
-const OFFICIAL_QUEST_SOURCE_LINKS = {
-  "case-001-mcq-taino-sourcing": "taino-context",
-  "case-001-mcq-columbus-audience": "columbus-letter",
-  "case-001-mcq-waldseemuller-change": "waldseemuller-map",
-  "case-001-hipp-columbus-letter": "columbus-letter",
-  "case-004-mcq-charter-sourcing": "riverbend-charter",
-  "case-004-mcq-frethorne-audience": "riverbend-letter",
-  "case-004-mcq-ledger-sourcing": "riverbend-ledger",
-  "case-004-hipp-frethorne-letter": "riverbend-letter",
-  "case-007-mcq-pontiac-sourcing": "commoncause-pontiac-speech",
-  "case-007-mcq-dunmore-causation": "commoncause-dunmore-proclamation",
-  "case-007-hipp-henry-speech": "commoncause-henry-speech",
-};
-
-// Read-only inline preview of a source card for the Manage Content editor —
-// reuse the exact same sourceVisual() a student sees, wrapped in a
-// pointer-events:none container so the app's shared global click/change
-// listeners can't fire from a teacher's edit screen and mutate real
-// progress state. Questions no longer get this treatment: their editable
-// form (see authoringFieldsMarkup()) is itself styled to resemble the real
-// student widget, so a separate frozen duplicate would be redundant.
-//
-// Kept intentionally light: art + title always show, creator/date/record
-// nest in their own collapsible ("About this source", reusing
-// manageContentSectionMarkup()'s toggle so it doesn't require new state),
-// and the source's own Chronicler prompt renders once, in a visually
-// locked block — it used to also get echoed as plain text right below the
-// question list, which read as a second, unlabeled question next to the
-// real editable ones.
-function sourcePreviewCardMarkup(source) {
-  const meta = manageContentSectionMarkup({
-    id: `${source.id}::meta`,
-    title: "About this source",
-    kicker: `${source.creator} · ${source.date}`,
-    bodyMarkup: `<dl class="manage-content-source-meta-dl"><div><dt>Creator</dt><dd>${esc(source.creator)}</dd></div><div><dt>Date</dt><dd>${esc(source.date)}</dd></div><div><dt>Record</dt><dd>${esc(source.record)}</dd></div></dl>`,
-  });
-  return `<div class="quest-preview-frozen manage-content-source-preview"><p class="quest-preview-label">Student view preview</p><div class="manage-content-source-preview-art">${sourceVisual(source)}</div><div class="manage-content-source-preview-copy"><p class="kicker">${esc(source.type)}</p><h4>${esc(source.title)}</h4></div></div>
-${meta}
-<div class="manage-content-locked-prompt"><span class="manage-content-lock-glyph" aria-hidden="true">&#128274;</span><div><p class="manage-content-locked-label">Chronicler prompt · fixed, locked to the map</p><p>${esc(source.prompt)}</p></div></div>`;
-}
-
-// Short, per-source explainer of the real order a student encounters this
-// source in — gate presence/type varies per source, so this stays a small
-// per-source note rather than a single case-level sentence (which couldn't
-// stay accurate across e.g. case-001's gated taino-context vs. its ungated
-// columbus-letter).
-function sourceFlowNoteMarkup(source) {
-  const text = source?.investigationMode
-    ? "How students get here: they complete the Investigation Challenge below first — this source stays locked until they do. Once unlocked, the Chronicler prompt is answered right away; Institute Context stays sealed until they submit that response."
-    : "How students get here: this source has no Investigation Challenge gate — it opens directly. The Chronicler prompt is answered right away; Institute Context stays sealed until they submit that response.";
-  return `<p class="manage-content-help-text">${text}</p>`;
-}
-
-// Read-only inline preview of a source's real Investigation Challenge gate
-// (source.investigationMode/investigationQuestId) — reuses the same
-// renderQuest() a student's investigationScreen() calls, wrapped frozen so
-// this editor's global click/change listeners can't fire from it. Empty
-// state ({}) previews the quest itself, not any particular student's
-// answers. Returns "" for a source with no gate (e.g. case-001's
-// columbus-letter) — there's nothing to preview.
-function investigationGatePreviewMarkup(source) {
-  if (!source?.investigationMode) return "";
-  const quest = investigationQuestFor(source.investigationMode, source.investigationQuestId);
-  return `<div class="quest-preview-frozen">
-<p class="quest-preview-label">Investigation Challenge · students complete this before the source unlocks · fixed, not editable here</p>
-${quest ? renderQuest(source.investigationMode, quest, {}) : `<p class="bank-empty">This record's Investigation Challenge is still being cataloged.</p>`}
-</div>`;
-}
 
 function manageContentMissionCardMarkup(c) {
   return `<article class="manage-content-mission-card">
@@ -2654,261 +2545,6 @@ ${body}
 // manageContentUnitSectionMarkup()/manageContentMissionCardMarkup() are now
 // called from there instead.
 
-// Which real source document (if any) a question is grouped under —
-// resolved from UNIT_SOURCES for the summary line and the editable
-// "Linked source" select's current value alike.
-function resolvedSourceTitle(caseId, sourceId) {
-  if (!sourceId) return null;
-  return (UNIT_SOURCES[caseId] || []).find((s) => s.id === sourceId)?.title || null;
-}
-
-function isCardBeingEdited(auth, entry) {
-  if (!auth) return false;
-  return entry.officialId !== undefined
-    ? auth.editingOfficialId === entry.officialId
-    : auth.editingCustomId === entry.id;
-}
-
-// Collapsed-by-default summary row for one question/source card — official
-// or teacher-added alike. Editing happens in place (see
-// manageContentQuestionEntryMarkup()): clicking Edit swaps this same list
-// position for manageContentAuthoringFormMarkup() rather than opening a
-// separate panel below it.
-function manageContentCardSummaryMarkup(entry) {
-  const isOfficial = entry.officialId !== undefined;
-  const slotKind = entry.slotKind;
-  // The badge shows what this slot currently renders as for students — for
-  // most slots that's just slotKind, but a teacher-authored type-changing
-  // replacement means the two can genuinely differ (see currentSlotKind's
-  // doc comment in loadManageContentCaseData()).
-  const displaySlotKind = entry.currentSlotKind || slotKind;
-  const kindLabel =
-    displaySlotKind === "source"
-      ? "Source"
-      : QUEST_TYPE_DISPLAY_NAMES[displaySlotKind] || displaySlotKind;
-  const promptText = isOfficial
-    ? entry.officialLabel
-    : entry.content.prompt || entry.content.title || "";
-  const truncatedPrompt = promptText.length > 140 ? `${promptText.slice(0, 140)}…` : promptText;
-  const sourceLabel =
-    resolvedSourceTitle(contentUiState.selectedCaseId, entry.relatedSourceId) ||
-    "No linked source — general question";
-  const isDraftUnpublished = isOfficial
-    ? entry.draftAltId !== entry.publishedAltId
-    : entry.status !== "published";
-  const editAction = isOfficial
-    ? slotKind === "source"
-      ? "start-edit-source"
-      : "start-edit-question"
-    : "start-edit-addition";
-  const editDataAttrs = isOfficial
-    ? `data-slot-kind="${esc(slotKind)}" data-official-id="${esc(entry.officialId)}" data-related-source-id="${esc(entry.relatedSourceId || "")}"`
-    : `data-custom-id="${esc(entry.id)}"`;
-  // Native <dialog> (see handleManageContentClick's "open-delete-addition-dialog"/
-  // "confirm-delete-addition" handlers) rather than a hand-rolled two-click
-  // Confirm/Cancel button swap — showModal() gives focus trapping and
-  // Escape-to-cancel for free, which the prior inline swap had neither of.
-  const deleteControls = !isOfficial
-    ? `<button class="btn btn-plain manage-content-delete-btn" data-action="open-delete-addition-dialog" data-custom-id="${esc(entry.id)}" type="button">Delete</button>
-<dialog class="manage-content-delete-dialog" id="delete-confirm-dialog-${esc(entry.id)}">
-<p>Delete this question? This can't be undone.</p>
-<form method="dialog" class="manage-content-delete-dialog-actions">
-<button class="btn btn-plain" type="submit">Cancel</button>
-<button class="btn btn-outline manage-content-delete-btn" data-action="confirm-delete-addition" data-custom-id="${esc(entry.id)}" type="button">Confirm delete</button>
-</form>
-</dialog>`
-    : "";
-  // The guided Keep/Add/Replace flow only applies to the 4 real quest
-  // types — sources and ledger records (case-002's fixed grid layout) keep
-  // today's single-click "Edit →" only.
-  const guidedButton =
-    isOfficial && QUEST_TYPE_DISPLAY_NAMES[slotKind]
-      ? `<button class="btn btn-plain manage-content-edit-btn" data-action="start-guided-change" ${editDataAttrs} type="button">Change this question →</button>`
-      : "";
-  // Lets a teacher pick one of the pre-authored curated alternates (or an
-  // existing custom replacement, both merged into entry.alternatives — see
-  // loadManageContentCaseData()) without opening the full authoring form.
-  // "— Official version —" sends a null altContentId, which
-  // setDraftSelection() already treats as "delete the draft row" — this
-  // doubles as the only revert-to-official control in this screen.
-  const altPicker =
-    isOfficial && entry.alternatives?.length
-      ? `<label class="manage-content-inline-field manage-content-alt-picker">Alternate<select data-alt-select data-slot-kind="${esc(slotKind)}" data-official-id="${esc(entry.officialId)}">
-<option value="">— Official version —</option>
-${entry.alternatives
-  .map(
-    (alt) =>
-      `<option value="${esc(alt.id)}" data-kind="${esc(alt.kind)}" ${alt.id === entry.draftAltId ? "selected" : ""}>${esc(alt.label)}${alt.kind === "custom" ? " (teacher-added)" : ""}</option>`
-  )
-  .join("")}
-</select></label>`
-      : "";
-  return `<article class="manage-content-slot-card manage-content-card-summary ${!isOfficial ? "manage-content-slot-card--addition" : ""}">
-<div class="manage-content-slot-head">
-<span class="case-kind-badge">${esc(kindLabel)}</span>
-${!isOfficial ? `<span class="case-kind-badge manage-content-badge-added">Teacher-added</span>` : ""}
-<p class="manage-content-slot-label">${esc(truncatedPrompt)}</p>
-</div>
-<div class="manage-content-slot-controls">
-${sourceLabel ? `<span class="manage-content-summary-source">${esc(sourceLabel)}</span>` : ""}
-<span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}" role="status" aria-live="polite">${isDraftUnpublished ? "Draft — not yet published" : "Published"}</span>
-${altPicker}
-<button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" ${editDataAttrs} type="button">Edit →</button>
-${guidedButton}
-${deleteControls}
-</div>
-</article>`;
-}
-
-function isCardInGuidedPrompt(entry) {
-  if (!manageContentGuidedPrompt || entry.officialId === undefined) return false;
-  return (
-    manageContentGuidedPrompt.officialId === entry.officialId &&
-    manageContentGuidedPrompt.slotKind === entry.slotKind
-  );
-}
-
-// The "Keep what's here?" / "Add one additional question?" mini-flow —
-// swapped in for the summary card the same way the authoring form is (see
-// manageContentQuestionEntryMarkup()), one Yes/No step at a time.
-function manageContentGuidedPromptMarkup() {
-  const p = manageContentGuidedPrompt;
-  if (p.step === "add-one") {
-    return `<article class="manage-content-slot-card manage-content-guided-prompt">
-<p class="manage-content-slot-label">Add one additional question?</p>
-<div class="manage-content-guided-actions">
-<button class="btn btn-gold" data-action="guided-add-yes" type="button">Yes, add one</button>
-<button class="btn btn-outline" data-action="guided-add-no" type="button">No, that's all</button>
-</div>
-</article>`;
-  }
-  return `<article class="manage-content-slot-card manage-content-guided-prompt">
-<p class="manage-content-slot-label">Keep what's here?</p>
-<div class="manage-content-guided-actions">
-<button class="btn btn-gold" data-action="guided-keep-yes" type="button">Yes, keep it</button>
-<button class="btn btn-outline" data-action="guided-keep-no" type="button">No, replace it</button>
-</div>
-<button class="btn btn-plain" data-action="cancel-guided-prompt" type="button">Cancel</button>
-</article>`;
-}
-
-function manageContentQuestionEntryMarkup(entry) {
-  if (isCardBeingEdited(manageContentAuthoring, entry)) return manageContentAuthoringFormMarkup();
-  if (isCardInGuidedPrompt(entry)) return manageContentGuidedPromptMarkup();
-  return manageContentCardSummaryMarkup(entry);
-}
-
-function manageContentSectionMarkup({ id, title, kicker, bodyMarkup }) {
-  const collapsed = !manageContentExpandedSectionIds.has(id);
-  return `<section class="manage-content-source-section ${collapsed ? "is-collapsed" : ""}">
-<button class="manage-content-source-toggle" data-action="toggle-manage-content-section" data-section-id="${esc(id)}" type="button" aria-expanded="${!collapsed}">
-<span class="manage-content-unit-chevron" aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
-<span class="manage-content-source-toggle-heading"><strong>${esc(title)}</strong>${kicker ? `<span class="kicker">${esc(kicker)}</span>` : ""}</span>
-</button>
-${collapsed ? "" : `<div class="manage-content-source-body">${bodyMarkup}</div>`}
-</section>`;
-}
-
-// Which source card a question group nests under. UNIT_SOURCES only covers
-// case-001/004/007 today (all three Map Missions, now fully locked and
-// never reaching this function — see manageContentCaseScreen()'s early
-// return for route === "field"), so this has no live case yet — see
-// docs/architecture/ARCHITECTURE-QUICKREF.md's Phase 24 note on this same
-// UNIT_SOURCES coverage gap. Kept general rather than case-specific so a
-// future Activity Mission with real sources works without further changes.
-function manageContentSourceGroups() {
-  return contentUiState.slots
-    .filter((s) => s.slotKind === "source")
-    .map((slot) => ({ id: slot.officialId, source: slot.previewContent, locked: false }));
-}
-
-function manageContentGroupBodyMarkup(group, questions) {
-  const sourcePreview = sourcePreviewCardMarkup(group.source);
-  const editSourceBtn = !group.locked
-    ? `<button class="btn btn-plain manage-content-edit-btn" data-action="start-edit-source" data-official-id="${esc(group.source.id)}" type="button">Edit this source →</button>`
-    : "";
-  const cards = questions.map(manageContentQuestionEntryMarkup).join("");
-  // Rendered here (appended after the card list) only for a brand-new
-  // question, or for editing the source itself — sources have no card of
-  // their own in `questions` to render in place. Editing an *existing*
-  // question renders inline via manageContentQuestionEntryMarkup() instead,
-  // even though it shares this group's relatedSourceId.
-  const showAddForm =
-    manageContentAuthoring &&
-    ((manageContentAuthoring.formMode === "add" &&
-      manageContentAuthoring.relatedSourceId === group.id) ||
-      (manageContentAuthoring.slotKind === "source" &&
-        manageContentAuthoring.editingOfficialId === group.source.id));
-  return `${sourceFlowNoteMarkup(group.source)}
-${investigationGatePreviewMarkup(group.source)}
-<div class="manage-content-source-preview-wrap">${sourcePreview}${editSourceBtn}</div>
-<h4 class="manage-content-questions-heading">Practice Check questions about this source</h4>
-<p class="manage-content-editable-note">Editable, and optional for students — these appear later on the separate Practice Check screen, not while reading this source, and don't affect whether it unlocks.</p>
-${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">No questions about this source yet.</p>`}
-${
-  showAddForm
-    ? manageContentAuthoringFormMarkup()
-    : `<button class="manage-content-add-tab" disabled title="Coming soon — for now you can adjust existing questions or swap in an alternate." type="button">+ Add new question about this source</button>`
-}`;
-}
-
-function manageContentGeneralGroupBodyMarkup(
-  questions,
-  emptyText = "No general questions yet.",
-  additionsSupported = false
-) {
-  const cards = questions.map(manageContentQuestionEntryMarkup).join("");
-  const showAddForm =
-    manageContentAuthoring &&
-    manageContentAuthoring.formMode === "add" &&
-    !manageContentAuthoring.relatedSourceId;
-  // A teacher-added question only reaches real students through Archive
-  // Challenges (see archiveChallengesScreen()'s additionCards) — a case
-  // without its own case.archiveChallenge has nowhere for one to render, so
-  // the button stays disabled there rather than silently saving a question
-  // no student will ever see.
-  const addButton = additionsSupported
-    ? `<button class="manage-content-add-tab" data-action="start-add-question" type="button">+ Add new question</button>`
-    : `<button class="manage-content-add-tab" disabled title="Only supported for missions with an Archive Challenge, for now." type="button">+ Add new question</button>`;
-  return `${cards ? `<div class="manage-content-slot-stack">${cards}</div>` : `<p class="case-summary-note">${esc(emptyText)}</p>`}
-${showAddForm ? manageContentAuthoringFormMarkup() : addButton}`;
-}
-
-// Map Missions (route === "field") never reach this function — see
-// manageContentCaseScreen()'s early return, which shows its own fixed
-// locked-panel copy instead.
-function missionFlowSummary() {
-  return "Fixed: this mission's activity mechanic and layout. Editable below: its sources (if any) and its practice or Archive Challenge questions.";
-}
-
-const AUTHORING_TYPE_LABELS = {
-  source: "source",
-  ...Object.fromEntries(
-    Object.entries(QUEST_TYPE_DISPLAY_NAMES).map(([key, name]) => [key, `${name} question`])
-  ),
-};
-
-// Which real source document (if any) a question is grouped under — shown
-// on every quest-type editing form uniformly, as a plain (non-editable)
-// label. This is presentational grouping only, never part of any quest
-// content schema — related_source_id is never read by grading or by what a
-// student actually sees paired with a source in play, it only decides
-// which section of this editor a question's card renders under. It used to
-// be a <select>, which looked like it could re-link a question to a
-// different source; it can't, and sources are fixed to the map, so a
-// dropdown here was actively misleading. Grouping is set once, at creation
-// time, from which "+ Add question" button was clicked. Not shown for
-// slotKind "source" itself (a source isn't grouped under another source),
-// and not shown for a case with no UNIT_SOURCES entries (nothing to link).
-function linkedSourceFieldMarkup(auth) {
-  const caseSources = UNIT_SOURCES[contentUiState.selectedCaseId] || [];
-  if (!caseSources.length) return "";
-  const label =
-    caseSources.find((s) => s.id === auth.relatedSourceId)?.title ||
-    "No linked source — general question";
-  return `<p class="manage-content-locked-linked-source">Grouped under: <strong>${esc(label)}</strong></p>`;
-}
-
 // Sources available to select in the current case's authoring forms (HIPP
 // document text, evidence-organizing record fields) — drawn from the
 // classroom's curated Sources-tab pool for the case's unit
@@ -2939,21 +2575,26 @@ function poolSourcesForCopy() {
   return items;
 }
 
-function sourceCopyOptionsMarkup() {
+function sourceCopyOptionsMarkup(selectedValue) {
   return poolSourcesForCopy()
-    .map(
-      ({ id, kind, item }) =>
-        `<option value="${kind}:${esc(id)}">${esc(item.title)}${kind === "visual" ? " (visual)" : ""}</option>`
-    )
+    .map(({ id, kind, item }) => {
+      const value = `${kind}:${id}`;
+      return `<option value="${esc(value)}" ${value === selectedValue ? "selected" : ""}>${esc(item.title)}${kind === "visual" ? " (visual)" : ""}</option>`;
+    })
     .join("");
 }
 
 // Maps a picked "Select source" option's value ("text:<id>" or
 // "visual:<id>", as built by sourceCopyOptionsMarkup()) to the
-// {label, attribution, excerpt} triad both the HIPP and evidence-organizing
-// authoring forms autofill from. Visual sources have no creator/date/excerpt
-// fields, so they map onto citation/description instead. Returns null for a
-// value that doesn't resolve to a real pool entry (e.g. the blank
+// {label, attribution, excerpt, fullText} fields the HIPP and
+// evidence-organizing authoring forms autofill from. Visual sources have no
+// creator/date/excerpt/fullText fields, so they map onto citation/description
+// instead. `fullText` is only ever present on a text-source library entry
+// that's actually been transcribed (primary-source-library.schema.js —
+// absent means "not yet transcribed," not "this source has none") — the
+// HIPP document-text field prefers it over the short `excerpt` when present,
+// see the [data-copy-hipp-source] branch of handleAppChange(). Returns null
+// for a value that doesn't resolve to a real pool entry (e.g. the blank
 // "— Choose —" option, or a stale id no longer in the catalog).
 export function resolvePoolSourceFields(value) {
   const separatorIndex = value.indexOf(":");
@@ -2963,8 +2604,13 @@ export function resolvePoolSourceFields(value) {
   const item = kind === "visual" ? getVisualSourceById(id) : getPrimarySourceById(id);
   if (!item) return null;
   return kind === "visual"
-    ? { label: item.title, attribution: item.citation, excerpt: item.description }
-    : { label: item.title, attribution: `${item.creator}, ${item.date}`, excerpt: item.excerpt };
+    ? { label: item.title, attribution: item.citation, excerpt: item.description, fullText: null }
+    : {
+        label: item.title,
+        attribution: `${item.creator}, ${item.date}`,
+        excerpt: item.excerpt,
+        fullText: item.fullText || null,
+      };
 }
 
 // Shared "Select source" control for the evidence-organizing (per-record-row)
@@ -2976,15 +2622,21 @@ export function resolvePoolSourceFields(value) {
 // replaced — the "Manage sources →" link is how a teacher gets there to add
 // some. selectAttrs carries whatever data-* attributes the caller's specific
 // <select> needs (data-copy-evidence-source plus a row index, or just
-// data-copy-hipp-source).
-function sourcePickerFieldMarkup(selectAttrs) {
-  const copyOptions = sourceCopyOptionsMarkup();
+// data-copy-hipp-source — HIPP's also carries data-authoring-field so the
+// generic syncAuthoringFieldsFromDom() scalar loop keeps it in `fields`
+// automatically). `selectedValue` is the pool value ("text:<id>"/"visual:<id>")
+// to render as selected, so a picked source's name stays visible after the
+// autofill re-renders this control — a blank/`undefined` value (never
+// picked, or an existing record that wasn't copied from the pool) shows
+// "— Choose —" instead.
+function sourcePickerFieldMarkup(selectAttrs, selectedValue) {
+  const copyOptions = sourceCopyOptionsMarkup(selectedValue);
   if (!copyOptions) return "";
   const unitNumber = currentUnitNumber();
   const manageLink = unitNumber
     ? `<button type="button" class="btn btn-plain manage-content-source-picker-link" data-action="go-to-sources-tab" data-unit="${unitNumber}">Manage sources →</button>`
     : "";
-  return `<label class="manage-content-copy-field">Select source<select ${selectAttrs}><option value="">— Choose —</option>${copyOptions}</select></label>${manageLink}`;
+  return `<label class="manage-content-copy-field">Select source<select ${selectAttrs}><option value="" ${selectedValue ? "" : "selected"}>— Choose —</option>${copyOptions}</select></label>${manageLink}`;
 }
 
 function mcqFieldsMarkup(fields) {
@@ -3056,7 +2708,7 @@ function evidenceOrganizingFieldsMarkup(fields) {
   const sourceRows = sources
     .map(
       (source, i) => `<div class="manage-content-evidence-source-row">
-${sourcePickerFieldMarkup(`data-copy-evidence-source data-row-index="${i}"`)}
+${sourcePickerFieldMarkup(`data-copy-evidence-source data-row-index="${i}"`, source.sourcePoolValue)}
 <input type="text" data-source-label value="${esc(source.label)}" placeholder="Record label">
 <input type="text" data-source-attribution value="${esc(source.attribution)}" placeholder="Attribution">
 <textarea data-source-excerpt rows="2" placeholder="Excerpt shown to students">${esc(source.excerpt)}</textarea>
@@ -3108,7 +2760,7 @@ function hippFieldsMarkup(fields) {
 </div>`;
     })
     .join("");
-  return `${sourcePickerFieldMarkup("data-copy-hipp-source")}
+  return `${sourcePickerFieldMarkup('data-copy-hipp-source data-authoring-field="hippSourcePoolValue"', fields.hippSourcePoolValue)}
 <label>Document text<textarea data-authoring-field="documentText" rows="6">${esc(fields.documentText)}</textarea></label>
 <label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
 <div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
@@ -3119,63 +2771,35 @@ function hippFieldsMarkup(fields) {
 
 function authoringFieldsMarkup(auth) {
   const { slotKind, fields } = auth;
-  if (slotKind === "source") {
-    return `<label>Type (e.g. "Primary source · letter")<input type="text" data-authoring-field="type" value="${esc(fields.type)}"></label>
-<label>Title<input type="text" data-authoring-field="title" value="${esc(fields.title)}"></label>
-<label>Creator<input type="text" data-authoring-field="creator" value="${esc(fields.creator)}"></label>
-<label>Date<input type="text" data-authoring-field="date" value="${esc(fields.date)}"></label>
-<label>Record<input type="text" data-authoring-field="record" value="${esc(fields.record)}"></label>
-<label>Source text (shown to students)<textarea data-authoring-field="excerpt" rows="6">${esc(fields.excerpt)}</textarea></label>
-<label>Reading question<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
-  }
-  const linkedSource = linkedSourceFieldMarkup(auth);
-  if (slotKind === "mcq") return linkedSource + mcqFieldsMarkup(fields);
-  if (slotKind === "sequencing") return linkedSource + sequencingFieldsMarkup(fields);
-  if (slotKind === "evidence-organizing")
-    return linkedSource + evidenceOrganizingFieldsMarkup(fields);
-  return linkedSource + hippFieldsMarkup(fields);
+  if (slotKind === "mcq") return mcqFieldsMarkup(fields);
+  if (slotKind === "sequencing") return sequencingFieldsMarkup(fields);
+  if (slotKind === "evidence-organizing") return evidenceOrganizingFieldsMarkup(fields);
+  return hippFieldsMarkup(fields);
 }
 
+// Renders either the 4-card activity-type picker (Replace, before a type is
+// chosen) or the field editor for the currently chosen slotKind — no
+// Save/Cancel/Preview actions of its own, since those differ between Edit's
+// single always-open editor and Replace's type-picker -> editor progression
+// (see manageContentWorkspaceStepMarkup(), the caller).
 function manageContentAuthoringFormMarkup() {
   const auth = manageContentAuthoring;
   if (!auth) return "";
-  const verb =
-    auth.formMode === "add" ? "Add a new" : auth.formMode === "replace" ? "Replace this" : "Edit";
-  const heading = `${verb} question${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}`;
   if (!auth.slotKind) {
-    // A mission built via Replace can be built as any of the 4 types (that
-    // IS the choice Replace exists to make) — this constraint only applies
-    // to "add" mode's type-picker, so an added question can't introduce a
-    // second type onto a mission that already has one. See
-    // primaryQuestSlotType()'s doc comment for why one mission = one type.
-    const constrainType = auth.formMode === "add" ? auth.constrainToType : null;
     const typeCards = Object.entries(QUEST_TYPE_DISPLAY_NAMES)
-      .map(([key, name]) => {
-        const locked = constrainType && key !== constrainType;
-        return locked
-          ? `<button class="manage-content-type-card" disabled title="This mission is already built as ${esc(QUEST_TYPE_DISPLAY_NAMES[constrainType])} — for a different question type, build it on a different mission." type="button"><strong>${esc(name)}</strong><span>${esc(QUEST_TYPE_DESCRIPTIONS[key])}</span></button>`
-          : `<button class="manage-content-type-card" data-action="pick-question-type" data-slot-kind="${esc(key)}" type="button"><strong>${esc(name)}</strong><span>${esc(QUEST_TYPE_DESCRIPTIONS[key])}</span></button>`;
-      })
+      .map(
+        ([key, name]) =>
+          `<button class="manage-content-type-card" data-action="pick-question-type" data-slot-kind="${esc(key)}" type="button"><strong>${esc(name)}</strong><span>${esc(QUEST_TYPE_DESCRIPTIONS[key])}</span></button>`
+      )
       .join("");
     return `<div class="manage-content-authoring-form manage-content-type-picker">
-<h4>${heading}</h4>
-<p>Choose a question type:</p>
-<div class="manage-content-type-picker-options">
-${typeCards}
-<button class="btn btn-plain" disabled title="SAQ doesn't exist as a quest type in the engine yet — a separate, larger effort, not part of this editor." type="button">SAQ — not available yet</button>
-</div>
-<button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>
+<div class="manage-content-type-picker-options">${typeCards}</div>
 </div>`;
   }
   return `<div class="manage-content-authoring-form">
-<h4>${verb} ${esc(AUTHORING_TYPE_LABELS[auth.slotKind])}${auth.relatedSourceLabel ? ` — about ${esc(auth.relatedSourceLabel)}` : ""}</h4>
 ${auth.errors.length ? `<ul class="manage-content-authoring-errors">${auth.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
 <div data-authoring-form>
 ${authoringFieldsMarkup(auth)}
-</div>
-<div class="manage-content-authoring-actions">
-<button class="btn btn-gold" data-action="save-authoring" type="button">Save</button>
-<button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>
 </div>
 </div>`;
 }
@@ -3201,15 +2825,19 @@ function manageContentCaseScreen() {
   if (!activeCase) {
     return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← All cases</button></section></main>${authorPanel()}`;
   }
+  // Map Missions are entirely fixed content — the walkable map, its NPCs/
+  // sources, and its Practice Check questions are all locked — so this is
+  // the only screen a Map Mission ever shows here: no wizard, no edit/
+  // replace controls, just a name field and a way to preview the real map.
   if (activeCase.route === "field") {
     return `${chrome()}<main class="shell manage-content-shell"><section>
-<button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>
-<p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
-<h1>${esc(resolvedCaseTitle(activeCase))}</h1>
-<p>${esc(activeCase.summary)}</p>
+${manageContentWizardHeaderMarkup(activeCase)}
 ${missionRenameControlMarkup(activeCase)}
-<p class="locked-note">Map Missions are entirely fixed content — the walkable map, its NPCs and sources, and its Practice Check questions are all locked. Nothing here is editable.</p>
-<button class="btn btn-outline" data-action="toggle-content-preview" type="button">Preview as student →</button>
+<p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
+<div class="manage-content-wizard-choice-actions">
+<button class="btn btn-outline" data-action="toggle-content-preview" type="button">Student Preview</button>
+<button class="btn btn-plain" data-action="back-to-teacher-dashboard" type="button">Back</button>
+</div>
 </section></main>${authorPanel()}`;
   }
   const step = contentUiState.wizardStep || "name";
@@ -3218,151 +2846,124 @@ ${missionRenameControlMarkup(activeCase)}
       ? manageContentPreviewStepMarkup(activeCase)
       : step === "edit" || step === "replace"
         ? manageContentWorkspaceStepMarkup(activeCase)
-        : manageContentNameStepMarkup(activeCase);
+        : step === "published"
+          ? manageContentPublishedStepMarkup(activeCase)
+          : manageContentNameStepMarkup(activeCase);
   return `${chrome()}<main class="shell manage-content-shell"><section>
 ${stepMarkup}
 </section></main>${authorPanel()}`;
 }
 
-// Shared "← All cases / kicker / title / summary" block every wizard step
-// opens with — factored out once the flat single-screen body below it
-// started branching by contentUiState.wizardStep.
+// Shared "← All cases / case number / mission name / description" block
+// every wizard step opens with. The kicker is just the case's number (e.g.
+// "Case 1.02"), not its kind/mechanic — that's internal bookkeeping a
+// teacher doesn't need to see here (it still shows on the mission list card,
+// manageContentMissionCardMarkup()) — so the mission's real name only ever
+// appears once, in the h1.
 function manageContentWizardHeaderMarkup(activeCase) {
+  const caseNumber = splitCaseTitle(activeCase)
+    .prefix.replace(/\s*—\s*$/, "")
+    .trim();
   return `<button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>
-<p class="kicker">${esc(activeCase.shortTitle)} · ${esc(caseKindLabel(activeCase))}</p>
+<p class="kicker">${esc(caseNumber || activeCase.shortTitle)}</p>
 <h1>${esc(resolvedCaseTitle(activeCase))}</h1>
 <p>${esc(activeCase.summary)}</p>`;
 }
 
-// Step 1 — "Name": the only thing a teacher sees before committing to look
-// at this mission's content at all, per the user's requested flow (Name ->
-// Preview Standard Mission -> Keep/Edit/Replace). Renaming was already a
-// standalone, always-available control (missionRenameControlMarkup()); it
-// now lives here rather than at the top of every step, since a rename isn't
-// itself part of the Keep/Edit/Replace decision.
+// Step 1 — "Mission Overview": the only thing a teacher sees before
+// committing to look at this mission's content at all — name (editable) and
+// a single "Preview Standard Mission" button. Nothing about editing or
+// replacing shows here; that choice only appears after previewing.
 function manageContentNameStepMarkup(activeCase) {
   return `${manageContentWizardHeaderMarkup(activeCase)}
 ${missionRenameControlMarkup(activeCase)}
-<p class="manage-content-flow-strip">${esc(missionFlowSummary())}</p>
 ${feedbackError(contentUiState)}
 <button class="btn btn-gold" data-action="wizard-go-preview" type="button">Preview Standard Mission →</button>`;
 }
 
-// Step 2 — "Preview Standard Mission": a frozen, read-only render of
-// whatever a student sees RIGHT NOW (the published state, not the draft —
-// see publishedPreviewContent's doc comment in loadManageContentCaseData())
-// followed by the mission-level Keep / Edit / Replace choice. Map Missions
-// never reach this (manageContentCaseScreen()'s route === "field" early
-// return above), so contentUiState.slots here is always just source-less
-// quest slots — the one official quest slot every non-map mission has as of
-// the Phase A migrations (see docs/architecture/ARCHITECTURE-QUICKREF.md).
+// Step 2 — "Student Preview": the case's one Archive Challenge activity,
+// live and fully interactive (see enterContentPreview()'s inline mode —
+// grading/save() both no-op while previewSession is active, so nothing a
+// teacher does here reaches real student data), followed by the one
+// mission-level decision. Map Missions never reach this step — see
+// manageContentCaseScreen()'s route === "field" branch above.
 function manageContentPreviewStepMarkup(activeCase) {
-  const slot = contentUiState.slots.find((s) => s.slotKind !== "source");
+  const slot = contentUiState.slot;
   const previewBody = slot
-    ? `<div class="quest-preview-frozen"><p class="quest-preview-label">Student view · current live (published) version</p>${renderQuest(slot.publishedSlotKind, slot.publishedPreviewContent, {})}</div>`
-    : `<p class="case-summary-note">This mission has no swappable content yet.</p>`;
+    ? `<div class="manage-content-live-preview">${archiveChallengeCard("", slot.slotKind, slot.officialId)}</div>`
+    : `<p class="case-summary-note">This mission has no activity configured yet.</p>`;
   return `${manageContentWizardHeaderMarkup(activeCase)}
 ${previewBody}
 ${feedbackError(contentUiState)}
 <div class="manage-content-wizard-choice">
-<p class="manage-content-wizard-choice-prompt">Keep this mission, edit it, or replace it with your own?</p>
+<p class="manage-content-wizard-choice-prompt">Use this mission?</p>
 <div class="manage-content-wizard-choice-actions">
-<button class="btn btn-gold" data-action="back-to-teacher-dashboard" type="button">Keep this mission</button>
-<button class="btn btn-outline" data-action="wizard-go-edit" type="button">Edit this mission</button>
-<button class="btn btn-outline" data-action="wizard-go-replace" type="button">Replace with your own</button>
+<button class="btn btn-gold" data-action="keep-and-publish" type="button">Keep &amp; Publish</button>
+<button class="btn btn-outline" data-action="wizard-go-edit" type="button">Edit This Activity</button>
+<button class="btn btn-outline" data-action="wizard-go-replace" type="button">Replace Activity</button>
 </div>
 </div>
 <button class="back-link" data-action="wizard-go-name" type="button">← Back</button>`;
 }
 
-// Persistent "Select Original" toggle — lets a teacher flip between their
-// own built replacement and the untouched official version at any point
-// during Edit/Replace, never a one-way destructive swap. Reuses the exact
-// same draft-selection mechanism as the existing per-question Alternate
-// dropdown's "— Official version —" option (setDraftSelection(..., null)),
-// just surfaced as one prominent always-visible control instead of a
-// dropdown a teacher has to already know to look for. Renders nothing once
-// this mission has never had a custom replacement built for it — nothing to
-// toggle to yet.
-function manageContentSelectOriginalToggleMarkup() {
-  const slot = contentUiState.slots.find((s) => s.slotKind !== "source");
-  if (!slot || !slot.latestCustomAltId) return "";
-  const showingCustom = slot.draftAltId === slot.latestCustomAltId && slot.draftAltKind === "custom";
-  const targetAltId = showingCustom ? "" : slot.latestCustomAltId;
-  const targetAltKind = showingCustom ? "curated" : "custom";
-  return `<div class="manage-content-select-original">
-<span class="manage-content-status-pill ${showingCustom ? "is-draft" : "is-published"}" role="status" aria-live="polite">Currently editing: ${showingCustom ? "Your version" : "Original"}</span>
-<button class="btn btn-plain" data-action="toggle-select-original" data-slot-kind="${esc(slot.slotKind)}" data-official-id="${esc(slot.officialId)}" data-target-alt-id="${esc(targetAltId)}" data-target-alt-kind="${esc(targetAltKind)}" type="button">${showingCustom ? "Select Original" : "Select Your Version"}</button>
+// Step 3A — "Published": explicit confirmation after any of the three
+// publish paths (Keep & Publish, Edit's Save & Publish, Replace's
+// Save & Publish, or Restore Standard Version) — a teacher should never be
+// silently dropped back at the case list after publishing.
+function manageContentPublishedStepMarkup(activeCase) {
+  if (isPreviewingContent()) {
+    const slot = contentUiState.slot;
+    return `${manageContentWizardHeaderMarkup(activeCase)}
+<div class="manage-content-live-preview">${slot ? archiveChallengeCard("", slot.slotKind, slot.officialId) : ""}</div>
+<button class="back-link" data-action="exit-content-preview" type="button">← Back</button>`;
+  }
+  return `${manageContentWizardHeaderMarkup(activeCase)}
+<p class="manage-content-published-banner">Published — ${esc(resolvedCaseTitle(activeCase))} is now available to students.</p>
+<div class="manage-content-wizard-choice-actions">
+<button class="btn btn-gold" data-action="back-to-teacher-dashboard" type="button">Return to Cases</button>
+<button class="btn btn-outline" data-action="preview-published-mission" type="button">Preview Published Mission</button>
 </div>`;
 }
 
-// Steps 3/4 — "Edit" and "Replace" share this same workspace: today's
-// existing flat source/question editor (unchanged from before the wizard),
-// just relocated behind the Name/Preview steps and given a persistent
-// Select Original toggle + a way back to the preview step. What actually
-// differs between arriving via "Edit this mission" vs. "Replace with your
-// own" is which action opened it (wizard-go-edit leaves the screen as-is
-// for a teacher to click into an existing question; wizard-go-replace
-// pre-opens the type-picker for this mission's one official slot, mirroring
-// the existing per-question "guided-keep-no" replace flow) — see those two
-// handlers in handleManageContentClick().
+// Steps 3B ("edit") and 3C ("replace") — every non-map mission has exactly
+// one official quest slot (its Archive Challenge, see
+// officialQuestSlotsForCase()'s doc comment), so both steps work on that
+// one slot's single editor: no slot list, no "add new question." "Edit
+// This Activity" opens straight into the existing type's editor
+// (wizard-go-edit); "Replace Activity" opens the 4-card type picker first
+// (wizard-go-replace). While previewing in-progress changes (see
+// "preview-authoring-changes" in handleManageContentClick()), this step
+// shows that ephemeral preview instead of the editor.
 function manageContentWorkspaceStepMarkup(activeCase) {
-  const groups = manageContentSourceGroups();
-  const groupIds = new Set(groups.map((g) => g.id));
-  const questionSlots = contentUiState.slots.filter((s) => s.slotKind !== "source");
-  const generalQuestions = [
-    ...questionSlots.filter((s) => !s.relatedSourceId || !groupIds.has(s.relatedSourceId)),
-    ...contentUiState.additionSlots.filter(
-      (a) => !a.relatedSourceId || !groupIds.has(a.relatedSourceId)
-    ),
-  ];
-  const hasEditableContent =
-    groups.length > 0 || questionSlots.length > 0 || contentUiState.additionSlots.length > 0;
-  const hasUnpublishedDraft =
-    contentUiState.slots.some((s) => s.draftAltId !== s.publishedAltId) ||
-    contentUiState.additionSlots.some((a) => a.status === "draft");
-  const canPreview = caseIsPreviewable(activeCase);
-
-  const groupSections = groups
-    .map((group) =>
-      manageContentSectionMarkup({
-        id: group.id,
-        title: group.source.title,
-        kicker: `${group.source.type}${group.locked ? " · locked to official text" : ""}`,
-        bodyMarkup: manageContentGroupBodyMarkup(group, [
-          ...questionSlots.filter((s) => s.relatedSourceId === group.id),
-          ...contentUiState.additionSlots.filter((a) => a.relatedSourceId === group.id),
-        ]),
-      })
-    )
-    .join("");
-  const generalSection =
-    generalQuestions.length || !groups.length
-      ? manageContentSectionMarkup({
-          id: "general",
-          title: "General questions",
-          kicker: groups.length ? "Not tied to a single source" : undefined,
-          bodyMarkup: manageContentGeneralGroupBodyMarkup(
-            generalQuestions,
-            undefined,
-            Boolean(activeCase.archiveChallenge)
-          ),
-        })
-      : "";
-
+  const isReplace = contentUiState.wizardStep === "replace";
+  const slot = contentUiState.slot;
+  const auth = manageContentAuthoring;
+  if (isPreviewingContent()) {
+    return `${manageContentWizardHeaderMarkup(activeCase)}
+<div class="manage-content-live-preview">${auth?.previewQuest ? archiveChallengeQuestCard("", auth.slotKind, auth.previewQuest) : ""}</div>
+<button class="back-link" data-action="exit-content-preview" type="button">← Back to editing</button>`;
+  }
+  const typeChosen = Boolean(auth?.slotKind);
+  const heading = !typeChosen
+    ? "Choose an activity type"
+    : `${isReplace ? "Replace with" : "Edit"} ${esc(QUEST_TYPE_DISPLAY_NAMES[auth.slotKind])} Activity`;
+  const showRestore = !isReplace && Boolean(slot?.latestCustomAltId);
   return `${manageContentWizardHeaderMarkup(activeCase)}
-${missionRenameControlMarkup(activeCase)}
-<p class="manage-content-flow-strip">${esc(missionFlowSummary())}</p>
-${manageContentSelectOriginalToggleMarkup()}
-${
-  hasEditableContent
-    ? `${groupSections}${generalSection}`
-    : "<p>This mission has no swappable content yet.</p>"
-}
+<h2 class="manage-content-editor-heading">${heading}</h2>
+${isReplace && !typeChosen ? "<p>Choose the activity students will complete for this mission.</p>" : ""}
+${manageContentAuthoringFormMarkup()}
 ${feedbackError(contentUiState)}
-<button class="btn btn-gold" data-action="publish-case-content" type="button" ${hasUnpublishedDraft ? "" : "disabled"}>Publish to students</button>
-<button class="btn btn-outline" data-action="toggle-content-preview" type="button" ${canPreview ? "" : "disabled"}>Preview as student →</button>
-<button class="back-link" data-action="wizard-go-preview" type="button">← Back to preview</button>`;
+${
+  typeChosen
+    ? `<div class="manage-content-authoring-actions">
+<button class="btn btn-outline" data-action="preview-authoring-changes" type="button">${isReplace ? "Preview Replacement" : "Preview Changes"}</button>
+<button class="btn btn-gold" data-action="save-and-publish-authoring" type="button">Save &amp; Publish</button>
+</div>
+${isReplace ? `<button class="btn btn-plain" data-action="replace-choose-type" type="button">← Back to activity types</button>` : ""}
+${showRestore ? `<button class="btn btn-plain" data-action="restore-standard-version" type="button">Restore Standard Version</button>` : ""}`
+    : ""
+}
+<button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>`;
 }
 
 async function loadManageContentCaseData(caseId) {
@@ -3423,55 +3024,24 @@ async function loadManageContentCaseData(caseId) {
       (customReplacementsBySlot[item.replaces_official_id] ??= []).push(item);
     }
 
-    const sourceSlots = (UNIT_SOURCES[caseId] || []).map((source) => {
-      const key = `source:${source.id}`;
-      const draft = bySlot[key]?.draft || null;
-      const published = bySlot[key]?.published || null;
-      const customAlts = (customReplacementsBySlot[source.id] || []).map((item) => ({
-        id: item.id,
-        label: item.content.title || "Custom",
-        kind: "custom",
-      }));
-      const previewContent =
-        draft && draft.kind === "custom"
-          ? customById.get(draft.id)?.content || source
-          : draft
-            ? sourceAlternateById(draft.id) || source
-            : source;
-      return {
-        slotKind: "source",
-        officialId: source.id,
-        officialLabel: source.title,
-        relatedSourceId: source.id,
-        draftAltId: draft?.id || null,
-        draftAltKind: draft?.kind || "curated",
-        publishedAltId: published?.id || null,
-        alternatives: [
-          ...alternativesForSourceSlot(source.id).map((a) => ({ ...a, kind: "curated" })),
-          ...customAlts,
-        ],
-        previewContent,
-      };
-    });
-    const questSlots = officialQuestSlotsForCase(caseId).map(({ questType, quest }) => {
+    const officialSlot = officialQuestSlotsForCase(caseId)[0];
+    if (!officialSlot) {
+      contentUiState.slot = null;
+    } else {
+      const { questType, quest } = officialSlot;
       const key = `${questType}:${quest.id}`;
       const draft = bySlot[key]?.draft || null;
       const published = bySlot[key]?.published || null;
       const replacementItems = customReplacementsBySlot[quest.id] || [];
-      const customAlts = replacementItems.map((item) => {
-        const label = item.content.prompt || item.content.question;
-        return { id: item.id, label: label ? label.slice(0, 80) : "Custom", kind: "custom" };
-      });
-      // Which custom replacement row to offer as "your version" on the
-      // persistent Select Original toggle (manageContentSelectOriginalToggleMarkup())
-      // when the draft/published slot isn't currently pointed at a custom
-      // row at all (e.g. reverted to official) — the most recently
-      // saved/updated one, since a slot is only ever meant to hold one
-      // teacher-built replacement at a time even though old rows aren't
-      // deleted on a type change.
+      // Which custom replacement row "Restore Standard Version" un-does when
+      // the draft isn't currently pointed at a custom row at all (e.g.
+      // already reverted to official) — the most recently saved/updated
+      // one, since a slot only ever holds one teacher-built replacement at
+      // a time even though old rows aren't deleted on a type change.
       const latestCustomAltId = replacementItems.length
         ? [...replacementItems].sort(
-            (a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)
+            (a, b) =>
+              new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)
           )[0].id
         : null;
       const previewContent =
@@ -3480,63 +3050,28 @@ async function loadManageContentCaseData(caseId) {
           : draft
             ? questAlternateById(questType, draft.id) || quest
             : quest;
-      // The type previewContent should actually be interpreted/rendered as
-      // right now — usually questType (the stable official type), but a
-      // custom draft's own slot_kind can genuinely differ (a teacher-
-      // authored type-changing replacement — see resolveQuestSlotWithType()
-      // in remote-content-selection-repository.js for the student-facing
-      // equivalent). slotKind below stays the stable identifier; this is
-      // what the guided flow/quick-edit read to know what type they're
-      // actually looking at.
+      // What this slot is currently authored/rendered as — usually
+      // questType (the stable official type), but a custom draft's own
+      // slot_kind can genuinely differ (a teacher-authored type-changing
+      // replacement — see resolveQuestSlotWithType() in
+      // remote-content-selection-repository.js for the student-facing
+      // equivalent).
       const currentSlotKind =
         draft && draft.kind === "custom"
           ? customById.get(draft.id)?.slot_kind || questType
           : questType;
-      // Same resolution as previewContent/currentSlotKind above but against
-      // the PUBLISHED row instead of the draft one — what a student
-      // actually sees right now, used by the wizard's "Preview Standard
-      // Mission" step (manageContentPreviewStepMarkup()) so it never shows
-      // an unsaved/unpublished draft as if it were already live.
-      const publishedPreviewContent =
-        published && published.kind === "custom"
-          ? customById.get(published.id)?.content || quest
-          : published
-            ? questAlternateById(questType, published.id) || quest
-            : quest;
-      const publishedSlotKind =
-        published && published.kind === "custom"
-          ? customById.get(published.id)?.slot_kind || questType
-          : questType;
-      return {
+      contentUiState.slot = {
         slotKind: questType,
         currentSlotKind,
         officialId: quest.id,
         officialLabel: quest.prompt,
-        relatedSourceId: OFFICIAL_QUEST_SOURCE_LINKS[quest.id] || null,
         draftAltId: draft?.id || null,
         draftAltKind: draft?.kind || "curated",
         publishedAltId: published?.id || null,
-        publishedAltKind: published?.kind || "curated",
-        publishedSlotKind,
-        publishedPreviewContent,
         latestCustomAltId,
-        alternatives: [
-          ...alternativesForQuestSlot(questType, quest.id).map((a) => ({ ...a, kind: "curated" })),
-          ...customAlts,
-        ],
         previewContent,
       };
-    });
-    contentUiState.slots = [...sourceSlots, ...questSlots];
-    contentUiState.additionSlots = customItems
-      .filter((item) => item.mode === "addition")
-      .map((item) => ({
-        id: item.id,
-        slotKind: item.slot_kind,
-        relatedSourceId: item.related_source_id,
-        content: item.content,
-        status: item.status,
-      }));
+    }
   } catch (err) {
     reportUiError(contentUiState, err, "Could not load this case's content.");
   }
@@ -3589,6 +3124,12 @@ function syncAuthoringFieldsFromDom(slotKind, formEl) {
       excerpt: row.querySelector("[data-source-excerpt]").value,
       skillCategory: row.querySelector("[data-source-skill]").value,
       correctSlotId: row.querySelector("[data-source-slot]").value,
+      // Which pool source (if any) is picked in this row's "Select source"
+      // control — UI-only bookkeeping so the picker keeps showing the
+      // chosen source's name after the copy-in re-renders it (see
+      // sourcePickerFieldMarkup()'s doc comment); never part of the saved
+      // quest content itself.
+      sourcePoolValue: row.querySelector("[data-copy-evidence-source]")?.value || "",
     }));
   } else if (slotKind === "hipp") {
     fields.hippPrompts = [
@@ -3620,75 +3161,81 @@ function reorderSequenceItems(items, movedIndex, targetPosition) {
   return rest.map((item, i) => ({ ...item, position: i }));
 }
 
-function handleSaveAuthoring() {
+// Validates the open authoring form's current fields and persists them as
+// this slot's draft selection (a new or reused custom_content_items
+// "replacement" row, then setDraftSelection pointing the slot at it) —
+// shared by "save-and-publish-authoring" (which publishes right after) and
+// nothing else, since "preview-authoring-changes" builds its ephemeral
+// preview straight from the in-memory content instead of persisting
+// anything (see manageContentAuthoring.previewQuest's doc comment).
+// Returns a Promise resolving once persisted, or null if validation failed
+// (errors are already rendered onto the form in that case).
+function persistAuthoringSelection() {
   const auth = manageContentAuthoring;
-  if (!auth || !auth.slotKind) return;
+  if (!auth || !auth.slotKind) return null;
   const formEl = currentAuthoringFormEl();
   const fields = syncAuthoringFieldsFromDom(auth.slotKind, formEl);
-  const relatedSourceEl = formEl.querySelector('[data-authoring-field="relatedSourceId"]');
-  const relatedSourceId = relatedSourceEl ? relatedSourceEl.value || null : auth.relatedSourceId;
-  const result = buildAuthoredContent(auth.slotKind, fields, auth.sourceWiring);
+  const result = buildAuthoredContent(auth.slotKind, fields);
   if (!result.ok) {
-    manageContentAuthoring = { ...auth, fields, relatedSourceId, errors: result.errors };
+    manageContentAuthoring = { ...auth, fields, errors: result.errors };
     render();
-    return;
+    return null;
   }
   const classroomId = teacherUiState.selectedClassroomId;
   const caseId = contentUiState.selectedCaseId;
-  const isReplacement = Boolean(auth.editingOfficialId);
   // A previously-saved custom row's slot_kind is fixed at creation
   // (updateCustomContent never changes it) — reusing it via update is only
   // safe when the currently-chosen type still matches what it was created
-  // as. Picking a genuinely different type (via the guided replace flow's
-  // type picker) always creates a fresh row instead, even if one already
-  // existed for this slot, so its stored slot_kind always matches its
-  // content shape.
+  // as. Picking a genuinely different type (via Replace's type picker)
+  // always creates a fresh row instead, even if one already existed for
+  // this slot, so its stored slot_kind always matches its content shape.
   const canReuseExistingCustomRow =
     auth.editingCustomId && auth.slotKind === auth.currentSlotKindAtStart;
   const persist = canReuseExistingCustomRow
-    ? updateCustomContent(auth.editingCustomId, { content: result.content, relatedSourceId })
+    ? updateCustomContent(auth.editingCustomId, { content: result.content })
     : createCustomContent({
         classroomId,
         caseId,
         slotKind: auth.slotKind,
-        mode: isReplacement ? "replacement" : "addition",
+        mode: "replacement",
         replacesOfficialId: auth.editingOfficialId,
-        relatedSourceId,
         content: result.content,
       });
-  persist
-    .then((row) =>
-      isReplacement
-        ? setDraftSelection(
-            classroomId,
-            caseId,
-            auth.officialSlotKind || auth.slotKind,
-            auth.editingOfficialId,
-            row.id,
-            "custom"
-          )
-        : null
+  return persist.then((row) =>
+    setDraftSelection(
+      classroomId,
+      caseId,
+      auth.officialSlotKind || auth.slotKind,
+      auth.editingOfficialId,
+      row.id,
+      "custom"
     )
-    .then(() => {
-      manageContentAuthoring = null;
-      return loadManageContentCaseData(caseId);
-    })
-    .catch(catchUiError(contentUiState, "Could not save this question."));
+  );
 }
 
 // Real "Preview as student" — no bespoke preview markup. Switches the
-// resolution cache to draft and navigates into the actual screen a student
-// would land on: the real walkable field screen for map missions (fully
-// playable — movement, collision, NPCs, Practice Check), or the real
-// Archive Challenges screen for a mission whose only editable content is a
-// case-level Archive Challenge. Nothing here is persisted — see
-// previewSession's own comment and the save() guard above.
-function enterContentPreview(caseId) {
+// resolution cache to draft and, unless `inline` is set, navigates into the
+// actual screen a student would land on: the real walkable field screen for
+// map missions (fully playable — movement, collision, NPCs, Practice
+// Check), or the real Archive Challenges screen for a mission whose only
+// editable content is a case-level Archive Challenge. `inline: true` (used
+// by the redesigned Manage Content wizard's Screen 2/3A) stays on the
+// current screen instead, letting the caller render the same live,
+// interactive widget (archiveChallengeCard()) directly inside the wizard —
+// exitContentPreview() already handles both cases correctly since it only
+// navigates when a snapshot was actually taken. Nothing here is persisted —
+// see previewSession's own comment and the save() guard above.
+function enterContentPreview(caseId, { inline = false } = {}) {
   const kase = caseById(caseId);
   if (!kase) return;
   const isMapCase = kase.route === "field";
   if (!caseIsPreviewable(kase)) return;
   loadSelectionsForResolution(teacherUiState.selectedClassroomId, "draft").then(() => {
+    if (inline) {
+      previewSession = { active: true, snapshot: null };
+      render();
+      return;
+    }
     previewSession = {
       active: true,
       snapshot: {
@@ -3773,13 +3320,12 @@ function handleManageContentClick(target, action) {
     contentUiState = {
       selectedCaseId: target.dataset.caseId,
       wizardStep: "name",
-      slots: [],
-      additionSlots: [],
+      slot: null,
       error: "",
       pending: false,
     };
-    manageContentExpandedSectionIds = new Set();
     manageContentAuthoring = null;
+    previewSession = { active: false, snapshot: null };
     progress.currentScreen = "manage-content-case";
     save();
     render();
@@ -3788,87 +3334,181 @@ function handleManageContentClick(target, action) {
   }
   if (action === "wizard-go-name") {
     contentUiState.wizardStep = "name";
+    previewSession = { active: false, snapshot: null };
     render();
     return true;
   }
   if (action === "wizard-go-preview") {
     contentUiState.wizardStep = "preview";
     manageContentAuthoring = null;
-    render();
+    enterContentPreview(contentUiState.selectedCaseId, { inline: true });
     return true;
   }
-  // "Edit this mission" — just moves to the workspace step; a teacher then
-  // clicks the existing per-question "Edit →"/"Change this question →"
-  // controls exactly as before the wizard existed.
+  // "Edit This Activity" — opens straight into this mission's one official
+  // slot's editor, pre-filled from its current content (official, or a
+  // teacher's own draft replacement if one exists) — there's no card list
+  // to click into anymore, since a mission has exactly one activity.
   if (action === "wizard-go-edit") {
     contentUiState.wizardStep = "edit";
+    previewSession = { active: false, snapshot: null };
+    const slot = contentUiState.slot;
+    manageContentAuthoring = slot
+      ? {
+          formMode: "edit",
+          slotKind: slot.currentSlotKind || slot.slotKind,
+          officialSlotKind: slot.slotKind,
+          currentSlotKindAtStart: slot.currentSlotKind || slot.slotKind,
+          originalPreviewContent: slot.previewContent,
+          editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
+          editingOfficialId: slot.officialId,
+          fields: authoringFieldsFromContent(
+            slot.currentSlotKind || slot.slotKind,
+            slot.previewContent
+          ),
+          errors: [],
+          previewQuest: null,
+        }
+      : null;
     render();
     return true;
   }
-  // "Replace with your own" — moves to the workspace step AND immediately
-  // opens the type-picker for this mission's one official quest slot, so
-  // "current quest types present themselves" right away rather than
-  // requiring a further click once there. Mirrors the existing per-question
-  // "guided-keep-no" replace flow (see that handler below), just triggered
-  // for the mission's primary slot instead of a specific card's button.
+  // "Replace Activity" — opens the 4-card type picker for this mission's
+  // one official slot (slotKind stays null until "pick-question-type").
   if (action === "wizard-go-replace") {
     contentUiState.wizardStep = "replace";
-    const slot = contentUiState.slots.find((s) => s.slotKind !== "source");
-    if (slot) {
+    previewSession = { active: false, snapshot: null };
+    const slot = contentUiState.slot;
+    manageContentAuthoring = slot
+      ? {
+          formMode: "replace",
+          slotKind: null,
+          officialSlotKind: slot.slotKind,
+          currentSlotKindAtStart: slot.currentSlotKind || slot.slotKind,
+          originalPreviewContent: slot.previewContent,
+          editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
+          editingOfficialId: slot.officialId,
+          fields: {},
+          errors: [],
+          previewQuest: null,
+        }
+      : null;
+    render();
+    return true;
+  }
+  if (action === "replace-choose-type") {
+    if (manageContentAuthoring) {
       manageContentAuthoring = {
-        formMode: "replace",
+        ...manageContentAuthoring,
         slotKind: null,
-        officialSlotKind: slot.slotKind,
-        currentSlotKindAtStart: slot.currentSlotKind || slot.slotKind,
-        originalPreviewContent: slot.previewContent,
-        relatedSourceId: slot.relatedSourceId,
-        relatedSourceLabel: resolvedSourceTitle(contentUiState.selectedCaseId, slot.relatedSourceId),
-        editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
-        editingOfficialId: slot.officialId,
-        sourceWiring: null,
         fields: {},
         errors: [],
+        previewQuest: null,
       };
     }
     render();
     return true;
   }
-  // The persistent Select Original toggle (manageContentSelectOriginalToggleMarkup()) —
-  // flips this mission's one official slot's DRAFT selection between its
-  // teacher-built replacement and the official version. Same underlying
-  // mechanism as the per-question Alternate dropdown's "— Official
-  // version —" option (data-alt-select, above): a draft row, not an instant
-  // publish — the teacher still clicks "Publish to students" to make either
-  // choice live.
-  if (action === "toggle-select-original") {
-    const slotKind = target.dataset.slotKind;
-    const officialId = target.dataset.officialId;
-    const altId = target.dataset.targetAltId || null;
-    const altKind = target.dataset.targetAltKind || "curated";
+  // "Keep & Publish" (Screen 2) — publishes the STANDARD mission regardless
+  // of any leftover unpublished draft: clears the slot's draft selection
+  // back to official first, then publishes that (a cleared draft makes
+  // publishCaseSelections() delete the published row entirely, i.e. revert
+  // to official — see remote-content-selection-repository.js).
+  if (action === "keep-and-publish") {
+    previewSession = { active: false, snapshot: null };
+    const slot = contentUiState.slot;
     const classroomId = teacherUiState.selectedClassroomId;
     const caseId = contentUiState.selectedCaseId;
-    setDraftSelection(classroomId, caseId, slotKind, officialId, altId, altKind)
-      .then(() => loadManageContentCaseData(caseId))
-      .catch(catchUiError(contentUiState, "Could not update this selection."));
+    const clearDraft = slot?.draftAltId
+      ? setDraftSelection(classroomId, caseId, slot.slotKind, slot.officialId, null, "curated")
+      : Promise.resolve();
+    clearDraft
+      .then(() =>
+        publishCaseSelections(
+          classroomId,
+          caseId,
+          slot ? [{ slotKind: slot.slotKind, slotContentId: slot.officialId }] : []
+        )
+      )
+      .then(() => loadSelectionsForResolution(classroomId, "published"))
+      .then(() => {
+        contentUiState.wizardStep = "published";
+        return loadManageContentCaseData(caseId);
+      })
+      .catch(catchUiError(contentUiState, "Could not publish this mission."));
     return true;
   }
-  if (action === "publish-case-content") {
-    const slotIds = contentUiState.slots.map((s) => ({
-      slotKind: s.slotKind,
-      slotContentId: s.officialId,
-    }));
-    const draftAdditions = contentUiState.additionSlots.filter((a) => a.status === "draft");
-    Promise.all([
-      publishCaseSelections(
-        teacherUiState.selectedClassroomId,
-        contentUiState.selectedCaseId,
-        slotIds
-      ),
-      ...draftAdditions.map((a) => updateCustomContent(a.id, { status: "published" })),
-    ])
-      .then(() => loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published"))
-      .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
-      .catch(catchUiError(contentUiState, "Could not publish these changes."));
+  // "Restore Standard Version" (Screen 3B, only shown once a custom version
+  // exists) — a complete, one-click revert: clears the draft back to
+  // official and publishes immediately, same as Keep & Publish, so a
+  // teacher is never left with an inconsistent unpublished state.
+  if (action === "restore-standard-version") {
+    previewSession = { active: false, snapshot: null };
+    const slot = contentUiState.slot;
+    if (!slot) return true;
+    const classroomId = teacherUiState.selectedClassroomId;
+    const caseId = contentUiState.selectedCaseId;
+    setDraftSelection(classroomId, caseId, slot.slotKind, slot.officialId, null, "curated")
+      .then(() =>
+        publishCaseSelections(classroomId, caseId, [
+          { slotKind: slot.slotKind, slotContentId: slot.officialId },
+        ])
+      )
+      .then(() => loadSelectionsForResolution(classroomId, "published"))
+      .then(() => {
+        manageContentAuthoring = null;
+        contentUiState.wizardStep = "published";
+        return loadManageContentCaseData(caseId);
+      })
+      .catch(catchUiError(contentUiState, "Could not restore the standard version."));
+    return true;
+  }
+  // "Save & Publish" (Screens 3B/3C) — persists the open form as this
+  // slot's draft replacement, then immediately publishes it.
+  if (action === "save-and-publish-authoring") {
+    const auth = manageContentAuthoring;
+    if (!auth?.slotKind) return true;
+    const classroomId = teacherUiState.selectedClassroomId;
+    const caseId = contentUiState.selectedCaseId;
+    const slotKind = auth.officialSlotKind || auth.slotKind;
+    const officialId = auth.editingOfficialId;
+    const persisted = persistAuthoringSelection();
+    if (!persisted) return true;
+    persisted
+      .then(() =>
+        publishCaseSelections(classroomId, caseId, [{ slotKind, slotContentId: officialId }])
+      )
+      .then(() => loadSelectionsForResolution(classroomId, "published"))
+      .then(() => {
+        manageContentAuthoring = null;
+        contentUiState.wizardStep = "published";
+        return loadManageContentCaseData(caseId);
+      })
+      .catch(catchUiError(contentUiState, "Could not save and publish this activity."));
+    return true;
+  }
+  // "Preview Changes"/"Preview Replacement" (Screens 3B/3C) — builds an
+  // ephemeral content object straight from the form's current fields (never
+  // persisted — see manageContentAuthoring.previewQuest's doc comment) and
+  // renders it live via the shared previewSession mechanism, so Cancel
+  // afterward can never leave a stray draft behind.
+  if (action === "preview-authoring-changes") {
+    const auth = manageContentAuthoring;
+    if (!auth?.slotKind) return true;
+    const formEl = currentAuthoringFormEl();
+    const fields = syncAuthoringFieldsFromDom(auth.slotKind, formEl);
+    const result = buildAuthoredContent(auth.slotKind, fields);
+    if (!result.ok) {
+      manageContentAuthoring = { ...auth, fields, errors: result.errors };
+      render();
+      return true;
+    }
+    manageContentAuthoring = { ...auth, fields, errors: [], previewQuest: result.content };
+    previewSession = { active: true, snapshot: null };
+    render();
+    return true;
+  }
+  if (action === "preview-published-mission") {
+    enterContentPreview(contentUiState.selectedCaseId, { inline: true });
     return true;
   }
   if (action === "toggle-content-preview") {
@@ -3879,249 +3519,28 @@ function handleManageContentClick(target, action) {
     exitContentPreview();
     return true;
   }
-  if (action === "toggle-manage-content-section") {
-    const id = target.dataset.sectionId;
-    if (manageContentExpandedSectionIds.has(id)) manageContentExpandedSectionIds.delete(id);
-    else manageContentExpandedSectionIds.add(id);
-    render();
-    return true;
-  }
-  // Reachable only from manageContentGeneralGroupBodyMarkup()'s "+ Add new
-  // question" button on a case with a real case.archiveChallenge —
-  // archiveChallengesScreen() is the only real student-facing screen that
-  // renders addition-slot questions (via resolvedAdditionsForCase()).
-  // manageContentGroupBodyMarkup()'s per-source "+ Add new question about
-  // this source" stays disabled: it only ever renders for Map Missions'
-  // sources, which are fully locked (see manageContentCaseScreen()'s
-  // route === "field" branch) and never reach this handler.
-  if (action === "start-add-question") {
-    const relatedSourceId = target.dataset.relatedSourceId || null;
-    const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase
-      ? manageContentSourceGroups().find((g) => g.id === relatedSourceId)
-      : null;
-    manageContentAuthoring = {
-      formMode: "add",
-      slotKind: null,
-      constrainToType: primaryQuestSlotType(),
-      relatedSourceId,
-      relatedSourceLabel: group?.source.title || null,
-      editingCustomId: null,
-      editingOfficialId: null,
-      sourceWiring: null,
-      fields: {},
-      errors: [],
-    };
-    render();
-    return true;
-  }
   if (action === "pick-question-type") {
     if (!manageContentAuthoring) return true;
     const slotKind = target.dataset.slotKind;
     const auth = manageContentAuthoring;
-    // Picking the type the slot is CURRENTLY authored as (only possible in
-    // "replace" mode — "add" has no existing content to match) re-uses its
-    // current content as a starting point, same as the quick-edit shortcut;
-    // any other choice is a genuinely different type and starts blank.
+    // Picking the type the slot is CURRENTLY authored as re-uses its
+    // current content as a starting point; any other choice is a genuinely
+    // different type and starts blank.
     const fields =
-      auth.formMode === "replace" &&
-      slotKind === auth.currentSlotKindAtStart &&
-      auth.originalPreviewContent
+      slotKind === auth.currentSlotKindAtStart && auth.originalPreviewContent
         ? authoringFieldsFromContent(slotKind, auth.originalPreviewContent)
         : defaultAuthoringFields(slotKind);
     manageContentAuthoring = { ...auth, slotKind, fields, errors: [] };
     render();
     return true;
   }
-  if (action === "start-edit-question") {
-    const slotKind = target.dataset.slotKind;
-    const officialId = target.dataset.officialId;
-    const relatedSourceId = target.dataset.relatedSourceId || null;
-    const slot = contentUiState.slots.find(
-      (s) => s.slotKind === slotKind && s.officialId === officialId
-    );
-    if (!slot) return true;
-    const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase
-      ? manageContentSourceGroups().find((g) => g.id === relatedSourceId)
-      : null;
-    // The quick "Edit →" shortcut edits whatever this slot is CURRENTLY
-    // authored as, not necessarily its original type — currentSlotKind
-    // diverges from the stable slotKind only for an already type-changed
-    // custom replacement (see currentSlotKind's doc comment above). slotKind
-    // (stable) is kept separately as officialSlotKind for the DB write.
-    const authoringType = slot.currentSlotKind || slotKind;
-    manageContentAuthoring = {
-      formMode: "edit",
-      slotKind: authoringType,
-      officialSlotKind: slotKind,
-      currentSlotKindAtStart: authoringType,
-      originalPreviewContent: slot.previewContent,
-      relatedSourceId,
-      relatedSourceLabel: group?.source.title || null,
-      editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
-      editingOfficialId: officialId,
-      sourceWiring: null,
-      fields: authoringFieldsFromContent(authoringType, slot.previewContent),
-      errors: [],
-    };
-    render();
-    return true;
-  }
-  // The guided Keep/Add/Replace flow's entry point — see
-  // manageContentGuidedPromptMarkup(). Only reachable for the 4 real quest
-  // types (manageContentCardSummaryMarkup() gates the button accordingly).
-  if (action === "start-guided-change") {
-    manageContentAuthoring = null;
-    manageContentGuidedPrompt = {
-      slotKind: target.dataset.slotKind,
-      officialId: target.dataset.officialId,
-      relatedSourceId: target.dataset.relatedSourceId || null,
-      step: "keep-or-not",
-    };
-    render();
-    return true;
-  }
-  if (action === "cancel-guided-prompt") {
-    manageContentGuidedPrompt = null;
-    render();
-    return true;
-  }
-  if (action === "guided-keep-yes") {
-    if (manageContentGuidedPrompt) manageContentGuidedPrompt.step = "add-one";
-    render();
-    return true;
-  }
-  if (action === "guided-add-no") {
-    manageContentGuidedPrompt = null;
-    render();
-    return true;
-  }
-  if (action === "guided-add-yes") {
-    const relatedSourceId = manageContentGuidedPrompt?.relatedSourceId || null;
-    manageContentGuidedPrompt = null;
-    const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase
-      ? manageContentSourceGroups().find((g) => g.id === relatedSourceId)
-      : null;
-    manageContentAuthoring = {
-      formMode: "add",
-      slotKind: null,
-      constrainToType: primaryQuestSlotType(),
-      relatedSourceId,
-      relatedSourceLabel: group?.source.title || null,
-      editingCustomId: null,
-      editingOfficialId: null,
-      sourceWiring: null,
-      fields: {},
-      errors: [],
-    };
-    render();
-    return true;
-  }
-  // "No, replace it" — opens the type picker with no type chosen yet
-  // (slotKind stays null until pick-question-type fires) so a teacher can
-  // land on the same type (pre-filled, effectively a guided edit) or a
-  // genuinely different one (blank) — see pick-question-type's fields logic.
-  if (action === "guided-keep-no") {
-    const prompt = manageContentGuidedPrompt;
-    manageContentGuidedPrompt = null;
-    if (!prompt) return true;
-    const slot = contentUiState.slots.find(
-      (s) => s.slotKind === prompt.slotKind && s.officialId === prompt.officialId
-    );
-    if (!slot) return true;
-    const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase
-      ? manageContentSourceGroups().find((g) => g.id === prompt.relatedSourceId)
-      : null;
-    manageContentAuthoring = {
-      formMode: "replace",
-      slotKind: null,
-      officialSlotKind: prompt.slotKind,
-      currentSlotKindAtStart: slot.currentSlotKind || prompt.slotKind,
-      originalPreviewContent: slot.previewContent,
-      relatedSourceId: prompt.relatedSourceId,
-      relatedSourceLabel: group?.source.title || null,
-      editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
-      editingOfficialId: prompt.officialId,
-      sourceWiring: null,
-      fields: {},
-      errors: [],
-    };
-    render();
-    return true;
-  }
-  if (action === "start-edit-source") {
-    const officialId = target.dataset.officialId;
-    const slot = contentUiState.slots.find(
-      (s) => s.slotKind === "source" && s.officialId === officialId
-    );
-    const officialSource = (UNIT_SOURCES[contentUiState.selectedCaseId] || []).find(
-      (s) => s.id === officialId
-    );
-    if (!slot || !officialSource) return true;
-    // eslint-disable-next-line no-unused-vars -- destructuring-to-omit: these 7 fields are the teacher-editable ones, `wiring` is everything else
-    const { type, title, creator, date, record, excerpt, prompt, ...wiring } = officialSource;
-    manageContentAuthoring = {
-      formMode: "edit",
-      slotKind: "source",
-      officialSlotKind: "source",
-      currentSlotKindAtStart: "source",
-      relatedSourceId: officialId,
-      relatedSourceLabel: officialSource.title,
-      editingCustomId: slot.draftAltKind === "custom" ? slot.draftAltId : null,
-      editingOfficialId: officialId,
-      sourceWiring: wiring,
-      fields: authoringFieldsFromContent("source", slot.previewContent),
-      errors: [],
-    };
-    render();
-    return true;
-  }
-  if (action === "start-edit-addition") {
-    const customId = target.dataset.customId;
-    const item = contentUiState.additionSlots.find((a) => a.id === customId);
-    if (!item) return true;
-    const activeCase = caseById(contentUiState.selectedCaseId);
-    const group = activeCase
-      ? manageContentSourceGroups().find((g) => g.id === item.relatedSourceId)
-      : null;
-    manageContentAuthoring = {
-      formMode: "edit",
-      slotKind: item.slotKind,
-      currentSlotKindAtStart: item.slotKind,
-      relatedSourceId: item.relatedSourceId,
-      relatedSourceLabel: group?.source.title || null,
-      editingCustomId: item.id,
-      editingOfficialId: null,
-      sourceWiring: null,
-      fields: authoringFieldsFromContent(item.slotKind, item.content),
-      errors: [],
-    };
-    render();
-    return true;
-  }
+  // Cancel discards the open editor (any unsaved fields, and the ephemeral
+  // previewQuest if one was built) without persisting anything, and returns
+  // to Screen 2.
   if (action === "cancel-authoring") {
     manageContentAuthoring = null;
+    contentUiState.wizardStep = "preview";
     render();
-    return true;
-  }
-  if (action === "save-authoring") {
-    handleSaveAuthoring();
-    return true;
-  }
-  if (action === "open-delete-addition-dialog") {
-    const id = target.dataset.customId;
-    document.getElementById(`delete-confirm-dialog-${id}`)?.showModal();
-    return true;
-  }
-  if (action === "confirm-delete-addition") {
-    const id = target.dataset.customId;
-    document.getElementById(`delete-confirm-dialog-${id}`)?.close();
-    deleteCustomContent(id)
-      .then(() => loadManageContentCaseData(contentUiState.selectedCaseId))
-      .catch(catchUiError(contentUiState, "Could not delete this question."));
     return true;
   }
   if (action === "add-mcq-choice") {
@@ -4196,6 +3615,7 @@ function handleManageContentClick(target, action) {
       excerpt: "",
       skillCategory: SKILL_CATEGORIES[0],
       correctSlotId: fields.slots[0] ? slugify(fields.slots[0].label) : "",
+      sourcePoolValue: "",
     });
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
@@ -7409,7 +6829,11 @@ function handleGradingScreenClick(target, action) {
     // standalone list screen was folded into the dashboard's Units tab —
     // see teacherUnitsTabMarkup()) — restore whichever tab makes sense for
     // the screen we're leaving, since progress.currentScreen still holds
-    // that value at this point.
+    // that value at this point. Also clears a still-active inline preview
+    // (Screen 2's "Keep & Publish"/"Return to Cases" can reach this action
+    // while previewSession.active is true) so the preview banner and
+    // save()'s no-op guard don't leak onto the dashboard.
+    previewSession = { active: false, snapshot: null };
     teacherUiState.activeTab =
       progress.currentScreen === "manage-content-case" ? "units" : "assignments";
     progress.currentScreen = "teacher-dashboard";
@@ -7541,12 +6965,14 @@ function handleAppChange(event) {
     render();
   } else if (field.matches("[data-copy-hipp-source]")) {
     // One-time copy-in, not a persistent link — see poolSourcesForCopy()'s
-    // doc comment. Fields stay freely editable after this fires.
+    // doc comment. Fields stay freely editable after this fires. Prefers
+    // the source's real transcribed fullText over the short excerpt when
+    // one exists — see resolvePoolSourceFields()'s doc comment.
     const picked = field.value && resolvePoolSourceFields(field.value);
     if (picked) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("hipp", formEl);
-      fields.documentText = picked.excerpt;
+      fields.documentText = picked.fullText || picked.excerpt;
       fields.documentAttribution = picked.attribution;
       manageContentAuthoring = { ...manageContentAuthoring, fields };
       render();
@@ -7566,16 +6992,6 @@ function handleAppChange(event) {
       manageContentAuthoring = { ...manageContentAuthoring, fields };
       render();
     }
-  } else if (field.matches("[data-alt-select]")) {
-    const slotKind = field.dataset.slotKind;
-    const officialId = field.dataset.officialId;
-    const altId = field.value || null;
-    const altKind = altId ? field.selectedOptions[0]?.dataset.kind || "curated" : "curated";
-    const classroomId = teacherUiState.selectedClassroomId;
-    const caseId = contentUiState.selectedCaseId;
-    setDraftSelection(classroomId, caseId, slotKind, officialId, altId, altKind)
-      .then(() => loadManageContentCaseData(caseId))
-      .catch(catchUiError(contentUiState, "Could not update this selection."));
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
     progress.questResponses[questId] = { selected: field.value };
