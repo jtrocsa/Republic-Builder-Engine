@@ -11,14 +11,18 @@
 import { supabase } from "../lib/supabase-client.js";
 import { getSession } from "./remote-auth-repository.js";
 
+// Returns a Map<sourceId, sourceKind> rather than a bare Set — callers that
+// only need membership can still use .has(id) exactly as with a Set; callers
+// that need to resolve an id back to real content (getPrimarySourceById vs.
+// getVisualSourceById) need the kind too, which a Set discarded.
 export async function getUnitSourcePool(classroomId, unitNumber) {
   const { data, error } = await supabase
     .from("classroom_unit_source_pool")
-    .select("source_id")
+    .select("source_id, source_kind")
     .eq("classroom_id", classroomId)
     .eq("unit_number", unitNumber);
   if (error) throw error;
-  return new Set(data.map((row) => row.source_id));
+  return new Map(data.map((row) => [row.source_id, row.source_kind]));
 }
 
 export async function setSourceInPool(classroomId, unitNumber, sourceId, sourceKind, selected) {

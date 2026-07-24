@@ -154,6 +154,8 @@ import {
   PRIMARY_SOURCE_LIBRARY_UNITS,
   getPrimarySourcesForUnit,
   getVisualSourcesForUnit,
+  getPrimarySourceById,
+  getVisualSourceById,
 } from "./content/primary-source-library/index.js";
 import {
   loadSelectionsForResolution,
@@ -1548,8 +1550,10 @@ let teacherUiState = {
   pending: false,
   // Sources tab (Teacher Dashboard) — a classroom's curated pool of
   // candidate sources per unit, lazy-loaded per unit the first time its
-  // accordion section is opened. sourcePoolByUnit: { [unitNumber]: Set of
-  // selected source ids } | undefined (not yet loaded).
+  // accordion section is opened (also loaded from Manage Content's
+  // authoring form — see loadManageContentCaseData()). sourcePoolByUnit:
+  // { [unitNumber]: Map<sourceId, sourceKind> } | undefined (not yet
+  // loaded).
   sourcePoolByUnit: {},
   sourcesExpandedUnit: null,
   // Which pool rows currently have their full source content expanded —
@@ -2956,20 +2960,82 @@ function linkedSourceFieldMarkup(auth) {
   return `<p class="manage-content-locked-linked-source">Grouped under: <strong>${esc(label)}</strong></p>`;
 }
 
-// Sources available to copy text from in the current case's authoring
-// forms (HIPP document text, evidence-organizing record fields) — a
-// one-time copy-in convenience, not a persistent link: after copying, the
-// fields are freely editable text and never revert or resync if the
-// source's own text changes later. Empty for any case with no UNIT_SOURCES
-// entries (see linkedSourceFieldMarkup()'s identical guard).
-function caseSourcesForCopy() {
-  return UNIT_SOURCES[contentUiState.selectedCaseId] || [];
+// Sources available to select in the current case's authoring forms (HIPP
+// document text, evidence-organizing record fields) — drawn from the
+// classroom's curated Sources-tab pool for the case's unit
+// (classroom_unit_source_pool via teacherUiState.sourcePoolByUnit, the same
+// cache the Sources tab itself populates), not the case's own official
+// UNIT_SOURCES: those belong to Map Mission cases (route "field"), and
+// manageContentCaseScreen() locks all Map Mission content — including
+// sources — before the authoring form is ever reachable, so a per-case
+// "official sources" list would always render zero options in the one place
+// it's used. Selecting one is a one-time copy-in convenience, not a
+// persistent link: after copying, the fields are freely editable text and
+// never revert or resync if the source's own text changes later.
+function currentUnitNumber() {
+  const unit = unitForCase(contentUiState.selectedCaseId);
+  return unit ? Number(unit.id.split("-")[1]) : null;
+}
+
+function poolSourcesForCopy() {
+  const unitNumber = currentUnitNumber();
+  if (!unitNumber) return [];
+  const pool = teacherUiState.sourcePoolByUnit[unitNumber];
+  if (!pool) return [];
+  const items = [];
+  for (const [id, kind] of pool) {
+    const item = kind === "visual" ? getVisualSourceById(id) : getPrimarySourceById(id);
+    if (item) items.push({ id, kind, item });
+  }
+  return items;
 }
 
 function sourceCopyOptionsMarkup() {
-  return caseSourcesForCopy()
-    .map((s) => `<option value="${esc(s.id)}">${esc(s.title)}</option>`)
+  return poolSourcesForCopy()
+    .map(
+      ({ id, kind, item }) =>
+        `<option value="${kind}:${esc(id)}">${esc(item.title)}${kind === "visual" ? " (visual)" : ""}</option>`
+    )
     .join("");
+}
+
+// Maps a picked "Select source" option's value ("text:<id>" or
+// "visual:<id>", as built by sourceCopyOptionsMarkup()) to the
+// {label, attribution, excerpt} triad both the HIPP and evidence-organizing
+// authoring forms autofill from. Visual sources have no creator/date/excerpt
+// fields, so they map onto citation/description instead. Returns null for a
+// value that doesn't resolve to a real pool entry (e.g. the blank
+// "— Choose —" option, or a stale id no longer in the catalog).
+export function resolvePoolSourceFields(value) {
+  const separatorIndex = value.indexOf(":");
+  if (separatorIndex < 0) return null;
+  const kind = value.slice(0, separatorIndex);
+  const id = value.slice(separatorIndex + 1);
+  const item = kind === "visual" ? getVisualSourceById(id) : getPrimarySourceById(id);
+  if (!item) return null;
+  return kind === "visual"
+    ? { label: item.title, attribution: item.citation, excerpt: item.description }
+    : { label: item.title, attribution: `${item.creator}, ${item.date}`, excerpt: item.excerpt };
+}
+
+// Shared "Select source" control for the evidence-organizing (per-record-row)
+// and HIPP (per-form) authoring fields — picking an option autofills the
+// surrounding fields from the classroom's source pool (see
+// poolSourcesForCopy()/the data-copy-evidence-source/data-copy-hipp-source
+// branches in handleAppChange) and stays freely editable after. Renders
+// nothing if the pool has no options yet, same as the copy control it
+// replaced — the "Manage sources →" link is how a teacher gets there to add
+// some. selectAttrs carries whatever data-* attributes the caller's specific
+// <select> needs (data-copy-evidence-source plus a row index, or just
+// data-copy-hipp-source).
+function sourcePickerFieldMarkup(selectAttrs) {
+  const copyOptions = sourceCopyOptionsMarkup();
+  if (!copyOptions) return "";
+  const unitNumber = currentUnitNumber();
+  const manageLink = unitNumber
+    ? `<button type="button" class="btn btn-plain manage-content-source-picker-link" data-action="go-to-sources-tab" data-unit="${unitNumber}">Manage sources →</button>`
+    : "";
+  return `<label class="manage-content-copy-field">Select source<select ${selectAttrs}><option value="">— Choose —</option>${copyOptions}</select></label>${manageLink}`;
 }
 
 function mcqFieldsMarkup(fields) {
@@ -3038,11 +3104,10 @@ function evidenceOrganizingFieldsMarkup(fields) {
       (cat) =>
         `<option value="${esc(cat)}" ${currentSkill === cat ? "selected" : ""}>${esc(cat)}</option>`
     ).join("");
-  const copyOptions = sourceCopyOptionsMarkup();
   const sourceRows = sources
     .map(
       (source, i) => `<div class="manage-content-evidence-source-row">
-${copyOptions ? `<label class="manage-content-copy-field">Copy from an existing source<select data-copy-evidence-source data-row-index="${i}"><option value="">— choose a source —</option>${copyOptions}</select></label>` : ""}
+${sourcePickerFieldMarkup(`data-copy-evidence-source data-row-index="${i}"`)}
 <input type="text" data-source-label value="${esc(source.label)}" placeholder="Record label">
 <input type="text" data-source-attribution value="${esc(source.attribution)}" placeholder="Attribution">
 <textarea data-source-excerpt rows="2" placeholder="Excerpt shown to students">${esc(source.excerpt)}</textarea>
@@ -3094,8 +3159,7 @@ function hippFieldsMarkup(fields) {
 </div>`;
     })
     .join("");
-  const copyOptions = sourceCopyOptionsMarkup();
-  return `${copyOptions ? `<label class="manage-content-copy-field">Copy in an existing source's text<select data-copy-hipp-source><option value="">— choose a source —</option>${copyOptions}</select></label>` : ""}
+  return `${sourcePickerFieldMarkup("data-copy-hipp-source")}
 <label>Document text<textarea data-authoring-field="documentText" rows="6">${esc(fields.documentText)}</textarea></label>
 <label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
 <div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
@@ -3305,6 +3369,25 @@ async function loadManageContentCaseData(caseId) {
   if (kase?.route === "field") {
     render();
     return;
+  }
+  const unit = unitForCase(caseId);
+  const unitNumber = unit ? Number(unit.id.split("-")[1]) : null;
+  // Lazy-load this unit's Sources-tab pool (same cache the Sources tab
+  // itself populates, teacherUiState.sourcePoolByUnit) so the authoring
+  // form's "Select source" picker has real options — fire-and-forget, same
+  // pattern as toggle-sources-unit's lazy load, so it doesn't block the
+  // slot-list fetch below.
+  if (
+    unitNumber &&
+    teacherUiState.selectedClassroomId &&
+    teacherUiState.sourcePoolByUnit[unitNumber] === undefined
+  ) {
+    getUnitSourcePool(teacherUiState.selectedClassroomId, unitNumber)
+      .then((pool) => {
+        teacherUiState.sourcePoolByUnit[unitNumber] = pool;
+        render();
+      })
+      .catch(catchUiError(teacherUiState, "Could not load this unit's source pool."));
   }
   try {
     const classroomId = teacherUiState.selectedClassroomId;
@@ -3636,6 +3719,26 @@ function exitPreviewIfActive() {
 }
 
 function handleManageContentClick(target, action) {
+  if (action === "go-to-sources-tab") {
+    const unitNumber = Number(target.dataset.unit);
+    teacherUiState.activeTab = "sources";
+    teacherUiState.sourcesExpandedUnit = unitNumber;
+    progress.currentScreen = "teacher-dashboard";
+    save();
+    render();
+    if (
+      teacherUiState.selectedClassroomId &&
+      teacherUiState.sourcePoolByUnit[unitNumber] === undefined
+    ) {
+      getUnitSourcePool(teacherUiState.selectedClassroomId, unitNumber)
+        .then((pool) => {
+          teacherUiState.sourcePoolByUnit[unitNumber] = pool;
+          render();
+        })
+        .catch(catchUiError(teacherUiState, "Could not load this unit's source pool."));
+    }
+    return true;
+  }
   if (action === "toggle-manage-content-unit") {
     const unitId = target.dataset.unitId;
     manageContentExpandedUnitId = manageContentExpandedUnitId === unitId ? null : unitId;
@@ -7395,7 +7498,7 @@ function handleAuthScreenClick(target, action) {
       nowSelected
     )
       .then(() => {
-        if (nowSelected) pool.add(sourceId);
+        if (nowSelected) pool.set(sourceId, sourceKind);
         else pool.delete(sourceId);
         render();
       })
@@ -7599,28 +7702,28 @@ function handleAppChange(event) {
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
   } else if (field.matches("[data-copy-hipp-source]")) {
-    // One-time copy-in, not a persistent link — see caseSourcesForCopy()'s
+    // One-time copy-in, not a persistent link — see poolSourcesForCopy()'s
     // doc comment. Fields stay freely editable after this fires.
-    const source = caseSourcesForCopy().find((s) => s.id === field.value);
-    if (source) {
+    const picked = field.value && resolvePoolSourceFields(field.value);
+    if (picked) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("hipp", formEl);
-      fields.documentText = source.excerpt;
-      fields.documentAttribution = `${source.creator}, ${source.date}`;
+      fields.documentText = picked.excerpt;
+      fields.documentAttribution = picked.attribution;
       manageContentAuthoring = { ...manageContentAuthoring, fields };
       render();
     }
   } else if (field.matches("[data-copy-evidence-source]")) {
-    const source = caseSourcesForCopy().find((s) => s.id === field.value);
-    if (source) {
+    const picked = field.value && resolvePoolSourceFields(field.value);
+    if (picked) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("evidence-organizing", formEl);
       const rowIndex = Number(field.dataset.rowIndex);
       fields.sources[rowIndex] = {
         ...fields.sources[rowIndex],
-        label: source.title,
-        attribution: `${source.creator}, ${source.date}`,
-        excerpt: source.excerpt,
+        label: picked.label,
+        attribution: picked.attribution,
+        excerpt: picked.excerpt,
       };
       manageContentAuthoring = { ...manageContentAuthoring, fields };
       render();
