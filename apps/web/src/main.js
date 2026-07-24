@@ -1631,7 +1631,9 @@ function catchUiError(state, fallback) {
   };
 }
 function feedbackError(state) {
-  return state.error ? `<p class="feedback error">${esc(state.error)}</p>` : "";
+  return state.error
+    ? `<p class="feedback error" role="status" aria-live="polite">${esc(state.error)}</p>`
+    : "";
 }
 
 onAuthStateChange((_event, session) => {
@@ -2789,7 +2791,7 @@ ${!isOfficial ? `<span class="case-kind-badge manage-content-badge-added">Teache
 </div>
 <div class="manage-content-slot-controls">
 ${sourceLabel ? `<span class="manage-content-summary-source">${esc(sourceLabel)}</span>` : ""}
-<span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}">${isDraftUnpublished ? "Draft — not yet published" : "Published"}</span>
+<span class="manage-content-status-pill ${isDraftUnpublished ? "is-draft" : "is-published"}" role="status" aria-live="polite">${isDraftUnpublished ? "Draft — not yet published" : "Published"}</span>
 ${altPicker}
 <button class="btn btn-plain manage-content-edit-btn" data-action="${editAction}" ${editDataAttrs} type="button">Edit →</button>
 ${guidedButton}
