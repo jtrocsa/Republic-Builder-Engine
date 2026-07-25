@@ -2500,6 +2500,15 @@ const QUEST_TYPE_DESCRIPTIONS = {
   "evidence-organizing": "Sort sources into the historical-thinking skill each best demonstrates.",
   hipp: "Analyze a document's Historical situation, Intended audience, Purpose, and Point of view.",
 };
+// Small text glyphs (not photo emoji, to stay in the Cinzel/gold historical-
+// adventure register — see CLAUDE.md's visual design language section) shown
+// beside each quest type's name atop its configure panel.
+const QUEST_TYPE_ICONS = {
+  mcq: "◉",
+  sequencing: "↕",
+  "evidence-organizing": "▤",
+  hipp: "◈",
+};
 
 function manageContentMissionCardMarkup(c) {
   return `<article class="manage-content-mission-card">
@@ -2639,6 +2648,81 @@ function sourcePickerFieldMarkup(selectAttrs, selectedValue) {
   return `<label class="manage-content-copy-field">Select source<select ${selectAttrs}><option value="" ${selectedValue ? "" : "selected"}>— Choose —</option>${copyOptions}</select></label>${manageLink}`;
 }
 
+// Splits a pool source's full text into sentence-ish chunks so the highlight
+// tool (sourceTextToolMarkup() below) can offer them as individually
+// toggleable "lines." Deliberately simple (sentence-boundary regex, not a
+// real tokenizer) and pure — called fresh every render from the currently
+// picked pool source's text, never cached, so a stored `highlighted` index
+// array always lines up with the segments it was recorded against as long as
+// the underlying pool pick hasn't changed (picking a new/different source
+// resets `highlighted`, see the data-copy-*-source branches in
+// handleAppChange()).
+function splitIntoSegments(text) {
+  return (text || "").match(/[^.!?]+[.!?]+(\s+|$)/g) || (text ? [text] : []);
+}
+
+const MANAGE_CONTENT_EXCERPT_MAX_CHARS = 500;
+
+// Renders the shared "highlight full source text into an excerpt, or write
+// your own summary instead" tool that sits above a text field a teacher is
+// filling in from a picked pool source (HIPP's document text, an
+// evidence-organizing record's excerpt, or mcq/sequencing's optional
+// relatedSource excerpt). `fieldKey` addresses this tool instance's ephemeral
+// state in manageContentAuthoring.textTools (see that field's doc comment).
+// `poolValue` is the field's current "Select source" pick (e.g.
+// fields.hippSourcePoolValue) — the tool only offers highlighting once a pool
+// source is actually picked, same "renders nothing yet" convention
+// sourcePickerFieldMarkup() itself uses. `currentText` is the live value of
+// the actual saved field (documentText/excerpt/relatedSourceExcerpt),
+// rendered below the tool as "Student text" with a character counter — this
+// textarea is what actually gets saved; the tool above it is just a
+// convenience for composing its value.
+function sourceTextToolMarkup(fieldKey, poolValue, currentText, textareaAttrs) {
+  const tool = manageContentAuthoring?.textTools?.[fieldKey] || { mode: "excerpt" };
+  const resolved = poolValue ? resolvePoolSourceFields(poolValue) : null;
+  const fullText = resolved ? resolved.fullText || resolved.excerpt : "";
+  const segments = fullText ? splitIntoSegments(fullText) : [];
+  const highlighted = tool.highlighted || [];
+  const past = tool.past || [];
+  const future = tool.future || [];
+  const length = (currentText || "").length;
+  const modeTabs = `<div class="manage-content-source-tool-tabs">
+<button type="button" class="btn ${tool.mode === "summary" ? "btn-outline" : "btn-gold"}" data-action="set-source-text-mode" data-field-key="${esc(fieldKey)}" data-mode="excerpt">Use Highlighted Excerpt</button>
+<button type="button" class="btn ${tool.mode === "summary" ? "btn-gold" : "btn-outline"}" data-action="set-source-text-mode" data-field-key="${esc(fieldKey)}" data-mode="summary">Write Summary Instead</button>
+</div>`;
+  const highlighter =
+    tool.mode !== "summary" && fullText
+      ? `<div class="manage-content-source-fulltext">
+<div class="manage-content-source-fulltext-head">
+<span>Full source text (for you)</span>
+</div>
+<p class="manage-content-source-fulltext-body">${esc(fullText)}</p>
+<div class="manage-content-source-fulltext-head">
+<span>Select lines for students</span>
+<div class="manage-content-source-fulltext-actions">
+<button type="button" class="btn btn-plain" data-action="clear-highlights" data-field-key="${esc(fieldKey)}" ${highlighted.some(Boolean) ? "" : "disabled"}>Clear</button>
+<button type="button" class="btn btn-plain" data-action="undo-highlight" data-field-key="${esc(fieldKey)}" ${past.length ? "" : "disabled"}>↺ Undo</button>
+<button type="button" class="btn btn-plain" data-action="redo-highlight" data-field-key="${esc(fieldKey)}" ${future.length ? "" : "disabled"}>↻ Redo</button>
+</div>
+</div>
+<p class="manage-content-source-fulltext-body manage-content-source-fulltext-select">${segments
+          .map(
+            (segment, i) =>
+              `<span class="manage-content-source-segment ${highlighted[i] ? "is-highlighted" : ""}" data-action="toggle-highlight-segment" data-field-key="${esc(fieldKey)}" data-segment-index="${i}">${esc(segment)}</span>`
+          )
+          .join("")}</p>
+<button type="button" class="btn btn-gold" data-action="use-highlighted-excerpt" data-field-key="${esc(fieldKey)}" ${highlighted.some(Boolean) ? "" : "disabled"}>Use Highlighted Excerpt →</button>
+</div>`
+      : "";
+  const counter = `<p class="manage-content-char-counter">${length} of ${MANAGE_CONTENT_EXCERPT_MAX_CHARS} characters ${length > 0 && length <= MANAGE_CONTENT_EXCERPT_MAX_CHARS ? "✓" : ""}</p>`;
+  return `<div class="manage-content-source-tool" data-field-key="${esc(fieldKey)}">
+${resolved ? modeTabs : ""}
+${highlighter}
+<label>Student text (what students will see)<textarea ${textareaAttrs} rows="5">${esc(currentText)}</textarea></label>
+${counter}
+</div>`;
+}
+
 function mcqFieldsMarkup(fields) {
   const choices = fields.choices || [];
   const rows = choices
@@ -2654,7 +2738,13 @@ function mcqFieldsMarkup(fields) {
 <div class="manage-content-field-label">Choices — mark the correct one</div>
 <div class="manage-content-row-list" data-authoring-rows="choices">${rows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-mcq-choice">+ Add choice</button>
-<label>Explanation (optional, shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+<label>Explanation (optional, shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>
+<div class="manage-content-field-label">Attach a source (optional)</div>
+<p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
+${sourcePickerFieldMarkup('data-copy-mcq-source data-authoring-field="mcqSourcePoolValue"', fields.mcqSourcePoolValue)}
+<label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Immigration Act (Chinese Exclusion Act), 1882"></label>
+<label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
+${sourceTextToolMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}`;
 }
 
 function sequencingFieldsMarkup(fields) {
@@ -2679,7 +2769,13 @@ function sequencingFieldsMarkup(fields) {
 <div class="manage-content-field-label">Items — set each one's position in the correct causal order (not just chronological)</div>
 <div class="manage-content-row-list" data-authoring-rows="items">${rows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-sequence-item">+ Add item</button>
-<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>
+<div class="manage-content-field-label">Attach a source (optional)</div>
+<p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
+${sourcePickerFieldMarkup('data-copy-sequencing-source data-authoring-field="sequencingSourcePoolValue"', fields.sequencingSourcePoolValue)}
+<label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Seneca Falls Convention, 1848"></label>
+<label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
+${sourceTextToolMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}`;
 }
 
 function evidenceOrganizingFieldsMarkup(fields) {
@@ -2711,7 +2807,7 @@ function evidenceOrganizingFieldsMarkup(fields) {
 ${sourcePickerFieldMarkup(`data-copy-evidence-source data-row-index="${i}"`, source.sourcePoolValue)}
 <input type="text" data-source-label value="${esc(source.label)}" placeholder="Record label">
 <input type="text" data-source-attribution value="${esc(source.attribution)}" placeholder="Attribution">
-<textarea data-source-excerpt rows="2" placeholder="Excerpt shown to students">${esc(source.excerpt)}</textarea>
+${sourceTextToolMarkup(`evidence-${i}`, source.sourcePoolValue, source.excerpt, "data-source-excerpt")}
 <label class="manage-content-inline-field" title="The College Board historical-thinking skill this record demonstrates — this is graded, not decorative.">Skill<select data-source-skill>${skillOptions(source.skillCategory)}</select></label>
 <label class="manage-content-inline-field">Correct slot<select data-source-slot>${slotOptions(source.correctSlotId)}</select></label>
 <button type="button" class="manage-content-row-delete-btn" data-action="remove-evidence-source" data-row-index="${i}" ${sources.length <= 1 ? "disabled" : ""} title="Remove this record">×</button>
@@ -2761,7 +2857,7 @@ function hippFieldsMarkup(fields) {
     })
     .join("");
   return `${sourcePickerFieldMarkup('data-copy-hipp-source data-authoring-field="hippSourcePoolValue"', fields.hippSourcePoolValue)}
-<label>Document text<textarea data-authoring-field="documentText" rows="6">${esc(fields.documentText)}</textarea></label>
+${sourceTextToolMarkup("hipp", fields.hippSourcePoolValue, fields.documentText, 'data-authoring-field="documentText"')}
 <label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
 <div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
 <p class="manage-content-help-text">Each prompt needs exactly one fully <strong>correct</strong> option (names the right answer <em>and</em> explains how it shapes the document's argument) and at least one <strong>ID-only distractor</strong> — a wrong answer that correctly names the right person/place/context but doesn't connect it to the argument. This mirrors the real AP DBQ rubric rule: identification alone scores zero.</p>
@@ -2771,10 +2867,62 @@ function hippFieldsMarkup(fields) {
 
 function authoringFieldsMarkup(auth) {
   const { slotKind, fields } = auth;
-  if (slotKind === "mcq") return mcqFieldsMarkup(fields);
-  if (slotKind === "sequencing") return sequencingFieldsMarkup(fields);
-  if (slotKind === "evidence-organizing") return evidenceOrganizingFieldsMarkup(fields);
-  return hippFieldsMarkup(fields);
+  const body =
+    slotKind === "mcq"
+      ? mcqFieldsMarkup(fields)
+      : slotKind === "sequencing"
+        ? sequencingFieldsMarkup(fields)
+        : slotKind === "evidence-organizing"
+          ? evidenceOrganizingFieldsMarkup(fields)
+          : hippFieldsMarkup(fields);
+  return `<div class="manage-content-section-head"><span class="manage-content-section-icon">${esc(QUEST_TYPE_ICONS[slotKind] || "")}</span><span>${esc(QUEST_TYPE_DISPLAY_NAMES[slotKind] || "")}</span></div>${body}`;
+}
+
+// Maps a sourceTextToolMarkup() fieldKey to the pool-value and target-text
+// getter/setter it drives on a synced `fields` object — the single place
+// that knows which flat field each of the highlight tool's four call sites
+// (hipp's documentText, an evidence-organizing row's excerpt, mcq/
+// sequencing's optional relatedSourceExcerpt) actually reads/writes, so the
+// toggle/undo/redo/use-excerpt click handlers stay generic across all of
+// them. Returns null for a key with no known target (defensive — every real
+// fieldKey the UI renders has one).
+function resolveTextToolTarget(fieldKey, fields) {
+  if (fieldKey === "hipp") {
+    return {
+      poolValue: fields.hippSourcePoolValue,
+      set: (value) => {
+        fields.documentText = value;
+      },
+    };
+  }
+  if (fieldKey === "mcq") {
+    return {
+      poolValue: fields.mcqSourcePoolValue,
+      set: (value) => {
+        fields.relatedSourceExcerpt = value;
+      },
+    };
+  }
+  if (fieldKey === "sequencing") {
+    return {
+      poolValue: fields.sequencingSourcePoolValue,
+      set: (value) => {
+        fields.relatedSourceExcerpt = value;
+      },
+    };
+  }
+  if (fieldKey.startsWith("evidence-")) {
+    const rowIndex = Number(fieldKey.slice("evidence-".length));
+    const row = fields.sources?.[rowIndex];
+    if (!row) return null;
+    return {
+      poolValue: row.sourcePoolValue,
+      set: (value) => {
+        row.excerpt = value;
+      },
+    };
+  }
+  return null;
 }
 
 // Renders either the 4-card activity-type picker (Replace, before a type is
@@ -2934,6 +3082,15 @@ function manageContentPublishedStepMarkup(activeCase) {
 // (wizard-go-replace). While previewing in-progress changes (see
 // "preview-authoring-changes" in handleManageContentClick()), this step
 // shows that ephemeral preview instead of the editor.
+// One-line summary of whether/how a source is attached for the status bar
+// at the bottom of the workspace step — hipp/evidence-organizing always
+// carry source text (it's central to those two types), mcq/sequencing's is
+// the new optional relatedSource from section B of the facelift plan.
+function sourceHandlingStatusLabel(slotKind, fields) {
+  if (slotKind === "hipp" || slotKind === "evidence-organizing") return "Full text + excerpt";
+  return fields?.relatedSourceExcerpt ? "Full text + excerpt (optional)" : "Not attached (optional)";
+}
+
 function manageContentWorkspaceStepMarkup(activeCase) {
   const isReplace = contentUiState.wizardStep === "replace";
   const slot = contentUiState.slot;
@@ -2960,7 +3117,12 @@ ${
 <button class="btn btn-gold" data-action="save-and-publish-authoring" type="button">Save &amp; Publish</button>
 </div>
 ${isReplace ? `<button class="btn btn-plain" data-action="replace-choose-type" type="button">← Back to activity types</button>` : ""}
-${showRestore ? `<button class="btn btn-plain" data-action="restore-standard-version" type="button">Restore Standard Version</button>` : ""}`
+${showRestore ? `<button class="btn btn-plain" data-action="restore-standard-version" type="button">Restore Standard Version</button>` : ""}
+<div class="manage-content-status-bar">
+<span class="manage-content-status-pill">Published Mission: ${slot?.publishedAltId ? "Customized" : "Standard"}</span>
+<span class="manage-content-status-pill">Student View: Ready</span>
+<span class="manage-content-status-pill">Source: ${esc(sourceHandlingStatusLabel(auth.slotKind, auth.fields))}</span>
+</div>`
     : ""
 }
 <button class="btn btn-plain" data-action="cancel-authoring" type="button">Cancel</button>`;
@@ -3367,6 +3529,7 @@ function handleManageContentClick(target, action) {
           ),
           errors: [],
           previewQuest: null,
+          textTools: {},
         }
       : null;
     render();
@@ -3390,6 +3553,7 @@ function handleManageContentClick(target, action) {
           fields: {},
           errors: [],
           previewQuest: null,
+          textTools: {},
         }
       : null;
     render();
@@ -3403,6 +3567,7 @@ function handleManageContentClick(target, action) {
         fields: {},
         errors: [],
         previewQuest: null,
+        textTools: {},
       };
     }
     render();
@@ -3530,7 +3695,98 @@ function handleManageContentClick(target, action) {
       slotKind === auth.currentSlotKindAtStart && auth.originalPreviewContent
         ? authoringFieldsFromContent(slotKind, auth.originalPreviewContent)
         : defaultAuthoringFields(slotKind);
-    manageContentAuthoring = { ...auth, slotKind, fields, errors: [] };
+    manageContentAuthoring = { ...auth, slotKind, fields, errors: [], textTools: {} };
+    render();
+    return true;
+  }
+  // The highlight/excerpt tool (sourceTextToolMarkup()) — six actions
+  // sharing one shape: sync the form's current values first (so an in-
+  // progress edit elsewhere in the form isn't lost), mutate the relevant
+  // manageContentAuthoring.textTools[fieldKey] undo/redo stack, re-render.
+  // Purely ephemeral UI state — see manageContentAuthoring.textTools's own
+  // doc comment at its "edit"/"replace"/pick-question-type reset sites.
+  if (
+    action === "toggle-highlight-segment" ||
+    action === "clear-highlights" ||
+    action === "undo-highlight" ||
+    action === "redo-highlight"
+  ) {
+    const auth = manageContentAuthoring;
+    if (!auth) return true;
+    const fields = syncAuthoringFieldsFromDom(auth.slotKind, currentAuthoringFormEl());
+    const fieldKey = target.dataset.fieldKey;
+    const textTools = { ...(auth.textTools || {}) };
+    const tool = textTools[fieldKey] || { mode: "excerpt", highlighted: [], past: [], future: [] };
+    if (action === "toggle-highlight-segment") {
+      const segmentIndex = Number(target.dataset.segmentIndex);
+      const highlighted = [...(tool.highlighted || [])];
+      highlighted[segmentIndex] = !highlighted[segmentIndex];
+      textTools[fieldKey] = {
+        ...tool,
+        highlighted,
+        past: [...(tool.past || []), tool.highlighted || []],
+        future: [],
+      };
+    } else if (action === "clear-highlights") {
+      textTools[fieldKey] = {
+        ...tool,
+        highlighted: [],
+        past: [...(tool.past || []), tool.highlighted || []],
+        future: [],
+      };
+    } else if (action === "undo-highlight" && tool.past?.length) {
+      const past = [...tool.past];
+      const previous = past.pop();
+      textTools[fieldKey] = {
+        ...tool,
+        highlighted: previous,
+        past,
+        future: [tool.highlighted || [], ...(tool.future || [])],
+      };
+    } else if (action === "redo-highlight" && tool.future?.length) {
+      const future = [...tool.future];
+      const next = future.shift();
+      textTools[fieldKey] = {
+        ...tool,
+        highlighted: next,
+        past: [...(tool.past || []), tool.highlighted || []],
+        future,
+      };
+    }
+    manageContentAuthoring = { ...auth, fields, textTools };
+    render();
+    return true;
+  }
+  if (action === "set-source-text-mode") {
+    const auth = manageContentAuthoring;
+    if (!auth) return true;
+    const fields = syncAuthoringFieldsFromDom(auth.slotKind, currentAuthoringFormEl());
+    const fieldKey = target.dataset.fieldKey;
+    const textTools = { ...(auth.textTools || {}) };
+    const tool = textTools[fieldKey] || { highlighted: [], past: [], future: [] };
+    textTools[fieldKey] = { ...tool, mode: target.dataset.mode };
+    manageContentAuthoring = { ...auth, fields, textTools };
+    render();
+    return true;
+  }
+  if (action === "use-highlighted-excerpt") {
+    const auth = manageContentAuthoring;
+    if (!auth) return true;
+    const fields = syncAuthoringFieldsFromDom(auth.slotKind, currentAuthoringFormEl());
+    const fieldKey = target.dataset.fieldKey;
+    const tool = auth.textTools?.[fieldKey];
+    const fieldTarget = resolveTextToolTarget(fieldKey, fields);
+    if (tool && fieldTarget) {
+      const resolved = fieldTarget.poolValue ? resolvePoolSourceFields(fieldTarget.poolValue) : null;
+      const fullText = resolved ? resolved.fullText || resolved.excerpt : "";
+      const segments = fullText ? splitIntoSegments(fullText) : [];
+      const excerpt = segments
+        .filter((_, i) => tool.highlighted?.[i])
+        .join(" ")
+        .trim();
+      if (excerpt) fieldTarget.set(excerpt);
+    }
+    manageContentAuthoring = { ...auth, fields };
     render();
     return true;
   }
@@ -6974,7 +7230,11 @@ function handleAppChange(event) {
       const fields = syncAuthoringFieldsFromDom("hipp", formEl);
       fields.documentText = picked.fullText || picked.excerpt;
       fields.documentAttribution = picked.attribution;
-      manageContentAuthoring = { ...manageContentAuthoring, fields };
+      manageContentAuthoring = {
+        ...manageContentAuthoring,
+        fields,
+        textTools: { ...manageContentAuthoring.textTools, hipp: undefined },
+      };
       render();
     }
   } else if (field.matches("[data-copy-evidence-source]")) {
@@ -6989,7 +7249,41 @@ function handleAppChange(event) {
         attribution: picked.attribution,
         excerpt: picked.excerpt,
       };
-      manageContentAuthoring = { ...manageContentAuthoring, fields };
+      manageContentAuthoring = {
+        ...manageContentAuthoring,
+        fields,
+        textTools: { ...manageContentAuthoring.textTools, [`evidence-${rowIndex}`]: undefined },
+      };
+      render();
+    }
+  } else if (field.matches("[data-copy-mcq-source]")) {
+    const picked = field.value && resolvePoolSourceFields(field.value);
+    if (picked) {
+      const formEl = field.closest("[data-authoring-form]");
+      const fields = syncAuthoringFieldsFromDom("mcq", formEl);
+      fields.relatedSourceLabel = picked.label;
+      fields.relatedSourceAttribution = picked.attribution;
+      fields.relatedSourceExcerpt = picked.excerpt;
+      manageContentAuthoring = {
+        ...manageContentAuthoring,
+        fields,
+        textTools: { ...manageContentAuthoring.textTools, mcq: undefined },
+      };
+      render();
+    }
+  } else if (field.matches("[data-copy-sequencing-source]")) {
+    const picked = field.value && resolvePoolSourceFields(field.value);
+    if (picked) {
+      const formEl = field.closest("[data-authoring-form]");
+      const fields = syncAuthoringFieldsFromDom("sequencing", formEl);
+      fields.relatedSourceLabel = picked.label;
+      fields.relatedSourceAttribution = picked.attribution;
+      fields.relatedSourceExcerpt = picked.excerpt;
+      manageContentAuthoring = {
+        ...manageContentAuthoring,
+        fields,
+        textTools: { ...manageContentAuthoring.textTools, sequencing: undefined },
+      };
       render();
     }
   } else if (field.matches("[data-mcq-quest]")) {

@@ -9,8 +9,19 @@ import { z } from "zod";
 import { McqQuestionSchema } from "../../content/schemas/review.schema.js";
 import { escapeHtml } from "../shared/html.js";
 
+export const McqRelatedSourceSchema = z.object({
+  label: z.string().min(1, "relatedSource.label is required"),
+  attribution: z.string().optional(),
+  excerpt: z.string().min(1, "relatedSource.excerpt is required"),
+});
+
 export const McqQuestSchema = McqQuestionSchema.extend({
   id: z.string().min(1, "mcq quest id is required"),
+  // Optional, non-graded reference source a teacher can attach for context —
+  // see docs on evidence-organizing/hipp's own (required, graded) source
+  // fields; this one is purely decorative student-facing context and has no
+  // bearing on gradeMcqQuest().
+  relatedSource: McqRelatedSourceSchema.nullable().optional(),
 });
 
 export const McqQuestListSchema = z.array(McqQuestSchema).superRefine((items, ctx) => {
@@ -35,6 +46,11 @@ export const McqQuestListSchema = z.array(McqQuestSchema).superRefine((items, ct
 export function renderMcqQuest(quest, state = {}) {
   const { selected } = state;
   return `<article class="quest quest-mcq" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="mcq">
+  ${
+    quest.relatedSource
+      ? `<p class="quest-related-source">${quest.relatedSource.attribution ? `<span class="quest-related-source-attribution">${escapeHtml(quest.relatedSource.attribution)}</span> — ` : ""}${escapeHtml(quest.relatedSource.excerpt)}</p>`
+      : ""
+  }
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
   <div class="quest-choices">
     ${quest.choices

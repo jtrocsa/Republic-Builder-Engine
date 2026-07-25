@@ -4560,6 +4560,22 @@ dd {
   line-height: 1.5;
   margin: 0 0 14px;
 }
+/* Optional, non-graded reference source a teacher attached to an mcq/
+   sequencing quest — see quest-types/generic/{mcq,sequencing}-quest.js's
+   relatedSource field. */
+.quest-related-source {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-left: 2px solid rgba(239, 204, 122, 0.35);
+  color: #c4d0cf;
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+.quest-related-source-attribution {
+  font-style: normal;
+  color: var(--gold-soft);
+}
 .quest-choices {
   display: grid;
   gap: 14px;
@@ -8283,6 +8299,111 @@ details[open] > summary.manage-content-unit-toggle::before {
   color: #b9c7c2;
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+/* Quest-type panel header (icon + name), atop each configure form. */
+.manage-content-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--gold-soft);
+  font-family: "Cinzel", serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+.manage-content-section-icon {
+  color: var(--gold);
+  font-size: 1.1rem;
+}
+
+/* Highlight/excerpt source tool (sourceTextToolMarkup()). */
+.manage-content-source-tool {
+  margin: 6px 0 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(4, 26, 38, 0.28);
+}
+.manage-content-source-tool-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.manage-content-source-fulltext {
+  margin-bottom: 12px;
+}
+.manage-content-source-fulltext-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 6px;
+  color: var(--gold-soft);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.manage-content-source-fulltext-actions {
+  display: flex;
+  gap: 6px;
+}
+.manage-content-source-fulltext-body {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(239, 204, 122, 0.2);
+  border-radius: 10px;
+  background: rgba(4, 20, 30, 0.5);
+  color: #d8e3de;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.manage-content-source-fulltext-select {
+  cursor: text;
+}
+.manage-content-source-segment {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.12s ease;
+}
+.manage-content-source-segment:hover {
+  background: rgba(239, 204, 122, 0.18);
+}
+.manage-content-source-segment.is-highlighted {
+  background: rgba(239, 204, 122, 0.38);
+  color: var(--gold-soft);
+}
+.manage-content-char-counter {
+  margin: 4px 0 0;
+  color: #b9c7c2;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+/* Bottom status row (Published Mission / Student View / Source Text
+   Handling), based on .case-kind-badge's pill look. */
+.manage-content-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.manage-content-status-pill {
+  padding: 5px 12px;
+  border: 1px solid rgba(239, 204, 122, 0.4);
+  border-radius: 999px;
+  background: rgba(4, 26, 38, 0.4);
+  color: #d8e3de;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .field-preview-banner {
   display: flex;

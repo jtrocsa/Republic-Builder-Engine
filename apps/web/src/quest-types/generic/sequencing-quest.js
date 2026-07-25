@@ -18,6 +18,12 @@ export const SequencingItemSchema = z.object({
   position: z.number().int().nonnegative("item.position must be a non-negative integer"),
 });
 
+export const SequencingRelatedSourceSchema = z.object({
+  label: z.string().min(1, "relatedSource.label is required"),
+  attribution: z.string().optional(),
+  excerpt: z.string().min(1, "relatedSource.excerpt is required"),
+});
+
 export const SequencingQuestSchema = z
   .object({
     id: z.string().min(1, "sequencing quest id is required"),
@@ -30,6 +36,9 @@ export const SequencingQuestSchema = z
     // empireScreen(), which paired its causal-order mechanic with a graded
     // reflection the plain all-or-nothing sequencing type had no field for).
     reflectionPrompt: z.string().min(1).optional(),
+    // Optional, non-graded reference source — same purely-decorative role as
+    // mcq-quest.js's own relatedSource, see that file's doc comment.
+    relatedSource: SequencingRelatedSourceSchema.nullable().optional(),
   })
   .superRefine((quest, ctx) => {
     const firstSeenAt = new Map();
@@ -95,6 +104,11 @@ export function renderSequencingQuest(quest, state = {}) {
   const reflectionLength = (state.reflection || "").trim().length;
 
   return `<section class="quest quest-sequencing" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="sequencing">
+  ${
+    quest.relatedSource
+      ? `<p class="quest-related-source">${quest.relatedSource.attribution ? `<span class="quest-related-source-attribution">${escapeHtml(quest.relatedSource.attribution)}</span> — ` : ""}${escapeHtml(quest.relatedSource.excerpt)}</p>`
+      : ""
+  }
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
   <ol class="quest-sequence-list">
     ${order

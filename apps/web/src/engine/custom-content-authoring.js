@@ -104,6 +104,14 @@ export function defaultMcqFields() {
       { text: "", correct: false },
     ],
     explanation: "",
+    // Optional, non-graded reference source — see mcq-quest.js's
+    // relatedSource doc comment. Flat scalar fields (not a nested object) so
+    // they ride the generic [data-authoring-field] scalar loop in
+    // syncAuthoringFieldsFromDom() exactly like hipp's documentText/
+    // documentAttribution already do.
+    relatedSourceLabel: "",
+    relatedSourceAttribution: "",
+    relatedSourceExcerpt: "",
   };
 }
 
@@ -112,6 +120,9 @@ export function mcqToFields(quest) {
     prompt: quest.prompt || "",
     choices: (quest.choices || []).map((text, i) => ({ text, correct: i === quest.answer })),
     explanation: quest.explanation || "",
+    relatedSourceLabel: quest.relatedSource?.label || "",
+    relatedSourceAttribution: quest.relatedSource?.attribution || "",
+    relatedSourceExcerpt: quest.relatedSource?.excerpt || "",
   };
 }
 
@@ -127,12 +138,22 @@ export function buildMcqContent(fields) {
       errors: [`choices: mark exactly one choice correct (found ${correctCount})`],
     };
   }
+  const relatedSourceLabel = (fields.relatedSourceLabel || "").trim();
+  const relatedSourceExcerpt = (fields.relatedSourceExcerpt || "").trim();
   const content = {
     id: shortId(fields.prompt),
     prompt: (fields.prompt || "").trim(),
     choices: choices.map((choice) => (choice.text || "").trim()),
     answer: choices.findIndex((choice) => choice.correct),
     explanation: (fields.explanation || "").trim(),
+    relatedSource:
+      relatedSourceLabel && relatedSourceExcerpt
+        ? {
+            label: relatedSourceLabel,
+            attribution: (fields.relatedSourceAttribution || "").trim(),
+            excerpt: relatedSourceExcerpt,
+          }
+        : undefined,
   };
   const result = McqQuestSchema.safeParse(content);
   if (!result.success) return { ok: false, errors: issuesToMessages(result.error) };
@@ -149,6 +170,11 @@ export function defaultSequencingFields() {
       { label: "", position: 1 },
     ],
     explanation: "",
+    // Optional, non-graded reference source — see mcq-quest.js's
+    // relatedSource doc comment (mirrored on sequencing-quest.js).
+    relatedSourceLabel: "",
+    relatedSourceAttribution: "",
+    relatedSourceExcerpt: "",
   };
 }
 
@@ -156,7 +182,14 @@ export function sequencingToFields(quest) {
   const items = [...(quest.items || [])]
     .sort((a, b) => a.position - b.position)
     .map((item, i) => ({ label: item.label, position: i }));
-  return { prompt: quest.prompt || "", items, explanation: quest.explanation || "" };
+  return {
+    prompt: quest.prompt || "",
+    items,
+    explanation: quest.explanation || "",
+    relatedSourceLabel: quest.relatedSource?.label || "",
+    relatedSourceAttribution: quest.relatedSource?.attribution || "",
+    relatedSourceExcerpt: quest.relatedSource?.excerpt || "",
+  };
 }
 
 export function buildSequencingContent(fields) {
@@ -187,11 +220,21 @@ export function buildSequencingContent(fields) {
     label: (rows[i].label || "").trim(),
     position: positions[i],
   }));
+  const relatedSourceLabel = (fields.relatedSourceLabel || "").trim();
+  const relatedSourceExcerpt = (fields.relatedSourceExcerpt || "").trim();
   const content = {
     id: shortId(fields.prompt),
     prompt: (fields.prompt || "").trim(),
     items,
     explanation: (fields.explanation || "").trim() || undefined,
+    relatedSource:
+      relatedSourceLabel && relatedSourceExcerpt
+        ? {
+            label: relatedSourceLabel,
+            attribution: (fields.relatedSourceAttribution || "").trim(),
+            excerpt: relatedSourceExcerpt,
+          }
+        : undefined,
   };
   const result = SequencingQuestSchema.safeParse(content);
   if (!result.success) return { ok: false, errors: issuesToMessages(result.error) };
