@@ -5408,6 +5408,9 @@ dd {
   color: #bbcfca;
   font-size: 0.78rem;
 }
+.evidence-select-label-text {
+  white-space: nowrap;
+}
 .evidence-select-label select {
   flex: 1;
   padding: 6px 8px;
@@ -8970,6 +8973,14 @@ details[open] > summary.manage-content-unit-toggle::before {
   display: flex;
   gap: 10px;
 }
+.manage-content-jump-links {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.manage-content-jump-links .text-button {
+  margin: 0 2px;
+}
 .btn-plain {
   border-color: transparent;
   background: none;
@@ -9193,10 +9204,6 @@ details[open] > summary.manage-content-unit-toggle::before {
   align-items: center;
   gap: 10px;
 }
-.manage-content-command-bar-actions .btn {
-  padding: 8px 14px;
-  font-size: 0.68rem;
-}
 .manage-content-command-bar-actions .manage-content-status-badge {
   margin-left: auto;
 }
@@ -9240,40 +9247,57 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-color: rgba(189, 117, 95, 0.6);
   color: var(--danger);
 }
-.manage-content-step-indicator {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  padding-top: 8px;
-  border-top: 1px solid var(--c-border-subtle);
-}
-.manage-content-step {
-  padding: 2px 0;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-family: "Cinzel", serif;
-  font-size: 0.72rem;
-  letter-spacing: 0.01em;
-  cursor: default;
-}
-button.manage-content-step {
-  cursor: pointer;
-  border-radius: var(--c-radius-sm);
-}
-.manage-content-step.is-current,
-.manage-content-step[aria-current="step"] {
-  color: var(--gold);
-  font-weight: 700;
-}
-.manage-content-step.is-done {
-  color: #9fd3b8;
-}
 .manage-content-command-bar button:focus-visible,
-.manage-content-step-indicator button:focus-visible,
 .manage-content-breadcrumb button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+/* Vertical journey rail — a pure status display beside the editor content,
+   replacing the old horizontal command-bar pill row (see
+   manageContentStepIndicatorMarkup() in main.js). Extends the shared
+   .c-steps/.c-step primitive (defined near the top of this file) with a
+   visible bordered/filled "current" state — the previous text-only
+   .manage-content-step gave no visual difference between clickable and
+   inert items, which is exactly what led teachers to click inert ones. */
+.manage-content-layout {
+  display: grid;
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
+  gap: var(--c-space-5);
+  align-items: start;
+}
+.manage-content-journey-rail {
+  /* Deliberately not position:sticky — this app's shared
+     html, body { overflow-x: hidden; } rule (search this file) forces
+     body's computed overflow-y to "auto" per the CSS Overflow spec,
+     making body an unintended non-scrolling sticky containing block that
+     sticky positioning measurably fails against (same reason
+     .manage-content-fixed-header above uses position:fixed instead — see
+     manageContentFixedHeaderMarkup()'s comment in main.js). The rail just
+     scrolls with its content instead.
+  */
+  align-self: start;
+}
+.manage-content-journey.c-steps {
+  flex-direction: column;
+  gap: var(--c-space-3);
+}
+.manage-content-journey .c-step {
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--c-radius-sm);
+}
+.manage-content-journey .c-step[aria-current="step"] {
+  border-color: var(--c-border);
+  background: rgba(var(--c-gold-rgb), 0.08);
+}
+@media (max-width: 900px) {
+  .manage-content-layout {
+    grid-template-columns: 1fr;
+  }
+  .manage-content-journey.c-steps {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 }
 
 /* --- Manage Content Pass 2: source selector enrichment, selected-source

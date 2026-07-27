@@ -151,7 +151,7 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
       <h3>${escapeHtml(source.label)}${isPlaced ? `<span class="evidence-placed-badge" aria-hidden="true">✓</span>` : ""}</h3>
       <p class="evidence-attribution">${escapeHtml(source.attribution)}</p>
       <p class="evidence-excerpt">${escapeHtml(source.excerpt)}</p>
-      <label class="evidence-select-label">Place in
+      <label class="evidence-select-label"><span class="evidence-select-label-text">Place in</span>
         <select data-evidence-select="${escapeHtml(source.id)}" data-quest-id="${escapeHtml(quest.id)}">
           <option value="">— place —</option>
           ${quest.slots

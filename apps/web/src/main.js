@@ -3900,20 +3900,21 @@ function manageContentBreadcrumbMarkup(activeCase) {
   return `<nav class="manage-content-breadcrumb" aria-label="Manage Content navigation">${segments.join('<span aria-hidden="true"> › </span>')}</nav>`;
 }
 
-// Which action "Preview as student" should trigger from the command bar,
-// per wizard step — Step 1 has nothing live to show yet, so it navigates
-// into Step 2's real inline preview instead of silently activating an
-// invisible preview session; the edit/replace workspace only has something
-// to preview once a slot kind has actually been chosen (returns null then,
-// so the caller can hide the button entirely rather than render a no-op).
+// Which action "Preview as student" should trigger from the command bar —
+// only Map Missions (route === "field") need it, since they have no other
+// preview entry point in the body. Every non-field wizard step already
+// surfaces its own contextual preview action right where it's relevant
+// ("Preview Standard Mission →" at step 1, the live preview that step 2
+// simply *is*, "Preview Changes"/"Preview Replacement" in the edit/replace
+// workspace, "Preview Published Mission" on the published step), so a
+// second persistent copy in the header would just be a duplicate button
+// sitting next to the one that actually matters. Returns null (caller
+// hides the button entirely) whenever a preview session is already active
+// too — the banner's own "Exit preview" covers that case.
 function manageContentPreviewActionForStep(activeCase) {
+  if (isPreviewingContent()) return null;
   if (activeCase.route === "field") return "toggle-content-preview";
-  const step = contentUiState.wizardStep;
-  if (step === "name") return "wizard-go-preview";
-  if (step === "edit" || step === "replace") {
-    return manageContentAuthoring?.slotKind ? "preview-authoring-changes" : null;
-  }
-  return "preview-published-mission";
+  return null;
 }
 
 // Wraps chrome() + the command bar in one position:fixed header so the bar
@@ -3971,54 +3972,37 @@ ${sourcePoolButton}
 ${previewButton}
 ${statusBadgeMarkup(status.key, status.label)}
 </div>
-</div>
-${manageContentStepIndicatorMarkup(activeCase)}`;
+</div>`;
 }
 
-// Compact "Mission · Sources · Questions · Preview & Publish" indicator.
-// "Sources"/"Questions" aren't separate wizardStep values — both live
-// inside the single edit/replace workspace step's one-page form — so those
-// two dots act as scroll/focus anchors into that page (see
-// manage-content-sources-anchor/manage-content-questions-anchor above)
-// rather than real navigation, per this pass's brief allowing that when an
-// editor uses one-page sections instead of separate routes. Suppressed for
-// Map Missions (no wizard exists there) and before case data has loaded.
+// Vertical "Mission / Preview / Edit or Replace / Publish" journey rail —
+// a pure status display, never clickable. Earlier versions of this made
+// "Sources"/"Questions" secretly-clickable scroll anchors alongside two
+// inert stages, with no visual difference between the two — teachers
+// mistook the inert stages for buttons. Sources/Questions were never real
+// wizard steps anyway (both live inside the single edit/replace workspace
+// step's one-page form), so that jump behavior now lives as an obvious
+// in-page "Jump to:" link pair inside manageContentWorkspaceStepMarkup()
+// instead of pretending to be journey navigation here. Suppressed for Map
+// Missions (no wizard exists there) and before case data has loaded.
 function manageContentStepIndicatorMarkup(activeCase) {
   if (!activeCase || activeCase.route === "field") return "";
   const step = contentUiState.wizardStep || "name";
   const inWorkspace = step === "edit" || step === "replace";
   const steps = [
-    { label: "Mission", current: step === "name", done: step !== "name", action: null },
-    {
-      label: "Sources",
-      current: false,
-      done: inWorkspace,
-      action: inWorkspace ? "focus-manage-content-sources" : null,
-    },
-    {
-      label: "Questions",
-      current: inWorkspace,
-      done: false,
-      action: inWorkspace ? "focus-manage-content-questions" : null,
-    },
-    {
-      label: "Preview & Publish",
-      current: step === "preview" || step === "published",
-      done: step === "published",
-      action: null,
-    },
+    { label: "Mission", current: step === "name", done: step !== "name" },
+    { label: "Preview", current: false, done: step !== "name" },
+    { label: inWorkspace ? "Editing" : "Edit or Replace", current: inWorkspace, done: false },
+    { label: "Publish", current: step === "preview" || step === "published", done: step === "published" },
   ];
-  const dots = steps
-    .map(({ label, current, done, action }) => {
-      const cls = current ? "is-current" : done ? "is-done" : "is-pending";
+  const items = steps
+    .map(({ label, current, done }) => {
+      const cls = `c-step${done ? " is-done" : ""}`;
       const currentAttr = current ? ' aria-current="step"' : "";
-      const inner = `${done ? "✓ " : ""}${esc(label)}`;
-      return action
-        ? `<button type="button" class="manage-content-step ${cls}" data-action="${action}"${currentAttr}>${inner}</button>`
-        : `<span class="manage-content-step ${cls}"${currentAttr}>${inner}</span>`;
+      return `<li class="${cls}"${currentAttr}>${done ? "✓ " : ""}${esc(label)}</li>`;
     })
     .join("");
-  return `<div class="manage-content-step-indicator">${dots}</div>`;
+  return `<ol class="manage-content-journey c-steps">${items}</ol>`;
 }
 
 function manageContentCaseScreen() {
@@ -4050,9 +4034,12 @@ ${missionRenameControlMarkup(activeCase)}
         : step === "published"
           ? manageContentPublishedStepMarkup(activeCase)
           : manageContentNameStepMarkup(activeCase);
-  return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><section>
+  return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><div class="manage-content-layout">
+<aside class="manage-content-journey-rail">${manageContentStepIndicatorMarkup(activeCase)}</aside>
+<section>
 ${stepMarkup}
-</section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
+</section>
+</div></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
 }
 
 // Shared "case number / mission name / description" block every wizard step
@@ -4166,6 +4153,7 @@ function manageContentWorkspaceStepMarkup(activeCase) {
   return `${manageContentWizardHeaderMarkup(activeCase)}
 <h2 class="manage-content-editor-heading">${heading}</h2>
 ${isReplace && !typeChosen ? "<p>Choose the activity students will complete for this mission.</p>" : ""}
+${typeChosen ? `<p class="manage-content-jump-links">Jump to: <button type="button" class="text-button" data-action="focus-manage-content-sources">Sources</button> · <button type="button" class="text-button" data-action="focus-manage-content-questions">Questions</button></p>` : ""}
 ${manageContentAuthoringFormMarkup()}
 ${feedbackError(contentUiState)}
 ${feedbackSuccess(contentUiState)}
