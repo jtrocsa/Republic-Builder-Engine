@@ -8116,6 +8116,35 @@ button:hover,
   gap: 10px;
   margin-top: 12px;
 }
+/* The join code within a classroom-switcher button — was baked into the
+   button's primary label ("Period 4 (RTZ547)"); now visually secondary. */
+.classroom-switch-code {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 400;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+}
+/* Compact Unit Access status card (Phase 44, C4) — was a bare .kicker
+   rendering "ALL UNITS ARE ALREADY AVAILABLE." in shouted caps. */
+.manage-content-unit-access {
+  margin: 10px 0 24px;
+}
+.manage-content-unit-access-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--c-space-3);
+}
+.manage-content-unit-access-row .c-help {
+  margin: 0;
+  flex: 1 1 auto;
+}
+.manage-content-unit-access .btn {
+  margin-top: 10px;
+}
 .roster-progress-pill {
   display: inline-block;
   padding: 3px 9px;
@@ -8337,6 +8366,14 @@ details[open] > summary.manage-content-unit-toggle::before {
   border: 1px solid rgba(239, 204, 122, 0.22);
   border-radius: 14px;
   background: rgba(4, 26, 38, 0.32);
+  transition:
+    border-color var(--c-dur-base) ease,
+    transform var(--c-dur-base) ease;
+}
+.manage-content-mission-card:hover,
+.manage-content-mission-card:focus-within {
+  border-color: var(--c-border-strong);
+  transform: translateY(-2px);
 }
 .manage-content-mission-head {
   display: flex;

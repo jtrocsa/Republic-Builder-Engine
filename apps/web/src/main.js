@@ -2236,6 +2236,15 @@ function teacherDashboardTabsMarkup() {
   ).join("")}</div>`;
 }
 
+// Human-readable labels for the raw roster_slots.status enum — was
+// rendered verbatim ("claimed"/"unclaimed"/"disabled") straight from the
+// database.
+const ROSTER_STATUS_LABEL = {
+  claimed: { label: "Claimed", tone: "success" },
+  unclaimed: { label: "Not yet claimed", tone: "muted" },
+  disabled: { label: "Disabled", tone: "error" },
+};
+
 function teacherClassroomsTabMarkup() {
   const rosterRows = teacherUiState.roster
     .map((slot) => {
@@ -2245,6 +2254,10 @@ function teacherClassroomsTabMarkup() {
       const progressLabel = summary
         ? `${summary.completedCount} case${summary.completedCount === 1 ? "" : "s"} complete`
         : "Not started";
+      const statusInfo = ROSTER_STATUS_LABEL[slot.status] || {
+        label: slot.status,
+        tone: "default",
+      };
       const actions =
         slot.status === "disabled"
           ? "Disabled"
@@ -2256,7 +2269,7 @@ function teacherClassroomsTabMarkup() {
             ]
               .filter(Boolean)
               .join(" · ");
-      return `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${esc(slot.status)}</td><td><span class="roster-progress-pill">${esc(progressLabel)}</span></td><td>${actions}</td></tr>`;
+      return `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${chip(statusInfo)}</td><td>${chip({ label: progressLabel, tone: "muted" })}</td><td>${actions}</td></tr>`;
     })
     .join("");
   return `
@@ -2279,23 +2292,33 @@ ${
 }
 ${
   teacherUiState.selectedClassroomId
-    ? `<table class="roster-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Progress</th><th></th></tr></thead><tbody>${rosterRows}</tbody></table>`
-    : "<p>Create a classroom above to add students.</p>"
+    ? `<table class="roster-table"><caption class="c-help">Students in this classroom</caption><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Progress</th><th scope="col"></th></tr></thead><tbody>${rosterRows}</tbody></table>`
+    : `${emptyState({ title: "No students yet", body: "Create a classroom above to add students." })}`
 }`;
 }
 
+// Readable labels for the two real taskType values (see
+// engine/evaluator-requests.js). taskId itself (a source id or
+// `saq-{unitId}`) is kept but de-emphasized as secondary metadata rather
+// than presented as a primary column — resolving it to a human title would
+// need a lookup this pass hasn't verified is safe to add.
+const SUBMISSION_TASK_TYPE_LABEL = {
+  "hipp-sourcing": "HIPP Sourcing",
+  saq: "SAQ",
+};
+
 function teacherAssignmentsTabMarkup() {
   if (!teacherUiState.selectedClassroomId)
-    return "<p>Select or create a classroom to review its submissions.</p>";
+    return emptyState({ body: "Select or create a classroom to review its submissions." });
   const submissionRows = teacherUiState.submissions
     .map(
       (sub) =>
-        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(sub.taskType)}</td><td>${esc(sub.taskId)}</td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
+        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(SUBMISSION_TASK_TYPE_LABEL[sub.taskType] || sub.taskType)}<br><span class="c-help">${esc(sub.taskId)}</span></td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
     )
     .join("");
   return submissionRows
-    ? `<table class="roster-table"><thead><tr><th>Student</th><th>Type</th><th>Task</th><th>Readiness</th><th></th></tr></thead><tbody>${submissionRows}</tbody></table>`
-    : "<p>No submissions yet for this classroom.</p>";
+    ? `<table class="roster-table"><caption class="c-help">Student submissions for this classroom</caption><thead><tr><th scope="col">Student</th><th scope="col">Assessment</th><th scope="col">Readiness</th><th scope="col"></th></tr></thead><tbody>${submissionRows}</tbody></table>`
+    : emptyState({ body: "No submissions yet for this classroom." });
 }
 
 function teacherUnitsTabMarkup() {
@@ -2311,10 +2334,13 @@ function teacherDashboardScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
     return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
   }
+  // Join code is real, useful info (what a teacher hands students to join)
+  // but was baked into the button's primary label — now a visually
+  // secondary span within the same button, not competing with the name.
   const classroomButtons = teacherUiState.classrooms
     .map(
       (c) =>
-        `<button class="btn ${c.id === teacherUiState.selectedClassroomId ? "btn-gold" : "btn-outline"}" data-action="select-classroom" data-classroom-id="${esc(c.id)}" type="button">${esc(c.name)} (${esc(c.join_code)})</button>`
+        `<button class="btn ${c.id === teacherUiState.selectedClassroomId ? "btn-gold" : "btn-outline"}" data-action="select-classroom" data-classroom-id="${esc(c.id)}" type="button">${esc(c.name)}<span class="classroom-switch-code">${esc(c.join_code)}</span></button>`
     )
     .join("");
   const tabBodies = {
@@ -2337,17 +2363,20 @@ ${activeTabBody}
 </section></main>${authorPanel()}`;
 }
 
+// Compact status card, not a shouted banner — was a bare .kicker rendering
+// "ALL UNITS ARE ALREADY AVAILABLE." in all-caps via CSS text-transform.
 function teacherUnitAccessMarkup() {
   const index = teacherUiState.enabledUnitIndex;
   const currentUnit = UNITS[index];
   const nextUnit = UNITS[index + 1];
   return `<h2>Unit access</h2>
-<p>Students can currently reach: <strong>${esc(resolvedUnitTitle(currentUnit))}</strong> and everything before it.</p>
-${
-  nextUnit
-    ? `<button class="btn btn-outline" data-action="advance-classroom-unit" type="button">Advance to ${esc(resolvedUnitTitle(nextUnit))} →</button>`
-    : `<p class="kicker">All units are already available.</p>`
-}`;
+<div class="c-panel manage-content-unit-access">
+<div class="manage-content-unit-access-row">
+<p class="c-help">Students can currently reach <strong>${esc(resolvedUnitTitle(currentUnit))}</strong> and everything before it.</p>
+${chip({ label: nextUnit ? `${index + 1} of ${UNITS.length} units open` : "All units open", tone: nextUnit ? "default" : "success" })}
+</div>
+${nextUnit ? `<button class="btn btn-outline" data-action="advance-classroom-unit" type="button">Advance to ${esc(resolvedUnitTitle(nextUnit))} →</button>` : ""}
+</div>`;
 }
 
 // --- Teacher Dashboard "Sources" tab ---------------------------------------
