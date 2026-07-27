@@ -2548,7 +2548,7 @@ ${body}
 
 function teacherSourcesTabMarkup() {
   if (!teacherUiState.selectedClassroomId)
-    return "<p>Select or create a classroom to curate its sources.</p>";
+    return emptyState({ body: "Select or create a classroom to curate its sources." });
   return `
 <p>Review every researched source for each unit, see which ones are already locked into a built mission, and pre-select the ones you want available for this classroom.</p>
 ${PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta }) => teacherSourcesUnitSectionMarkup(meta)).join("")}`;
@@ -2560,7 +2560,10 @@ function gradingScreen() {
   }
   const submission = gradingUiState.submission;
   if (!submission) {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1><p>${gradingUiState.error ? esc(gradingUiState.error) : "Loading submission…"}</p><button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button></section></main>${authorPanel()}`;
+    const body = gradingUiState.error
+      ? feedbackError(gradingUiState)
+      : loadingNote("Loading submission…");
+    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1>${body}<button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button></section></main>${authorPanel()}`;
   }
   const grades =
     submission.grades
@@ -2568,10 +2571,10 @@ function gradingScreen() {
         (g) =>
           `<article class="manual-grade-entry"><p class="kicker">${esc(new Date(g.created_at).toLocaleString())}</p><h3>${esc(g.grade_label)}</h3>${g.teacher_feedback ? `<p>${esc(g.teacher_feedback)}</p>` : ""}</article>`
       )
-      .join("") || "<p>No grade entered yet.</p>";
+      .join("") || emptyState({ body: "No grade entered yet." });
   return `${chrome()}<main class="shell review-shell"><section class="review-copy">
 <button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
-<p class="kicker">${esc(submission.taskType)} · ${esc(submission.taskId)}</p>
+<p class="kicker">${esc(SUBMISSION_TASK_TYPE_LABEL[submission.taskType] || submission.taskType)}</p>
 <h1>${esc(submission.studentDisplayName)}</h1>
 ${submission.stimulus ? `<blockquote>${esc(submission.stimulus)}</blockquote>` : ""}
 <p><b>Prompt:</b> ${esc(submission.prompt)}</p>
