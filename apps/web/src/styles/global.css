@@ -1,15 +1,151 @@
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Spectral:ital,wght@0,400;0,600;0,700;1,600&display=swap");
+
+/* ============================================================
+   Chronicle Design System — tokens (Phase 44)
+   See docs/architecture/UI-DESIGN-SYSTEM.md for the full guide.
+
+   The original 10 tokens (--ink, --muted, --gold, --gold-soft,
+   --panel, --line, --paper, --danger) are kept below as aliases so
+   every existing var() call in this file keeps working unchanged.
+   --navy/--navy2 are dropped (zero references anywhere). --cream is
+   added to fix a live bug: .activity-board h2 references var(--cream)
+   but the token was never declared.
+   ============================================================ */
 :root {
-  --ink: #f7e7bd;
-  --muted: #c4d0cf;
-  --gold: #e1b65d;
-  --gold-soft: #f0d488;
-  --navy: #052838;
-  --navy2: #0b4154;
+  /* Base channels — one alpha ramp instead of the ~157 hand-written
+     rgba(239, 204, 122, …) literals scattered through this file. */
+  --c-gold-rgb: 239, 204, 122;
+  --c-ink-rgb: 247, 231, 189;
+  --c-navy-rgb: 4, 26, 38;
+  --c-teal-rgb: 126, 221, 214;
+  --c-black-rgb: 0, 0, 0;
+  --c-white-rgb: 255, 255, 255;
+
+  /* Surfaces */
+  --c-canvas: #052838;
+  --c-surface: rgba(var(--c-navy-rgb), 0.72);
+  --c-surface-raised: rgba(var(--c-navy-rgb), 0.91);
+  --c-surface-interactive: rgba(var(--c-navy-rgb), 0.4);
+  --c-surface-parchment: #e9d5a3;
+
+  /* Text */
+  --c-text: #f7e7bd;
+  --c-text-secondary: #d8e3de;
+  --c-text-muted: #c4d0cf;
+  --c-text-on-gold: #19303a;
+
+  /* Borders — ordinary borders are translucent blue-gray/cream, not
+     gold. Gold is reserved for primary actions, selection, progress,
+     and small accents (see the button hierarchy below). */
+  --c-border-subtle: rgba(var(--c-ink-rgb), 0.14);
+  --c-border: rgba(var(--c-gold-rgb), 0.4);
+  --c-border-strong: rgba(var(--c-gold-rgb), 0.6);
+  --c-border-gold: var(--gold);
+
+  /* Accent / status */
+  --c-gold: #e1b65d;
+  --c-gold-soft: #f0d488;
+  --c-gold-hover: #f0d488;
+  --c-success: #87d5a4;
+  --c-warning: #f0cf7a;
+  --c-error: #bd755f;
+  --c-info: #7ee6ec;
+  --c-focus-ring: var(--c-gold);
+  --c-disabled-bg: rgba(var(--c-navy-rgb), 0.3);
+  --c-disabled-text: rgba(var(--c-ink-rgb), 0.4);
+
+  /* Type */
+  --c-font-display: "Spectral", serif;
+  --c-font-label: "Cinzel", serif;
+  --c-font-ui: "DM Sans", system-ui, sans-serif;
+  --c-text-display: clamp(2.5rem, 4.2vw, 4.8rem);
+  --c-text-page: clamp(1.9rem, 2.6vw, 2.6rem);
+  --c-text-section: 1.2rem;
+  --c-text-body: 1rem;
+  --c-text-meta: 0.85rem;
+  --c-text-label: 0.72rem;
+  --c-leading-tight: 1.1;
+  --c-leading-normal: 1.5;
+  --c-leading-relaxed: 1.7;
+
+  /* Spacing */
+  --c-space-1: 4px;
+  --c-space-2: 8px;
+  --c-space-3: 12px;
+  --c-space-4: 16px;
+  --c-space-5: 24px;
+  --c-space-6: 32px;
+  --c-space-7: 48px;
+  --c-space-8: 64px;
+
+  /* Shape */
+  --c-radius-sm: 8px;
+  --c-radius-md: 12px;
+  --c-radius-lg: 16px;
+  --c-radius-pill: 999px;
+
+  /* Elevation — three tiers, replacing 42 bespoke box-shadow values. */
+  --c-shadow-subtle: 0 12px 24px rgba(var(--c-black-rgb), 0.22);
+  --c-shadow-raised: 0 20px 40px rgba(var(--c-black-rgb), 0.28);
+  --c-shadow-overlay: 0 28px 60px rgba(var(--c-black-rgb), 0.42);
+
+  /* Layout widths */
+  --c-width-auth: 460px;
+  --c-width-content: 1180px;
+  --c-width-editor: 1480px;
+  --c-width-reading: 68ch;
+  --c-gutter: 56px;
+  --c-header-h: 58px;
+
+  /* Motion */
+  --c-dur-fast: 120ms;
+  --c-dur-base: 200ms;
+  --c-dur-slow: 320ms;
+
+  /* --- Legacy aliases (kept: 129 existing var() calls depend on these
+     exact names). --panel and --line keep their original literal
+     values rather than pointing at --c-surface-raised/--c-border —
+     those new semantic tokens use a deliberately different navy/gold
+     base for new work, and re-deriving the old names from them would
+     silently shift the 29 existing --line borders and 1 --panel
+     surface by a few RGB points. --- */
+  --ink: var(--c-text);
+  --muted: var(--c-text-muted);
+  --gold: var(--c-gold);
+  --gold-soft: var(--c-gold-soft);
   --panel: rgba(5, 39, 55, 0.91);
   --line: rgba(229, 190, 102, 0.4);
-  --paper: #e9d5a3;
-  --danger: #bd755f;
+  --paper: var(--c-surface-parchment);
+  --danger: var(--c-error);
+  --cream: var(--c-text);
+}
+
+/* Global focus ring — the pattern already used by Manage Content
+   (global.css:8664 as of Phase 43), now the default everywhere. Most
+   interactive elements have no focus style at all today; this adds
+   one without changing hover/click appearance. Gameplay elements that
+   already define their own :focus-visible ring (.field-npc,
+   .source-signal--world, .recall-beacon, etc.) keep it — theirs use
+   !important and are declared later in the file, so they still win. */
+:focus-visible {
+  outline: 2px solid var(--c-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Respect reduced-motion system-wide. The file has 60 `animation:`
+   declarations and previously only 3 were covered; this umbrella
+   covers all of them (including future ones) without hand-auditing
+   every keyframe. The 3 existing targeted rules below are redundant
+   with this but left in place — harmless, and documents intent. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 * {
   box-sizing: border-box;
