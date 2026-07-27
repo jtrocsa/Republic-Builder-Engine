@@ -2243,10 +2243,17 @@ const TEACHER_DASHBOARD_TABS = [
   { id: "units", label: "Units" },
 ];
 
+// Real tab semantics — was a row of plain buttons with no role/aria-
+// selected. Each tab stays individually Tab-key reachable (no roving
+// tabindex/arrow-key handling — this app's global keydown handler already
+// carries significant gameplay-movement complexity, and standard Tab
+// traversal already makes every tab keyboard-operable).
 function teacherDashboardTabsMarkup() {
-  return `<div class="archive-legend archive-unit-tabs">${TEACHER_DASHBOARD_TABS.map(
-    (tab) =>
-      `<button class="text-button unit-tab ${teacherUiState.activeTab === tab.id ? "is-selected" : ""}" data-action="select-teacher-tab" data-tab="${tab.id}" type="button">${esc(tab.label)}</button>`
+  return `<div class="archive-legend archive-unit-tabs" role="tablist" aria-label="Teacher dashboard sections">${TEACHER_DASHBOARD_TABS.map(
+    (tab) => {
+      const selected = teacherUiState.activeTab === tab.id;
+      return `<button class="text-button unit-tab ${selected ? "is-selected" : ""}" data-action="select-teacher-tab" data-tab="${tab.id}" type="button" role="tab" aria-selected="${selected}" aria-controls="teacher-dashboard-tabpanel">${esc(tab.label)}</button>`;
+    }
   ).join("")}</div>`;
 }
 
@@ -2371,7 +2378,7 @@ function teacherDashboardScreen() {
 <div class="completion-actions">${classroomButtons}</div>
 ${feedbackError(teacherUiState)}
 ${teacherDashboardTabsMarkup()}
-${activeTabBody}
+<div id="teacher-dashboard-tabpanel" role="tabpanel" aria-label="${esc(TEACHER_DASHBOARD_TABS.find((t) => t.id === teacherUiState.activeTab)?.label || "Classrooms")}">${activeTabBody}</div>
 <button class="btn btn-outline" data-action="teacher-sign-out" type="button">Sign out</button>
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
@@ -3268,7 +3275,7 @@ function sourceTextToolMarkup(fieldKey, poolValue, currentText, textareaAttrs) {
 <p class="manage-content-source-fulltext-body manage-content-source-fulltext-select">${segments
           .map(
             (segment, i) =>
-              `<span class="manage-content-source-segment ${highlighted[i] ? "is-highlighted" : ""}" data-action="toggle-highlight-segment" data-field-key="${esc(fieldKey)}" data-segment-index="${i}">${esc(segment)}</span>`
+              `<button type="button" class="manage-content-source-segment ${highlighted[i] ? "is-highlighted" : ""}" data-action="toggle-highlight-segment" data-field-key="${esc(fieldKey)}" data-segment-index="${i}" aria-pressed="${highlighted[i] ? "true" : "false"}">${esc(segment)}</button>`
           )
           .join("")}</p>
 <button type="button" class="btn btn-gold" data-action="use-highlighted-excerpt" data-field-key="${esc(fieldKey)}" ${highlighted.some(Boolean) ? "" : "disabled"}>Use Highlighted Excerpt →</button>

@@ -9098,7 +9098,17 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-source-fulltext-select {
   cursor: text;
 }
+/* Now a <button> (was a click-only, keyboard-inaccessible <span>) — reset
+   to read as plain inline text within the surrounding paragraph. */
 .manage-content-source-segment {
+  display: inline;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   border-radius: 3px;
   transition: background-color 0.12s ease;
