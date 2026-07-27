@@ -2488,6 +2488,22 @@ function officialQuestSlotsForCase(caseId) {
 // key was kept as-is. (A 5th, unrelated "ledger-record" quasi-type used to
 // live here for case-002's bespoke ledger — retired once case-002 was
 // migrated onto a real quest type; see docs/architecture/ARCHITECTURE-QUICKREF.md.)
+// Small "ⓘ" affordance for extra teacher guidance in Manage Content. Reuses
+// the app's existing native-title tooltip convention (see the title= attrs
+// already on mcq/sequencing/hipp inputs) instead of introducing new
+// JS-driven popover/disclosure state, per CLAUDE.md's near-term-minimal
+// architecture note. Keep `text` to plain sentences — title attrs render as
+// plain text, no markup.
+function helpIconMarkup(text) {
+  return `<span class="manage-content-help-icon" tabindex="0" title="${esc(text)}" aria-label="${esc(text)}">ⓘ</span>`;
+}
+const MANAGE_CONTENT_WIZARD_HELP_TEXT =
+  "How this works: Preview shows the mission's current activity exactly as students will see it. From there, choose Keep & Publish to leave it as-is, Edit This Activity to change its wording or answers, or Replace Activity to swap in a different activity type. Nothing changes for students until you publish.";
+const MANAGE_CONTENT_HIPP_ARGUMENT_HELP =
+  "The specific historical argument or interpretation this HIPP dimension should connect to — e.g. a claim about why the document was written or who it was meant to persuade. Students see this next to the dimension name. A correct answer must explain how this dimension (Historical situation/Intended audience/Purpose/Point of view) supports this exact argument, not just identify it.";
+const MANAGE_CONTENT_HIPP_ID_ONLY_HELP =
+  "Marks a wrong-answer option that correctly names the right person, place, or context for this dimension but doesn't connect it to the argument above. On the real AP DBQ rubric, identification alone earns zero points — only explaining how or why it shapes the argument counts. Each prompt needs exactly one fully correct option and at least one option like this.";
+
 const QUEST_TYPE_DISPLAY_NAMES = {
   mcq: "Multiple Choice",
   sequencing: "Sequencing",
@@ -2661,8 +2677,6 @@ function splitIntoSegments(text) {
   return (text || "").match(/[^.!?]+[.!?]+(\s+|$)/g) || (text ? [text] : []);
 }
 
-const MANAGE_CONTENT_EXCERPT_MAX_CHARS = 500;
-
 // Renders the shared "highlight full source text into an excerpt, or write
 // your own summary instead" tool that sits above a text field a teacher is
 // filling in from a picked pool source (HIPP's document text, an
@@ -2694,10 +2708,6 @@ function sourceTextToolMarkup(fieldKey, poolValue, currentText, textareaAttrs) {
     tool.mode !== "summary" && fullText
       ? `<div class="manage-content-source-fulltext">
 <div class="manage-content-source-fulltext-head">
-<span>Full source text (for you)</span>
-</div>
-<p class="manage-content-source-fulltext-body">${esc(fullText)}</p>
-<div class="manage-content-source-fulltext-head">
 <span>Select lines for students</span>
 <div class="manage-content-source-fulltext-actions">
 <button type="button" class="btn btn-plain" data-action="clear-highlights" data-field-key="${esc(fieldKey)}" ${highlighted.some(Boolean) ? "" : "disabled"}>Clear</button>
@@ -2714,7 +2724,7 @@ function sourceTextToolMarkup(fieldKey, poolValue, currentText, textareaAttrs) {
 <button type="button" class="btn btn-gold" data-action="use-highlighted-excerpt" data-field-key="${esc(fieldKey)}" ${highlighted.some(Boolean) ? "" : "disabled"}>Use Highlighted Excerpt →</button>
 </div>`
       : "";
-  const counter = `<p class="manage-content-char-counter">${length} of ${MANAGE_CONTENT_EXCERPT_MAX_CHARS} characters ${length > 0 && length <= MANAGE_CONTENT_EXCERPT_MAX_CHARS ? "✓" : ""}</p>`;
+  const counter = `<p class="manage-content-char-counter">${length} character${length === 1 ? "" : "s"}</p>`;
   return `<div class="manage-content-source-tool" data-field-key="${esc(fieldKey)}">
 ${resolved ? modeTabs : ""}
 ${highlighter}
@@ -2734,17 +2744,17 @@ function mcqFieldsMarkup(fields) {
 </div>`
     )
     .join("");
-  return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<div class="manage-content-field-label">Choices — mark the correct one</div>
-<div class="manage-content-row-list" data-authoring-rows="choices">${rows}</div>
-<button type="button" class="manage-content-add-row-btn" data-action="add-mcq-choice">+ Add choice</button>
-<label>Explanation (optional, shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>
-<div class="manage-content-field-label">Attach a source (optional)</div>
+  return `<div class="manage-content-field-label">Attach a source (optional)</div>
 <p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
 ${sourcePickerFieldMarkup('data-copy-mcq-source data-authoring-field="mcqSourcePoolValue"', fields.mcqSourcePoolValue)}
 <label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Immigration Act (Chinese Exclusion Act), 1882"></label>
 <label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
-${sourceTextToolMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}`;
+${sourceTextToolMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}
+<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<div class="manage-content-field-label">Choices — mark the correct one</div>
+<div class="manage-content-row-list" data-authoring-rows="choices">${rows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-mcq-choice">+ Add choice</button>
+<label>Explanation (optional, shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
 }
 
 function sequencingFieldsMarkup(fields) {
@@ -2765,17 +2775,17 @@ function sequencingFieldsMarkup(fields) {
 </div>`
     )
     .join("");
-  return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<div class="manage-content-field-label">Items — set each one's position in the correct causal order (not just chronological)</div>
-<div class="manage-content-row-list" data-authoring-rows="items">${rows}</div>
-<button type="button" class="manage-content-add-row-btn" data-action="add-sequence-item">+ Add item</button>
-<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>
-<div class="manage-content-field-label">Attach a source (optional)</div>
+  return `<div class="manage-content-field-label">Attach a source (optional)</div>
 <p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
 ${sourcePickerFieldMarkup('data-copy-sequencing-source data-authoring-field="sequencingSourcePoolValue"', fields.sequencingSourcePoolValue)}
 <label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Seneca Falls Convention, 1848"></label>
 <label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
-${sourceTextToolMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}`;
+${sourceTextToolMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}
+<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
+<div class="manage-content-field-label">Items — set each one's position in the correct causal order (not just chronological)</div>
+<div class="manage-content-row-list" data-authoring-rows="items">${rows}</div>
+<button type="button" class="manage-content-add-row-btn" data-action="add-sequence-item">+ Add item</button>
+<label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
 }
 
 function evidenceOrganizingFieldsMarkup(fields) {
@@ -2839,7 +2849,7 @@ function hippFieldsMarkup(fields) {
         .map(
           (option, oi) => `<div class="manage-content-hipp-option-row">
 <input type="radio" name="hipp-correct-${pi}" data-hipp-correct ${option.correct ? "checked" : ""} title="Mark as the correct option">
-<label class="manage-content-inline-checkbox" title="Check this if the option correctly names the right person/place/context but doesn't explain how it shapes the argument."><input type="checkbox" data-hipp-identification ${option.identificationOnly ? "checked" : ""}> ID-only distractor</label>
+<label class="manage-content-inline-checkbox"><input type="checkbox" data-hipp-identification ${option.identificationOnly ? "checked" : ""}> Names it, but doesn't explain why</label>${helpIconMarkup(MANAGE_CONTENT_HIPP_ID_ONLY_HELP)}
 <input type="text" data-hipp-option-text value="${esc(option.text)}" placeholder="Option text">
 <button type="button" class="manage-content-row-delete-btn" data-action="remove-hipp-option" data-prompt-index="${pi}" data-row-index="${oi}" ${options.length <= 3 ? "disabled" : ""} title="Remove this option">×</button>
 </div>`
@@ -2850,7 +2860,7 @@ function hippFieldsMarkup(fields) {
 <select data-hipp-dimension title="HIPP dimension">${dimensionOptions(prompt.dimension)}</select>
 <button type="button" class="manage-content-row-delete-btn" data-action="remove-hipp-prompt" data-row-index="${pi}" ${prompts.length <= 1 ? "disabled" : ""} title="Remove this prompt">×</button>
 </div>
-<textarea data-hipp-argument rows="2" placeholder="Argument">${esc(prompt.argument)}</textarea>
+<label>Argument this dimension connects to${helpIconMarkup(MANAGE_CONTENT_HIPP_ARGUMENT_HELP)}<textarea data-hipp-argument rows="2" placeholder="e.g. Newspapers built broad public support for ratifying the Constitution">${esc(prompt.argument)}</textarea></label>
 <div class="manage-content-row-list">${optionRows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-hipp-option" data-prompt-index="${pi}" ${options.length >= 6 ? "disabled" : ""}>+ Add option</button>
 </div>`;
@@ -2860,7 +2870,7 @@ function hippFieldsMarkup(fields) {
 ${sourceTextToolMarkup("hipp", fields.hippSourcePoolValue, fields.documentText, 'data-authoring-field="documentText"')}
 <label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
 <div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
-<p class="manage-content-help-text">Each prompt needs exactly one fully <strong>correct</strong> option (names the right answer <em>and</em> explains how it shapes the document's argument) and at least one <strong>ID-only distractor</strong> — a wrong answer that correctly names the right person/place/context but doesn't connect it to the argument. This mirrors the real AP DBQ rubric rule: identification alone scores zero.</p>
+<p class="manage-content-help-text">Each prompt needs exactly one fully <strong>correct</strong> option (names the right answer <em>and</em> explains how it shapes the document's argument) and at least one option that <strong>names it, but doesn't explain why</strong> — a wrong answer that correctly identifies the right person/place/context but doesn't connect it to the argument. This mirrors the real AP DBQ rubric rule: identification alone scores zero.</p>
 <div class="manage-content-row-list" data-authoring-rows="hippPrompts">${promptBlocks}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-hipp-prompt" ${prompts.length >= 2 ? "disabled" : ""}>+ Add HIPP prompt</button>`;
 }
@@ -3012,7 +3022,7 @@ function manageContentWizardHeaderMarkup(activeCase) {
   const caseNumber = splitCaseTitle(activeCase)
     .prefix.replace(/\s*—\s*$/, "")
     .trim();
-  return `<button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>
+  return `<div class="manage-content-wizard-header-top"><button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>${helpIconMarkup(MANAGE_CONTENT_WIZARD_HELP_TEXT)}</div>
 <p class="kicker">${esc(caseNumber || activeCase.shortTitle)}</p>
 <h1>${esc(resolvedCaseTitle(activeCase))}</h1>
 <p>${esc(activeCase.summary)}</p>`;
@@ -3038,7 +3048,7 @@ ${feedbackError(contentUiState)}
 function manageContentPreviewStepMarkup(activeCase) {
   const slot = contentUiState.slot;
   const previewBody = slot
-    ? `<div class="manage-content-live-preview">${archiveChallengeCard("", slot.slotKind, slot.officialId)}</div>`
+    ? `<div class="manage-content-live-preview">${archiveChallengeCard(`Student view — ${QUEST_TYPE_DISPLAY_NAMES[slot.slotKind] || ""}`, slot.slotKind, slot.officialId)}</div>`
     : `<p class="case-summary-note">This mission has no activity configured yet.</p>`;
   return `${manageContentWizardHeaderMarkup(activeCase)}
 ${previewBody}
@@ -3062,7 +3072,7 @@ function manageContentPublishedStepMarkup(activeCase) {
   if (isPreviewingContent()) {
     const slot = contentUiState.slot;
     return `${manageContentWizardHeaderMarkup(activeCase)}
-<div class="manage-content-live-preview">${slot ? archiveChallengeCard("", slot.slotKind, slot.officialId) : ""}</div>
+<div class="manage-content-live-preview">${slot ? archiveChallengeCard(`Student view — ${QUEST_TYPE_DISPLAY_NAMES[slot.slotKind] || ""}`, slot.slotKind, slot.officialId) : ""}</div>
 <button class="back-link" data-action="exit-content-preview" type="button">← Back</button>`;
   }
   return `${manageContentWizardHeaderMarkup(activeCase)}
@@ -3097,7 +3107,7 @@ function manageContentWorkspaceStepMarkup(activeCase) {
   const auth = manageContentAuthoring;
   if (isPreviewingContent()) {
     return `${manageContentWizardHeaderMarkup(activeCase)}
-<div class="manage-content-live-preview">${auth?.previewQuest ? archiveChallengeQuestCard("", auth.slotKind, auth.previewQuest) : ""}</div>
+<div class="manage-content-live-preview">${auth?.previewQuest ? archiveChallengeQuestCard(`Student view — ${QUEST_TYPE_DISPLAY_NAMES[auth.slotKind] || ""}`, auth.slotKind, auth.previewQuest) : ""}</div>
 <button class="back-link" data-action="exit-content-preview" type="button">← Back to editing</button>`;
   }
   const typeChosen = Boolean(auth?.slotKind);

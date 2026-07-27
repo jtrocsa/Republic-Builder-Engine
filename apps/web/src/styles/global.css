@@ -8272,11 +8272,9 @@ details[open] > summary.manage-content-unit-toggle::before {
   color: #b9c7c2;
 }
 .manage-content-live-preview {
-  margin-top: 14px;
-  padding: 24px 26px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(9, 55, 71, 0.88), rgba(6, 31, 43, 0.92));
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 .manage-content-live-preview .quest-practice-item {
   margin-bottom: 0;
@@ -8299,6 +8297,27 @@ details[open] > summary.manage-content-unit-toggle::before {
   color: #b9c7c2;
   font-size: 0.78rem;
   line-height: 1.4;
+}
+.manage-content-help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+}
+.manage-content-wizard-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 /* Quest-type panel header (icon + name), atop each configure form. */
