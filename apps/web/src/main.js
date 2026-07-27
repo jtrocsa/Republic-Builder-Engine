@@ -3947,10 +3947,11 @@ function manageContentStepIndicatorMarkup(activeCase) {
   const dots = steps
     .map(({ label, current, done, action }) => {
       const cls = current ? "is-current" : done ? "is-done" : "is-pending";
+      const currentAttr = current ? ' aria-current="step"' : "";
       const inner = `${done ? "✓ " : ""}${esc(label)}`;
       return action
-        ? `<button type="button" class="manage-content-step ${cls}" data-action="${action}">${inner}</button>`
-        : `<span class="manage-content-step ${cls}">${inner}</span>`;
+        ? `<button type="button" class="manage-content-step ${cls}" data-action="${action}"${currentAttr}>${inner}</button>`
+        : `<span class="manage-content-step ${cls}"${currentAttr}>${inner}</span>`;
     })
     .join("");
   return `<div class="manage-content-step-indicator">${dots}</div>`;

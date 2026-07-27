@@ -8228,18 +8228,20 @@ button:hover,
   padding: 235px 0 42px;
 }
 .manage-content-shell > section {
-  padding: 40px 44px;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: linear-gradient(145deg, rgba(13, 58, 73, 0.91), rgba(4, 26, 38, 0.96));
-  box-shadow: 0 30px 55px rgba(0, 0, 0, 0.28);
+  padding: 36px 40px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--c-radius-lg);
+  background: var(--c-surface);
+  box-shadow: var(--c-shadow-subtle);
 }
+/* Reduced from clamp(2.2rem, 3.6vw, 3.2rem) — the editor's own title was
+   competing with the wizard header's h1 for visual weight; this now
+   matches --c-text-page, the same scale used by the new c-page-title
+   primitive, so the title reads as a heading rather than a hero. */
 .manage-content-shell h1 {
   margin: 4px 0 14px;
   color: #f9e9bd;
-  font:
-    700 clamp(2.2rem, 3.6vw, 3.2rem) "Spectral",
-    serif;
+  font: 700 var(--c-text-page) var(--c-font-display);
 }
 .manage-content-unit {
   margin-top: 18px;
@@ -8701,11 +8703,16 @@ details[open] > summary.manage-content-unit-toggle::before {
   font-size: 0.82rem;
   font-family: inherit;
 }
+/* Was a solid full-strength gold border — exactly the "one large
+   gold-outlined container holding every control" pattern the design
+   system pass calls out to fix. Section grouping inside now carries the
+   visual hierarchy (see .manage-content-editor-section); this outer
+   wrapper just needs enough contrast to read as one grouped card. */
 .manage-content-authoring-form {
   margin-top: 14px;
   padding: 16px 18px;
-  border: 1px solid var(--gold);
-  border-radius: 14px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--c-radius-lg);
   background: rgba(0, 0, 0, 0.22);
 }
 .manage-content-authoring-form h4 {
@@ -9163,23 +9170,24 @@ details[open] > summary.manage-content-unit-toggle::before {
   flex-wrap: wrap;
   gap: 4px 16px;
   padding-top: 8px;
-  border-top: 1px solid rgba(239, 204, 122, 0.18);
+  border-top: 1px solid var(--c-border-subtle);
 }
 .manage-content-step {
-  padding: 0;
+  padding: 2px 0;
   border: 0;
   background: transparent;
   color: var(--muted);
   font-family: "Cinzel", serif;
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
   cursor: default;
 }
 button.manage-content-step {
   cursor: pointer;
+  border-radius: var(--c-radius-sm);
 }
-.manage-content-step.is-current {
+.manage-content-step.is-current,
+.manage-content-step[aria-current="step"] {
   color: var(--gold);
   font-weight: 700;
 }
@@ -9267,13 +9275,18 @@ button.manage-content-step {
   letter-spacing: 0.04em;
   color: rgba(247, 231, 189, 0.6);
 }
+/* The excerpt itself is what students will read, distinguished from the
+   surrounding navy editing chrome with a light parchment-inspired
+   surface — contrast checked against --c-text-on-gold-style dark ink
+   (#3a2f1d, ~9.7:1 on --c-surface-parchment) so it stays readable. */
 .manage-content-source-summary-excerpt {
   margin: 0;
-  max-height: 4.5em;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  max-height: 6em;
+  overflow: hidden auto;
+  padding: 10px 12px;
+  border-radius: var(--c-radius-sm);
+  background: rgba(233, 213, 163, 0.16);
+  color: #f3e6c8;
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -9382,6 +9395,24 @@ button.manage-content-step {
   font-weight: 600;
 }
 
+/* Manage Content at laptop/small-laptop widths (1024px) — the block had
+   only one media query total before this (720px, below) covering 177
+   rules; this tier keeps the command bar and editor shell usable at
+   1024px without the sticky header eating too much vertical space. */
+@media (max-width: 1024px) {
+  .manage-content-shell {
+    padding-top: 210px;
+  }
+  .manage-content-shell > section {
+    padding: 28px 24px;
+  }
+  .manage-content-command-bar {
+    padding: 10px 16px;
+  }
+  .manage-content-command-bar-actions .manage-content-status-badge {
+    margin-left: 0;
+  }
+}
 @media (max-width: 720px) {
   .manage-content-source-summary-meta {
     flex-direction: column;
@@ -9392,5 +9423,11 @@ button.manage-content-step {
   .manage-content-full-source-dialog {
     width: calc(100vw - 24px);
     padding: 18px;
+  }
+  .manage-content-shell {
+    padding-top: 260px;
+  }
+  .manage-content-command-bar-actions {
+    gap: 6px;
   }
 }
