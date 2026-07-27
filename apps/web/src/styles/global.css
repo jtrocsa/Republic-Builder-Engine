@@ -8205,8 +8205,14 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-type-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   width: 220px;
+}
+.manage-content-type-card-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
   padding: 14px 16px;
   border: 1px solid rgba(239, 204, 122, 0.28);
   border-radius: 12px;
@@ -8214,26 +8220,30 @@ details[open] > summary.manage-content-unit-toggle::before {
   color: #d8e3de;
   text-align: left;
   cursor: pointer;
+  font: inherit;
 }
-.manage-content-type-card:hover {
+.manage-content-type-card-pick:hover {
   border-color: var(--gold);
   background: rgba(4, 26, 38, 0.45);
 }
-.manage-content-type-card:disabled {
+.manage-content-type-card-pick:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
-.manage-content-type-card:disabled:hover {
+.manage-content-type-card-pick:disabled:hover {
   border-color: rgba(239, 204, 122, 0.28);
   background: rgba(4, 26, 38, 0.28);
 }
-.manage-content-type-card strong {
+.manage-content-type-card-pick strong {
   color: var(--gold-soft);
   font-size: 0.95rem;
 }
-.manage-content-type-card span {
+.manage-content-type-card-pick span {
   font-size: 0.8rem;
   color: #b9c7c2;
+}
+.manage-content-type-card .manage-content-help-trigger {
+  align-self: flex-start;
 }
 .manage-content-wizard-choice {
   margin-top: 18px;
@@ -8564,4 +8574,206 @@ button.manage-content-step {
 .manage-content-breadcrumb button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+
+/* --- Manage Content Pass 2: source selector enrichment, selected-source
+   summary card, native <dialog> overlays (help drawer, warning dialog,
+   full-source viewer), preview banner, empty/loading/success states. --- */
+.manage-content-source-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.manage-content-source-requirement {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(247, 231, 189, 0.72);
+}
+.manage-content-source-requirement[data-requirement="required"] {
+  color: var(--gold-soft);
+}
+.manage-content-empty-state {
+  padding: 14px;
+  margin: 0 0 10px;
+  border: 1px dashed rgba(239, 204, 122, 0.35);
+  border-radius: 10px;
+  background: rgba(5, 40, 56, 0.35);
+  font-size: 0.9rem;
+  color: rgba(247, 231, 189, 0.78);
+}
+.manage-content-source-selector.manage-content-empty-state p {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.manage-content-source-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(239, 204, 122, 0.28);
+  border-radius: 12px;
+  background: rgba(5, 40, 56, 0.4);
+}
+.manage-content-source-summary-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.manage-content-source-summary-customized-badge {
+  font-size: 0.78rem;
+  color: var(--gold-soft);
+  white-space: nowrap;
+}
+.manage-content-source-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(247, 231, 189, 0.78);
+}
+.manage-content-source-summary-meta dt {
+  font-weight: 600;
+}
+.manage-content-source-summary-meta dd {
+  margin: 0;
+}
+.manage-content-source-summary-excerpt-label {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(247, 231, 189, 0.6);
+}
+.manage-content-source-summary-excerpt {
+  margin: 0;
+  max-height: 4.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.manage-content-source-summary-restore-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(247, 231, 189, 0.72);
+}
+.manage-content-source-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Native <dialog>-based overlays — all three (help drawer, warning dialog,
+   full-source viewer) share this base chrome, reusing .hub-dialogue's
+   navy/gold/blur visual language rather than inventing a new look. Unlike
+   .hub-dialogue (a position:fixed div), these are real <dialog> elements —
+   ::backdrop replaces the manual scrim, and the browser's own top-layer
+   handles focus containment. */
+.manage-content-help-drawer,
+.manage-content-warning-dialog,
+.manage-content-full-source-dialog {
+  width: min(640px, calc(100vw - 48px));
+  max-height: min(80vh, 720px);
+  padding: 24px;
+  border: 1px solid rgba(239, 204, 122, 0.52);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(11, 52, 66, 0.98), rgba(4, 24, 36, 0.99));
+  color: var(--ink);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.42);
+}
+.manage-content-warning-dialog {
+  width: min(480px, calc(100vw - 48px));
+}
+.manage-content-help-drawer::backdrop,
+.manage-content-warning-dialog::backdrop,
+.manage-content-full-source-dialog::backdrop {
+  background: rgba(2, 20, 31, 0.46);
+  backdrop-filter: blur(3px);
+}
+.manage-content-help-drawer-section {
+  margin-bottom: 14px;
+}
+.manage-content-help-drawer-section h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  color: var(--gold-soft);
+}
+.manage-content-help-drawer-apush-name {
+  display: block;
+  font-size: 1.2rem;
+}
+.manage-content-help-drawer-chronicle-name {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: rgba(247, 231, 189, 0.65);
+}
+.manage-content-help-key-terms {
+  margin: 0;
+}
+.manage-content-help-key-terms dt {
+  margin-top: 8px;
+  color: var(--gold-soft);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.manage-content-help-key-terms dd {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: rgba(247, 231, 189, 0.82);
+}
+.manage-content-help-trigger {
+  margin-left: 8px;
+}
+.manage-content-warning-dialog-actions,
+.manage-content-full-source-dialog .btn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.manage-content-full-source-body {
+  overflow-y: auto;
+  max-height: 50vh;
+  min-width: 0;
+  line-height: 1.6;
+}
+
+.manage-content-loading-note {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: rgba(247, 231, 189, 0.65);
+}
+.feedback.success {
+  color: #e2f3e1;
+  background: rgba(91, 150, 101, 0.2);
+}
+.field-preview-banner {
+  flex-wrap: wrap;
+}
+.field-preview-banner-version {
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .manage-content-source-summary-meta {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .manage-content-help-drawer,
+  .manage-content-warning-dialog,
+  .manage-content-full-source-dialog {
+    width: calc(100vw - 24px);
+    padding: 18px;
+  }
 }

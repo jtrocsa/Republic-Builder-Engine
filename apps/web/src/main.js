@@ -1532,6 +1532,13 @@ let teacherUiState = {
   // { [unitNumber]: Map<sourceId, sourceKind> } | undefined (not yet
   // loaded).
   sourcePoolByUnit: {},
+  // Unit numbers with a getUnitSourcePool() fetch currently in flight — a
+  // separate Set rather than a 3rd sentinel value inside sourcePoolByUnit,
+  // so every existing `!pool`/`pool === undefined` check there keeps working
+  // unchanged; this only exists to let the Manage Content source selector
+  // show "Loading sources…" instead of the "empty pool" message while a
+  // fetch that might still fill it is still running.
+  sourcePoolLoadingUnits: new Set(),
   sourcesExpandedUnit: null,
   // Which pool rows currently have their full source content expanded —
   // keyed by `${kind}:${id}` since text/visual ids aren't guaranteed unique
@@ -1559,6 +1566,10 @@ let contentUiState = {
   //  draftAltKind, publishedAltId, latestCustomAltId, previewContent}
   slot: null,
   error: "",
+  // Plain-language confirmation for an action that just succeeded (e.g.
+  // "Draft saved.") — see feedbackSuccess(). Cleared whenever a new pending
+  // action starts, so it can't linger stale across an unrelated save/publish.
+  successMessage: "",
   pending: false,
   // Which kind of async action most recently failed, so the command bar's
   // status badge can say "Save failed"/"Publish failed" instead of a single
@@ -1599,6 +1610,22 @@ let manageContentAuthoring = null;
 // teacher does while previewing (including real gameplay side effects like
 // evidence collection) reaches localStorage or Supabase.
 let previewSession = { active: false, snapshot: null };
+// Pass 2: Manage Content's three native <dialog>-based overlays (Help drawer,
+// unsaved-change warning, read-only full-source viewer) — see
+// syncManageContentNativeDialogs()/closeManageContentDialog() below for why
+// these are synced imperatively (render() fully replaces app.innerHTML every
+// time, so a fresh, always-closed <dialog> node exists after every render;
+// only .showModal() actually makes one visible/modal).
+let manageContentHelpDrawerOpenFor = null; // a slotKind string ("mcq" etc.), or null
+let manageContentViewingFullSourceValue = null; // a "kind:id" pool value, or null
+let manageContentFullSourceTriggerSelector = null; // captured at open time, for focus-return on close
+// {scenarioKey, onPrimary: fn|null, onSecondary: fn, triggerSelector} or null.
+// onPrimary/onSecondary are real closures (never persisted/serialized — this
+// is in-memory UI state like previewSession above), so this one dialog stays
+// generic across every call site instead of hardcoding a scenario->action
+// switch inside the dialog itself. scenarioKey only selects display copy from
+// MANAGE_CONTENT_WARNING_SCENARIOS.
+let manageContentWarningDialog = null;
 // Per-taskId pending/error state for the AI Archive Evaluator calls kicked
 // off from sourceReader()/reviewScreen() — see runEvaluation() below.
 const evaluatorPendingTaskIds = new Set();
@@ -1628,6 +1655,11 @@ function catchUiError(state, fallback) {
 function feedbackError(state) {
   return state.error
     ? `<p class="feedback error" role="status" aria-live="polite">${esc(state.error)}</p>`
+    : "";
+}
+function feedbackSuccess(state) {
+  return state.successMessage
+    ? `<p class="feedback success" role="status" aria-live="polite">${esc(state.successMessage)}</p>`
     : "";
 }
 
@@ -1867,10 +1899,45 @@ const save = () => {
   saveProgress(progress);
 };
 
+// Exactly 3 real, distinguishable version labels — deliberately not a 4th
+// "current student version": Published *is* the current student version by
+// definition (classroom_content_selections.status is a real, DB-enforced,
+// RLS-checked draft/published split — see remote-content-selection-
+// repository.js — with no further state beyond those two), so a 4th label
+// would either silently duplicate "Published version" or fabricate a
+// distinction the data model can't back. "Your unsaved edits" is its own
+// real, separate state: manageContentAuthoring.previewQuest only exists for
+// the "Preview Changes"/"Preview Replacement" path, built straight from the
+// open form's current, never-persisted fields (see preview-authoring-changes
+// above) — not resolved from either cache.
+// Explicit params (rather than reading manageContentAuthoring/previewSession
+// directly) so this stays a plain, directly testable function — see
+// manageContentSlotStatus()'s doc comment for the same convention, and
+// tests/unit/main-content-preview-resolution.test.js.
+export function contentPreviewVersionLabel(hasUnsavedPreviewQuest, resolution) {
+  if (hasUnsavedPreviewQuest) return "Your unsaved edits";
+  return resolution === "published" ? "Published version" : "Draft version";
+}
+
+function contentPreviewBannerMarkup() {
+  const kase = caseById(contentUiState.selectedCaseId);
+  const title = kase ? resolvedCaseTitle(kase) : "";
+  const versionLabel = contentPreviewVersionLabel(
+    Boolean(manageContentAuthoring?.previewQuest),
+    previewSession.resolution
+  );
+  return `<div class="field-preview-banner" role="status">
+<span>Previewing as student${title ? ` — ${esc(title)}` : ""}</span>
+<span aria-hidden="true">·</span>
+<span class="field-preview-banner-version">${esc(versionLabel)}</span>
+<span aria-hidden="true">·</span>
+<span>Nothing you do here affects student progress.</span>
+<button class="btn btn-outline" data-action="exit-content-preview" type="button">Exit preview</button>
+</div>`;
+}
+
 function chrome() {
-  const previewBanner = isPreviewingContent()
-    ? `<div class="field-preview-banner" role="status"><span>Previewing as student — draft content shown, nothing you do here is saved.</span><button class="btn btn-outline" data-action="exit-content-preview" type="button">Exit preview</button></div>`
-    : "";
+  const previewBanner = isPreviewingContent() ? contentPreviewBannerMarkup() : "";
   return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><small>${esc(BRAND.engine)}</small><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="text-button" data-action="open-main-menu">Menu</button><button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" aria-label="Toggle Chronicle music">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button><button class="author-toggle ${authorMode ? "active" : ""}" data-action="author">✦ ${authorMode ? "Author Mode On" : "Author Mode"}</button></div></header>${previewBanner}`;
 }
 
@@ -2542,6 +2609,146 @@ const QUEST_TYPE_ICONS = {
   hipp: "◈",
 };
 
+// Shared across every quest type's Help drawer — every editable slot here
+// *is* the case's one Archive Challenge, so the definition is identical
+// regardless of which quest type is currently chosen for it.
+const ARCHIVE_CHALLENGE_HELP_TERM = {
+  term: "Archive Challenge",
+  def: "Chronicle's name for a case's one gradable practice activity, reached from the Institute Archive — this is exactly the activity you're editing here.",
+};
+
+// Content for the "Help ?" drawer opened per mission/assessment type (see
+// manageContentHelpDrawerMarkup() below) — real APUSH/College-Board
+// terminology as the primary label (apushName), Chronicle's own name as a
+// secondary parenthetical (chronicleName), never the reverse. keyTerms only
+// lists terms actually relevant to that specific type, drawn from the
+// glossary already used elsewhere in this app/CLAUDE.md (HIPP,
+// Contextualization, Point of view, Historical situation, Archive
+// Challenge, Investigation Challenge, Evidence organization, Sequencing) —
+// not every term on every card.
+const MANAGE_CONTENT_HELP_CONTENT = {
+  hipp: {
+    apushName: "HIPP Source Analysis",
+    chronicleName: "Source Investigation",
+    whatStudentsDo:
+      "Students read a primary source and answer one question per HIPP dimension, explaining how that dimension shapes the document's argument or reliability — not just identifying facts about it.",
+    assesses:
+      "The HIPP source-analysis sourcing skill used across AP DBQ and SAQ sourcing points.",
+    whenToUse:
+      "Use when the mission's focus is analyzing one source in depth, not checking content recall.",
+    whatStudentsSee:
+      "The source's text and attribution, followed by one multiple-choice question per HIPP dimension chosen for this document.",
+    keyTerms: [
+      {
+        term: "HIPP",
+        def: "A framework for analyzing a primary source's Historical situation, Intended audience, Purpose, and Point of view.",
+      },
+      {
+        term: "Historical situation",
+        def: "The circumstances — time, place, events — surrounding when a source was created.",
+      },
+      {
+        term: "Point of view",
+        def: "The perspective, background, or position that shapes what a source's author says and leaves out.",
+      },
+      {
+        term: "Investigation Challenge",
+        def: "A different, source-attached HIPP activity tied to one specific source's own investigation pointer — not the same as this mission's Archive Challenge, and not currently editable from this screen.",
+      },
+      ARCHIVE_CHALLENGE_HELP_TERM,
+    ],
+  },
+  mcq: {
+    apushName: "Multiple-Choice Question",
+    chronicleName: "Multiple Choice",
+    whatStudentsDo:
+      "Students read a prompt — optionally grounded in a source — and select one correct answer from several choices.",
+    assesses:
+      "Content knowledge and recall, or, when a source is attached, the ability to connect a source to a specific claim.",
+    whenToUse:
+      "Use for a quick content check or a single-answer question that doesn't need a multi-part rubric.",
+    whatStudentsSee:
+      "An optional source excerpt, the question prompt, and answer choices; an explanation appears after answering if one is provided.",
+    keyTerms: [ARCHIVE_CHALLENGE_HELP_TERM],
+  },
+  sequencing: {
+    apushName: "Sequencing",
+    chronicleName: "Sequencing",
+    whatStudentsDo:
+      "Students arrange a set of items into the correct causal order, not just chronological order.",
+    assesses:
+      "Causation and continuity-and-change reasoning — explaining how and why events led to one another, not only when they happened.",
+    whenToUse:
+      "Use when the historical-thinking point is how events caused each other, not just a list of dates.",
+    whatStudentsSee:
+      "An optional source excerpt, the prompt, and a set of items students reorder into the sequence they judge correct.",
+    keyTerms: [
+      {
+        term: "Sequencing",
+        def: "Arranging events or items in the order that reflects cause and effect, not just chronology.",
+      },
+      ARCHIVE_CHALLENGE_HELP_TERM,
+    ],
+  },
+  "evidence-organizing": {
+    apushName: "Evidence Organization",
+    chronicleName: "Evidence Organizing",
+    whatStudentsDo:
+      "Students sort several source records into categories based on which historical claim each one best supports.",
+    assesses:
+      "The AP historical-thinking skills — Comparison, Causation, Continuity and Change, Contextualization, and Sourcing — by asking students to identify which one a specific piece of evidence demonstrates.",
+    whenToUse:
+      "Use when the goal is distinguishing historical-thinking skills across multiple sources, not analyzing one source in depth.",
+    whatStudentsSee:
+      "A set of evidence cards with source excerpts, sorted into labeled categories, plus a reflection prompt.",
+    keyTerms: [
+      {
+        term: "Evidence organization",
+        def: "Sorting pieces of historical evidence by the reasoning skill or claim each one best demonstrates.",
+      },
+      {
+        term: "Contextualization",
+        def: "Explaining the broader historical situation surrounding an event, rather than analyzing it in isolation.",
+      },
+      ARCHIVE_CHALLENGE_HELP_TERM,
+    ],
+  },
+};
+
+// Labeled (not icon-only) so it satisfies "accessible name" for free — see
+// helpIconMarkup()'s doc comment for why that single-sentence-tooltip
+// affordance isn't sufficient for this 5-section requirement. One per
+// quest-type field editor (authoringFieldsMarkup()) and one per type-picker
+// card (manageContentAuthoringFormMarkup()), so a teacher can get help
+// before or after choosing a type.
+function manageContentHelpTriggerMarkup(slotKind) {
+  return `<button type="button" class="btn btn-plain manage-content-help-trigger" data-action="open-help-drawer" data-slot-kind="${esc(slotKind)}">Help ?</button>`;
+}
+
+// Always rendered (see manageContentCaseScreen()'s doc comment on Pass 2
+// dialog plumbing) — content is conditional on manageContentHelpDrawerOpenFor,
+// synced open/closed via syncManageContentNativeDialogs(). Definitions are
+// plain visible text (a <dl>), not hover-only tooltips, since some of these
+// terms (Investigation Challenge vs. Archive Challenge, for instance) matter
+// enough that a teacher shouldn't have to discover they're hoverable.
+function manageContentHelpDrawerMarkup() {
+  const content = manageContentHelpDrawerOpenFor
+    ? MANAGE_CONTENT_HELP_CONTENT[manageContentHelpDrawerOpenFor]
+    : null;
+  const body = content
+    ? `<h2 id="manage-content-help-title"><span class="manage-content-help-drawer-apush-name">${esc(content.apushName)}</span><span class="manage-content-help-drawer-chronicle-name">Chronicle mission type: ${esc(content.chronicleName)}</span></h2>
+<div class="manage-content-help-drawer-section"><h3>What students do</h3><p>${esc(content.whatStudentsDo)}</p></div>
+<div class="manage-content-help-drawer-section"><h3>What this assesses</h3><p>${esc(content.assesses)}</p></div>
+<div class="manage-content-help-drawer-section"><h3>When to use it</h3><p>${esc(content.whenToUse)}</p></div>
+<div class="manage-content-help-drawer-section"><h3>What students see</h3><p>${esc(content.whatStudentsSee)}</p></div>
+<div class="manage-content-help-drawer-section"><h3>Key terms</h3><dl class="manage-content-help-key-terms">${content.keyTerms.map(({ term, def }) => `<dt>${esc(term)}</dt><dd>${esc(def)}</dd>`).join("")}</dl></div>`
+    : "";
+  return `<dialog id="manage-content-help-dialog" class="manage-content-help-drawer" aria-labelledby="manage-content-help-title">
+${body}
+<button type="button" class="btn btn-outline" data-action="close-help-drawer">Close</button>
+</dialog>`;
+}
+
 function manageContentMissionCardMarkup(c) {
   return `<article class="manage-content-mission-card">
 <div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p><span class="case-kind-badge">${esc(caseKindLabel(c))}</span></div>
@@ -2616,17 +2823,36 @@ function poolSourcesForCopy() {
   return items;
 }
 
-function sourceCopyOptionsMarkup(selectedValue) {
+// `inUseValues` (a Set of "kind:id" pool values already picked by *other*
+// fields in the same form) only ever has entries for evidence-organizing —
+// the one quest type with more than one source-picker row per mission (see
+// evidenceOrganizingFieldsMarkup()); every other quest type has exactly one
+// source field per mission, so callers simply omit it. This is not
+// cross-mission or cross-unit duplicate detection — nothing in the source
+// pool tracks usage outside the currently open form, and building that would
+// need a new query across every case's saved selections, out of scope here.
+// Extracted as its own pure, exported function so the enriched-label format
+// can be tested directly against real primary-source-library fixtures
+// without needing to stand up teacherUiState.sourcePoolByUnit — see
+// tests/unit/main-source-selector.test.js.
+export function sourceSelectorOptionLabel(kind, item) {
+  return kind === "visual"
+    ? `${item.title} (image source)`
+    : `${item.title} — ${item.creator}, ${item.date} (text source)`;
+}
+
+function sourceSelectorOptionsMarkup(selectedValue, inUseValues = new Set()) {
   return poolSourcesForCopy()
     .map(({ id, kind, item }) => {
       const value = `${kind}:${id}`;
-      return `<option value="${esc(value)}" ${value === selectedValue ? "selected" : ""}>${esc(item.title)}${kind === "visual" ? " (visual)" : ""}</option>`;
+      const inUseSuffix = inUseValues.has(value) ? " — already used in this activity" : "";
+      return `<option value="${esc(value)}" ${value === selectedValue ? "selected" : ""}>${esc(sourceSelectorOptionLabel(kind, item) + inUseSuffix)}</option>`;
     })
     .join("");
 }
 
 // Maps a picked "Select source" option's value ("text:<id>" or
-// "visual:<id>", as built by sourceCopyOptionsMarkup()) to the
+// "visual:<id>", as built by sourceSelectorOptionsMarkup()) to the
 // {label, attribution, excerpt, fullText} fields the HIPP and
 // evidence-organizing authoring forms autofill from. Visual sources have no
 // creator/date/excerpt/fullText fields, so they map onto citation/description
@@ -2654,30 +2880,178 @@ export function resolvePoolSourceFields(value) {
       };
 }
 
-// Shared "Select source" control for the evidence-organizing (per-record-row)
-// and HIPP (per-form) authoring fields — picking an option autofills the
-// surrounding fields from the classroom's source pool (see
-// poolSourcesForCopy()/the data-copy-evidence-source/data-copy-hipp-source
-// branches in handleAppChange) and stays freely editable after. Renders
-// nothing if the pool has no options yet, same as the copy control it
-// replaced — the "Manage sources →" link is how a teacher gets there to add
-// some. selectAttrs carries whatever data-* attributes the caller's specific
-// <select> needs (data-copy-evidence-source plus a row index, or just
-// data-copy-hipp-source — HIPP's also carries data-authoring-field so the
-// generic syncAuthoringFieldsFromDom() scalar loop keeps it in `fields`
-// automatically). `selectedValue` is the pool value ("text:<id>"/"visual:<id>")
-// to render as selected, so a picked source's name stays visible after the
-// autofill re-renders this control — a blank/`undefined` value (never
-// picked, or an existing record that wasn't copied from the pool) shows
-// "— Choose —" instead.
-function sourcePickerFieldMarkup(selectAttrs, selectedValue) {
-  const copyOptions = sourceCopyOptionsMarkup(selectedValue);
-  if (!copyOptions) return "";
+// Shared "Source for this activity" control for the evidence-organizing
+// (per-record-row), HIPP, mcq, and sequencing authoring fields — picking an
+// option autofills the surrounding fields from the classroom's source pool
+// (see poolSourcesForCopy()/the data-copy-*-source branches in
+// handleAppChange) and stays freely editable after. Renders an empty-pool
+// message (not a blank control) when the pool has no options yet — the
+// "Manage sources →" link is how a teacher gets there to add some.
+// `fieldKey` is the same stable id (hipp/mcq/sequencing/evidence-N)
+// sourceTextToolMarkup() already keys its own state by — reused here purely
+// to build stable element ids for aria-describedby, not for any state
+// lookup. `selectAttrs` carries whatever data-* attributes the caller's
+// specific <select> needs (data-copy-evidence-source plus a row index, or
+// just data-copy-hipp-source — HIPP's also carries data-authoring-field so
+// the generic syncAuthoringFieldsFromDom() scalar loop keeps it in `fields`
+// automatically). `selectedValue` is the pool value ("text:<id>"/
+// "visual:<id>") to render as selected, so a picked source's name stays
+// visible after the autofill re-renders this control — a blank/`undefined`
+// value (never picked, or an existing record that wasn't copied from the
+// pool) shows "— Choose —" instead. `requirement` ("required"|"optional") is
+// passed explicitly by each of the 4 call sites rather than introspected
+// from the quest-type Zod schema at render time (HIPP/evidence-organizing's
+// source fields are schema-required; mcq/sequencing's relatedSource is
+// schema-optional) — reaching into schema internals from the render layer
+// just for a label isn't justified. See sourceSelectorOptionsMarkup()'s doc
+// comment for `inUseValues`' scope.
+const MANAGE_CONTENT_SOURCE_REQUIREMENT_TEXT = {
+  required: "Required — students must examine this source before submitting.",
+  optional: "Optional — students may complete without a source.",
+};
+
+function sourceSelectorFieldMarkup(fieldKey, selectAttrs, selectedValue, requirement, inUseValues) {
+  const pool = poolSourcesForCopy();
   const unitNumber = currentUnitNumber();
   const manageLink = unitNumber
     ? `<button type="button" class="btn btn-plain manage-content-source-picker-link" data-action="go-to-sources-tab" data-unit="${unitNumber}">Manage sources →</button>`
     : "";
-  return `<label class="manage-content-copy-field">Select source<select ${selectAttrs}><option value="" ${selectedValue ? "" : "selected"}>— Choose —</option>${copyOptions}</select></label>${manageLink}`;
+  if (!pool.length) {
+    const isLoading = unitNumber && teacherUiState.sourcePoolLoadingUnits.has(unitNumber);
+    return `<div class="manage-content-source-selector manage-content-empty-state">
+<p class="${isLoading ? "manage-content-loading-note" : ""}">${isLoading ? "Loading sources…" : "This unit's source pool is empty. Add sources from the Sources tab before attaching one here."}</p>
+${isLoading ? "" : manageLink}
+</div>`;
+  }
+  const copyOptions = sourceSelectorOptionsMarkup(selectedValue, inUseValues);
+  const requirementText = MANAGE_CONTENT_SOURCE_REQUIREMENT_TEXT[requirement] || "";
+  const requirementId = `manage-content-source-requirement-${esc(fieldKey)}`;
+  return `<div class="manage-content-source-selector" data-field-key="${esc(fieldKey)}">
+<label class="manage-content-copy-field">Source for this activity<select ${selectAttrs} ${requirementText ? `aria-describedby="${requirementId}"` : ""}><option value="" ${selectedValue ? "" : "selected"}>— Choose —</option>${copyOptions}</select></label>
+${requirementText ? `<p id="${requirementId}" class="manage-content-source-requirement" data-requirement="${esc(requirement)}">${esc(requirementText)}</p>` : ""}
+${manageLink}
+</div>`;
+}
+
+// Same heuristic used by both the summary card's "Customized excerpt" badge
+// and the source-change guard in handleAppChange() — factored into one
+// function so they can't drift apart. This is a heuristic, not a stored
+// fact: it can't distinguish "customized by highlighting" from "customized
+// by typing" from "genuinely identical to the official excerpt by
+// coincidence" — textTools' highlight state is ephemeral/session-only (see
+// its own doc comment) and isn't what's persisted, so comparing the saved
+// text against what a fresh copy-in would produce right now is the only
+// signal actually available.
+export function fieldHasCustomizedExcerpt(poolValue, currentText) {
+  if (!poolValue) return false;
+  const resolved = resolvePoolSourceFields(poolValue);
+  if (!resolved) return false;
+  const stock = (resolved.fullText || resolved.excerpt || "").trim();
+  return (currentText || "").trim() !== stock;
+}
+
+// Guards the 4 data-copy-*-source branches in handleAppChange() against
+// silently discarding a customized excerpt when a teacher picks a different
+// source — the confirmed bug this pass fixes (previously every pick
+// unconditionally overwrote the excerpt and wiped highlight state, no
+// warning, no check). `oldPoolValue`/`oldExcerptText` describe the field's
+// state *before* this pick (the <select>'s DOM value has already changed by
+// the time a change event fires, so the caller must capture these from
+// manageContentAuthoring.fields — the last-rendered, pre-pick state — not
+// re-read them from the DOM). `applyFn` is the exact copy-in this branch
+// would otherwise run immediately; deferred behind the warning dialog only
+// when there's something genuine to lose, so a first-ever pick (or picking
+// the same source again) stays exactly as frictionless as before.
+// `selectEl` is the actual <select> that just changed — when deferring, its
+// DOM value is reverted back to `oldPoolValue` *before* opening the dialog,
+// because openManageContentWarningDialog() itself re-syncs
+// manageContentAuthoring.fields from the live DOM (to preserve any unrelated
+// unsaved edits elsewhere in the form — see its own doc comment); without
+// the revert, that resync would silently commit this unconfirmed pick into
+// state anyway, leaving Cancel in a half-applied state (new source, old
+// excerpt).
+function confirmSourceChangeIfNeeded(selectEl, fieldKey, oldPoolValue, oldExcerptText, applyFn) {
+  if (!fieldHasCustomizedExcerpt(oldPoolValue, oldExcerptText)) {
+    applyFn();
+    return;
+  }
+  selectEl.value = oldPoolValue || "";
+  openManageContentWarningDialog("change-source", {
+    onSecondary: applyFn,
+    triggerSelector: `.manage-content-source-selector[data-field-key="${CSS.escape(fieldKey)}"] select`,
+  });
+}
+
+// Sits between the source selector and the highlight tool in all 4
+// quest-type field renderers — the "which source, and what will students
+// actually see" summary the highlight tool itself doesn't provide. `slot` is
+// contentUiState.slot (needed only for the "Restore Standard Version"
+// pointer — see below). When no source is picked yet: for an optional field
+// (mcq/sequencing), shows a plain-language empty-state message instead of a
+// blank gap; for a required field (hipp/evidence-organizing), renders
+// nothing — the form's own validation already covers a required field being
+// empty, so a second message here would be redundant.
+function selectedSourceSummaryCardMarkup(fieldKey, poolValue, currentText, slot, requirement) {
+  if (!poolValue) {
+    return requirement === "optional"
+      ? `<p class="manage-content-empty-state manage-content-source-summary-empty">No source selected yet. Choose one above, or leave this optional field blank.</p>`
+      : "";
+  }
+  const resolved = resolvePoolSourceFields(poolValue);
+  if (!resolved) return "";
+  const customized = fieldHasCustomizedExcerpt(poolValue, currentText);
+  const excerptPreview = (currentText || "").trim() || "(no student text yet)";
+  const restoreNote = slot?.latestCustomAltId
+    ? `<p class="manage-content-source-summary-restore-note">This activity has a saved custom version. Use Restore Standard Version below to reset everything — source, prompt, and excerpt — back to the official version.</p>`
+    : "";
+  return `<div class="manage-content-source-summary-card">
+<div class="manage-content-source-summary-head">
+<strong>${esc(resolved.label)}</strong>
+${customized ? `<span class="manage-content-source-summary-customized-badge">✎ Customized excerpt</span>` : ""}
+</div>
+<dl class="manage-content-source-summary-meta">
+<dt>Attribution</dt><dd>${esc(resolved.attribution)}</dd>
+</dl>
+<p class="manage-content-source-summary-excerpt-label">Current student excerpt</p>
+<p class="manage-content-source-summary-excerpt">${esc(excerptPreview)}</p>
+${restoreNote}
+<div class="manage-content-source-summary-actions">
+<button type="button" class="btn btn-plain" data-action="focus-source-selector" data-field-key="${esc(fieldKey)}">Change source</button>
+<button type="button" class="btn btn-plain" data-action="focus-source-excerpt" data-field-key="${esc(fieldKey)}">Edit student excerpt</button>
+<button type="button" class="btn btn-plain" data-action="view-full-source" data-field-key="${esc(fieldKey)}" data-source-pool-value="${esc(poolValue)}">View full source</button>
+</div>
+</div>`;
+}
+
+// Read-only viewer for a pool source's full record — the existing
+// student-facing sourceReader() (see its own doc comment) operates on a
+// completely different content shape (case sources, not the primary-source-
+// library shape the pool draws from) and isn't reusable here. Reads
+// manageContentViewingFullSourceValue directly (module state, same
+// convention contentUiState-driven markup functions already use) rather than
+// taking it as a param, since it's rendered once per screen regardless of
+// which summary card's "View full source" opened it.
+function sourceFullTextDialogMarkup() {
+  const resolved = manageContentViewingFullSourceValue
+    ? resolvePoolSourceFields(manageContentViewingFullSourceValue)
+    : null;
+  const body = resolved
+    ? `<h2 id="manage-content-full-source-title">${esc(resolved.label)}</h2>
+<p class="manage-content-source-summary-meta">${esc(resolved.attribution)}</p>
+${
+  resolved.fullText
+    ? `<div class="manage-content-full-source-body">${esc(resolved.fullText)
+        .split("\n")
+        .filter(Boolean)
+        .map((p) => `<p>${p}</p>`)
+        .join("")}</div>`
+    : `<p class="manage-content-loading-note">Full text not yet transcribed for this source — showing the excerpt instead.</p><div class="manage-content-full-source-body"><p>${esc(resolved.excerpt)}</p></div>`
+}`
+    : "";
+  return `<dialog id="manage-content-full-source-dialog" class="manage-content-full-source-dialog" aria-labelledby="manage-content-full-source-title">
+${body}
+<button type="button" class="btn btn-outline" data-action="close-full-source-dialog">Close</button>
+</dialog>`;
 }
 
 // Splits a pool source's full text into sentence-ish chunks so the highlight
@@ -2702,7 +3076,7 @@ function splitIntoSegments(text) {
 // `poolValue` is the field's current "Select source" pick (e.g.
 // fields.hippSourcePoolValue) — the tool only offers highlighting once a pool
 // source is actually picked, same "renders nothing yet" convention
-// sourcePickerFieldMarkup() itself uses. `currentText` is the live value of
+// sourceSelectorFieldMarkup() itself uses. `currentText` is the live value of
 // the actual saved field (documentText/excerpt/relatedSourceExcerpt),
 // rendered below the tool as "Student text" with a character counter — this
 // textarea is what actually gets saved; the tool above it is just a
@@ -2762,7 +3136,8 @@ function mcqFieldsMarkup(fields) {
     .join("");
   return `<div class="manage-content-field-label">Attach a source (optional)</div>
 <p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
-${sourcePickerFieldMarkup('data-copy-mcq-source data-authoring-field="mcqSourcePoolValue"', fields.mcqSourcePoolValue)}
+${sourceSelectorFieldMarkup("mcq", 'data-copy-mcq-source data-authoring-field="mcqSourcePoolValue"', fields.mcqSourcePoolValue, "optional")}
+${selectedSourceSummaryCardMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, contentUiState.slot, "optional")}
 <label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Immigration Act (Chinese Exclusion Act), 1882"></label>
 <label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
 ${sourceTextToolMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}
@@ -2793,7 +3168,8 @@ function sequencingFieldsMarkup(fields) {
     .join("");
   return `<div class="manage-content-field-label">Attach a source (optional)</div>
 <p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
-${sourcePickerFieldMarkup('data-copy-sequencing-source data-authoring-field="sequencingSourcePoolValue"', fields.sequencingSourcePoolValue)}
+${sourceSelectorFieldMarkup("sequencing", 'data-copy-sequencing-source data-authoring-field="sequencingSourcePoolValue"', fields.sequencingSourcePoolValue, "optional")}
+${selectedSourceSummaryCardMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, contentUiState.slot, "optional")}
 <label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Seneca Falls Convention, 1848"></label>
 <label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
 ${sourceTextToolMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}
@@ -2828,17 +3204,21 @@ function evidenceOrganizingFieldsMarkup(fields) {
         `<option value="${esc(cat)}" ${currentSkill === cat ? "selected" : ""}>${esc(cat)}</option>`
     ).join("");
   const sourceRows = sources
-    .map(
-      (source, i) => `<div class="manage-content-evidence-source-row">
-${sourcePickerFieldMarkup(`data-copy-evidence-source data-row-index="${i}"`, source.sourcePoolValue)}
+    .map((source, i) => {
+      const inUseValues = new Set(
+        sources.filter((_, j) => j !== i && sources[j].sourcePoolValue).map((s) => s.sourcePoolValue)
+      );
+      return `<div class="manage-content-evidence-source-row">
+${sourceSelectorFieldMarkup(`evidence-${i}`, `data-copy-evidence-source data-row-index="${i}"`, source.sourcePoolValue, "required", inUseValues)}
+${selectedSourceSummaryCardMarkup(`evidence-${i}`, source.sourcePoolValue, source.excerpt, contentUiState.slot, "required")}
 <input type="text" data-source-label value="${esc(source.label)}" placeholder="Record label">
 <input type="text" data-source-attribution value="${esc(source.attribution)}" placeholder="Attribution">
 ${sourceTextToolMarkup(`evidence-${i}`, source.sourcePoolValue, source.excerpt, "data-source-excerpt")}
 <label class="manage-content-inline-field" title="The College Board historical-thinking skill this record demonstrates — this is graded, not decorative.">Skill<select data-source-skill>${skillOptions(source.skillCategory)}</select></label>
 <label class="manage-content-inline-field">Correct slot<select data-source-slot>${slotOptions(source.correctSlotId)}</select></label>
 <button type="button" class="manage-content-row-delete-btn" data-action="remove-evidence-source" data-row-index="${i}" ${sources.length <= 1 ? "disabled" : ""} title="Remove this record">×</button>
-</div>`
-    )
+</div>`;
+    })
     .join("");
   return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
 <div class="manage-content-field-label">Slots — the categories students sort evidence into</div>
@@ -2882,7 +3262,8 @@ function hippFieldsMarkup(fields) {
 </div>`;
     })
     .join("");
-  return `${sourcePickerFieldMarkup('data-copy-hipp-source data-authoring-field="hippSourcePoolValue"', fields.hippSourcePoolValue)}
+  return `${sourceSelectorFieldMarkup("hipp", 'data-copy-hipp-source data-authoring-field="hippSourcePoolValue"', fields.hippSourcePoolValue, "required")}
+${selectedSourceSummaryCardMarkup("hipp", fields.hippSourcePoolValue, fields.documentText, contentUiState.slot, "required")}
 ${sourceTextToolMarkup("hipp", fields.hippSourcePoolValue, fields.documentText, 'data-authoring-field="documentText"')}
 <label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
 <div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
@@ -2901,7 +3282,7 @@ function authoringFieldsMarkup(auth) {
         : slotKind === "evidence-organizing"
           ? evidenceOrganizingFieldsMarkup(fields)
           : hippFieldsMarkup(fields);
-  return `<div class="manage-content-section-head"><span class="manage-content-section-icon">${esc(QUEST_TYPE_ICONS[slotKind] || "")}</span><span>${esc(QUEST_TYPE_DISPLAY_NAMES[slotKind] || "")}</span></div>${body}`;
+  return `<div class="manage-content-section-head"><span class="manage-content-section-icon">${esc(QUEST_TYPE_ICONS[slotKind] || "")}</span><span>${esc(QUEST_TYPE_DISPLAY_NAMES[slotKind] || "")}</span>${manageContentHelpTriggerMarkup(slotKind)}</div>${body}`;
 }
 
 // Maps a sourceTextToolMarkup() fieldKey to the pool-value and target-text
@@ -2963,7 +3344,7 @@ function manageContentAuthoringFormMarkup() {
     const typeCards = Object.entries(QUEST_TYPE_DISPLAY_NAMES)
       .map(
         ([key, name]) =>
-          `<button class="manage-content-type-card" data-action="pick-question-type" data-slot-kind="${esc(key)}" type="button"><strong>${esc(name)}</strong><span>${esc(QUEST_TYPE_DESCRIPTIONS[key])}</span></button>`
+          `<div class="manage-content-type-card"><button class="manage-content-type-card-pick" data-action="pick-question-type" data-slot-kind="${esc(key)}" type="button"><strong>${esc(name)}</strong><span>${esc(QUEST_TYPE_DESCRIPTIONS[key])}</span></button>${manageContentHelpTriggerMarkup(key)}</div>`
       )
       .join("");
     return `<div class="manage-content-authoring-form manage-content-type-picker">
@@ -3023,7 +3404,7 @@ export function manageContentSlotStatus(slot, pending, lastActionFailed, draftSa
 }
 
 function statusBadgeMarkup(key, label) {
-  return `<span class="manage-content-status-badge" data-status-key="${esc(key)}">${esc(label)}</span>`;
+  return `<span class="manage-content-status-badge" data-status-key="${esc(key)}" role="status" aria-live="polite">${esc(label)}</span>`;
 }
 
 // "Manage Content › Unit N: Title › Case N.NN — Name" — reuses the exact
@@ -3166,7 +3547,7 @@ function manageContentStepIndicatorMarkup(activeCase) {
 
 function manageContentCaseScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
   const activeCase = caseById(contentUiState.selectedCaseId);
   if (!activeCase) {
@@ -3182,7 +3563,7 @@ function manageContentCaseScreen() {
     return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><section>
 ${missionRenameControlMarkup(activeCase)}
 <p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
-</section></main>${authorPanel()}`;
+</section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
   }
   const step = contentUiState.wizardStep || "name";
   const stepMarkup =
@@ -3195,7 +3576,7 @@ ${missionRenameControlMarkup(activeCase)}
           : manageContentNameStepMarkup(activeCase);
   return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><section>
 ${stepMarkup}
-</section></main>${authorPanel()}`;
+</section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
 }
 
 // Shared "case number / mission name / description" block every wizard step
@@ -3304,6 +3685,7 @@ function manageContentWorkspaceStepMarkup(activeCase) {
 ${isReplace && !typeChosen ? "<p>Choose the activity students will complete for this mission.</p>" : ""}
 ${manageContentAuthoringFormMarkup()}
 ${feedbackError(contentUiState)}
+${feedbackSuccess(contentUiState)}
 ${
   typeChosen
     ? `<div id="manage-content-questions-anchor" class="manage-content-authoring-actions">
@@ -3346,12 +3728,17 @@ async function loadManageContentCaseData(caseId) {
     teacherUiState.selectedClassroomId &&
     teacherUiState.sourcePoolByUnit[unitNumber] === undefined
   ) {
+    teacherUiState.sourcePoolLoadingUnits.add(unitNumber);
     getUnitSourcePool(teacherUiState.selectedClassroomId, unitNumber)
       .then((pool) => {
         teacherUiState.sourcePoolByUnit[unitNumber] = pool;
+        teacherUiState.sourcePoolLoadingUnits.delete(unitNumber);
         render();
       })
-      .catch(catchUiError(teacherUiState, "Could not load this unit's source pool."));
+      .catch((err) => {
+        teacherUiState.sourcePoolLoadingUnits.delete(unitNumber);
+        catchUiError(teacherUiState, "Could not load this unit's source pool.")(err);
+      });
   }
   try {
     const classroomId = teacherUiState.selectedClassroomId;
@@ -3484,7 +3871,7 @@ function syncAuthoringFieldsFromDom(slotKind, formEl) {
       // Which pool source (if any) is picked in this row's "Select source"
       // control — UI-only bookkeeping so the picker keeps showing the
       // chosen source's name after the copy-in re-renders it (see
-      // sourcePickerFieldMarkup()'s doc comment); never part of the saved
+      // sourceSelectorFieldMarkup()'s doc comment); never part of the saved
       // quest content itself.
       sourcePoolValue: row.querySelector("[data-copy-evidence-source]")?.value || "",
     }));
@@ -3570,31 +3957,87 @@ function persistAuthoringSelection() {
   );
 }
 
+// "Save Draft" (Screens 3B/3C) — persists the open form as this slot's draft
+// selection without publishing it, so a teacher can save partial work and
+// come back to it later. `onSaved` (used by runAfterConfirmingDiscard()'s
+// "Save and continue") runs only after the save has actually landed —
+// letting a caller navigate away right after a save completes without
+// duplicating this function's pending/error handling.
+function saveAuthoringDraft(onSaved) {
+  const auth = manageContentAuthoring;
+  if (!auth?.slotKind) return;
+  const caseId = contentUiState.selectedCaseId;
+  contentUiState.lastActionFailed = null;
+  contentUiState.successMessage = "";
+  const persisted = persistAuthoringSelection();
+  if (!persisted) return;
+  contentUiState.pending = true;
+  render();
+  persisted
+    .then(() => {
+      contentUiState.pending = false;
+      contentUiState.draftSavedSincePublish = true;
+      contentUiState.successMessage = "Draft saved — not yet visible to students.";
+      if (manageContentAuthoring) {
+        manageContentAuthoring.fieldsAtOpen = manageContentAuthoring.fields;
+      }
+      return loadManageContentCaseData(caseId);
+    })
+    .then(() => onSaved?.())
+    .catch((err) => {
+      contentUiState.pending = false;
+      contentUiState.lastActionFailed = "save";
+      reportUiError(contentUiState, err, "Could not save this draft.");
+      render();
+    });
+}
+
+// Which resolution ("draft"|"published") each preview-triggering action
+// should show — a pure, exported, directly-testable mapping (mirroring
+// manageContentSlotStatus()'s pattern) so a caller's label can never drift
+// from what enterContentPreview() actually loads. "Preview Published
+// Mission" is the fix for a real, confirmed bug: it used to always resolve
+// "draft" regardless of its own label, meaning a teacher who published, then
+// made further unsaved edits, and then clicked "Preview Published Mission"
+// would see those newer edits instead of the actual published content the
+// button claims to show. Returns null for actions that don't call
+// enterContentPreview() at all (preview-authoring-changes builds its preview
+// straight from in-memory form fields — see that branch's own comment).
+export function manageContentPreviewResolutionForAction(action) {
+  if (action === "preview-published-mission") return "published";
+  if (action === "wizard-go-preview" || action === "toggle-content-preview") return "draft";
+  return null;
+}
+
 // Real "Preview as student" — no bespoke preview markup. Switches the
-// resolution cache to draft and, unless `inline` is set, navigates into the
-// actual screen a student would land on: the real walkable field screen for
-// map missions (fully playable — movement, collision, NPCs, Practice
-// Check), or the real Archive Challenges screen for a mission whose only
-// editable content is a case-level Archive Challenge. `inline: true` (used
-// by the redesigned Manage Content wizard's Screen 2/3A) stays on the
+// resolution cache to `resolution` and, unless `inline` is set, navigates
+// into the actual screen a student would land on: the real walkable field
+// screen for map missions (fully playable — movement, collision, NPCs,
+// Practice Check), or the real Archive Challenges screen for a mission whose
+// only editable content is a case-level Archive Challenge. `inline: true`
+// (used by the redesigned Manage Content wizard's Screen 2/3A) stays on the
 // current screen instead, letting the caller render the same live,
 // interactive widget (archiveChallengeCard()) directly inside the wizard —
 // exitContentPreview() already handles both cases correctly since it only
 // navigates when a snapshot was actually taken. Nothing here is persisted —
-// see previewSession's own comment and the save() guard above.
-function enterContentPreview(caseId, { inline = false } = {}) {
+// see previewSession's own comment and the save() guard above. `resolution`
+// is stored on previewSession so the preview banner can report an accurate
+// version label (see contentPreviewVersionLabel()) instead of assuming every
+// preview shows draft content.
+function enterContentPreview(caseId, { inline = false, resolution = "draft" } = {}) {
   const kase = caseById(caseId);
   if (!kase) return;
   const isMapCase = kase.route === "field";
   if (!caseIsPreviewable(kase)) return;
-  loadSelectionsForResolution(teacherUiState.selectedClassroomId, "draft").then(() => {
+  loadSelectionsForResolution(teacherUiState.selectedClassroomId, resolution).then(() => {
     if (inline) {
-      previewSession = { active: true, snapshot: null };
+      previewSession = { active: true, snapshot: null, resolution };
       render();
       return;
     }
     previewSession = {
       active: true,
+      resolution,
       snapshot: {
         activeCaseId: progress.activeCaseId,
         currentScreen: progress.currentScreen,
@@ -3611,6 +4054,9 @@ function enterContentPreview(caseId, { inline = false } = {}) {
       progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
       progress.currentScreen = "archive-challenges";
     }
+    render();
+  }).catch((err) => {
+    reportUiError(contentUiState, err, "Could not load the preview.");
     render();
   });
 }
@@ -3646,14 +4092,156 @@ function exitPreviewIfActive() {
   return true;
 }
 
+// Maps each Pass 2 <dialog> element's id to the state variable it's driven
+// by, for the shared close/native-close handling below.
+const MANAGE_CONTENT_DIALOG_IDS = {
+  "manage-content-help-dialog": "help",
+  "manage-content-warning-dialog": "warning",
+  "manage-content-full-source-dialog": "full-source",
+};
+
+// The one place any of the three Pass 2 dialogs actually closes — nulls the
+// owning state var, re-renders (a fresh, closed <dialog> node replaces the
+// modal one, since render() fully replaces app.innerHTML), then restores
+// focus to the exact trigger that opened it. Called both by explicit
+// close-*-dialog click actions and by the native close/cancel listener below
+// (Escape while a <dialog> itself has focus never reaches our own click
+// handlers), so both paths always agree on state and focus.
+function closeManageContentDialog(kind) {
+  let triggerSelector = null;
+  if (kind === "help") {
+    triggerSelector = manageContentHelpDrawerOpenFor
+      ? `[data-action="open-help-drawer"][data-slot-kind="${CSS.escape(manageContentHelpDrawerOpenFor)}"]`
+      : null;
+    manageContentHelpDrawerOpenFor = null;
+  } else if (kind === "warning") {
+    triggerSelector = manageContentWarningDialog?.triggerSelector || null;
+    manageContentWarningDialog = null;
+  } else if (kind === "full-source") {
+    triggerSelector = manageContentFullSourceTriggerSelector;
+    manageContentViewingFullSourceValue = null;
+    manageContentFullSourceTriggerSelector = null;
+  }
+  render();
+  if (triggerSelector) document.querySelector(triggerSelector)?.focus();
+}
+
+// <dialog>'s "close"/"cancel" events don't bubble, so this can't be caught by
+// the app's one delegated click listener — registered on document with
+// {capture:true} instead (see the one-time listener setup near the bottom of
+// this file). Fires for every native dialog close (Escape, or a future
+// browser affordance), including ones our own click handlers already
+// initiated (which null the state before render() ever lets the old modal
+// node close) — the "state already null" guard here makes it a no-op for
+// those, so this only actually does anything for a close our own code never
+// saw coming.
+function handleManageContentDialogNativeClose(event) {
+  const kind = MANAGE_CONTENT_DIALOG_IDS[event.target?.id];
+  if (!kind) return;
+  if (kind === "help" && !manageContentHelpDrawerOpenFor) return;
+  if (kind === "warning" && !manageContentWarningDialog) return;
+  if (kind === "full-source" && !manageContentViewingFullSourceValue) return;
+  closeManageContentDialog(kind);
+}
+
+// Called once at the tail of render() (see app.innerHTML assignment below).
+// A fresh <dialog> node from a just-replaced app.innerHTML is always closed
+// (the markup never sets the `open` attribute — see this file's Pass 2
+// dialog-plumbing note), so "should be open" is the only direction that ever
+// needs action here; a "should be closed" dialog is already exactly that by
+// construction. Guarding on `!dialog.open` just avoids a throw from calling
+// showModal() twice on the same node in the rare case this runs more than
+// once against one render pass.
+function syncManageContentNativeDialogs() {
+  for (const [id, kind] of Object.entries(MANAGE_CONTENT_DIALOG_IDS)) {
+    const dialog = document.getElementById(id);
+    if (!dialog || dialog.open) continue;
+    const shouldBeOpen =
+      kind === "help"
+        ? Boolean(manageContentHelpDrawerOpenFor)
+        : kind === "warning"
+          ? Boolean(manageContentWarningDialog)
+          : Boolean(manageContentViewingFullSourceValue);
+    if (shouldBeOpen) dialog.showModal();
+  }
+}
+
+// Display copy only — the actual behavior for each scenario lives in the
+// onPrimary/onSecondary closures a caller passes to
+// openManageContentWarningDialog(), not here, so this dialog stays generic
+// across every call site instead of hardcoding a scenario->action switch.
+// `primaryLabel` is null for scenarios with nothing meaningful to "save"
+// (e.g. a source pick that hasn't been applied yet) — those render only the
+// secondary (discard) action plus Cancel.
+const MANAGE_CONTENT_WARNING_SCENARIOS = {
+  "leave-editor": {
+    message: "You have unsaved changes to this activity. What would you like to do?",
+    primaryLabel: "Save and continue",
+    secondaryLabel: "Continue without saving",
+  },
+  "change-source": {
+    message:
+      "Choosing a different source will replace your customized excerpt with the new source's excerpt. Your current excerpt will be lost.",
+    primaryLabel: null,
+    secondaryLabel: "Replace source anyway",
+  },
+  "restore-standard-version": {
+    message:
+      "This will remove your customized activity and reset it to the official version — including your source, prompt, and excerpt. This can't be undone.",
+    primaryLabel: null,
+    secondaryLabel: "Restore standard version",
+  },
+};
+
+// The one place any of Pass 2's unsaved-work warnings actually opens —
+// scenarioKey selects display copy only (see the table above); onPrimary/
+// onSecondary are real closures the caller supplies (never persisted, plain
+// in-memory UI state like previewSession), so this dialog never needs to
+// know what any specific call site actually does. triggerSelector is
+// whatever CSS selector uniquely identifies the button that opened it, for
+// focus-return on Cancel/native-close (see closeManageContentDialog()).
+function openManageContentWarningDialog(scenarioKey, { onPrimary = null, onSecondary, triggerSelector }) {
+  // render() rebuilds the open authoring form's markup straight from
+  // manageContentAuthoring.fields — but a field a teacher just typed into
+  // only lives in the DOM until something calls syncAuthoringFieldsFromDom()
+  // (this app deliberately doesn't sync on every keystroke, to avoid
+  // clobbering cursor position/focus mid-typing). Sync now, before the
+  // render below that opens this dialog, or an about-to-be-lost edit would
+  // already be gone by the time any of this dialog's own actions ran.
+  const auth = manageContentAuthoring;
+  if (auth?.slotKind) {
+    const formEl = currentAuthoringFormEl();
+    if (formEl) auth.fields = syncAuthoringFieldsFromDom(auth.slotKind, formEl);
+  }
+  manageContentWarningDialog = { scenarioKey, onPrimary, onSecondary, triggerSelector };
+  render();
+}
+
+function manageContentWarningDialogMarkup() {
+  const dialog = manageContentWarningDialog;
+  const scenario = dialog ? MANAGE_CONTENT_WARNING_SCENARIOS[dialog.scenarioKey] : null;
+  const body = scenario
+    ? `<h2 id="manage-content-warning-title">Unsaved changes</h2>
+<p>${esc(scenario.message)}</p>
+<div class="manage-content-warning-dialog-actions">
+${scenario.primaryLabel ? `<button type="button" class="btn btn-outline" data-action="warning-dialog-primary">${esc(scenario.primaryLabel)}</button>` : ""}
+<button type="button" class="btn btn-gold" data-action="warning-dialog-secondary">${esc(scenario.secondaryLabel)}</button>
+<button type="button" class="btn btn-plain" data-action="close-warning-dialog">Cancel</button>
+</div>`
+    : "";
+  return `<dialog id="manage-content-warning-dialog" class="manage-content-warning-dialog" role="alertdialog" aria-labelledby="manage-content-warning-title">
+${body}
+</dialog>`;
+}
+
 // Whether the currently open "edit"/"replace" authoring form has changes
 // that haven't been saved yet — compares its live values against a snapshot
 // captured once when the form was opened or last saved
 // (manageContentAuthoring.fieldsAtOpen, see wizard-go-edit/pick-question-type/
 // save-authoring-draft below), so navigation actions can warn before
-// silently discarding them (see confirmDiscardChanges()). Only meaningful
-// once a slot kind has actually been chosen — the bare type-picker step has
-// nothing to lose yet.
+// silently discarding them (see runAfterConfirmingDiscard()). Only
+// meaningful once a slot kind has actually been chosen — the bare
+// type-picker step has nothing to lose yet.
 function manageContentAuthoringIsDirty() {
   const auth = manageContentAuthoring;
   if (!auth?.slotKind || !auth.fieldsAtOpen) return false;
@@ -3662,13 +4250,76 @@ function manageContentAuthoringIsDirty() {
   return JSON.stringify(liveFields) !== JSON.stringify(auth.fieldsAtOpen);
 }
 
-// Native confirm() gate for the two navigation actions that could otherwise
-// silently discard an open, unsaved authoring form (go-to-sources-tab,
-// back-to-teacher-dashboard) — deliberately the simplest viable mechanism;
-// no custom <dialog>/modal pattern exists anywhere in this app to build on.
-function confirmDiscardChanges() {
-  if (!manageContentAuthoringIsDirty()) return true;
-  return window.confirm("You have unsaved changes to this activity. Leave without saving?");
+// Gate for the two navigation actions that could otherwise silently discard
+// an open, unsaved authoring form (go-to-sources-tab, back-to-teacher-
+// dashboard) — runs `navigateFn` immediately when there's nothing to lose
+// (the common case), or opens the styled warning dialog first when
+// manageContentAuthoringIsDirty(), whose "Save and continue" persists via
+// saveAuthoringDraft() before navigating and whose "Continue without saving"
+// navigates straight away. Replaces the previous window.confirm()-based
+// confirmDiscardChanges() — a native confirm() can't render custom button
+// labels/copy, which the styled dialog needs.
+function runAfterConfirmingDiscard(navigateFn, triggerSelector) {
+  if (!manageContentAuthoringIsDirty()) {
+    navigateFn();
+    return;
+  }
+  openManageContentWarningDialog("leave-editor", {
+    onPrimary: () => saveAuthoringDraft(navigateFn),
+    onSecondary: navigateFn,
+    triggerSelector,
+  });
+}
+
+// Closing the tab/reloading can't show a custom dialog — browsers ignore any
+// text passed here and show their own native prompt — so this stays on the
+// plain native mechanism rather than trying to route through
+// requestUnsavedChangesDecision(). Only fires when there's genuinely
+// something to lose, same guard confirmDiscardChanges() uses.
+function handleWindowBeforeUnload(event) {
+  if (progress.currentScreen !== "manage-content-case") return;
+  if (!manageContentAuthoringIsDirty()) return;
+  event.preventDefault();
+  event.returnValue = "";
+}
+
+// The actual "Restore Standard Version" work — pulled out of the
+// restore-standard-version click branch so it can run either immediately
+// (no custom content to lose) or deferred behind the warning dialog's
+// "Restore standard version" confirmation (see that click branch below).
+// Reverts the *entire* custom content item this slot points at (source,
+// prompt, choices, excerpt together) — there is no finer-grained per-field
+// restore in the data model, see selectedSourceSummaryCardMarkup()'s doc
+// comment.
+function performRestoreStandardVersion() {
+  previewSession = { active: false, snapshot: null };
+  const slot = contentUiState.slot;
+  if (!slot) return;
+  const classroomId = teacherUiState.selectedClassroomId;
+  const caseId = contentUiState.selectedCaseId;
+  contentUiState.lastActionFailed = null;
+  contentUiState.pending = true;
+  render();
+  setDraftSelection(classroomId, caseId, slot.slotKind, slot.officialId, null, "curated")
+    .then(() =>
+      publishCaseSelections(classroomId, caseId, [
+        { slotKind: slot.slotKind, slotContentId: slot.officialId },
+      ])
+    )
+    .then(() => loadSelectionsForResolution(classroomId, "published"))
+    .then(() => {
+      contentUiState.pending = false;
+      contentUiState.draftSavedSincePublish = false;
+      manageContentAuthoring = null;
+      contentUiState.wizardStep = "published";
+      return loadManageContentCaseData(caseId);
+    })
+    .catch((err) => {
+      contentUiState.pending = false;
+      contentUiState.lastActionFailed = "publish";
+      reportUiError(contentUiState, err, "Could not restore the standard version.");
+      render();
+    });
 }
 
 function handleManageContentClick(target, action) {
@@ -3680,25 +4331,81 @@ function handleManageContentClick(target, action) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
     return true;
   }
-  if (action === "go-to-sources-tab") {
-    if (!confirmDiscardChanges()) return true;
-    const unitNumber = Number(target.dataset.unit);
-    teacherUiState.activeTab = "sources";
-    teacherUiState.sourcesExpandedUnit = unitNumber;
-    progress.currentScreen = "teacher-dashboard";
-    save();
+  // The selected-source summary card's "Change source"/"Edit student
+  // excerpt" actions aren't separate screens/state — they just move focus to
+  // the existing controls already rendered just above/below the card, keyed
+  // by the same fieldKey convention sourceTextToolMarkup() uses.
+  if (action === "focus-source-selector") {
+    document
+      .querySelector(`.manage-content-source-selector[data-field-key="${CSS.escape(target.dataset.fieldKey)}"] select`)
+      ?.focus();
+    return true;
+  }
+  if (action === "focus-source-excerpt") {
+    document
+      .querySelector(`.manage-content-source-tool[data-field-key="${CSS.escape(target.dataset.fieldKey)}"] textarea`)
+      ?.focus();
+    return true;
+  }
+  if (action === "view-full-source") {
+    manageContentViewingFullSourceValue = target.dataset.sourcePoolValue || null;
+    manageContentFullSourceTriggerSelector = `[data-action="view-full-source"][data-field-key="${CSS.escape(target.dataset.fieldKey)}"]`;
     render();
-    if (
-      teacherUiState.selectedClassroomId &&
-      teacherUiState.sourcePoolByUnit[unitNumber] === undefined
-    ) {
-      getUnitSourcePool(teacherUiState.selectedClassroomId, unitNumber)
-        .then((pool) => {
-          teacherUiState.sourcePoolByUnit[unitNumber] = pool;
-          render();
-        })
-        .catch(catchUiError(teacherUiState, "Could not load this unit's source pool."));
-    }
+    return true;
+  }
+  if (action === "close-full-source-dialog") {
+    closeManageContentDialog("full-source");
+    return true;
+  }
+  if (action === "open-help-drawer") {
+    manageContentHelpDrawerOpenFor = target.dataset.slotKind || null;
+    render();
+    return true;
+  }
+  if (action === "close-help-drawer") {
+    closeManageContentDialog("help");
+    return true;
+  }
+  // The warning dialog's own 3 actions — see openManageContentWarningDialog()
+  // for why onPrimary/onSecondary are plain closures rather than a
+  // scenario->behavior switch living here. Cancel goes through
+  // closeManageContentDialog() (state null + refocus the trigger); primary/
+  // secondary intentionally don't refocus the trigger, since their callbacks
+  // typically navigate/persist somewhere else — refocusing a now-irrelevant
+  // button would be confusing, consistent with how every other navigation
+  // action in this app already behaves.
+  if (action === "warning-dialog-primary" || action === "warning-dialog-secondary") {
+    const dialog = manageContentWarningDialog;
+    manageContentWarningDialog = null;
+    render();
+    if (action === "warning-dialog-primary") dialog?.onPrimary?.();
+    else dialog?.onSecondary?.();
+    return true;
+  }
+  if (action === "close-warning-dialog") {
+    closeManageContentDialog("warning");
+    return true;
+  }
+  if (action === "go-to-sources-tab") {
+    const unitNumber = Number(target.dataset.unit);
+    runAfterConfirmingDiscard(() => {
+      teacherUiState.activeTab = "sources";
+      teacherUiState.sourcesExpandedUnit = unitNumber;
+      progress.currentScreen = "teacher-dashboard";
+      save();
+      render();
+      if (
+        teacherUiState.selectedClassroomId &&
+        teacherUiState.sourcePoolByUnit[unitNumber] === undefined
+      ) {
+        getUnitSourcePool(teacherUiState.selectedClassroomId, unitNumber)
+          .then((pool) => {
+            teacherUiState.sourcePoolByUnit[unitNumber] = pool;
+            render();
+          })
+          .catch(catchUiError(teacherUiState, "Could not load this unit's source pool."));
+      }
+    }, '[data-action="go-to-sources-tab"]');
     return true;
   }
   if (action === "toggle-manage-content-unit") {
@@ -3713,6 +4420,7 @@ function handleManageContentClick(target, action) {
       wizardStep: "name",
       slot: null,
       error: "",
+      successMessage: "",
       pending: false,
       lastActionFailed: null,
       draftSavedSincePublish: false,
@@ -3734,7 +4442,10 @@ function handleManageContentClick(target, action) {
   if (action === "wizard-go-preview") {
     contentUiState.wizardStep = "preview";
     manageContentAuthoring = null;
-    enterContentPreview(contentUiState.selectedCaseId, { inline: true });
+    enterContentPreview(contentUiState.selectedCaseId, {
+      inline: true,
+      resolution: manageContentPreviewResolutionForAction(action),
+    });
     return true;
   }
   // "Edit This Activity" — opens straight into this mission's one official
@@ -3849,34 +4560,11 @@ function handleManageContentClick(target, action) {
   // official and publishes immediately, same as Keep & Publish, so a
   // teacher is never left with an inconsistent unpublished state.
   if (action === "restore-standard-version") {
-    previewSession = { active: false, snapshot: null };
-    const slot = contentUiState.slot;
-    if (!slot) return true;
-    const classroomId = teacherUiState.selectedClassroomId;
-    const caseId = contentUiState.selectedCaseId;
-    contentUiState.lastActionFailed = null;
-    contentUiState.pending = true;
-    render();
-    setDraftSelection(classroomId, caseId, slot.slotKind, slot.officialId, null, "curated")
-      .then(() =>
-        publishCaseSelections(classroomId, caseId, [
-          { slotKind: slot.slotKind, slotContentId: slot.officialId },
-        ])
-      )
-      .then(() => loadSelectionsForResolution(classroomId, "published"))
-      .then(() => {
-        contentUiState.pending = false;
-        contentUiState.draftSavedSincePublish = false;
-        manageContentAuthoring = null;
-        contentUiState.wizardStep = "published";
-        return loadManageContentCaseData(caseId);
-      })
-      .catch((err) => {
-        contentUiState.pending = false;
-        contentUiState.lastActionFailed = "publish";
-        reportUiError(contentUiState, err, "Could not restore the standard version.");
-        render();
-      });
+    if (!contentUiState.slot) return true;
+    openManageContentWarningDialog("restore-standard-version", {
+      onSecondary: performRestoreStandardVersion,
+      triggerSelector: '[data-action="restore-standard-version"]',
+    });
     return true;
   }
   // "Save Draft" (Screens 3B/3C) — persists the open form as this slot's
@@ -3886,29 +4574,7 @@ function handleManageContentClick(target, action) {
   // publishCaseSelections()/wizardStep-advance step is skipped, and the
   // teacher stays on the same editor instead of moving to Screen 3A.
   if (action === "save-authoring-draft") {
-    const auth = manageContentAuthoring;
-    if (!auth?.slotKind) return true;
-    const caseId = contentUiState.selectedCaseId;
-    contentUiState.lastActionFailed = null;
-    const persisted = persistAuthoringSelection();
-    if (!persisted) return true;
-    contentUiState.pending = true;
-    render();
-    persisted
-      .then(() => {
-        contentUiState.pending = false;
-        contentUiState.draftSavedSincePublish = true;
-        if (manageContentAuthoring) {
-          manageContentAuthoring.fieldsAtOpen = manageContentAuthoring.fields;
-        }
-        return loadManageContentCaseData(caseId);
-      })
-      .catch((err) => {
-        contentUiState.pending = false;
-        contentUiState.lastActionFailed = "save";
-        reportUiError(contentUiState, err, "Could not save this draft.");
-        render();
-      });
+    saveAuthoringDraft();
     return true;
   }
   // "Publish" (Screens 3B/3C) — persists the open form as this slot's draft
@@ -3968,11 +4634,16 @@ function handleManageContentClick(target, action) {
     return true;
   }
   if (action === "preview-published-mission") {
-    enterContentPreview(contentUiState.selectedCaseId, { inline: true });
+    enterContentPreview(contentUiState.selectedCaseId, {
+      inline: true,
+      resolution: manageContentPreviewResolutionForAction(action),
+    });
     return true;
   }
   if (action === "toggle-content-preview") {
-    enterContentPreview(contentUiState.selectedCaseId);
+    enterContentPreview(contentUiState.selectedCaseId, {
+      resolution: manageContentPreviewResolutionForAction(action),
+    });
     return true;
   }
   if (action === "exit-content-preview") {
@@ -6126,6 +6797,7 @@ function render() {
     html = `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Chronicle recovery</p><h1>Archive display restored.</h1><p>The screen recovered instead of staying blank. Return to the Institute and continue testing.</p><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="reset-case-001">Reset Case 1.01 demo</button></section></main>${authorPanel()}`;
   }
   app.innerHTML = html;
+  syncManageContentNativeDialogs();
   if (currentIntroLines()) window.requestAnimationFrame(startIntroTypewriter);
   if (progress.currentScreen === "field")
     window.requestAnimationFrame(() => {
@@ -7387,25 +8059,26 @@ function handleGradingScreenClick(target, action) {
     // the screen we're leaving, since progress.currentScreen still holds
     // that value at this point. Warn first if an open authoring form would
     // otherwise be silently discarded (open-manage-content-case always
-    // resets it on next entry) — see confirmDiscardChanges().
-    if (!confirmDiscardChanges()) return true;
-    // Also clears a still-active inline preview (Screen 2's "Keep &
-    // Publish"/"Return to Cases" can reach this action while
-    // previewSession.active is true) so the preview banner and save()'s
-    // no-op guard don't leak onto the dashboard. Unlike exitContentPreview(),
-    // this used to skip re-pointing the resolution cache back at
-    // "published" — leaving it stuck on "draft" until something else
-    // happened to reload it — so mirror that same call here too.
-    const wasPreviewing = isPreviewingContent();
-    previewSession = { active: false, snapshot: null };
-    teacherUiState.activeTab =
-      progress.currentScreen === "manage-content-case" ? "units" : "assignments";
-    progress.currentScreen = "teacher-dashboard";
-    save();
-    render();
-    if (wasPreviewing) {
-      loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published");
-    }
+    // resets it on next entry) — see runAfterConfirmingDiscard().
+    runAfterConfirmingDiscard(() => {
+      // Also clears a still-active inline preview (Screen 2's "Keep &
+      // Publish"/"Return to Cases" can reach this action while
+      // previewSession.active is true) so the preview banner and save()'s
+      // no-op guard don't leak onto the dashboard. Unlike exitContentPreview(),
+      // this used to skip re-pointing the resolution cache back at
+      // "published" — leaving it stuck on "draft" until something else
+      // happened to reload it — so mirror that same call here too.
+      const wasPreviewing = isPreviewingContent();
+      previewSession = { active: false, snapshot: null };
+      teacherUiState.activeTab =
+        progress.currentScreen === "manage-content-case" ? "units" : "assignments";
+      progress.currentScreen = "teacher-dashboard";
+      save();
+      render();
+      if (wasPreviewing) {
+        loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published");
+      }
+    }, '[data-action="back-to-teacher-dashboard"]');
     return true;
   }
   if (action === "save-manual-grade") {
@@ -7534,19 +8207,24 @@ function handleAppChange(event) {
     // One-time copy-in, not a persistent link — see poolSourcesForCopy()'s
     // doc comment. Fields stay freely editable after this fires. Prefers
     // the source's real transcribed fullText over the short excerpt when
-    // one exists — see resolvePoolSourceFields()'s doc comment.
+    // one exists — see resolvePoolSourceFields()'s doc comment. Guarded by
+    // confirmSourceChangeIfNeeded() so a customized excerpt isn't silently
+    // discarded — see that function's doc comment.
     const picked = field.value && resolvePoolSourceFields(field.value);
     if (picked) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("hipp", formEl);
-      fields.documentText = picked.fullText || picked.excerpt;
-      fields.documentAttribution = picked.attribution;
-      manageContentAuthoring = {
-        ...manageContentAuthoring,
-        fields,
-        textTools: { ...manageContentAuthoring.textTools, hipp: undefined },
-      };
-      render();
+      const oldPoolValue = manageContentAuthoring.fields.hippSourcePoolValue;
+      confirmSourceChangeIfNeeded(field, "hipp", oldPoolValue, fields.documentText, () => {
+        fields.documentText = picked.fullText || picked.excerpt;
+        fields.documentAttribution = picked.attribution;
+        manageContentAuthoring = {
+          ...manageContentAuthoring,
+          fields,
+          textTools: { ...manageContentAuthoring.textTools, hipp: undefined },
+        };
+        render();
+      });
     }
   } else if (field.matches("[data-copy-evidence-source]")) {
     const picked = field.value && resolvePoolSourceFields(field.value);
@@ -7554,48 +8232,63 @@ function handleAppChange(event) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("evidence-organizing", formEl);
       const rowIndex = Number(field.dataset.rowIndex);
-      fields.sources[rowIndex] = {
-        ...fields.sources[rowIndex],
-        label: picked.label,
-        attribution: picked.attribution,
-        excerpt: picked.excerpt,
-      };
-      manageContentAuthoring = {
-        ...manageContentAuthoring,
-        fields,
-        textTools: { ...manageContentAuthoring.textTools, [`evidence-${rowIndex}`]: undefined },
-      };
-      render();
+      const oldPoolValue = manageContentAuthoring.fields.sources[rowIndex]?.sourcePoolValue;
+      confirmSourceChangeIfNeeded(
+        field,
+        `evidence-${rowIndex}`,
+        oldPoolValue,
+        fields.sources[rowIndex].excerpt,
+        () => {
+          fields.sources[rowIndex] = {
+            ...fields.sources[rowIndex],
+            label: picked.label,
+            attribution: picked.attribution,
+            excerpt: picked.excerpt,
+          };
+          manageContentAuthoring = {
+            ...manageContentAuthoring,
+            fields,
+            textTools: { ...manageContentAuthoring.textTools, [`evidence-${rowIndex}`]: undefined },
+          };
+          render();
+        }
+      );
     }
   } else if (field.matches("[data-copy-mcq-source]")) {
     const picked = field.value && resolvePoolSourceFields(field.value);
     if (picked) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("mcq", formEl);
-      fields.relatedSourceLabel = picked.label;
-      fields.relatedSourceAttribution = picked.attribution;
-      fields.relatedSourceExcerpt = picked.excerpt;
-      manageContentAuthoring = {
-        ...manageContentAuthoring,
-        fields,
-        textTools: { ...manageContentAuthoring.textTools, mcq: undefined },
-      };
-      render();
+      const oldPoolValue = manageContentAuthoring.fields.mcqSourcePoolValue;
+      confirmSourceChangeIfNeeded(field, "mcq", oldPoolValue, fields.relatedSourceExcerpt, () => {
+        fields.relatedSourceLabel = picked.label;
+        fields.relatedSourceAttribution = picked.attribution;
+        fields.relatedSourceExcerpt = picked.excerpt;
+        manageContentAuthoring = {
+          ...manageContentAuthoring,
+          fields,
+          textTools: { ...manageContentAuthoring.textTools, mcq: undefined },
+        };
+        render();
+      });
     }
   } else if (field.matches("[data-copy-sequencing-source]")) {
     const picked = field.value && resolvePoolSourceFields(field.value);
     if (picked) {
       const formEl = field.closest("[data-authoring-form]");
       const fields = syncAuthoringFieldsFromDom("sequencing", formEl);
-      fields.relatedSourceLabel = picked.label;
-      fields.relatedSourceAttribution = picked.attribution;
-      fields.relatedSourceExcerpt = picked.excerpt;
-      manageContentAuthoring = {
-        ...manageContentAuthoring,
-        fields,
-        textTools: { ...manageContentAuthoring.textTools, sequencing: undefined },
-      };
-      render();
+      const oldPoolValue = manageContentAuthoring.fields.sequencingSourcePoolValue;
+      confirmSourceChangeIfNeeded(field, "sequencing", oldPoolValue, fields.relatedSourceExcerpt, () => {
+        fields.relatedSourceLabel = picked.label;
+        fields.relatedSourceAttribution = picked.attribution;
+        fields.relatedSourceExcerpt = picked.excerpt;
+        manageContentAuthoring = {
+          ...manageContentAuthoring,
+          fields,
+          textTools: { ...manageContentAuthoring.textTools, sequencing: undefined },
+        };
+        render();
+      });
     }
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
@@ -7969,6 +8662,14 @@ if (app) {
   window.addEventListener("keydown", handleWindowKeydown);
   window.addEventListener("keyup", handleWindowKeyup);
   window.addEventListener("blur", handleWindowBlur);
+  // <dialog>'s close/cancel events don't bubble, so they can't reach the
+  // delegated app.addEventListener("click", ...) above — capture-phase
+  // document listeners instead (see handleManageContentDialogNativeClose()'s
+  // doc comment for why this only matters for closes our own code didn't
+  // already see, e.g. Escape while a dialog itself has focus).
+  document.addEventListener("close", handleManageContentDialogNativeClose, true);
+  document.addEventListener("cancel", handleManageContentDialogNativeClose, true);
+  window.addEventListener("beforeunload", handleWindowBeforeUnload);
 
   render();
 }
