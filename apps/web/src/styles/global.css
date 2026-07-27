@@ -2442,6 +2442,43 @@ dd {
   max-width: 560px;
   padding: 40px 36px;
 }
+/* Teacher sign-in/create-account/join screens (Phase 44, C5) — .completion-
+   shell's 820px max-width is right for the dashboard, which also uses that
+   class, but swims the auth card at large monitor sizes. Scoped modifier so
+   the dashboard is untouched. Also dims the page's background grid behind
+   the card via a radial vignette, so the form reads as the clear focal
+   point rather than competing with the grid pattern. */
+.auth-shell {
+  position: relative;
+}
+.auth-shell::before {
+  content: "";
+  position: absolute;
+  inset: -10% -20%;
+  background: radial-gradient(circle at 50% 40%, rgba(3, 20, 30, 0.55), transparent 62%);
+  pointer-events: none;
+  z-index: -1;
+}
+.auth-shell > section {
+  position: relative;
+  max-width: var(--c-width-auth);
+  padding: 40px 36px;
+}
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 22px;
+}
+.auth-shell label {
+  margin-top: 20px;
+}
+.auth-shell .btn {
+  margin-top: 18px;
+}
+.auth-shell .back-link {
+  display: inline-block;
+  margin-top: 14px;
+}
 .landing-choice-row {
   display: flex;
   gap: 12px;

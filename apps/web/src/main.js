@@ -2137,48 +2137,62 @@ function passwordFieldMarkup(id, placeholder, value = "") {
   return `<div class="password-field"><input id="${esc(id)}" type="password" placeholder="${esc(placeholder)}" value="${esc(value)}" autocomplete="off"><button class="password-toggle" type="button" data-action="toggle-password-visibility" data-target="${esc(id)}" aria-pressed="false">Show</button></div>`;
 }
 
+// Quiet pill-style tab switcher for the auth screens (Sign In / Create
+// Account, First time / Returning) — reuses .unit-tab's existing look
+// (already used by the dashboard's own tab bar) instead of two full
+// .btn-gold/.btn-outline buttons competing with the real primary action
+// below the form.
+function authTabsMarkup(tabs) {
+  return `<div class="auth-tabs" role="tablist">${tabs
+    .map(
+      ({ label, action, selected }) =>
+        `<button type="button" class="text-button unit-tab ${selected ? "is-selected" : ""}" role="tab" aria-selected="${selected}" data-action="${esc(action)}">${esc(label)}</button>`
+    )
+    .join("")}</div>`;
+}
+
 function joinScreen() {
   const isClaim = authUiState.studentTab !== "signin";
-  return `${chrome()}<main class="shell completion-shell"><section>
+  return `${chrome()}<main class="shell completion-shell auth-shell"><section>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Join a Classroom</h1>
-<p>${
+<p class="c-page-description">${
     isClaim
       ? "First time joining? Your teacher gave you a classroom code and a student ID — claim your seat and set a password."
       : "Already claimed your seat? Sign back in with your classroom code, student ID, and password."
   }</p>
-<div class="completion-actions">
-<button class="btn ${isClaim ? "btn-gold" : "btn-outline"}" data-action="student-tab-claim" type="button">First time</button>
-<button class="btn ${!isClaim ? "btn-gold" : "btn-outline"}" data-action="student-tab-signin" type="button">Returning</button>
-</div>
+${authTabsMarkup([
+  { label: "First time", action: "student-tab-claim", selected: isClaim },
+  { label: "Returning", action: "student-tab-signin", selected: !isClaim },
+])}
 <label>Classroom code<input id="join-classroom-code" placeholder="e.g. FOX7K2" autocomplete="off"></label>
 <label>Your student ID<input id="join-student-id" placeholder="e.g. 07" autocomplete="off"></label>
 ${isClaim ? `<label>Display name (optional)<input id="join-display-name" placeholder="How your teacher sees you" autocomplete="off"></label>` : ""}
 <label>Password${passwordFieldMarkup("join-password", "••••••••")}</label>
-${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="${isClaim ? "submit-join-claim" : "submit-join-signin"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isClaim ? "Claim my seat →" : "Sign in →"}</button>
-<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+<button class="back-link" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
 }
 
 function loginScreen() {
   const isSignIn = authUiState.teacherTab !== "signup";
   if (isSignIn) {
-    return `${chrome()}<main class="shell completion-shell"><section>
+    return `${chrome()}<main class="shell completion-shell auth-shell"><section>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Teacher Sign In</h1>
-<div class="completion-actions">
-<button class="btn btn-gold" data-action="teacher-tab-signin" type="button">Sign In</button>
-<button class="btn btn-outline" data-action="teacher-tab-signup" type="button">Create Account</button>
-</div>
+${authTabsMarkup([
+  { label: "Sign In", action: "teacher-tab-signin", selected: true },
+  { label: "Create Account", action: "teacher-tab-signup", selected: false },
+])}
 <label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" autocomplete="off"></label>
 <label>Password${passwordFieldMarkup("teacher-password", "••••••••")}</label>
-${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
-${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+${authUiState.info ? `<p class="feedback" role="status" aria-live="polite">${esc(authUiState.info)}</p>` : ""}
+${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="submit-teacher-signin" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Sign In →"}</button>
 <button class="btn btn-outline" data-action="continue-with-google" type="button" ${authUiState.pending ? "disabled" : ""}>Continue with Google</button>
 ${import.meta.env.DEV ? btn({ label: "🧪 Dev: Fake Teacher", action: "dev-fake-teacher", variant: "dev", disabled: authUiState.pending }) : ""}
-<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+<button class="back-link" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
   }
   if (authUiState.signupStep === 2) {
@@ -2190,35 +2204,35 @@ ${import.meta.env.DEV ? btn({ label: "🧪 Dev: Fake Teacher", action: "dev-fake
 </div>`
       )
       .join("");
-    return `${chrome()}<main class="shell completion-shell"><section>
+    return `${chrome()}<main class="shell completion-shell auth-shell"><section>
 <p class="kicker">${esc(BRAND.engine)} · Step 2 of 2</p>
 <h1>Set Up Classrooms</h1>
-<p>Choose how many classrooms to create now — you can always add more later from your dashboard.</p>
+<p class="c-page-description">Choose how many classrooms to create now — you can always add more later from your dashboard.</p>
 <label>How many classrooms?<input id="signup-classroom-count" data-classroom-count type="number" min="1" max="20" value="${authUiState.classroomRows.length}"></label>
 ${rows}
-${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="submit-teacher-signup" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Create Account & Classrooms →"}</button>
-<button class="btn btn-outline" data-action="teacher-signup-back" type="button">← Back</button>
+<button class="back-link" data-action="teacher-signup-back" type="button">← Back</button>
 </section></main>${authorPanel()}`;
   }
   const draft = authUiState.signupDraft;
-  return `${chrome()}<main class="shell completion-shell"><section>
+  return `${chrome()}<main class="shell completion-shell auth-shell"><section>
 <p class="kicker">${esc(BRAND.engine)} · Step 1 of 2</p>
 <h1>Create Teacher Account</h1>
-<div class="completion-actions">
-<button class="btn btn-outline" data-action="teacher-tab-signin" type="button">Sign In</button>
-<button class="btn btn-gold" data-action="teacher-tab-signup" type="button">Create Account</button>
-</div>
+${authTabsMarkup([
+  { label: "Sign In", action: "teacher-tab-signin", selected: false },
+  { label: "Create Account", action: "teacher-tab-signup", selected: true },
+])}
 <label>Your name<input id="teacher-display-name" placeholder="Ms. Rivera" value="${esc(draft?.displayName || "")}" autocomplete="off"></label>
 <label>School / organization<input id="teacher-school-name" placeholder="e.g. Lincoln High School" value="${esc(draft?.schoolName || "")}" autocomplete="off"></label>
 <label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" value="${esc(draft?.email || "")}" autocomplete="off"></label>
 <label>Password${passwordFieldMarkup("teacher-password", "••••••••", draft?.password || "")}</label>
 <label>Confirm password${passwordFieldMarkup("teacher-confirm-password", "••••••••")}</label>
-${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
-${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
+${authUiState.info ? `<p class="feedback" role="status" aria-live="polite">${esc(authUiState.info)}</p>` : ""}
+${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="teacher-signup-continue" type="button" ${authUiState.pending ? "disabled" : ""}>Continue →</button>
 <button class="btn btn-outline" data-action="continue-with-google" type="button" ${authUiState.pending ? "disabled" : ""}>Continue with Google</button>
-<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
+<button class="back-link" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
 }
 
