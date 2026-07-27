@@ -7692,7 +7692,12 @@ button:hover,
 .manage-content-shell {
   width: min(1180px, calc(100% - 56px));
   margin: auto;
-  padding: 42px 0;
+  /* Generous top padding reserves room for .manage-content-fixed-header,
+     whose height varies (step indicator present/absent, command-bar
+     actions wrapping to two lines on narrow viewports) — sized for the
+     tallest realistic case rather than measured exactly, since this app
+     has no post-render layout-measurement hook to size it precisely. */
+  padding: 235px 0 42px;
 }
 .manage-content-shell > section {
   padding: 40px 44px;
@@ -8441,4 +8446,122 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .field-preview-banner button {
   flex-shrink: 0;
+}
+
+/* --- Manage Content: fixed header (chrome + command bar), breadcrumb,
+   status badge, step indicator (Pass 1 — teacher UI navigation & clarity).
+   position:fixed rather than sticky — see manageContentFixedHeaderMarkup()'s
+   doc comment in main.js for why sticky doesn't work against this app's
+   shared html/body overflow-x:hidden rule. manage-content-shell's
+   padding-top below reserves room for this fixed header's height. */
+.manage-content-fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: linear-gradient(135deg, #032232, #062c3d 53%, #031d2d);
+  border-bottom: 1px solid rgba(231, 199, 119, 0.2);
+}
+.manage-content-fixed-header .chrome {
+  border-bottom: none;
+}
+.manage-content-command-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(1180px, calc(100% - 56px));
+  margin: 0 auto 18px;
+  padding: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(9, 46, 60, 0.97), rgba(4, 26, 38, 0.98));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+.manage-content-command-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.manage-content-command-bar-actions .btn {
+  padding: 8px 14px;
+  font-size: 0.68rem;
+}
+.manage-content-command-bar-actions .manage-content-status-badge {
+  margin-left: auto;
+}
+.manage-content-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: #d8e3de;
+  font-size: 0.78rem;
+}
+.manage-content-breadcrumb .text-button {
+  font-size: 0.78rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.manage-content-status-badge {
+  padding: 5px 12px;
+  border: 1px solid rgba(239, 204, 122, 0.4);
+  border-radius: 999px;
+  background: rgba(4, 26, 38, 0.4);
+  color: #d8e3de;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.manage-content-status-badge[data-status-key="draft"] {
+  border-color: rgba(239, 204, 122, 0.6);
+  color: var(--gold-soft);
+}
+.manage-content-status-badge[data-status-key="published"] {
+  border-color: rgba(135, 213, 164, 0.5);
+  color: #87d5a4;
+}
+.manage-content-status-badge[data-status-key="saving"] {
+  color: var(--muted);
+  font-style: italic;
+}
+.manage-content-status-badge[data-status-key="failed"] {
+  border-color: rgba(189, 117, 95, 0.6);
+  color: var(--danger);
+}
+.manage-content-step-indicator {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(239, 204, 122, 0.18);
+}
+.manage-content-step {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: "Cinzel", serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: default;
+}
+button.manage-content-step {
+  cursor: pointer;
+}
+.manage-content-step.is-current {
+  color: var(--gold);
+  font-weight: 700;
+}
+.manage-content-step.is-done {
+  color: #9fd3b8;
+}
+.manage-content-command-bar button:focus-visible,
+.manage-content-step-indicator button:focus-visible,
+.manage-content-breadcrumb button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }

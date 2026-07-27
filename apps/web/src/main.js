@@ -1560,6 +1560,22 @@ let contentUiState = {
   slot: null,
   error: "",
   pending: false,
+  // Which kind of async action most recently failed, so the command bar's
+  // status badge can say "Save failed"/"Publish failed" instead of a single
+  // generic error state — set right before persistAuthoringSelection()/
+  // publishCaseSelections() run, cleared on success.
+  lastActionFailed: null,
+  // True once "Save Draft" has succeeded without a publish since — needed
+  // because slot.draftAltId/publishedAltId alone can't always tell: editing
+  // an already-customized slot further reuses its existing custom_content_
+  // items row (see persistAuthoringSelection()'s canReuseExistingCustomRow),
+  // so the row's id — and therefore draftAltId — doesn't change even though
+  // its content just did. This session-local flag is the accurate signal in
+  // that case; reset on a fresh case load (there's no way to recover it from
+  // stored data alone once the editor's closed and reopened, since the data
+  // model only tracks ids, not per-save content history — see
+  // manageContentSlotStatus()'s doc comment).
+  draftSavedSincePublish: false,
 };
 // Which unit's mission list is expanded on the top-level manageContentScreen()
 // accordion — a single id (not a Set) so opening one unit always collapses
@@ -2955,6 +2971,7 @@ function manageContentAuthoringFormMarkup() {
 </div>`;
   }
   return `<div class="manage-content-authoring-form">
+<div id="manage-content-sources-anchor"></div>
 ${auth.errors.length ? `<ul class="manage-content-authoring-errors">${auth.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
 <div data-authoring-form>
 ${authoringFieldsMarkup(auth)}
@@ -2975,27 +2992,196 @@ function caseIsPreviewable(kase) {
   return Boolean(kase.archiveChallenge);
 }
 
+// Pure status-derivation for the command bar's status badge — entirely
+// derived from data loadManageContentCaseData() already loaded, plus the
+// transient pending/lastActionFailed/draftSavedSincePublish flags set
+// around each save/publish action (see save-authoring-draft/
+// save-and-publish-authoring/keep-and-publish/restore-standard-version in
+// handleManageContentClick()). publishCaseSelections() copies the draft
+// row's value into a *separate* published row rather than replacing/
+// clearing the draft row (see remote-content-selection-repository.js), so a
+// slot whose draft and published ids match has generally been published
+// as-is. That id comparison alone has one known blind spot: editing an
+// *already*-customized slot further reuses its existing custom_content_
+// items row (persistAuthoringSelection()'s canReuseExistingCustomRow)
+// rather than creating a new one, so draftAltId doesn't change even though
+// the row's content just did — draftSavedSincePublish is the accurate
+// signal for that case, since the data model itself keeps no per-save
+// content history to detect it from ids alone. Takes these as explicit
+// params (rather than reading contentUiState directly) so this stays a
+// plain, directly testable function — see tests/unit/
+// main-manage-content-navigation.test.js.
+export function manageContentSlotStatus(slot, pending, lastActionFailed, draftSavedSincePublish) {
+  if (pending) return { key: "saving", label: "Saving…" };
+  if (lastActionFailed === "save") return { key: "failed", label: "Save failed" };
+  if (lastActionFailed === "publish") return { key: "failed", label: "Publish failed" };
+  if (!slot) return { key: "none", label: "No activity yet" };
+  if (draftSavedSincePublish) return { key: "draft", label: "Draft changes (not yet visible to students)" };
+  if (!slot.draftAltId && !slot.publishedAltId) return { key: "official", label: "Official version" };
+  if (slot.draftAltId === slot.publishedAltId) return { key: "published", label: "Published" };
+  return { key: "draft", label: "Draft changes (not yet visible to students)" };
+}
+
+function statusBadgeMarkup(key, label) {
+  return `<span class="manage-content-status-badge" data-status-key="${esc(key)}">${esc(label)}</span>`;
+}
+
+// "Manage Content › Unit N: Title › Case N.NN — Name" — reuses the exact
+// same title-resolution helpers (resolvedUnitTitle/resolvedCaseTitle)
+// already shown on the mission list so wording never drifts from it. The
+// first segment reuses the existing back-to-teacher-dashboard action; the
+// other two render as plain text since there's no intermediate "this
+// unit's missions" screen to link to.
+function manageContentBreadcrumbMarkup(activeCase) {
+  const unit = activeCase ? unitForCase(activeCase.id) : null;
+  const unitLabel = unit ? `Unit ${Number(unit.id.split("-")[1])}: ${resolvedUnitTitle(unit)}` : "";
+  const caseLabel = activeCase ? resolvedCaseTitle(activeCase) : "";
+  const segments = [
+    `<button type="button" class="text-button" data-action="back-to-teacher-dashboard">Manage Content</button>`,
+    unitLabel ? esc(unitLabel) : "",
+    caseLabel ? esc(caseLabel) : "",
+  ].filter(Boolean);
+  return `<nav class="manage-content-breadcrumb" aria-label="Manage Content navigation">${segments.join('<span aria-hidden="true"> › </span>')}</nav>`;
+}
+
+// Which action "Preview as student" should trigger from the command bar,
+// per wizard step — Step 1 has nothing live to show yet, so it navigates
+// into Step 2's real inline preview instead of silently activating an
+// invisible preview session; the edit/replace workspace only has something
+// to preview once a slot kind has actually been chosen (returns null then,
+// so the caller can hide the button entirely rather than render a no-op).
+function manageContentPreviewActionForStep(activeCase) {
+  if (activeCase.route === "field") return "toggle-content-preview";
+  const step = contentUiState.wizardStep;
+  if (step === "name") return "wizard-go-preview";
+  if (step === "edit" || step === "replace") {
+    return manageContentAuthoring?.slotKind ? "preview-authoring-changes" : null;
+  }
+  return "preview-published-mission";
+}
+
+// Wraps chrome() + the command bar in one position:fixed header so the bar
+// stays visible while scrolling a long authoring form. Deliberately fixed,
+// not sticky: this app's shared `html, body { overflow-x: hidden; }` rule
+// (added for the hub-shell layout) forces body's computed overflow-y to
+// "auto" per the CSS Overflow spec (an axis can't stay visible once the
+// other is clipped), which makes body an unintended, non-scrolling sticky
+// containing block — position:sticky measurably fails to stick against it.
+// position:fixed sidesteps that entirely (same pattern already used by
+// .author-panel/.scene-fade elsewhere in this file) at the cost of taking
+// the header out of flow — see manage-content-shell's matching padding-top
+// override in global.css.
+function manageContentFixedHeaderMarkup(activeCase) {
+  return `<div class="manage-content-fixed-header">${chrome()}${manageContentCommandBarMarkup(activeCase)}</div>`;
+}
+
+// Command bar content for every Manage Content mission-editing screen — the
+// one place a teacher can always find where they are (breadcrumb), the
+// mission's save/publish status, and the two escape hatches ("Change
+// source pool", "Preview as student") that used to only exist buried
+// inside specific wizard steps. Composed once here so none of the wizard
+// steps or the Map Mission lock view can drift out of sync with each other.
+// Rendered inside manageContentFixedHeaderMarkup()'s fixed wrapper above,
+// which is what actually keeps it on screen while scrolling.
+function manageContentCommandBarMarkup(activeCase) {
+  const breadcrumb = manageContentBreadcrumbMarkup(activeCase);
+  if (!activeCase) {
+    return `<div class="manage-content-command-bar">${breadcrumb}</div>`;
+  }
+  const unit = unitForCase(activeCase.id);
+  const unitNumber = unit ? Number(unit.id.split("-")[1]) : null;
+  const sourcePoolButton = unitNumber
+    ? `<button type="button" class="btn btn-outline" data-action="go-to-sources-tab" data-unit="${unitNumber}">Change source pool</button>`
+    : "";
+  const previewAction = manageContentPreviewActionForStep(activeCase);
+  const previewButton =
+    caseIsPreviewable(activeCase) && previewAction
+      ? `<button type="button" class="btn btn-outline" data-action="${previewAction}">Preview as student</button>`
+      : "";
+  const slot = activeCase.route === "field" ? null : contentUiState.slot;
+  const status =
+    activeCase.route === "field"
+      ? { key: "official", label: "Official version" }
+      : manageContentSlotStatus(
+          slot,
+          contentUiState.pending,
+          contentUiState.lastActionFailed,
+          contentUiState.draftSavedSincePublish
+        );
+  return `<div class="manage-content-command-bar">
+${breadcrumb}
+<div class="manage-content-command-bar-actions">
+${sourcePoolButton}
+${previewButton}
+${statusBadgeMarkup(status.key, status.label)}
+</div>
+</div>
+${manageContentStepIndicatorMarkup(activeCase)}`;
+}
+
+// Compact "Mission · Sources · Questions · Preview & Publish" indicator.
+// "Sources"/"Questions" aren't separate wizardStep values — both live
+// inside the single edit/replace workspace step's one-page form — so those
+// two dots act as scroll/focus anchors into that page (see
+// manage-content-sources-anchor/manage-content-questions-anchor above)
+// rather than real navigation, per this pass's brief allowing that when an
+// editor uses one-page sections instead of separate routes. Suppressed for
+// Map Missions (no wizard exists there) and before case data has loaded.
+function manageContentStepIndicatorMarkup(activeCase) {
+  if (!activeCase || activeCase.route === "field") return "";
+  const step = contentUiState.wizardStep || "name";
+  const inWorkspace = step === "edit" || step === "replace";
+  const steps = [
+    { label: "Mission", current: step === "name", done: step !== "name", action: null },
+    {
+      label: "Sources",
+      current: false,
+      done: inWorkspace,
+      action: inWorkspace ? "focus-manage-content-sources" : null,
+    },
+    {
+      label: "Questions",
+      current: inWorkspace,
+      done: false,
+      action: inWorkspace ? "focus-manage-content-questions" : null,
+    },
+    {
+      label: "Preview & Publish",
+      current: step === "preview" || step === "published",
+      done: step === "published",
+      action: null,
+    },
+  ];
+  const dots = steps
+    .map(({ label, current, done, action }) => {
+      const cls = current ? "is-current" : done ? "is-done" : "is-pending";
+      const inner = `${done ? "✓ " : ""}${esc(label)}`;
+      return action
+        ? `<button type="button" class="manage-content-step ${cls}" data-action="${action}">${inner}</button>`
+        : `<span class="manage-content-step ${cls}">${inner}</span>`;
+    })
+    .join("");
+  return `<div class="manage-content-step-indicator">${dots}</div>`;
+}
+
 function manageContentCaseScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
     return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
   const activeCase = caseById(contentUiState.selectedCaseId);
   if (!activeCase) {
-    return `${chrome()}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p><button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← All cases</button></section></main>${authorPanel()}`;
+    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p></section></main>${authorPanel()}`;
   }
   // Map Missions are entirely fixed content — the walkable map, its NPCs/
   // sources, and its Practice Check questions are all locked — so this is
   // the only screen a Map Mission ever shows here: no wizard, no edit/
-  // replace controls, just a name field and a way to preview the real map.
+  // replace controls, just a name field. The command bar's own "Preview as
+  // student"/breadcrumb now cover what the old inline "Student Preview"/
+  // "Back" buttons used to.
   if (activeCase.route === "field") {
-    return `${chrome()}<main class="shell manage-content-shell"><section>
-${manageContentWizardHeaderMarkup(activeCase)}
+    return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><section>
 ${missionRenameControlMarkup(activeCase)}
 <p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
-<div class="manage-content-wizard-choice-actions">
-<button class="btn btn-outline" data-action="toggle-content-preview" type="button">Student Preview</button>
-<button class="btn btn-plain" data-action="back-to-teacher-dashboard" type="button">Back</button>
-</div>
 </section></main>${authorPanel()}`;
   }
   const step = contentUiState.wizardStep || "name";
@@ -3007,22 +3193,20 @@ ${missionRenameControlMarkup(activeCase)}
         : step === "published"
           ? manageContentPublishedStepMarkup(activeCase)
           : manageContentNameStepMarkup(activeCase);
-  return `${chrome()}<main class="shell manage-content-shell"><section>
+  return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><section>
 ${stepMarkup}
 </section></main>${authorPanel()}`;
 }
 
-// Shared "← All cases / case number / mission name / description" block
-// every wizard step opens with. The kicker is just the case's number (e.g.
-// "Case 1.02"), not its kind/mechanic — that's internal bookkeeping a
-// teacher doesn't need to see here (it still shows on the mission list card,
-// manageContentMissionCardMarkup()) — so the mission's real name only ever
-// appears once, in the h1.
+// Shared "case number / mission name / description" block every wizard step
+// opens with. Navigation (breadcrumb, back-to-dashboard) now lives in the
+// command bar above (see manageContentCommandBarMarkup()), so this only
+// carries the help icon and mission identity.
 function manageContentWizardHeaderMarkup(activeCase) {
   const caseNumber = splitCaseTitle(activeCase)
     .prefix.replace(/\s*—\s*$/, "")
     .trim();
-  return `<div class="manage-content-wizard-header-top"><button class="back-link" data-action="back-to-teacher-dashboard">← All cases</button>${helpIconMarkup(MANAGE_CONTENT_WIZARD_HELP_TEXT)}</div>
+  return `<div class="manage-content-wizard-header-top">${helpIconMarkup(MANAGE_CONTENT_WIZARD_HELP_TEXT)}</div>
 <p class="kicker">${esc(caseNumber || activeCase.shortTitle)}</p>
 <h1>${esc(resolvedCaseTitle(activeCase))}</h1>
 <p>${esc(activeCase.summary)}</p>`;
@@ -3122,9 +3306,10 @@ ${manageContentAuthoringFormMarkup()}
 ${feedbackError(contentUiState)}
 ${
   typeChosen
-    ? `<div class="manage-content-authoring-actions">
-<button class="btn btn-outline" data-action="preview-authoring-changes" type="button">${isReplace ? "Preview Replacement" : "Preview Changes"}</button>
-<button class="btn btn-gold" data-action="save-and-publish-authoring" type="button">Save &amp; Publish</button>
+    ? `<div id="manage-content-questions-anchor" class="manage-content-authoring-actions">
+<button class="btn btn-outline" data-action="preview-authoring-changes" type="button" ${contentUiState.pending ? "disabled" : ""}>${isReplace ? "Preview Replacement" : "Preview Changes"}</button>
+<button class="btn btn-outline" data-action="save-authoring-draft" type="button" ${contentUiState.pending ? "disabled" : ""}>Save Draft</button>
+<button class="btn btn-gold" data-action="save-and-publish-authoring" type="button" ${contentUiState.pending ? "disabled" : ""}>Publish</button>
 </div>
 ${isReplace ? `<button class="btn btn-plain" data-action="replace-choose-type" type="button">← Back to activity types</button>` : ""}
 ${showRestore ? `<button class="btn btn-plain" data-action="restore-standard-version" type="button">Restore Standard Version</button>` : ""}
@@ -3461,8 +3646,42 @@ function exitPreviewIfActive() {
   return true;
 }
 
+// Whether the currently open "edit"/"replace" authoring form has changes
+// that haven't been saved yet — compares its live values against a snapshot
+// captured once when the form was opened or last saved
+// (manageContentAuthoring.fieldsAtOpen, see wizard-go-edit/pick-question-type/
+// save-authoring-draft below), so navigation actions can warn before
+// silently discarding them (see confirmDiscardChanges()). Only meaningful
+// once a slot kind has actually been chosen — the bare type-picker step has
+// nothing to lose yet.
+function manageContentAuthoringIsDirty() {
+  const auth = manageContentAuthoring;
+  if (!auth?.slotKind || !auth.fieldsAtOpen) return false;
+  const formEl = currentAuthoringFormEl();
+  const liveFields = formEl ? syncAuthoringFieldsFromDom(auth.slotKind, formEl) : auth.fields;
+  return JSON.stringify(liveFields) !== JSON.stringify(auth.fieldsAtOpen);
+}
+
+// Native confirm() gate for the two navigation actions that could otherwise
+// silently discard an open, unsaved authoring form (go-to-sources-tab,
+// back-to-teacher-dashboard) — deliberately the simplest viable mechanism;
+// no custom <dialog>/modal pattern exists anywhere in this app to build on.
+function confirmDiscardChanges() {
+  if (!manageContentAuthoringIsDirty()) return true;
+  return window.confirm("You have unsaved changes to this activity. Leave without saving?");
+}
+
 function handleManageContentClick(target, action) {
+  if (action === "focus-manage-content-sources" || action === "focus-manage-content-questions") {
+    const id =
+      action === "focus-manage-content-sources"
+        ? "manage-content-sources-anchor"
+        : "manage-content-questions-anchor";
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return true;
+  }
   if (action === "go-to-sources-tab") {
+    if (!confirmDiscardChanges()) return true;
     const unitNumber = Number(target.dataset.unit);
     teacherUiState.activeTab = "sources";
     teacherUiState.sourcesExpandedUnit = unitNumber;
@@ -3495,6 +3714,8 @@ function handleManageContentClick(target, action) {
       slot: null,
       error: "",
       pending: false,
+      lastActionFailed: null,
+      draftSavedSincePublish: false,
     };
     manageContentAuthoring = null;
     previewSession = { active: false, snapshot: null };
@@ -3542,6 +3763,7 @@ function handleManageContentClick(target, action) {
           textTools: {},
         }
       : null;
+    if (manageContentAuthoring) manageContentAuthoring.fieldsAtOpen = manageContentAuthoring.fields;
     render();
     return true;
   }
@@ -3593,6 +3815,9 @@ function handleManageContentClick(target, action) {
     const slot = contentUiState.slot;
     const classroomId = teacherUiState.selectedClassroomId;
     const caseId = contentUiState.selectedCaseId;
+    contentUiState.lastActionFailed = null;
+    contentUiState.pending = true;
+    render();
     const clearDraft = slot?.draftAltId
       ? setDraftSelection(classroomId, caseId, slot.slotKind, slot.officialId, null, "curated")
       : Promise.resolve();
@@ -3606,10 +3831,17 @@ function handleManageContentClick(target, action) {
       )
       .then(() => loadSelectionsForResolution(classroomId, "published"))
       .then(() => {
+        contentUiState.pending = false;
+        contentUiState.draftSavedSincePublish = false;
         contentUiState.wizardStep = "published";
         return loadManageContentCaseData(caseId);
       })
-      .catch(catchUiError(contentUiState, "Could not publish this mission."));
+      .catch((err) => {
+        contentUiState.pending = false;
+        contentUiState.lastActionFailed = "publish";
+        reportUiError(contentUiState, err, "Could not publish this mission.");
+        render();
+      });
     return true;
   }
   // "Restore Standard Version" (Screen 3B, only shown once a custom version
@@ -3622,6 +3854,9 @@ function handleManageContentClick(target, action) {
     if (!slot) return true;
     const classroomId = teacherUiState.selectedClassroomId;
     const caseId = contentUiState.selectedCaseId;
+    contentUiState.lastActionFailed = null;
+    contentUiState.pending = true;
+    render();
     setDraftSelection(classroomId, caseId, slot.slotKind, slot.officialId, null, "curated")
       .then(() =>
         publishCaseSelections(classroomId, caseId, [
@@ -3630,15 +3865,55 @@ function handleManageContentClick(target, action) {
       )
       .then(() => loadSelectionsForResolution(classroomId, "published"))
       .then(() => {
+        contentUiState.pending = false;
+        contentUiState.draftSavedSincePublish = false;
         manageContentAuthoring = null;
         contentUiState.wizardStep = "published";
         return loadManageContentCaseData(caseId);
       })
-      .catch(catchUiError(contentUiState, "Could not restore the standard version."));
+      .catch((err) => {
+        contentUiState.pending = false;
+        contentUiState.lastActionFailed = "publish";
+        reportUiError(contentUiState, err, "Could not restore the standard version.");
+        render();
+      });
     return true;
   }
-  // "Save & Publish" (Screens 3B/3C) — persists the open form as this
-  // slot's draft replacement, then immediately publishes it.
+  // "Save Draft" (Screens 3B/3C) — persists the open form as this slot's
+  // draft selection without publishing it, so a teacher can save partial
+  // work and come back to it later. Uses the exact same
+  // persistAuthoringSelection() as "Publish" below — only the
+  // publishCaseSelections()/wizardStep-advance step is skipped, and the
+  // teacher stays on the same editor instead of moving to Screen 3A.
+  if (action === "save-authoring-draft") {
+    const auth = manageContentAuthoring;
+    if (!auth?.slotKind) return true;
+    const caseId = contentUiState.selectedCaseId;
+    contentUiState.lastActionFailed = null;
+    const persisted = persistAuthoringSelection();
+    if (!persisted) return true;
+    contentUiState.pending = true;
+    render();
+    persisted
+      .then(() => {
+        contentUiState.pending = false;
+        contentUiState.draftSavedSincePublish = true;
+        if (manageContentAuthoring) {
+          manageContentAuthoring.fieldsAtOpen = manageContentAuthoring.fields;
+        }
+        return loadManageContentCaseData(caseId);
+      })
+      .catch((err) => {
+        contentUiState.pending = false;
+        contentUiState.lastActionFailed = "save";
+        reportUiError(contentUiState, err, "Could not save this draft.");
+        render();
+      });
+    return true;
+  }
+  // "Publish" (Screens 3B/3C) — persists the open form as this slot's draft
+  // replacement, then immediately publishes it, same as before "Save Draft"
+  // existed as a separate step.
   if (action === "save-and-publish-authoring") {
     const auth = manageContentAuthoring;
     if (!auth?.slotKind) return true;
@@ -3646,19 +3921,29 @@ function handleManageContentClick(target, action) {
     const caseId = contentUiState.selectedCaseId;
     const slotKind = auth.officialSlotKind || auth.slotKind;
     const officialId = auth.editingOfficialId;
+    contentUiState.lastActionFailed = null;
     const persisted = persistAuthoringSelection();
     if (!persisted) return true;
+    contentUiState.pending = true;
+    render();
     persisted
       .then(() =>
         publishCaseSelections(classroomId, caseId, [{ slotKind, slotContentId: officialId }])
       )
       .then(() => loadSelectionsForResolution(classroomId, "published"))
       .then(() => {
+        contentUiState.pending = false;
+        contentUiState.draftSavedSincePublish = false;
         manageContentAuthoring = null;
         contentUiState.wizardStep = "published";
         return loadManageContentCaseData(caseId);
       })
-      .catch(catchUiError(contentUiState, "Could not save and publish this activity."));
+      .catch((err) => {
+        contentUiState.pending = false;
+        contentUiState.lastActionFailed = "publish";
+        reportUiError(contentUiState, err, "Could not save and publish this activity.");
+        render();
+      });
     return true;
   }
   // "Preview Changes"/"Preview Replacement" (Screens 3B/3C) — builds an
@@ -3705,7 +3990,7 @@ function handleManageContentClick(target, action) {
       slotKind === auth.currentSlotKindAtStart && auth.originalPreviewContent
         ? authoringFieldsFromContent(slotKind, auth.originalPreviewContent)
         : defaultAuthoringFields(slotKind);
-    manageContentAuthoring = { ...auth, slotKind, fields, errors: [], textTools: {} };
+    manageContentAuthoring = { ...auth, slotKind, fields, fieldsAtOpen: fields, errors: [], textTools: {} };
     render();
     return true;
   }
@@ -6080,6 +6365,11 @@ function handleChromeClick(target, action) {
     return true;
   }
   if (action === "open-main-menu") {
+    // Same escape-hatch guard "home"/"archive-room" below already use —
+    // without it, a teacher opening the menu mid-preview would see the
+    // "Previewing as student" banner vanish (mainMenuScreen() doesn't render
+    // chrome() at all) while previewSession stayed active underneath.
+    if (exitPreviewIfActive()) return true;
     showMainMenu = true;
     landingMode = "root";
     render();
@@ -7095,16 +7385,27 @@ function handleGradingScreenClick(target, action) {
     // standalone list screen was folded into the dashboard's Units tab —
     // see teacherUnitsTabMarkup()) — restore whichever tab makes sense for
     // the screen we're leaving, since progress.currentScreen still holds
-    // that value at this point. Also clears a still-active inline preview
-    // (Screen 2's "Keep & Publish"/"Return to Cases" can reach this action
-    // while previewSession.active is true) so the preview banner and
-    // save()'s no-op guard don't leak onto the dashboard.
+    // that value at this point. Warn first if an open authoring form would
+    // otherwise be silently discarded (open-manage-content-case always
+    // resets it on next entry) — see confirmDiscardChanges().
+    if (!confirmDiscardChanges()) return true;
+    // Also clears a still-active inline preview (Screen 2's "Keep &
+    // Publish"/"Return to Cases" can reach this action while
+    // previewSession.active is true) so the preview banner and save()'s
+    // no-op guard don't leak onto the dashboard. Unlike exitContentPreview(),
+    // this used to skip re-pointing the resolution cache back at
+    // "published" — leaving it stuck on "draft" until something else
+    // happened to reload it — so mirror that same call here too.
+    const wasPreviewing = isPreviewingContent();
     previewSession = { active: false, snapshot: null };
     teacherUiState.activeTab =
       progress.currentScreen === "manage-content-case" ? "units" : "assignments";
     progress.currentScreen = "teacher-dashboard";
     save();
     render();
+    if (wasPreviewing) {
+      loadSelectionsForResolution(teacherUiState.selectedClassroomId, "published");
+    }
     return true;
   }
   if (action === "save-manual-grade") {
