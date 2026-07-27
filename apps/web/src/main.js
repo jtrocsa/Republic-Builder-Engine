@@ -3230,8 +3230,19 @@ ${body}
 // the underlying pool pick hasn't changed (picking a new/different source
 // resets `highlighted`, see the data-copy-*-source branches in
 // handleAppChange()).
+// Memoized by exact text — sourceTextToolMarkup() re-runs this on every
+// render while a teacher is editing any field in the authoring form
+// (typing in an unrelated textarea, reordering an answer row, etc.), but a
+// given source's full text is static for as long as it stays selected.
+// Cache key space is bounded in practice by the primary-source library's
+// size (a few dozen entries), so no eviction is needed.
+const SEGMENT_CACHE = new Map();
 function splitIntoSegments(text) {
-  return (text || "").match(/[^.!?]+[.!?]+(\s+|$)/g) || (text ? [text] : []);
+  if (!text) return [];
+  if (SEGMENT_CACHE.has(text)) return SEGMENT_CACHE.get(text);
+  const segments = text.match(/[^.!?]+[.!?]+(\s+|$)/g) || [text];
+  SEGMENT_CACHE.set(text, segments);
+  return segments;
 }
 
 // Renders the shared "highlight full source text into an excerpt, or write
