@@ -2530,6 +2530,13 @@ function missionRenameControlMarkup(kase) {
 // QUEST_TYPES keys (renderQuest/gradeQuest, quest-types/index.js — also
 // classroom_content_selections.slot_kind for quest slots) vs. the camelCase
 // property names PRACTICE_CHECK_QUESTS groups the same 4 types under.
+// Deliberately only these 4 — Short Answer Questions (reviewScreen(),
+// SaqSchema in review.schema.js) are a separate mechanism entirely, not
+// wired into QUEST_TYPES/renderQuest/gradeQuest and not one of Manage
+// Content's slot kinds. Adding SAQ authoring here would need a new
+// classroom_content_selections slot_kind plus a migration, which is out of
+// scope for Phase 3 absent a stronger justification — documented as a known
+// limitation, not implemented.
 const QUEST_SLOT_TYPES = [
   { questType: "mcq", practiceKey: "mcq" },
   { questType: "sequencing", practiceKey: "sequencing" },
@@ -3123,29 +3130,257 @@ ${counter}
 </div>`;
 }
 
+// --- Phase 3: guided editor sections (Source & stimulus / Student
+// directions / Question / Answer structure), reused across all 4 per-type
+// field editors below. Purely a display/collapse convenience over the exact
+// same fields/markup each editor already built — no field moves between
+// sections changes what gets validated, saved, or previewed.
+
+// Collapsed shows a one-line summary + "Edit" button; expanded shows the
+// section's real fields ("body"). `summary` is a plain string built by one
+// of the *SectionSummaries() functions below — an empty string means the
+// section isn't filled in yet, so it always renders expanded regardless of
+// collapsedSections (nothing meaningful to collapse to). `collapsible: false`
+// (used for the read-only Student Directions section, which is never worth
+// hiding) always renders expanded with no toggle at all. Collapse state
+// (manageContentAuthoring.collapsedSections) is ephemeral UI-only state, same
+// convention as textTools — collapsing/expanding never discards a field
+// value underneath it.
+//
+// Critical: `body`'s markup is always rendered into the DOM, even while
+// collapsed — only hidden via the native `hidden` attribute, never omitted.
+// syncAuthoringFieldsFromDom() re-syncs the *entire* form's fields from
+// whatever [data-authoring-field]/row elements currently exist in the DOM
+// on every add/remove/reorder/toggle action (see handleManageContentClick());
+// if a collapsed section's inputs were actually removed from the DOM, that
+// resync would silently return a fields object missing (or, for row-list
+// fields like `choices`/`sources`, wrongly empty) any value belonging to a
+// currently-collapsed section — confirmed as a real bug during manual
+// testing before this comment was written. Keeping the markup present and
+// merely hidden means its current-state value is always re-embedded in the
+// template on every render, so the DOM never diverges from state.
+function manageContentEditorSectionMarkup(sectionKey, title, { summary, body, collapsible = true }) {
+  const canCollapse = collapsible && Boolean(summary);
+  const collapsed = canCollapse && Boolean(manageContentAuthoring?.collapsedSections?.[sectionKey]);
+  const toggleBtn = canCollapse
+    ? `<button type="button" class="btn btn-plain manage-content-editor-section-toggle" data-action="toggle-authoring-section" data-section-key="${esc(sectionKey)}">${collapsed ? "Edit" : "Collapse"}</button>`
+    : "";
+  return `<div class="manage-content-editor-section${collapsed ? " is-collapsed" : ""}" data-section-key="${esc(sectionKey)}" tabindex="-1">
+<div class="manage-content-editor-section-head"><span class="manage-content-editor-section-title">${esc(title)}</span>${toggleBtn}</div>
+${collapsed ? `<p class="manage-content-editor-section-summary-text">${esc(summary)}</p>` : ""}
+<div class="manage-content-editor-section-body"${collapsed ? " hidden" : ""}>${body}</div>
+</div>`;
+}
+
+function truncateForSummary(text, maxLength = 60) {
+  const trimmed = (text || "").trim();
+  if (!trimmed) return "";
+  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
+}
+
+// Shared by every quest type's optional/required "Source & stimulus"
+// summary — reuses fieldHasCustomizedExcerpt()'s existing heuristic so this
+// can't describe a source as "customized" by any different rule than the
+// summary card/change-guard already use elsewhere in this file.
+function relatedSourceSummaryText(label, poolValue, currentText) {
+  const trimmedLabel = (label || "").trim();
+  if (!trimmedLabel) return "";
+  return `${trimmedLabel}, ${fieldHasCustomizedExcerpt(poolValue, currentText) ? "customized excerpt" : "official excerpt"}`;
+}
+
+export function mcqSectionSummaries(fields) {
+  const choices = fields.choices || [];
+  const filled = choices.filter((c) => (c.text || "").trim()).length;
+  const hasCorrect = choices.some((c) => c.correct);
+  return {
+    source: relatedSourceSummaryText(
+      fields.relatedSourceLabel,
+      fields.mcqSourcePoolValue,
+      fields.relatedSourceExcerpt
+    ),
+    question: truncateForSummary(fields.prompt),
+    answers:
+      filled >= 2
+        ? `${choices.length} choice${choices.length === 1 ? "" : "s"}, ${hasCorrect ? "correct answer selected" : "no correct answer selected yet"}`
+        : "",
+  };
+}
+
+export function sequencingSectionSummaries(fields) {
+  const items = fields.items || [];
+  const filled = items.filter((i) => (i.label || "").trim()).length;
+  return {
+    source: relatedSourceSummaryText(
+      fields.relatedSourceLabel,
+      fields.sequencingSourcePoolValue,
+      fields.relatedSourceExcerpt
+    ),
+    question: truncateForSummary(fields.prompt),
+    answers: filled >= 2 ? `${items.length} item${items.length === 1 ? "" : "s"} in order` : "",
+  };
+}
+
+// No "source" summary — evidence-organizing has no single top-level source
+// (see evidenceOrganizingFieldsMarkup()'s doc comment on why its per-record
+// source pickers stay inside "Answer structure" instead).
+export function evidenceOrganizingSectionSummaries(fields) {
+  const slots = fields.slots || [];
+  const sources = fields.sources || [];
+  const filledSlots = slots.filter((s) => (s.label || "").trim()).length;
+  const placed = sources.filter((s) => s.correctSlotId).length;
+  return {
+    question: truncateForSummary(fields.prompt),
+    answers:
+      filledSlots >= 2 && sources.length
+        ? `${slots.length} slot${slots.length === 1 ? "" : "s"}, ${sources.length} evidence record${sources.length === 1 ? "" : "s"}${placed === sources.length ? ", all placed" : ""}`
+        : "",
+  };
+}
+
+// No "question" summary — HIPP has no single top-level editable prompt (its
+// `prompt` is a fixed instruction string built by buildHippContent()); each
+// dimension's "argument" lives inside its own prompt block under "Answer
+// structure" instead (see hippFieldsMarkup()'s doc comment).
+export function hippSectionSummaries(fields) {
+  const prompts = fields.hippPrompts || [];
+  const filled = prompts.filter((p) => (p.argument || "").trim()).length;
+  return {
+    source: relatedSourceSummaryText(
+      fields.documentAttribution,
+      fields.hippSourcePoolValue,
+      fields.documentText
+    ),
+    answers: filled
+      ? `${prompts.length} HIPP prompt${prompts.length === 1 ? "" : "s"} (${prompts.map((p) => p.dimension).join(", ")})`
+      : "",
+  };
+}
+
+// Maps a raw auth.errors[] message to which guided section it belongs to,
+// purely from its leading field-name token — every message produced by
+// custom-content-authoring.js's hand-written checks or Zod's
+// issuesToMessages() starts with a bare field name before the first ".",
+// "[", or ":" (e.g. "choices: ...", "sources[0].skillCategory: ...",
+// "relatedSource.label: ..."). Returns null for anything unrecognized so
+// manageContentValidationSummaryMarkup() safely degrades to an unlinked
+// item rather than mislinking a message to the wrong section — if
+// custom-content-authoring.js's error wording ever changes without
+// preserving this leading-token convention, that's the failure mode, not a
+// crash.
+const VALIDATION_ERROR_SECTION_MAP = {
+  mcq: {
+    prompt: "question",
+    choices: "answers",
+    explanation: "answers",
+    relatedSource: "source",
+    relatedSourceLabel: "source",
+    relatedSourceAttribution: "source",
+    relatedSourceExcerpt: "source",
+  },
+  sequencing: {
+    prompt: "question",
+    items: "answers",
+    explanation: "answers",
+    relatedSource: "source",
+    relatedSourceLabel: "source",
+    relatedSourceAttribution: "source",
+    relatedSourceExcerpt: "source",
+  },
+  "evidence-organizing": {
+    prompt: "question",
+    slots: "answers",
+    sources: "answers",
+    reflectionPrompt: "answers",
+  },
+  hipp: {
+    document: "source",
+    documentText: "source",
+    documentAttribution: "source",
+    hippPrompts: "answers",
+    prompts: "answers",
+  },
+};
+export function sectionForValidationError(slotKind, message) {
+  const match = /^([a-zA-Z]+)/.exec(message || "");
+  if (!match) return null;
+  return VALIDATION_ERROR_SECTION_MAP[slotKind]?.[match[1]] || null;
+}
+
+// Replaces the old flat <ul> — each error that resolves to a real section
+// (see sectionForValidationError()) renders as a button that expands and
+// scrolls/focuses that section (see the "focus-authoring-section" action in
+// handleManageContentClick()); anything unresolved renders as plain text.
+// Wrapped in a focusable, role="alert" container so failed Save/Publish
+// attempts (see focusManageContentValidationSummary()) can move focus here.
+function manageContentValidationSummaryMarkup(slotKind, errors) {
+  if (!errors?.length) return "";
+  const items = errors
+    .map((message) => {
+      const sectionKey = sectionForValidationError(slotKind, message);
+      return sectionKey
+        ? `<li><button type="button" class="manage-content-validation-link" data-action="focus-authoring-section" data-section-key="${esc(sectionKey)}">${esc(message)}</button></li>`
+        : `<li>${esc(message)}</li>`;
+    })
+    .join("");
+  return `<div id="manage-content-validation-summary" class="manage-content-authoring-errors" tabindex="-1" role="alert">
+<ul>${items}</ul>
+</div>`;
+}
+
+// Moves focus to the validation summary after a failed Save/Publish/Preview
+// attempt re-renders it (see persistAuthoringSelection() and the
+// "preview-authoring-changes" action) — render() is a synchronous full
+// re-render from a template string, so the element exists by the time this
+// runs right after it.
+function focusManageContentValidationSummary() {
+  if (typeof document === "undefined") return;
+  document.getElementById("manage-content-validation-summary")?.focus();
+}
+
 function mcqFieldsMarkup(fields) {
   const choices = fields.choices || [];
   const rows = choices
     .map(
       (choice, i) => `<div class="manage-content-mcq-row">
+<button type="button" class="manage-content-row-move-btn" data-action="move-mcq-choice" data-row-index="${i}" data-direction="-1" ${i === 0 ? "disabled" : ""} title="Move up">↑</button>
+<button type="button" class="manage-content-row-move-btn" data-action="move-mcq-choice" data-row-index="${i}" data-direction="1" ${i === choices.length - 1 ? "disabled" : ""} title="Move down">↓</button>
 <input type="radio" name="mcq-correct" data-mcq-correct ${choice.correct ? "checked" : ""} title="Mark as the correct choice">
 <input type="text" data-mcq-text value="${esc(choice.text)}" placeholder="Choice text">
 <button type="button" class="manage-content-row-delete-btn" data-action="remove-mcq-choice" data-row-index="${i}" ${choices.length <= 2 ? "disabled" : ""} title="Remove this choice">×</button>
 </div>`
     )
     .join("");
-  return `<div class="manage-content-field-label">Attach a source (optional)</div>
-<p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
+  const summaries = mcqSectionSummaries(fields);
+  const sourceBody = `<p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
 ${sourceSelectorFieldMarkup("mcq", 'data-copy-mcq-source data-authoring-field="mcqSourcePoolValue"', fields.mcqSourcePoolValue, "optional")}
 ${selectedSourceSummaryCardMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, contentUiState.slot, "optional")}
 <label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Immigration Act (Chinese Exclusion Act), 1882"></label>
 <label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
-${sourceTextToolMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}
-<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<div class="manage-content-field-label">Choices — mark the correct one</div>
+${sourceTextToolMarkup("mcq", fields.mcqSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}`;
+  const directionsBody = `<p class="manage-content-help-text manage-content-directions">${esc(questHint("mcq", {}))}</p>`;
+  const questionBody = `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
+  const answersBody = `<div class="manage-content-field-label">Choices — mark the correct one</div>
 <div class="manage-content-row-list" data-authoring-rows="choices">${rows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-mcq-choice">+ Add choice</button>
 <label>Explanation (optional, shown after answering)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+  return [
+    manageContentEditorSectionMarkup("source", "Source & stimulus (optional)", {
+      summary: summaries.source,
+      body: sourceBody,
+    }),
+    manageContentEditorSectionMarkup("directions", "Student directions", {
+      body: directionsBody,
+      collapsible: false,
+    }),
+    manageContentEditorSectionMarkup("question", "Question", {
+      summary: summaries.question,
+      body: questionBody,
+    }),
+    manageContentEditorSectionMarkup("answers", "Answer structure", {
+      summary: summaries.answers,
+      body: answersBody,
+    }),
+  ].join("");
 }
 
 function sequencingFieldsMarkup(fields) {
@@ -3166,20 +3401,48 @@ function sequencingFieldsMarkup(fields) {
 </div>`
     )
     .join("");
-  return `<div class="manage-content-field-label">Attach a source (optional)</div>
-<p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
+  const summaries = sequencingSectionSummaries(fields);
+  const sourceBody = `<p class="manage-content-help-text">Not graded — purely context students see above the question, if you want to ground it in a primary source.</p>
 ${sourceSelectorFieldMarkup("sequencing", 'data-copy-sequencing-source data-authoring-field="sequencingSourcePoolValue"', fields.sequencingSourcePoolValue, "optional")}
 ${selectedSourceSummaryCardMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, contentUiState.slot, "optional")}
 <label>Source label<input type="text" data-authoring-field="relatedSourceLabel" value="${esc(fields.relatedSourceLabel)}" placeholder="e.g. Seneca Falls Convention, 1848"></label>
 <label>Attribution<input type="text" data-authoring-field="relatedSourceAttribution" value="${esc(fields.relatedSourceAttribution)}"></label>
-${sourceTextToolMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}
-<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<div class="manage-content-field-label">Items — set each one's position in the correct causal order (not just chronological)</div>
+${sourceTextToolMarkup("sequencing", fields.sequencingSourcePoolValue, fields.relatedSourceExcerpt, 'data-authoring-field="relatedSourceExcerpt"')}`;
+  const directionsBody = `<p class="manage-content-help-text manage-content-directions">${esc(questHint("sequencing", {}))}</p>`;
+  const questionBody = `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
+  const answersBody = `<div class="manage-content-field-label">Items — set each one's position in the correct causal order (not just chronological)</div>
 <div class="manage-content-row-list" data-authoring-rows="items">${rows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-sequence-item">+ Add item</button>
 <label>Explanation (optional)<textarea data-authoring-field="explanation" rows="2">${esc(fields.explanation)}</textarea></label>`;
+  return [
+    manageContentEditorSectionMarkup("source", "Source & stimulus (optional)", {
+      summary: summaries.source,
+      body: sourceBody,
+    }),
+    manageContentEditorSectionMarkup("directions", "Student directions", {
+      body: directionsBody,
+      collapsible: false,
+    }),
+    manageContentEditorSectionMarkup("question", "Question", {
+      summary: summaries.question,
+      body: questionBody,
+    }),
+    manageContentEditorSectionMarkup("answers", "Answer structure", {
+      summary: summaries.answers,
+      body: answersBody,
+    }),
+  ].join("");
 }
 
+// Exception to the Source & stimulus -> Student directions -> Question ->
+// Answer structure guided-section order the other 3 quest types use: this
+// type has no single top-level source. Each evidence record carries its own
+// source pick/excerpt/skill/correct-slot as one bundled row, so they all
+// stay together under one "Answer structure" section rather than being
+// split into an ill-fitting top-level Source section — this also matches
+// renderEvidenceOrganizingQuest()'s own real student-facing order (prompt,
+// then the evidence-card sources together), so nothing here is less
+// source-first than what students actually see.
 function evidenceOrganizingFieldsMarkup(fields) {
   const slots = fields.slots || [];
   const sources = fields.sources || [];
@@ -3220,8 +3483,10 @@ ${sourceTextToolMarkup(`evidence-${i}`, source.sourcePoolValue, source.excerpt, 
 </div>`;
     })
     .join("");
-  return `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>
-<div class="manage-content-field-label">Slots — the categories students sort evidence into</div>
+  const summaries = evidenceOrganizingSectionSummaries(fields);
+  const directionsBody = `<p class="manage-content-help-text manage-content-directions">${esc(questHint("evidence-organizing", {}))}</p>`;
+  const questionBody = `<label>Prompt<textarea data-authoring-field="prompt" rows="2">${esc(fields.prompt)}</textarea></label>`;
+  const answersBody = `<div class="manage-content-field-label">Slots — the categories students sort evidence into</div>
 <div class="manage-content-row-list" data-authoring-rows="slots">${slotRows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-evidence-slot">+ Add slot</button>
 <div class="manage-content-field-label">Evidence records</div>
@@ -3229,8 +3494,29 @@ ${sourceTextToolMarkup(`evidence-${i}`, source.sourcePoolValue, source.excerpt, 
 <div class="manage-content-row-list" data-authoring-rows="sources">${sourceRows}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-evidence-source">+ Add evidence record</button>
 <label>Reflection prompt (optional)<textarea data-authoring-field="reflectionPrompt" rows="2">${esc(fields.reflectionPrompt)}</textarea></label>`;
+  return [
+    manageContentEditorSectionMarkup("directions", "Student directions", {
+      body: directionsBody,
+      collapsible: false,
+    }),
+    manageContentEditorSectionMarkup("question", "Question", {
+      summary: summaries.question,
+      body: questionBody,
+    }),
+    manageContentEditorSectionMarkup("answers", "Answer structure — evidence records (each with its own source)", {
+      summary: summaries.answers,
+      body: answersBody,
+    }),
+  ].join("");
 }
 
+// Exception to the guided-section order the other 3 quest types use: HIPP
+// has no single top-level editable prompt text (buildHippContent() sets a
+// fixed instruction string) — each dimension's "argument" is itself part of
+// that dimension's prompt block, so there's no standalone Question section
+// here. Bundling argument+options together under "Answer structure" also
+// matches renderSourceAnalysisQuest()'s own real order (document, then each
+// dimension's argument+options together).
 function hippFieldsMarkup(fields) {
   const prompts = fields.hippPrompts || [];
   const dimensionOptions = (currentDimension) =>
@@ -3244,6 +3530,8 @@ function hippFieldsMarkup(fields) {
       const optionRows = options
         .map(
           (option, oi) => `<div class="manage-content-hipp-option-row">
+<button type="button" class="manage-content-row-move-btn" data-action="move-hipp-option" data-prompt-index="${pi}" data-row-index="${oi}" data-direction="-1" ${oi === 0 ? "disabled" : ""} title="Move up">↑</button>
+<button type="button" class="manage-content-row-move-btn" data-action="move-hipp-option" data-prompt-index="${pi}" data-row-index="${oi}" data-direction="1" ${oi === options.length - 1 ? "disabled" : ""} title="Move down">↓</button>
 <input type="radio" name="hipp-correct-${pi}" data-hipp-correct ${option.correct ? "checked" : ""} title="Mark as the correct option">
 <label class="manage-content-inline-checkbox"><input type="checkbox" data-hipp-identification ${option.identificationOnly ? "checked" : ""}> Names it, but doesn't explain why</label>${helpIconMarkup(MANAGE_CONTENT_HIPP_ID_ONLY_HELP)}
 <input type="text" data-hipp-option-text value="${esc(option.text)}" placeholder="Option text">
@@ -3262,14 +3550,30 @@ function hippFieldsMarkup(fields) {
 </div>`;
     })
     .join("");
-  return `${sourceSelectorFieldMarkup("hipp", 'data-copy-hipp-source data-authoring-field="hippSourcePoolValue"', fields.hippSourcePoolValue, "required")}
+  const summaries = hippSectionSummaries(fields);
+  const sourceBody = `${sourceSelectorFieldMarkup("hipp", 'data-copy-hipp-source data-authoring-field="hippSourcePoolValue"', fields.hippSourcePoolValue, "required")}
 ${selectedSourceSummaryCardMarkup("hipp", fields.hippSourcePoolValue, fields.documentText, contentUiState.slot, "required")}
 ${sourceTextToolMarkup("hipp", fields.hippSourcePoolValue, fields.documentText, 'data-authoring-field="documentText"')}
-<label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>
-<div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
+<label>Document attribution<input type="text" data-authoring-field="documentAttribution" value="${esc(fields.documentAttribution)}"></label>`;
+  const directionsBody = `<p class="manage-content-help-text manage-content-directions">${esc(questHint("hipp", {}))}</p>`;
+  const answersBody = `<div class="manage-content-field-label">HIPP prompts — one per dimension analyzed</div>
 <p class="manage-content-help-text">Each prompt needs exactly one fully <strong>correct</strong> option (names the right answer <em>and</em> explains how it shapes the document's argument) and at least one option that <strong>names it, but doesn't explain why</strong> — a wrong answer that correctly identifies the right person/place/context but doesn't connect it to the argument. This mirrors the real AP DBQ rubric rule: identification alone scores zero.</p>
 <div class="manage-content-row-list" data-authoring-rows="hippPrompts">${promptBlocks}</div>
 <button type="button" class="manage-content-add-row-btn" data-action="add-hipp-prompt" ${prompts.length >= 2 ? "disabled" : ""}>+ Add HIPP prompt</button>`;
+  return [
+    manageContentEditorSectionMarkup("source", "Source & stimulus", {
+      summary: summaries.source,
+      body: sourceBody,
+    }),
+    manageContentEditorSectionMarkup("directions", "Student directions", {
+      body: directionsBody,
+      collapsible: false,
+    }),
+    manageContentEditorSectionMarkup("answers", "Answer structure — HIPP prompts", {
+      summary: summaries.answers,
+      body: answersBody,
+    }),
+  ].join("");
 }
 
 function authoringFieldsMarkup(auth) {
@@ -3353,7 +3657,7 @@ function manageContentAuthoringFormMarkup() {
   }
   return `<div class="manage-content-authoring-form">
 <div id="manage-content-sources-anchor"></div>
-${auth.errors.length ? `<ul class="manage-content-authoring-errors">${auth.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+${manageContentValidationSummaryMarkup(auth.slotKind, auth.errors)}
 <div data-authoring-form>
 ${authoringFieldsMarkup(auth)}
 </div>
@@ -3654,9 +3958,16 @@ function manageContentPublishedStepMarkup(activeCase) {
 // one slot's single editor: no slot list, no "add new question." "Edit
 // This Activity" opens straight into the existing type's editor
 // (wizard-go-edit); "Replace Activity" opens the 4-card type picker first
-// (wizard-go-replace). While previewing in-progress changes (see
-// "preview-authoring-changes" in handleManageContentClick()), this step
-// shows that ephemeral preview instead of the editor.
+// (wizard-go-replace) and always builds a fresh custom replacement from
+// scratch — there is no curated-alternate picker here (a small pool of
+// pre-authored alternates per case/slot still exists as content files and
+// still resolves correctly if an old published selection points at one, but
+// the UI to pick a new one was intentionally removed in the wizard redesign
+// this shipped against and is not being restored as part of Phase 3; see
+// the Phase 3 plan's "Choose an alternative" limitation note). While
+// previewing in-progress changes (see "preview-authoring-changes" in
+// handleManageContentClick()), this step shows that ephemeral preview
+// instead of the editor.
 // One-line summary of whether/how a source is attached for the status bar
 // at the bottom of the workspace step — hipp/evidence-organizing always
 // carry source text (it's central to those two types), mcq/sequencing's is
@@ -3905,6 +4216,25 @@ function reorderSequenceItems(items, movedIndex, targetPosition) {
   return rest.map((item, i) => ({ ...item, position: i }));
 }
 
+// Shared Move Up/Down helper for MCQ choices and HIPP options-per-prompt
+// (the two row types the Phase 3 plan adds accessible reordering to —
+// sequencing already has reorderSequenceItems()'s position-select, and
+// evidence-organizing's order is cosmetic/out of scope). Correctness always
+// travels with the row object itself (choice.correct / option.correct), not
+// a separately-tracked index, so a plain adjacent-swap is safe for both —
+// see buildMcqContent()/buildHippContent() in custom-content-authoring.js,
+// which derive `answer`/keep `correct` from the row objects at save time,
+// never from array position. Clamps at the array bounds (a no-op past
+// either end) rather than wrapping, matching the disabled-button bounds
+// already used for the add/remove controls next to it.
+export function reorderAuthoringRow(rows, index, direction) {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= rows.length) return rows;
+  const next = [...rows];
+  [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+  return next;
+}
+
 // Validates the open authoring form's current fields and persists them as
 // this slot's draft selection (a new or reused custom_content_items
 // "replacement" row, then setDraftSelection pointing the slot at it) —
@@ -3923,6 +4253,7 @@ function persistAuthoringSelection() {
   if (!result.ok) {
     manageContentAuthoring = { ...auth, fields, errors: result.errors };
     render();
+    focusManageContentValidationSummary();
     return null;
   }
   const classroomId = teacherUiState.selectedClassroomId;
@@ -4626,6 +4957,7 @@ function handleManageContentClick(target, action) {
     if (!result.ok) {
       manageContentAuthoring = { ...auth, fields, errors: result.errors };
       render();
+      focusManageContentValidationSummary();
       return true;
     }
     manageContentAuthoring = { ...auth, fields, errors: [], previewQuest: result.content };
@@ -4765,6 +5097,47 @@ function handleManageContentClick(target, action) {
     render();
     return true;
   }
+  // Collapse/expand one of the guided editor sections (Source/Directions/
+  // Question/Answers) — see manageContentEditorSectionMarkup(). Purely
+  // ephemeral UI state; syncs the form's current values first so toggling a
+  // section never discards an in-progress edit elsewhere in the form.
+  if (action === "toggle-authoring-section") {
+    const auth = manageContentAuthoring;
+    if (!auth) return true;
+    const sectionKey = target.dataset.sectionKey;
+    const formEl = currentAuthoringFormEl();
+    const fields = formEl && auth.slotKind ? syncAuthoringFieldsFromDom(auth.slotKind, formEl) : auth.fields;
+    const collapsedSections = {
+      ...(auth.collapsedSections || {}),
+      [sectionKey]: !auth.collapsedSections?.[sectionKey],
+    };
+    manageContentAuthoring = { ...auth, fields, collapsedSections };
+    render();
+    return true;
+  }
+  // A validation-error link (manageContentValidationSummaryMarkup()) —
+  // expands the section the error belongs to (if collapsed) and moves
+  // focus/scroll there, satisfying "move focus to the problem" without
+  // touching validation logic itself.
+  if (action === "focus-authoring-section") {
+    const auth = manageContentAuthoring;
+    const sectionKey = target.dataset.sectionKey;
+    if (auth && sectionKey && auth.collapsedSections?.[sectionKey]) {
+      manageContentAuthoring = {
+        ...auth,
+        collapsedSections: { ...auth.collapsedSections, [sectionKey]: false },
+      };
+    }
+    render();
+    if (typeof document !== "undefined" && sectionKey) {
+      const sectionEl = document.querySelector(
+        `.manage-content-editor-section[data-section-key="${sectionKey}"]`
+      );
+      sectionEl?.scrollIntoView({ block: "center" });
+      sectionEl?.focus?.();
+    }
+    return true;
+  }
   if (action === "add-mcq-choice") {
     const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
     fields.choices.push({ text: "", correct: false });
@@ -4781,6 +5154,17 @@ function handleManageContentClick(target, action) {
       if (removedWasCorrect && !fields.choices.some((c) => c.correct))
         fields.choices[0].correct = true;
     }
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "move-mcq-choice") {
+    const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
+    fields.choices = reorderAuthoringRow(
+      fields.choices,
+      Number(target.dataset.rowIndex),
+      Number(target.dataset.direction)
+    );
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
     return true;
@@ -4896,6 +5280,18 @@ function handleManageContentClick(target, action) {
     const optionIndex = Number(target.dataset.rowIndex);
     const options = fields.hippPrompts[promptIndex].options;
     if (options.length > 3) options.splice(optionIndex, 1);
+    manageContentAuthoring = { ...manageContentAuthoring, fields };
+    render();
+    return true;
+  }
+  if (action === "move-hipp-option") {
+    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
+    const promptIndex = Number(target.dataset.promptIndex);
+    fields.hippPrompts[promptIndex].options = reorderAuthoringRow(
+      fields.hippPrompts[promptIndex].options,
+      Number(target.dataset.rowIndex),
+      Number(target.dataset.direction)
+    );
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
     return true;

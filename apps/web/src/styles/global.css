@@ -8107,6 +8107,25 @@ details[open] > summary.manage-content-unit-toggle::before {
   opacity: 0.3;
   cursor: not-allowed;
 }
+.manage-content-row-move-btn {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid rgba(239, 204, 122, 0.4);
+  border-radius: 999px;
+  background: none;
+  color: var(--gold-soft);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.manage-content-row-move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.manage-content-row-move-btn:not(:disabled):hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
 .manage-content-add-row-btn {
   align-self: flex-start;
   margin-bottom: 14px;
@@ -8276,6 +8295,76 @@ details[open] > summary.manage-content-unit-toggle::before {
   background: rgba(120, 40, 40, 0.22);
   color: #f3caca;
   font-size: 0.8rem;
+}
+.manage-content-authoring-errors ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.manage-content-validation-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #f3caca;
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.manage-content-validation-link:hover,
+.manage-content-validation-link:focus-visible {
+  color: #fff;
+}
+
+/* Guided editor sections (Source & stimulus / Student directions / Question
+   / Answer structure) — see manageContentEditorSectionMarkup(). */
+.manage-content-editor-section {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(239, 204, 122, 0.22);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+}
+.manage-content-editor-section:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.manage-content-editor-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.manage-content-editor-section-title {
+  color: var(--gold-soft);
+  font-family: "Cinzel", serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+.manage-content-editor-section-toggle {
+  flex: none;
+  padding: 2px 10px;
+  border: 1px solid rgba(239, 204, 122, 0.35);
+  border-radius: 999px;
+  background: none;
+  color: var(--gold-soft);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.manage-content-editor-section-toggle:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.manage-content-editor-section.is-collapsed {
+  background: rgba(0, 0, 0, 0.05);
+}
+.manage-content-editor-section-summary-text {
+  margin: 0;
+  color: #d8e3de;
+  font-size: 0.82rem;
+}
+.manage-content-directions {
+  border-left-color: var(--gold);
 }
 .manage-content-authoring-actions {
   display: flex;
