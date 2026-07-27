@@ -1663,6 +1663,113 @@ function feedbackSuccess(state) {
     : "";
 }
 
+// --- Chronicle Design System shared markup helpers (Phase 44) ---------
+// Thin template-literal builders over the c-* primitives in global.css
+// (see docs/architecture/UI-DESIGN-SYSTEM.md). New teacher-screen markup
+// should use these instead of hand-rolling button/field/chip HTML;
+// existing teacher screens are migrated onto them incrementally. Gameplay
+// screens keep their existing hand-written markup — this is a
+// teacher-surface primitive set, not a gameplay one.
+
+const BTN_VARIANT_CLASS = {
+  primary: "btn-gold",
+  secondary: "btn-outline",
+  tertiary: "btn-plain",
+  danger: "btn-danger",
+  dev: "btn-outline btn-dev",
+};
+
+// { label, action, variant: primary|secondary|tertiary|danger|dev,
+//   disabled, type, attrs: extra raw HTML attributes (e.g. data-* ) }
+function btn({
+  label,
+  action,
+  variant = "secondary",
+  disabled = false,
+  type = "button",
+  attrs = "",
+}) {
+  const variantClass = BTN_VARIANT_CLASS[variant] || variant;
+  return `<button class="btn ${variantClass}" data-action="${esc(action)}" type="${esc(type)}" ${disabled ? "disabled" : ""} ${attrs}>${esc(label)}</button>`;
+}
+
+const CHIP_TONE_CLASS = {
+  default: "",
+  gold: "c-chip--gold",
+  success: "c-chip--success",
+  warning: "c-chip--warning",
+  error: "c-chip--error",
+  muted: "c-chip--muted",
+};
+
+// A shared badge/status primitive — status is conveyed by the label text
+// plus shape, never by color alone. { label, tone, live: adds
+// role="status" aria-live="polite" for dynamically-updating chips. }
+function chip({ label, tone = "default", live = false }) {
+  const toneClass = CHIP_TONE_CLASS[tone] || "";
+  const liveAttrs = live ? ' role="status" aria-live="polite"' : "";
+  return `<span class="c-chip ${toneClass}"${liveAttrs}>${esc(label)}</span>`;
+}
+
+// A labeled form field with visible label (never placeholder-only),
+// required/optional indicator beside the label, muted help text, and an
+// error message wired via aria-describedby + aria-invalid rather than
+// color alone.
+function fieldMarkup({
+  id,
+  label,
+  type = "text",
+  value = "",
+  help,
+  required,
+  optional,
+  error,
+  textarea = false,
+  rows,
+}) {
+  const requirement = required
+    ? '<span class="c-label-hint">Required</span>'
+    : optional
+      ? '<span class="c-label-hint">Optional</span>'
+      : "";
+  const describedBy = [help && `${id}-help`, error && `${id}-error`].filter(Boolean);
+  const describedByAttr = describedBy.length ? ` aria-describedby="${describedBy.join(" ")}"` : "";
+  const invalidAttr = error ? ' aria-invalid="true"' : "";
+  const control = textarea
+    ? `<textarea class="c-textarea" id="${esc(id)}" ${rows ? `rows="${rows}"` : ""}${describedByAttr}${invalidAttr}>${esc(value)}</textarea>`
+    : `<input class="c-input" id="${esc(id)}" type="${esc(type)}" value="${esc(value)}"${describedByAttr}${invalidAttr}>`;
+  return `<div class="c-field">
+<div class="c-field-label-row"><label class="c-label" for="${esc(id)}">${esc(label)}</label>${requirement}</div>
+${control}
+${help ? `<p class="c-help" id="${esc(id)}-help">${esc(help)}</p>` : ""}
+${error ? `<p class="c-error-text" id="${esc(id)}-error" role="alert">${esc(error)}</p>` : ""}
+</div>`;
+}
+
+function emptyState({ title, body, action }) {
+  return `<div class="c-empty">${title ? `<strong>${esc(title)}</strong>` : ""}${body ? `<span>${esc(body)}</span>` : ""}${action ? btn(action) : ""}</div>`;
+}
+
+function loadingNote(text) {
+  return `<p class="c-loading" role="status" aria-live="polite">${esc(text)}</p>`;
+}
+
+// { eyebrow, title, description, status: a chip() options object,
+//   actions: an array of btn() options objects, breadcrumb: raw HTML }
+function pageHeaderMarkup({ eyebrow, title, description, status, actions = [], breadcrumb = "" }) {
+  return `${breadcrumb}<div class="c-page-header">
+<div><p class="c-eyebrow">${esc(eyebrow)}</p><h1 class="c-page-title">${esc(title)}</h1>${description ? `<p class="c-page-description">${esc(description)}</p>` : ""}</div>
+<div class="c-page-actions">${status ? chip(status) : ""}${actions.map(btn).join("")}</div>
+</div>`;
+}
+
+function sectionHeadMarkup({ title, description, actions = [] }) {
+  return `<div class="c-section-head">
+<div><h2 class="c-section-title">${esc(title)}</h2>${description ? `<p class="c-section-description">${esc(description)}</p>` : ""}</div>
+${actions.length ? `<div class="c-toolbar">${actions.map(btn).join("")}</div>` : ""}
+</div>`;
+}
+
 onAuthStateChange((_event, session) => {
   if (!session) {
     currentProfile = null;
@@ -2070,7 +2177,7 @@ ${authUiState.info ? `<p class="feedback">${esc(authUiState.info)}</p>` : ""}
 ${authUiState.error ? `<p class="feedback error">${esc(authUiState.error)}</p>` : ""}
 <button class="btn btn-gold" data-action="submit-teacher-signin" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Sign In →"}</button>
 <button class="btn btn-outline" data-action="continue-with-google" type="button" ${authUiState.pending ? "disabled" : ""}>Continue with Google</button>
-${import.meta.env.DEV ? `<button class="btn btn-outline" data-action="dev-fake-teacher" type="button" ${authUiState.pending ? "disabled" : ""}>🧪 Dev: Fake Teacher</button>` : ""}
+${import.meta.env.DEV ? btn({ label: "🧪 Dev: Fake Teacher", action: "dev-fake-teacher", variant: "dev", disabled: authUiState.pending }) : ""}
 <button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
 </section></main>${authorPanel()}`;
   }
