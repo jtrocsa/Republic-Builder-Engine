@@ -58,6 +58,16 @@ import {
   saqPartialSuccess,
   saqHint,
 } from "./history/saq-quest.js";
+import {
+  DbqQuestSchema,
+  DbqQuestListSchema,
+  renderDbqQuest,
+  gradeDbqQuest,
+  dbqAnsweredAny,
+  isDbqComplete,
+  dbqPartialSuccess,
+  dbqHint,
+} from "./history/dbq-quest.js";
 
 // Key naming note: the evidence-organizing entry keeps the key
 // "evidence-organizing" (established in Phase 8, already wired into
@@ -128,6 +138,19 @@ export const QUEST_TYPES = {
     // saq-quest.js's module doc comment) — there is no binary correct/
     // incorrect signal available without the AI evaluator or a teacher
     // grade, so it deliberately doesn't feed the skill-mastery record yet.
+  },
+  dbq: {
+    schema: DbqQuestSchema,
+    listSchema: DbqQuestListSchema,
+    render: renderDbqQuest,
+    grade: gradeDbqQuest,
+    answeredAny: dbqAnsweredAny,
+    isComplete: isDbqComplete,
+    partialSuccess: dbqPartialSuccess,
+    hint: dbqHint,
+    // No skillOutcomes — same rationale as saq: "complete" means
+    // "submitted," not "graded," so there's no skill-mastery signal without
+    // the AI evaluator or a teacher's real grade.
   },
 };
 

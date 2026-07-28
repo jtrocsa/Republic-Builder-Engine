@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { gradeQuest, questSkillOutcomes } from "../../apps/web/src/quest-types/index.js";
+import {
+  gradeQuest,
+  renderQuest,
+  isQuestComplete,
+  questSkillOutcomes,
+} from "../../apps/web/src/quest-types/index.js";
 
 const taggedMcq = {
   id: "sample-mcq",
@@ -17,6 +22,19 @@ const saqQuest = {
   rubric: "1 point per part.",
 };
 
+const dbqQuest = {
+  id: "sample-dbq",
+  prompt: "Evaluate the extent to which a sample development changed a sample era.",
+  documents: [1, 2, 3, 4].map((n) => ({
+    id: `doc-${n}`,
+    label: `Document ${n}`,
+    attribution: `Creator ${n}`,
+    date: "1776",
+    excerpt: `Excerpt ${n}.`,
+  })),
+  rubric: "7 points total.",
+};
+
 describe("questSkillOutcomes", () => {
   it("delegates to the quest type's own skillOutcomes implementation (normal case)", () => {
     const state = { selected: 0 };
@@ -32,9 +50,26 @@ describe("questSkillOutcomes", () => {
     expect(questSkillOutcomes("saq", saqQuest, state, result)).toEqual([]);
   });
 
+  it("returns [] for dbq, which also has no skillOutcomes contract slot (boundary case)", () => {
+    const state = { response: "a".repeat(400) };
+    const result = gradeQuest("dbq", dbqQuest, state);
+    expect(questSkillOutcomes("dbq", dbqQuest, state, result)).toEqual([]);
+  });
+
   it("throws on an unknown quest type, matching gradeQuest's own guard (invalid/missing data)", () => {
     expect(() => questSkillOutcomes("not-a-real-type", taggedMcq, {}, {})).toThrow(
       /Unknown quest type/
     );
+  });
+});
+
+describe("dbq registry wiring", () => {
+  it("renderQuest/gradeQuest/isQuestComplete all dispatch to the dbq quest type (normal case)", () => {
+    const state = { response: "a".repeat(400) };
+    const html = renderQuest("dbq", dbqQuest, state);
+    expect(html).toContain('data-quest-type="dbq"');
+    const result = gradeQuest("dbq", dbqQuest, state);
+    expect(isQuestComplete("dbq", result)).toBe(true);
+    expect(isQuestComplete("dbq", gradeQuest("dbq", dbqQuest, {}))).toBe(false);
   });
 });

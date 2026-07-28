@@ -3,6 +3,7 @@ import {
   buildHippEvaluationRequest,
   buildSaqEvaluationRequest,
   buildSaqQuestEvaluationRequest,
+  buildDbqEvaluationRequest,
 } from "../../apps/web/src/engine/evaluator-requests.js";
 
 const SOURCE = {
@@ -113,6 +114,38 @@ describe("buildSaqQuestEvaluationRequest", () => {
 
   it("marks isRevision true when a prior submission is passed", () => {
     const request = buildSaqQuestEvaluationRequest(quest, {}, { some: "prior" });
+    expect(request.isRevision).toBe(true);
+  });
+});
+
+describe("buildDbqEvaluationRequest", () => {
+  const quest = {
+    id: "sample-dossier",
+    prompt: "Evaluate the extent to which a sample development changed a sample era.",
+    documents: [
+      { id: "doc-1", label: "Document 1", attribution: "A sample creator", date: "1770", excerpt: "First excerpt." },
+      { id: "doc-2", label: "Document 2", attribution: "Another creator", date: "1775", excerpt: "Second excerpt." },
+    ],
+  };
+
+  it("sets taskType/taskId/prompt/studentResponse correctly", () => {
+    const request = buildDbqEvaluationRequest(quest, "My essay response.", null);
+    expect(request.taskType).toBe("dbq");
+    expect(request.taskId).toBe("dbq-quest-sample-dossier");
+    expect(request.prompt).toBe(quest.prompt);
+    expect(request.studentResponse).toBe("My essay response.");
+    expect(request.elementsAsked).toBeNull();
+    expect(request.isRevision).toBe(false);
+  });
+
+  it("concatenates every document's label/attribution/date/excerpt into stimulus", () => {
+    const request = buildDbqEvaluationRequest(quest, "My essay response.", null);
+    expect(request.stimulus).toContain("Document 1 (A sample creator, 1770): First excerpt.");
+    expect(request.stimulus).toContain("Document 2 (Another creator, 1775): Second excerpt.");
+  });
+
+  it("marks isRevision true when a prior submission is passed", () => {
+    const request = buildDbqEvaluationRequest(quest, "My essay response.", { some: "prior" });
     expect(request.isRevision).toBe(true);
   });
 });

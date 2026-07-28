@@ -39,6 +39,7 @@ import {
   SourceAnalysisQuestListSchema,
 } from "../apps/web/src/quest-types/history/source-analysis-quest.js";
 import { SaqQuestListSchema } from "../apps/web/src/quest-types/history/saq-quest.js";
+import { DbqQuestListSchema } from "../apps/web/src/quest-types/history/dbq-quest.js";
 import { QUEST_TYPES } from "../apps/web/src/quest-types/index.js";
 import {
   buildPrimarySourcesSchema,
@@ -314,6 +315,13 @@ function main() {
       content.unit03.archiveSaqQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_ARCHIVE_DBQ_QUESTS",
+      DbqQuestListSchema,
+      content.unit03.archiveDbqQuests
+    )
+  );
 
   // Primary source reference library (apps/web/src/content/primary-source-library/)
   // — syllabus-wide research reference for Units 1-9, not gameplay content.
@@ -342,6 +350,8 @@ function main() {
     "cross-reference: sequencing quest ids",
     "cross-reference: evidence-organizing quest ids",
     "cross-reference: hipp quest ids",
+    "cross-reference: saq quest ids",
+    "cross-reference: dbq quest ids",
     "cross-reference: archive challenge quest references",
     "cross-reference: investigation challenge quest references",
     "cross-reference: source alternate references",
@@ -456,6 +466,12 @@ function main() {
       {
         source: "unit-03-quests.js:UNIT_03_ARCHIVE_SAQ_QUESTS",
         items: content.unit03.archiveSaqQuests,
+      },
+    ],
+    dbq: [
+      {
+        source: "unit-03-quests.js:UNIT_03_ARCHIVE_DBQ_QUESTS",
+        items: content.unit03.archiveDbqQuests,
       },
     ],
   };

@@ -419,4 +419,67 @@ test.describe("Archive Challenge", () => {
     const stored = await readProgress(page);
     expect(stored.archiveChallenges[SAQ_QUEST_ID]?.status).not.toBe("complete");
   });
+
+  // Unit 3's second bonus Archive Challenge (Phase 49E) — the real "dbq"
+  // quest type's proving ground, same pattern as the SAQ tests above:
+  // "complete" means "submitted a substantial response," not AI-graded.
+  const DBQ_QUEST_ID = "unit-03-archive-common-cause-dbq";
+  const LONG_ESSAY_RESPONSE = "This essay discusses the Revolution's promise of liberty. ".repeat(
+    10
+  );
+
+  test("unit-03 bonus DBQ: draft a response of sufficient length and complete", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${DBQ_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+    // All 7 real documents render.
+    for (let n = 1; n <= 7; n += 1) {
+      await expect(quest).toContainText(`Document ${n}`);
+    }
+
+    const field = quest.locator(`[data-dbq-response="${DBQ_QUEST_ID}"]`);
+    await field.fill(LONG_ESSAY_RESPONSE);
+    await field.blur();
+
+    await expect(quest.locator("..").locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+    await expect(
+      quest.locator("..").getByRole("button", { name: "Get Archive Evaluator feedback →" })
+    ).toBeVisible();
+
+    const stored = await readProgress(page);
+    expect(stored.questResponses[DBQ_QUEST_ID].response).toBe(LONG_ESSAY_RESPONSE);
+    expect(stored.archiveChallenges[DBQ_QUEST_ID]?.status).toBe("complete");
+    // Bonus challenge, not tied to any case — doesn't unlock/complete a case.
+    expect(stored.completedCases).not.toContain("case-009");
+  });
+
+  test("unit-03 bonus DBQ: incomplete below the minimum response length", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${DBQ_QUEST_ID}"]`);
+    const field = quest.locator(`[data-dbq-response="${DBQ_QUEST_ID}"]`);
+    await field.fill("Too short a response.");
+    await field.blur();
+
+    await expect(quest.locator("..").locator(".activity-feedback.success")).toHaveCount(0);
+    await expect(
+      quest.locator("..").getByRole("button", { name: "Get Archive Evaluator feedback →" })
+    ).toHaveCount(0);
+
+    const stored = await readProgress(page);
+    expect(stored.archiveChallenges[DBQ_QUEST_ID]?.status).not.toBe("complete");
+  });
 });

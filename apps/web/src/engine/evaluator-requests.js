@@ -62,3 +62,26 @@ export function buildSaqQuestEvaluationRequest(quest, responses, priorSubmission
     isRevision: Boolean(priorSubmission),
   };
 }
+
+// Phase 49E: the "dbq" taskType/rubric (api/_lib/rubrics.js) is content-
+// independent (same 7-row structure regardless of the actual prompt/
+// documents), same as every other written-response rubric here — only the
+// stimulus/prompt/taskId vary per quest instance. `stimulus` concatenates
+// every document's label/attribution/date/excerpt so the evaluator can
+// check document use and sourcing against the real documents, not just the
+// student's response in isolation.
+export function buildDbqEvaluationRequest(quest, response, priorSubmission) {
+  const stimulus = quest.documents
+    .map((doc) => `${doc.label} (${doc.attribution}, ${doc.date}): ${doc.excerpt}`)
+    .join("\n\n");
+  return {
+    taskType: "dbq",
+    taskId: `dbq-quest-${quest.id}`,
+    prompt: quest.prompt,
+    stimulus,
+    sourceMetadata: null,
+    elementsAsked: null,
+    studentResponse: response,
+    isRevision: Boolean(priorSubmission),
+  };
+}

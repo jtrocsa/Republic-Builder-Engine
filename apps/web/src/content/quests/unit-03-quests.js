@@ -451,6 +451,91 @@ export const UNIT_03_ARCHIVE_SAQ_QUESTS = [
   },
 ];
 
+// Phase 49E: real Document-Based Question content ("The Chronicle
+// Dossier"), proving the new "dbq" quest type
+// (apps/web/src/quest-types/history/dbq-quest.js) end to end, the same way
+// Phase 49A proved "saq" — a second Unit 3 bonus Archive Challenge
+// (unit.archiveChallenges[], see unit-03-campaign.js). All 7 documents are
+// case-007's own real, cited CASE_007_SOURCES excerpts (unit-03-campaign.js)
+// reused verbatim, not new content — the prompt directly matches Unit 3's
+// own central question ("how did the ideals colonists used to justify
+// revolution against Britain both inspire and fail to extend equally to the
+// many peoples who lived through Period 3?"), since those seven sources were
+// already curated specifically to answer exactly that question across
+// Indigenous nations (Pontiac), colonial protest (Dickinson, Henry),
+// enslaved and free Black Americans (Wheatley, Dunmore's Proclamation, Hall's
+// petition), and women (Abigail Adams).
+export const UNIT_03_ARCHIVE_DBQ_QUESTS = [
+  {
+    id: "unit-03-archive-common-cause-dbq",
+    prompt:
+      "Evaluate the extent to which the language of natural rights and liberty used to justify the American Revolution was extended to different groups in American society in the period 1763 to 1783.",
+    documents: [
+      {
+        id: "doc-pontiac",
+        label: "Document 1",
+        attribution: "Pontiac (Odawa), speech at a council near Detroit",
+        date: "1763",
+        excerpt:
+          "This land, where you live, I have made for you and not for others… The Master of Life has ordered me to drive from your lands those dogs in red clothing who will do you nothing but harm. Now, therefore, you must lift the hatchet against them, and never bury it until they are driven out of this country.",
+      },
+      {
+        id: "doc-dickinson",
+        label: "Document 2",
+        attribution: "John Dickinson, Letters from a Farmer in Pennsylvania, Letter II",
+        date: "December 10, 1767",
+        excerpt:
+          "The parliament unquestionably possesses a legal authority to regulate the trade of Great Britain and all her colonies… But here I apprehend the parliament has exceeded the bounds of that authority… If you once admit that Great Britain may lay duties upon her exportations to us, for the purpose of levying money on us only, she will then have nothing to do but to lay those duties on the articles which she prohibits us to manufacture — and the tragedy of American liberty is finished.",
+      },
+      {
+        id: "doc-henry",
+        label: "Document 3",
+        attribution: "Patrick Henry, speech to the Second Virginia Convention",
+        date: "March 23, 1775",
+        excerpt:
+          "Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! I know not what course others may take; but as for me, give me liberty, or give me death!",
+      },
+      {
+        id: "doc-wheatley",
+        label: "Document 4",
+        attribution:
+          'Phillis Wheatley, "On the Death of Reverend Mr. George Whitefield, 1770"',
+        date: "1773 (composed 1770)",
+        excerpt:
+          "Take him, ye Africans, he longs for you; / Impartial Saviour is his title due; / Wash'd in the fountain of redeeming blood, / You shall be sons, and kings, and priests to God.",
+      },
+      {
+        id: "doc-dunmore",
+        label: "Document 5",
+        attribution:
+          "John Murray, Earl of Dunmore, Royal Governor of Virginia, proclamation",
+        date: "November 7, 1775",
+        excerpt:
+          "I do require every person capable of bearing arms, to resort to his Majesty's STANDARD… and I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops as soon as may be, for the more speedily reducing this Colony to a proper sense of their duty, to His Majesty's crown and dignity.",
+      },
+      {
+        id: "doc-hall",
+        label: "Document 6",
+        attribution:
+          "Prince Hall and seven other enslaved petitioners, petition to the Massachusetts Council and House of Representatives",
+        date: "January 13, 1777",
+        excerpt:
+          "The petition of a great number of blacks detained in a state of slavery in the bowels of a free and Christian country humbly showing that your petitioners apprehend that they have in common with all other men a natural and unalienable right to that freedom which the great Parent of the universe hath bestowed equally on all mankind, and which they have never forfeited by any compact or agreement whatever.",
+      },
+      {
+        id: "doc-adams",
+        label: "Document 7",
+        attribution: 'Abigail Adams, letter to John Adams, "Remember the Ladies"',
+        date: "March 31 – April 5, 1776",
+        excerpt:
+          "I desire you would Remember the Ladies, and be more generous and favourable to them than your ancestors. Do not put such unlimited power into the hands of the Husbands. Remember all Men would be tyrants if they could. If particular care and attention is not paid to the Laidies we are determined to foment a Rebellion, and will not hold ourselves bound by any Laws in which we have no voice, or Representation.",
+      },
+    ],
+    rubric:
+      "DBQ practice rubric: 7 points total. 1 point for a defensible thesis that responds to the prompt; 1 point for contextualization beyond the documents; up to 2 points for using the content of at least 3-4 documents to support an argument (not just describing them); 1 point for at least one piece of specific outside evidence beyond the documents; 1 point for explaining how or why at least 2 documents' point of view, purpose, situation, or audience is relevant to the argument; 1 point for complexity (e.g. explaining how the Revolution's promise was extended to some groups and denied to others, not just one or the other).",
+  },
+];
+
 export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-007-hipp-henry-speech",

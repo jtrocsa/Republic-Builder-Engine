@@ -39,6 +39,7 @@ import {
   REFLECTION_MIN_LENGTH,
   SKILL_CATEGORIES,
 } from "./quest-types/history/evidence-organizing-quest.js";
+import { DBQ_MIN_RESPONSE_LENGTH } from "./quest-types/history/dbq-quest.js";
 import {
   UNIT_01_MCQ_QUESTS,
   UNIT_01_SEQUENCING_QUESTS,
@@ -67,6 +68,7 @@ import {
   UNIT_03_INVESTIGATION_MCQ_QUESTS,
   UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
   UNIT_03_ARCHIVE_SAQ_QUESTS,
+  UNIT_03_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -182,6 +184,7 @@ import {
   buildHippEvaluationRequest,
   buildSaqEvaluationRequest,
   buildSaqQuestEvaluationRequest,
+  buildDbqEvaluationRequest,
 } from "./engine/evaluator-requests.js";
 import { evaluateSubmission } from "./engine/evaluator-client.js";
 
@@ -1978,6 +1981,7 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
   sequencing: UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
   mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
   saq: UNIT_03_ARCHIVE_SAQ_QUESTS,
+  dbq: UNIT_03_ARCHIVE_DBQ_QUESTS,
 };
 // Returns {questType, quest} rather than just the content — a published
 // teacher-authored replacement can be a genuinely different quest type than
@@ -6433,18 +6437,22 @@ function archiveChallengeQuestCard(
     : questAnsweredAny(questType, state)
       ? "in-progress"
       : "unanswered";
-  // SAQ's "complete" only means "submitted" (see saq-quest.js's module doc
-  // comment) — the AI Archive Evaluator round trip is a separate, optional
-  // step composed here rather than inside renderQuest/gradeQuest, the same
-  // way sourceReader()/reviewScreen() layer their own evaluator sections
-  // around their own bespoke content.
-  const saqTaskId = questType === "saq" ? `saq-quest-${quest.id}` : null;
-  const existingSaqSubmission = saqTaskId ? progress.submissions[saqTaskId] : null;
-  const saqEvaluatorSection =
-    questType === "saq" && complete
-      ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-saq-quest" data-quest="${esc(quest.id)}" ${evaluatorPendingTaskIds.has(saqTaskId) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(saqTaskId) ? "Consulting the Archive Evaluator…" : existingSaqSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[saqTaskId] ? `<p class="feedback error">${esc(evaluatorErrors[saqTaskId])}</p>` : ""}${archiveFeedbackMarkup(existingSaqSubmission?.feedback?.payload)}</section>`
+  // SAQ/DBQ's "complete" only means "submitted" (see saq-quest.js/dbq-
+  // quest.js's module doc comments) — the AI Archive Evaluator round trip is
+  // a separate, optional step composed here rather than inside
+  // renderQuest/gradeQuest, the same way sourceReader()/reviewScreen() layer
+  // their own evaluator sections around their own bespoke content. Both
+  // written-response types share one taskId convention and one evaluator
+  // button — only the request-builder call differs (Phase 49E generalized
+  // this from a saq-only block to also cover dbq).
+  const isWrittenResponseType = questType === "saq" || questType === "dbq";
+  const writtenTaskId = isWrittenResponseType ? `${questType}-quest-${quest.id}` : null;
+  const existingWrittenSubmission = writtenTaskId ? progress.submissions[writtenTaskId] : null;
+  const writtenEvaluatorSection =
+    isWrittenResponseType && complete
+      ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-written-quest" data-quest-type="${esc(questType)}" data-quest="${esc(quest.id)}" ${evaluatorPendingTaskIds.has(writtenTaskId) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(writtenTaskId) ? "Consulting the Archive Evaluator…" : existingWrittenSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[writtenTaskId] ? `<p class="feedback error">${esc(evaluatorErrors[writtenTaskId])}</p>` : ""}${archiveFeedbackMarkup(existingWrittenSubmission?.feedback?.payload)}</section>`
       : "";
-  return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}${saqEvaluatorSection}</div>`;
+  return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}${writtenEvaluatorSection}</div>`;
 }
 
 function archiveChallengeCard(kicker, questType, questId, opts) {
@@ -9091,17 +9099,19 @@ function handleEvaluatorClick(target, action) {
     runEvaluation(taskId, buildSaqEvaluationRequest(unit, review, state.saq || {}, prior));
     return true;
   }
-  if (action === "evaluate-saq-quest") {
+  if (action === "evaluate-written-quest") {
+    const questType = target.dataset.questType;
     const questId = target.dataset.quest;
-    const resolved = archiveChallengeQuestFor("saq", questId);
+    const resolved = archiveChallengeQuestFor(questType, questId);
     if (!resolved?.quest) return true;
     const state = progress.questResponses[questId] || {};
-    const taskId = `saq-quest-${questId}`;
+    const taskId = `${questType}-quest-${questId}`;
     const prior = progress.submissions[taskId];
-    runEvaluation(
-      taskId,
-      buildSaqQuestEvaluationRequest(resolved.quest, state.responses || {}, prior)
-    );
+    const request =
+      questType === "dbq"
+        ? buildDbqEvaluationRequest(resolved.quest, state.response || "", prior)
+        : buildSaqQuestEvaluationRequest(resolved.quest, state.responses || {}, prior);
+    runEvaluation(taskId, request);
     return true;
   }
   return false;
@@ -9307,6 +9317,12 @@ async function handleAppChange(event) {
     playQuestSfx(questId);
     save();
     render();
+  } else if (field.matches("[data-dbq-response]")) {
+    const questId = field.dataset.dbqResponse;
+    progress.questResponses[questId] = { response: field.value };
+    playQuestSfx(questId);
+    save();
+    render();
   } else if (field.matches("[data-evidence-reflection]")) {
     const questId = field.dataset.evidenceReflection;
     const state = progress.questResponses[questId] || {};
@@ -9361,6 +9377,12 @@ function handleAppInput(event) {
     );
     if (counter) {
       counter.textContent = `${field.value.trim().length}/${REFLECTION_MIN_LENGTH} characters`;
+    }
+  } else if (field.matches("[data-dbq-response]")) {
+    const questId = field.dataset.dbqResponse;
+    const counter = app.querySelector(`[data-dbq-response-counter="${CSS.escape(questId)}"]`);
+    if (counter) {
+      counter.textContent = `${field.value.trim().length}/${DBQ_MIN_RESPONSE_LENGTH} characters`;
     }
   }
 }
