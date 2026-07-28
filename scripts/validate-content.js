@@ -19,6 +19,7 @@ import {
   checkUniqueGlobalIds,
   checkChallengeReferences,
   checkAlternateReferences,
+  checkCasePeriodMatchesUnit,
 } from "../apps/web/src/content/schemas/cross-reference.js";
 import { z } from "zod";
 import {
@@ -336,6 +337,7 @@ function main() {
   const crossFileGroups = [
     "cross-reference: case ids",
     "cross-reference: source ids",
+    "cross-reference: case ced.period matches unit period",
     "cross-reference: mcq quest ids",
     "cross-reference: sequencing quest ids",
     "cross-reference: evidence-organizing quest ids",
@@ -497,6 +499,11 @@ function main() {
       { source: "unit-01-campaign.js:CASE_001_SOURCES", items: content.unit01.sources },
       { source: "unit-02-campaign.js:CASE_004_SOURCES", items: content.unit02.sources },
       { source: "unit-03-campaign.js:CASE_007_SOURCES", items: content.unit03.sources },
+    ]),
+    ...checkCasePeriodMatchesUnit("cross-reference: case ced.period matches unit period", [
+      content.unit01.unit,
+      content.unit02.unit,
+      content.unit03.unit,
     ]),
     // Every array feeding one QUEST_TYPES key gets merged into one flat
     // lookup in main.js (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE/

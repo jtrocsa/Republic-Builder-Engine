@@ -36,6 +36,12 @@ export const UNIT_01 = {
       route: "field",
       summary:
         "Establish what existed before contact, analyze a European account, and trace how early voyages changed the historical record.",
+      // Phase 49D: real College Board CED alignment (see
+      // content/ced-taxonomy.js/unit.schema.js's CedAlignmentSchema).
+      // KC 1.1 (established pre-contact societies) + 1.2 (contact and the
+      // start of the Columbian Exchange) — this case's own reconstruction
+      // mechanic walks both halves in sequence.
+      ced: { period: 1, keyConcepts: ["1.1", "1.2"], themes: ["MIG", "WOR"] },
     },
     {
       id: "case-002",
@@ -59,6 +65,11 @@ export const UNIT_01 = {
         questType: "evidence-organizing",
         questId: "case-002-archive-exchange-claims",
       },
+      // KC 1.2 — the Columbian Exchange itself. Themes: WXT (the economic
+      // exchange of crops/animals/people this case's whole ledger mechanic
+      // tracks) and GEO (the environmental transformation that exchange
+      // produced on both sides of the Atlantic).
+      ced: { period: 1, keyConcepts: ["1.2"], themes: ["WXT", "GEO"] },
     },
     {
       id: "case-003",
@@ -82,6 +93,11 @@ export const UNIT_01 = {
         questType: "sequencing",
         questId: "case-003-archive-empire-system",
       },
+      // KC 1.2 — conquest/colonization's "significant social, cultural, and
+      // political changes." Themes: PCE (the new hierarchy/power structure
+      // this case's Colonial System Builder mechanic connects) and MIG
+      // (forced migration/labor systems central to that system).
+      ced: { period: 1, keyConcepts: ["1.2"], themes: ["PCE", "MIG"] },
     },
   ],
 };

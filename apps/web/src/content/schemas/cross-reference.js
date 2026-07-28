@@ -101,6 +101,31 @@ export function checkChallengeReferences(groupLabel, entries, questTypeKeys, que
   return errors;
 }
 
+// Phase 49D: cross-checks each case's ced.period (unit.schema.js's
+// CedAlignmentSchema) against its own unit's period, parsed from the unit's
+// free-text `period` string (e.g. "Period 1 · 1491–1607"). A single Zod
+// schema can't see across the case/unit boundary, so a copy-paste mistake
+// (e.g. a Period 2 case tagged ced.period: 1) would otherwise pass silently.
+export function checkCasePeriodMatchesUnit(groupLabel, units) {
+  const errors = [];
+  for (const unit of units) {
+    const match = /Period (\d+)/.exec(unit.period || "");
+    if (!match) continue;
+    const expectedPeriod = Number(match[1]);
+    for (const kase of unit.cases || []) {
+      if (kase.ced && kase.ced.period !== expectedPeriod) {
+        errors.push({
+          group: groupLabel,
+          id: kase.id,
+          path: `${unit.id}.cases`,
+          message: `case "${kase.id}"'s ced.period (${kase.ced.period}) does not match its unit's period (${expectedPeriod}, parsed from unit.period "${unit.period}").`,
+        });
+      }
+    }
+  }
+  return errors;
+}
+
 // Checks Teacher Mode's curated alternate-content pools (e.g.
 // case-001-source-alternates.js's `replacesSourceId`, case-001-mcq-alternates.js's
 // `replacesQuestId`) point at real official content ids — a typo here would let a

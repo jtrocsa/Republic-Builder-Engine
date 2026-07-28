@@ -7992,6 +7992,14 @@ details[open] > summary.manage-content-unit-toggle::before {
   gap: 8px 12px;
   flex-wrap: nowrap;
 }
+/* Phase 49D: CED alignment chips (Period/Key Concept/Theme/Historical
+   Thinking Skill) — wraps rather than forcing the card wider, since a
+   7-theme/5-skill vocabulary can produce more chips than one row fits. */
+.manage-content-ced-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
 .manage-content-mission-card h3 {
   margin: 2px 0 0;
   color: #f0e4c4;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CED_THEME_CODES } from "../ced-taxonomy.js";
 
 // Route names a case hands off to on Chronotravel (`goToCase()` sets
 // `currentScreen = "travel"`, which self-advances to `caseById(id).route`) —
@@ -33,6 +34,37 @@ const ArchiveChallengeSchema = z.object({
   questId: z.string().min(1, "case.archiveChallenge.questId is required"),
 });
 
+// Phase 49D: real College Board CED alignment metadata, surfaced read-only
+// on the Teacher Dashboard (Manage Content's mission cards) alongside each
+// mission's existing kind/mechanic labels — not a 4th independently-authored
+// taxonomy: the 4th CED dimension the roadmap names ("Historical Thinking
+// Skill") is deliberately NOT a field here. It's derived at render time from
+// the skillCategory tags mcq/sequencing/hipp/evidence-organizing quests
+// already carry (Phase 49B) — see engine/ced-alignment.js — so it can never
+// drift from what a case's actual content exercises.
+const CedAlignmentSchema = z.object({
+  // 1-9 (not 1-3) even though only Periods 1-3 exist in the game today —
+  // Chronicle's own roadmap (PHASES-46-50.md) states it plans to grow into
+  // the CED's full 9 periods, and narrowing this to 1-3 now would just mean
+  // widening it again later for no benefit.
+  period: z.number().int().min(1).max(9, "case.ced.period must be 1-9"),
+  keyConcepts: z
+    .array(
+      z
+        .string()
+        .regex(/^[1-9]\.[1-9]$/, 'case.ced.keyConcepts entries must look like "1.2"')
+    )
+    .min(1, "case.ced.keyConcepts must contain at least one entry"),
+  themes: z
+    .array(
+      z.enum(CED_THEME_CODES, {
+        message: `case.ced.themes entries must be one of: ${CED_THEME_CODES.join(", ")}`,
+      })
+    )
+    .min(1, "case.ced.themes must contain at least one entry")
+    .max(3, "case.ced.themes should stay focused - at most 3 per case"),
+});
+
 // Whether a case gets a marker on the Chronicle Navigation Table has no
 // field here — it's purely a per-classroom teacher override
 // ("navTableVisible" in teacher-override-repository.js, default visible),
@@ -61,6 +93,7 @@ export const CaseSchema = z.object({
   // ChronoTravel destination cases (route: "field") and for
   // not-yet-migrated standalone cases.
   archiveChallenge: ArchiveChallengeSchema.nullable().default(null),
+  ced: CedAlignmentSchema,
 });
 
 export const UnitSchema = z.object({

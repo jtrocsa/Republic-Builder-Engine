@@ -14,6 +14,7 @@ const validCase = {
   mechanic: "Record Reconstruction",
   route: "field",
   summary: "Establish what existed before contact.",
+  ced: { period: 1, keyConcepts: ["1.2"], themes: ["MIG", "WOR"] },
 };
 
 const validUnit = {
@@ -106,6 +107,32 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     const result = UnitSchema.safeParse(validUnit);
     expect(result.success).toBe(true);
     expect(result.data.archiveChallenges).toEqual([]);
+  });
+
+  it("rejects a case missing ced entirely (invalid/missing data)", () => {
+    const broken = { ...validCase };
+    delete broken.ced;
+    expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
+  });
+
+  it("rejects a ced.keyConcepts entry that isn't shaped like \"N.N\" (invalid/missing data)", () => {
+    const broken = { ...validCase, ced: { ...validCase.ced, keyConcepts: ["one-two"] } };
+    expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
+  });
+
+  it("rejects a ced.themes entry outside the fixed 7-theme vocabulary (invalid/missing data)", () => {
+    const broken = { ...validCase, ced: { ...validCase.ced, themes: ["NOT_A_THEME"] } };
+    expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
+  });
+
+  it("rejects more than 3 ced.themes entries (boundary case)", () => {
+    const broken = { ...validCase, ced: { ...validCase.ced, themes: ["NAT", "WXT", "GEO", "MIG"] } };
+    expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
+  });
+
+  it("accepts ced.period up to 9, not just 1-3 (boundary case, future-period headroom)", () => {
+    const futureCase = { ...validCase, id: "case-999", ced: { ...validCase.ced, period: 9 } };
+    expect(UnitSchema.safeParse({ ...validUnit, cases: [futureCase] }).success).toBe(true);
   });
 
   it("rejects an archiveChallenge missing questId (invalid/missing data)", () => {

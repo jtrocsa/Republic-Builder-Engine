@@ -7,6 +7,8 @@ import {
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
 import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
+import { CED_THEME_LABEL } from "./content/ced-taxonomy.js";
+import { skillsForQuestSlots } from "./engine/ced-alignment.js";
 import {
   loadProgress,
   saveProgress,
@@ -2877,6 +2879,34 @@ function officialQuestSlotsForCase(caseId) {
     : practiceSlots;
 }
 
+// Phase 49D: this case's actual Historical Thinking Skill coverage,
+// re-derived from its own official quest content's existing skillCategory
+// tags (see engine/ced-alignment.js's doc comment for why this is derived
+// rather than a 5th authored field).
+function caseHistoricalThinkingSkills(caseId) {
+  return skillsForQuestSlots(officialQuestSlotsForCase(caseId), SKILL_CATEGORIES);
+}
+
+// Phase 49D: read-only CED alignment chip row for a Manage Content mission
+// card — Period/Key Concept/Theme come straight from the case's own
+// content-authored case.ced (unit.schema.js's CedAlignmentSchema); the
+// Historical Thinking Skill chips are derived, not authored (see
+// caseHistoricalThinkingSkills() above).
+function cedAlignmentMarkup(kase) {
+  if (!kase.ced) return "";
+  const periodChip = chip({ label: `Period ${kase.ced.period}`, tone: "muted" });
+  const keyConceptChips = kase.ced.keyConcepts
+    .map((kc) => chip({ label: `KC ${kc}`, tone: "muted" }))
+    .join("");
+  const themeChips = kase.ced.themes
+    .map((code) => chip({ label: CED_THEME_LABEL[code] || code, tone: "gold" }))
+    .join("");
+  const skillChips = caseHistoricalThinkingSkills(kase.id)
+    .map((skill) => chip({ label: skill }))
+    .join("");
+  return `<div class="manage-content-ced-row">${periodChip}${keyConceptChips}${themeChips}${skillChips}</div>`;
+}
+
 // Canonical display names for the 4 real quest-types/index.js QUEST_TYPES
 // keys — every other display string in Manage Content (editor headings,
 // the type-picker cards) derives from this single table so "Multiple Choice"
@@ -3071,6 +3101,7 @@ function manageContentMissionCardMarkup(c) {
 <h3>${esc(resolvedCaseTitle(c))}</h3>
 ${detail ? `<p class="c-help">${esc(detail)}</p>` : ""}
 <p class="case-summary-note">${esc(c.summary)}</p>
+${cedAlignmentMarkup(c)}
 <button class="btn btn-outline" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit mission →</button>
 </article>`;
 }

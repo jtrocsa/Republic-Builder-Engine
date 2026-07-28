@@ -4,6 +4,7 @@ import {
   runSchema,
   checkUniqueGlobalIds,
   checkChallengeReferences,
+  checkCasePeriodMatchesUnit,
 } from "../../apps/web/src/content/schemas/cross-reference.js";
 
 describe("runSchema", () => {
@@ -52,6 +53,47 @@ describe("checkUniqueGlobalIds", () => {
     ]);
     expect(errors).toHaveLength(1);
     expect(errors[0].id).toBe("x");
+  });
+});
+
+describe("checkCasePeriodMatchesUnit", () => {
+  it("finds no errors when every case's ced.period matches its unit (normal case)", () => {
+    const units = [
+      {
+        id: "unit-01",
+        period: "Period 1 · 1491–1607",
+        cases: [{ id: "case-001", ced: { period: 1 } }],
+      },
+    ];
+    expect(checkCasePeriodMatchesUnit("test", units)).toEqual([]);
+  });
+
+  it("flags a case whose ced.period doesn't match its unit's parsed period (regression case)", () => {
+    const units = [
+      {
+        id: "unit-02",
+        period: "Period 2 · 1607–1754",
+        cases: [{ id: "case-004", ced: { period: 1 } }],
+      },
+    ];
+    const errors = checkCasePeriodMatchesUnit("test", units);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].id).toBe("case-004");
+    expect(errors[0].message).toContain("does not match");
+  });
+
+  it("skips a unit whose period string doesn't contain a parseable number (boundary case)", () => {
+    const units = [
+      { id: "unit-x", period: "Not a real period string", cases: [{ id: "case-x", ced: { period: 1 } }] },
+    ];
+    expect(checkCasePeriodMatchesUnit("test", units)).toEqual([]);
+  });
+
+  it("skips a case with no ced field at all (boundary case)", () => {
+    const units = [
+      { id: "unit-01", period: "Period 1 · 1491–1607", cases: [{ id: "case-001" }] },
+    ];
+    expect(checkCasePeriodMatchesUnit("test", units)).toEqual([]);
   });
 });
 

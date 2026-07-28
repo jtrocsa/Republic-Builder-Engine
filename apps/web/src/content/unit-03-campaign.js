@@ -74,6 +74,12 @@ export const UNIT_03 = {
       route: "field",
       summary:
         "Walk the Chronicle Institute's reconstruction of a Revolutionary-era Philadelphia gathering ground, gather seven records spanning a frontier war to a fragile peace, and weigh how unevenly the era's language of liberty was extended — and to whom.",
+      // Phase 49D CED alignment. KC 3.1 (Britain's tighter control provoking
+      // the independence movement and Revolutionary War) + 3.3 (the frontier
+      // conflict over land/resources this case's frontier-war record
+      // covers). Themes: PCE (claims to liberty and power), MIG (frontier
+      // land conflict), WOR (the imperial contest that opens this case).
+      ced: { period: 3, keyConcepts: ["3.1", "3.3"], themes: ["PCE", "MIG", "WOR"] },
     },
     {
       id: "case-008",
@@ -99,6 +105,13 @@ export const UNIT_03 = {
         questType: "evidence-organizing",
         questId: "case-008-archive-ratification-claims",
       },
+      // KC 3.2 — the Revolution's republican ideals inspiring new
+      // experiments in government (Articles → Constitutional Convention →
+      // ratification debate → Bill of Rights), exactly this case's
+      // Ratification Ledger mechanic. Themes: PCE (how much power a
+      // government should hold) and NAT (what kind of nation this new
+      // government would represent).
+      ced: { period: 3, keyConcepts: ["3.2"], themes: ["PCE", "NAT"] },
     },
     {
       id: "case-009",
@@ -126,6 +139,12 @@ export const UNIT_03 = {
         questType: "evidence-organizing",
         questId: "unit-03-archive-appeal-form-comparison",
       },
+      // KC 3.2 — the Revolution's republican rights language, and who could
+      // actually claim it (Prince Hall's petition vs. Abigail Adams's
+      // letter). Themes: NAT (whose voice counts as part of the nation)
+      // and PCE (formal petition vs. private influence as different routes
+      // to power).
+      ced: { period: 3, keyConcepts: ["3.2"], themes: ["NAT", "PCE"] },
     },
   ],
 };

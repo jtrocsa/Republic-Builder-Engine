@@ -43,6 +43,13 @@ export const UNIT_02 = {
       route: "field",
       summary:
         "Walk a young tobacco settlement on the James River, speak with its people, and secure three records — a company land charter, a servant's letter, and a wharf account — before they are lost.",
+      // Phase 49D CED alignment (content/ced-taxonomy.js). KC 2.1 (colonial
+      // migration/settlement patterns and competition for resources — the
+      // headright charter) + 2.2 (economic ties to Britain — the wharf
+      // ledger). Themes: WXT (the tobacco/labor economy this case's whole
+      // wharf-ledger record documents) and MIG (headright-driven settlement
+      // and bound-labor migration).
+      ced: { period: 2, keyConcepts: ["2.1", "2.2"], themes: ["WXT", "MIG"] },
     },
     {
       id: "case-005",
@@ -66,6 +73,12 @@ export const UNIT_02 = {
         questType: "evidence-organizing",
         questId: "case-005-archive-triangle-cargo",
       },
+      // KC 2.2 — the transatlantic economic exchanges (mercantile trade)
+      // this case's whole route-plotter mechanic reconstructs. Themes: WXT
+      // (the trade system itself), WOR (Europe/Africa/Americas interaction),
+      // MIG (the forced migration of enslaved people this case names as one
+      // of the circuit's human costs).
+      ced: { period: 2, keyConcepts: ["2.2"], themes: ["WXT", "WOR", "MIG"] },
     },
     {
       id: "case-006",
@@ -87,6 +100,11 @@ export const UNIT_02 = {
         questType: "evidence-organizing",
         questId: "case-006-archive-region-display",
       },
+      // KC 2.1 — distinct colonization/migration patterns across regions,
+      // the exact comparison this case's Region Builder mechanic asks for.
+      // Themes: MIG (regional settlement patterns) and GEO (how each
+      // region's environment shaped the society built on it).
+      ced: { period: 2, keyConcepts: ["2.1"], themes: ["MIG", "GEO"] },
     },
   ],
 };
