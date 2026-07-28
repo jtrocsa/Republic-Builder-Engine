@@ -3449,32 +3449,41 @@ dd {
   overflow: hidden;
   background: linear-gradient(130deg, #1a7183, #205a72);
 }
+/* Consolidated from 8 chronologically-layered hotfix redeclarations of the bare
+   .case-field-player rule (Phase 45B) — see docs/architecture/FILE-AUDIT-2026-07.md §8. Every
+   property below is the cascade-resolved final value each of those redeclarations left in
+   effect (later non-important wins over earlier non-important; the last !important always
+   wins outright regardless of position) — this is a pure consolidation, not a restyle;
+   verified against the Phase 45A screenshot baselines for zero pixel diff. The
+   `.hub-player, .case-field-player { aspect-ratio: 2/3; }` combined rule further below still
+   supplies this class's aspect-ratio (moot in practice once width+height are both fixed px,
+   kept for parity) — left untouched since it also styles .hub-player, out of this pass's scope. */
 .case-field-player {
   position: absolute;
-  z-index: 11;
-  width: 8.2%;
-  aspect-ratio: 1 / 1.25;
+  z-index: 80 !important;
+  width: 46px;
+  height: 69px;
+  aspect-ratio: 2 / 3;
   transform: translate(-50%, -50%);
-  transition:
-    left 185ms cubic-bezier(0.2, 0.8, 0.25, 1),
-    top 185ms cubic-bezier(0.2, 0.8, 0.25, 1);
+  transition: none !important;
   pointer-events: none;
+  will-change: left, top;
 }
 .case-field-player > span {
   position: absolute;
-  left: 16%;
-  right: 16%;
-  bottom: 3%;
-  height: 15%;
-  background: rgba(0, 0, 0, 0.25);
+  left: 12%;
+  right: 12%;
+  bottom: 0;
+  height: 12%;
+  background: rgba(0, 0, 0, 0.28);
   border-radius: 50%;
   filter: blur(2px);
 }
 .case-field-player img {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  width: 46px;
+  height: 69px;
   object-fit: contain;
   image-rendering: pixelated;
   filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.25));
@@ -3482,8 +3491,9 @@ dd {
 .case-field-player[data-facing="left"] img {
   transform: scaleX(-1);
 }
-.case-field-player.is-walking {
-  animation: caseWalk 0.19s steps(2) infinite;
+.case-field-player.is-walking,
+.hub-player.is-walking {
+  animation: fieldFootsteps 0.28s steps(2) infinite !important;
 }
 .field-mentor--png {
   width: 8%;
@@ -4037,9 +4047,10 @@ dd {
 .hub-player[data-facing="left"] img {
   transform: scaleX(-1);
 }
-.hub-player.is-walking {
-  animation: hub-walk 0.17s steps(2) infinite;
-}
+/* .hub-player.is-walking consolidated into the shared rule near .case-field-player above
+   (Phase 45B) — this hub-walk 0.17s declaration was already fully superseded (see that rule's
+   comment for the resolved-cascade reasoning); @keyframes hub-walk left for the Phase 45D
+   dead-CSS sweep since another selector may still reference it. */
 .hub-npc {
   position: absolute;
   z-index: 8;
@@ -4524,15 +4535,9 @@ dd {
   object-fit: contain;
   image-rendering: pixelated;
 }
-.hub-player.is-walking,
-.case-field-player.is-walking {
-  animation: footstepBob 0.19s steps(2) infinite;
-}
-@keyframes footstepBob {
-  50% {
-    transform: translate(-50%, -52%);
-  }
-}
+/* This footstepBob 0.19s pairing was already fully superseded by the time it shipped (see the
+   consolidated .case-field-player.is-walking/.hub-player.is-walking rule's comment, Phase 45B);
+   @keyframes footstepBob left for the Phase 45D dead-CSS sweep. */
 .case-field--living {
   grid-template-columns: minmax(230px, 0.52fr) minmax(680px, 1.85fr) minmax(250px, 0.55fr);
   align-items: center;
@@ -4550,17 +4555,24 @@ dd {
     600 0.88rem/1.55 "DM Sans",
     sans-serif !important;
 }
+/* Consolidated from 6 chronologically-layered hotfix redeclarations of the bare .field-viewport
+   rule (Phase 45B) — see docs/architecture/FILE-AUDIT-2026-07.md §8. Same resolved-cascade
+   methodology as the .case-field-player/.field-npc consolidations above; verified against the
+   Phase 45A screenshot baselines for zero pixel diff. */
 .field-viewport {
   position: relative;
   overflow: hidden;
-  min-height: 590px;
-  aspect-ratio: 1.42/1;
+  min-height: 640px;
+  aspect-ratio: 1.47/1;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: #1d7891;
+  outline: 1px solid rgba(239, 204, 122, 0.16);
+  overscroll-behavior: contain;
+  contain: layout paint;
+  background: linear-gradient(180deg, #49a9bd 0%, #257d99 46%, #145a75 100%) !important;
   box-shadow:
     inset 0 0 0 10px rgba(238, 204, 124, 0.04),
-    0 22px 42px rgba(0, 0, 0, 0.22);
+    0 26px 52px rgba(0, 0, 0, 0.28) !important;
 }
 .caribbean-world {
   position: absolute;
@@ -4641,16 +4653,25 @@ dd {
   transform: rotate(-9deg);
   z-index: 2;
 }
+/* Consolidated from 7 chronologically-layered hotfix redeclarations of the bare .field-npc rule
+   (Phase 45B) — see docs/architecture/FILE-AUDIT-2026-07.md §8. Same resolved-cascade
+   methodology as the .case-field-player consolidation above; verified against the Phase 45A
+   screenshot baselines for zero pixel diff. */
 .field-npc {
   position: absolute;
-  z-index: 8;
-  width: 54px;
-  height: 70px;
-  transform: translate(-50%, -50%);
+  z-index: 70 !important;
+  width: 46px !important;
+  height: 66px !important;
+  transform: translate(-50%, -50%) !important;
   border: 0;
   background: none;
   padding: 0;
   cursor: pointer;
+  transition:
+    filter 0.12s ease,
+    transform 0.12s ease;
+  overflow: visible !important;
+  outline: none !important;
 }
 .field-npc i {
   display: block;
@@ -4682,36 +4703,9 @@ dd {
 .source-signal {
   z-index: 9;
 }
-.case-field-player {
-  position: absolute;
-  z-index: 12;
-  width: 46px;
-  height: 69px;
-  transform: translate(-50%, -50%);
-  transition:
-    left 92ms linear,
-    top 92ms linear;
-  pointer-events: none;
-}
-.case-field-player > span {
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  bottom: 0;
-  height: 12%;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.28);
-  filter: blur(2px);
-}
-.case-field-player img {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 46px;
-  height: 69px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.25));
-}
+/* .case-field-player (position/z-index/width/height/transform/transition/pointer-events),
+   .case-field-player > span, and .case-field-player img were all consolidated into their
+   single canonical rule near the top of this file (Phase 45B). */
 .case-field-player[data-facing="left"] img {
   transform: scaleX(-1);
 }
@@ -4772,11 +4766,8 @@ dd {
 .field-path {
   display: none !important;
 }
-.field-viewport {
-  min-height: 610px;
-  aspect-ratio: 1.47/1;
-  contain: layout paint;
-}
+/* .field-viewport's min-height/aspect-ratio/contain here match the resolved-final values already
+   in the single consolidated .field-viewport rule near the top of this file (Phase 45B). */
 .caribbean-world {
   will-change: transform;
   backface-visibility: hidden;
@@ -4851,13 +4842,8 @@ dd {
   transform: translate(-50%, -50%) !important;
   min-width: 138px;
 }
-.field-npc {
-  width: 62px !important;
-  height: 88px !important;
-  transition:
-    filter 0.12s ease,
-    transform 0.12s ease;
-}
+/* .field-npc's width/height/transition here were superseded by a later hotfix — consolidated
+   into the single .field-npc rule near the top of this file (Phase 45B). */
 .field-npc img {
   display: block;
   width: 62px;
@@ -4902,17 +4888,11 @@ dd {
 .spanish-ship .sail-two {
   bottom: 132px !important;
 }
-.case-field-player {
-  transition:
-    left 58ms linear,
-    top 58ms linear !important;
-}
-.case-field-player.is-walking {
-  animation: fieldFootsteps 0.23s steps(2) infinite !important;
-}
-.hub-player.is-walking {
-  animation: fieldFootsteps 0.23s steps(2) infinite !important;
-}
+/* .case-field-player's own transition (58ms) and the fieldFootsteps 0.23s is-walking pairing
+   here were both fully superseded by later hotfixes — consolidated into the single
+   .case-field-player rule and the single .case-field-player.is-walking/.hub-player.is-walking
+   rule near the top of this file (Phase 45B). @keyframes fieldFootsteps itself is still live —
+   the consolidated is-walking rule's final resolved value references it. */
 @keyframes fieldFootsteps {
   0%,
   100% {
@@ -5588,14 +5568,10 @@ dd {
   font-size: 0.84rem !important;
   line-height: 1.45 !important;
 }
-.field-viewport {
-  outline: 1px solid rgba(239, 204, 122, 0.16);
-}
-.field-npc {
-  width: 46px !important;
-  height: 66px !important;
-  transform: translate(-50%, -50%) !important;
-}
+/* .field-viewport's outline here matches the resolved-final value already in the single
+   consolidated .field-viewport rule near the top of this file (Phase 45B). */
+/* .field-npc's width/height/transform here match the resolved-final values already in the
+   single consolidated .field-npc rule near the top of this file (Phase 45B). */
 .field-npc:hover,
 .field-npc:focus-visible {
   filter: brightness(1.08);
@@ -5614,14 +5590,10 @@ dd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.case-field-player {
-  transition:
-    left 42ms linear,
-    top 42ms linear !important;
-}
-.case-field-player.is-walking {
-  animation: fieldFootsteps 0.18s steps(2) infinite !important;
-}
+/* .case-field-player's transition (42ms) and the fieldFootsteps 0.18s is-walking pairing here
+   were both superseded by later hotfixes — consolidated into the single .case-field-player and
+   .case-field-player.is-walking/.hub-player.is-walking rules near the top of this file
+   (Phase 45B). */
 .source-signal--world {
   min-width: 126px !important;
   transform: translate(-50%, -50%) scale(0.92) !important;
@@ -5941,9 +5913,8 @@ dd {
   font-size: 10px !important;
   max-width: 80px !important;
 }
-.field-npc {
-  z-index: 32;
-}
+/* .field-npc's z-index: 32 was superseded by the later z-index: 70 !important, now in the
+   single consolidated .field-npc rule near the top of this file (Phase 45B). */
 .field-npc em {
   position: absolute;
   left: 50%;
@@ -6017,9 +5988,8 @@ dd {
     transform: translateX(7px);
   }
 }
-.field-viewport {
-  min-height: 640px;
-}
+/* .field-viewport's min-height here matches the resolved-final value already in the single
+   consolidated .field-viewport rule near the top of this file (Phase 45B). */
 .caribbean-world {
   will-change: transform;
 }
@@ -6488,9 +6458,8 @@ dd {
 .source-signal--world:not(.is-near) {
   opacity: 0.9;
 }
-.field-npc {
-  overflow: visible !important;
-}
+/* .field-npc's overflow: visible !important is now in the single consolidated .field-npc rule
+   near the top of this file (Phase 45B). */
 .field-npc .npc-frame {
   position: absolute;
   left: 50%;
@@ -6748,9 +6717,8 @@ dd {
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
-.field-npc {
-  outline: none !important;
-}
+/* .field-npc's outline: none !important is now in the single consolidated .field-npc rule near
+   the top of this file (Phase 45B). */
 .field-npc:hover,
 .field-npc:focus-visible {
   transform: translate(-50%, -50%) !important;
@@ -6950,9 +6918,8 @@ dd {
 html {
   scroll-behavior: auto !important;
 }
-.field-viewport {
-  overscroll-behavior: contain;
-}
+/* .field-viewport's overscroll-behavior here matches the resolved-final value already in the
+   single consolidated .field-viewport rule near the top of this file (Phase 45B). */
 .field-npc,
 .source-signal--world,
 .recall-beacon,
@@ -7531,12 +7498,8 @@ html {
     0 0 0 4px rgba(241, 203, 116, 0.13),
     0 6px 12px rgba(0, 0, 0, 0.27) !important;
 }
-.case-field-player {
-  z-index: 80 !important;
-}
-.field-npc {
-  z-index: 70 !important;
-}
+/* .case-field-player's z-index: 80 !important and .field-npc's z-index: 70 !important are both
+   folded into their single consolidated rules (Phase 45B). */
 .source-signal--world {
   z-index: 65 !important;
 }
@@ -7914,12 +7877,8 @@ button:hover,
 /* -------------------------------------------------------------------------
    Island asset polish · richer terrain materials without changing layout
    ------------------------------------------------------------------------- */
-.field-viewport {
-  background: linear-gradient(180deg, #49a9bd 0%, #257d99 46%, #145a75 100%) !important;
-  box-shadow:
-    inset 0 0 0 10px rgba(238, 204, 124, 0.04),
-    0 26px 52px rgba(0, 0, 0, 0.28) !important;
-}
+/* .field-viewport's background/box-shadow here match the resolved-final values already in the
+   single consolidated .field-viewport rule near the top of this file (Phase 45B). */
 .caribbean-world {
   background: linear-gradient(180deg, #48a8bb 0%, #237b96 50%, #155a73 100%) !important;
   transition: none !important;
@@ -7971,19 +7930,13 @@ button:hover,
     0 18px 0 rgba(0, 0, 0, 0.18),
     0 26px 22px rgba(0, 0, 0, 0.16) !important;
 }
-.case-field-player {
-  transition: none !important;
-  will-change: left, top;
-}
-.case-field-player.is-walking {
-  animation: fieldFootsteps 0.28s steps(2) infinite !important;
-}
+/* .case-field-player's transition: none/will-change and the fieldFootsteps 0.28s is-walking
+   pairing (for both .case-field-player and .hub-player) are now fully covered by the single
+   consolidated rules near the top of this file (Phase 45B) — this was the last, final-value
+   copy of each before consolidation. */
 .hub-player {
   transition: none !important;
   will-change: left, top;
-}
-.hub-player.is-walking {
-  animation: fieldFootsteps 0.28s steps(2) infinite !important;
 }
 
 /* Navigation Table unit tabs (Unit 2 milestone) */
