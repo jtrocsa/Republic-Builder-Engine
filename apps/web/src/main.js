@@ -1679,18 +1679,27 @@ const BTN_VARIANT_CLASS = {
   dev: "btn-outline btn-dev",
 };
 
-// { label, action, variant: primary|secondary|tertiary|danger|dev,
-//   disabled, type, attrs: extra raw HTML attributes (e.g. data-* ) }
+// { label, labelHtml: raw HTML in place of the escaped label (e.g. an
+//   embedded <span>), action, href: renders an <a> instead of a <button>
+//   (opens in a new tab — every current use is an external link),
+//   variant: primary|secondary|tertiary|danger|dev, disabled, type,
+//   attrs: extra raw HTML attributes (e.g. data-*) }
 function btn({
   label,
+  labelHtml,
   action,
+  href,
   variant = "secondary",
   disabled = false,
   type = "button",
   attrs = "",
 }) {
   const variantClass = BTN_VARIANT_CLASS[variant] || variant;
-  return `<button class="btn ${variantClass}" data-action="${esc(action)}" type="${esc(type)}" ${disabled ? "disabled" : ""} ${attrs}>${esc(label)}</button>`;
+  const content = labelHtml || esc(label);
+  if (href) {
+    return `<a class="btn ${variantClass}" href="${esc(href)}" target="_blank" rel="noopener noreferrer" ${attrs}>${content}</a>`;
+  }
+  return `<button class="btn ${variantClass}" data-action="${esc(action)}" type="${esc(type)}" ${disabled ? "disabled" : ""} ${attrs}>${content}</button>`;
 }
 
 const CHIP_TONE_CLASS = {
@@ -1714,7 +1723,12 @@ function chip({ label, tone = "default", live = false }) {
 // A labeled form field with visible label (never placeholder-only),
 // required/optional indicator beside the label, muted help text, and an
 // error message wired via aria-describedby + aria-invalid rather than
-// color alone.
+// color alone. { ...as before, plus: placeholder, autocomplete,
+//   attrs: extra raw HTML attributes (e.g. min/max/data-*),
+//   control: raw HTML rendered in place of the default input/textarea
+//     (e.g. passwordFieldMarkup(id, ...)) — still gets the label/help/
+//     error wrapper, but fieldMarkup doesn't own the control's markup,
+//     select: [{value, label}] renders a <select> instead of an <input> }
 function fieldMarkup({
   id,
   label,
@@ -1726,6 +1740,11 @@ function fieldMarkup({
   error,
   textarea = false,
   rows,
+  placeholder,
+  autocomplete,
+  attrs = "",
+  control,
+  select,
 }) {
   const requirement = required
     ? '<span class="c-label-hint">Required</span>'
@@ -1735,12 +1754,23 @@ function fieldMarkup({
   const describedBy = [help && `${id}-help`, error && `${id}-error`].filter(Boolean);
   const describedByAttr = describedBy.length ? ` aria-describedby="${describedBy.join(" ")}"` : "";
   const invalidAttr = error ? ' aria-invalid="true"' : "";
-  const control = textarea
-    ? `<textarea class="c-textarea" id="${esc(id)}" ${rows ? `rows="${rows}"` : ""}${describedByAttr}${invalidAttr}>${esc(value)}</textarea>`
-    : `<input class="c-input" id="${esc(id)}" type="${esc(type)}" value="${esc(value)}"${describedByAttr}${invalidAttr}>`;
+  const placeholderAttr = placeholder ? ` placeholder="${esc(placeholder)}"` : "";
+  const autocompleteAttr = autocomplete ? ` autocomplete="${esc(autocomplete)}"` : "";
+  const inputControl = control
+    ? control
+    : select
+      ? `<select class="c-select" id="${esc(id)}"${describedByAttr}${invalidAttr} ${attrs}>${select
+          .map(
+            (opt) =>
+              `<option value="${esc(opt.value)}"${opt.value === value ? " selected" : ""}>${esc(opt.label)}</option>`
+          )
+          .join("")}</select>`
+      : textarea
+        ? `<textarea class="c-textarea" id="${esc(id)}" ${rows ? `rows="${rows}"` : ""}${placeholderAttr}${autocompleteAttr}${describedByAttr}${invalidAttr} ${attrs}>${esc(value)}</textarea>`
+        : `<input class="c-input" id="${esc(id)}" type="${esc(type)}" value="${esc(value)}"${placeholderAttr}${autocompleteAttr}${describedByAttr}${invalidAttr} ${attrs}>`;
   return `<div class="c-field">
 <div class="c-field-label-row"><label class="c-label" for="${esc(id)}">${esc(label)}</label>${requirement}</div>
-${control}
+${inputControl}
 ${help ? `<p class="c-help" id="${esc(id)}-help">${esc(help)}</p>` : ""}
 ${error ? `<p class="c-error-text" id="${esc(id)}-error" role="alert">${esc(error)}</p>` : ""}
 </div>`;
@@ -2134,7 +2164,7 @@ function mainMenuScreen() {
 // document.getElementById(...).value at submit time — a render() here would wipe
 // whatever the user has already typed.
 function passwordFieldMarkup(id, placeholder, value = "") {
-  return `<div class="password-field"><input id="${esc(id)}" type="password" placeholder="${esc(placeholder)}" value="${esc(value)}" autocomplete="off"><button class="password-toggle" type="button" data-action="toggle-password-visibility" data-target="${esc(id)}" aria-pressed="false">Show</button></div>`;
+  return `<div class="password-field"><input class="c-input" id="${esc(id)}" type="password" placeholder="${esc(placeholder)}" value="${esc(value)}" autocomplete="off"><button class="password-toggle" type="button" data-action="toggle-password-visibility" data-target="${esc(id)}" aria-pressed="false">Show</button></div>`;
 }
 
 // Quiet pill-style tab switcher for the auth screens (Sign In / Create
@@ -2154,21 +2184,21 @@ function authTabsMarkup(tabs) {
 function joinScreen() {
   const isClaim = authUiState.studentTab !== "signin";
   return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
-<p class="kicker">${esc(BRAND.engine)}</p>
-<h1>Join a Classroom</h1>
-<p class="c-page-description">${
-    isClaim
-      ? "First time joining? Your teacher gave you a classroom code and a student ID — claim your seat and set a password."
-      : "Already claimed your seat? Sign back in with your classroom code, student ID, and password."
-  }</p>
+${pageHeaderMarkup({
+  eyebrow: BRAND.engine,
+  title: "Join a Classroom",
+  description: isClaim
+    ? "First time joining? Your teacher gave you a classroom code and a student ID — claim your seat and set a password."
+    : "Already claimed your seat? Sign back in with your classroom code, student ID, and password.",
+})}
 ${authTabsMarkup([
   { label: "First time", action: "student-tab-claim", selected: isClaim },
   { label: "Returning", action: "student-tab-signin", selected: !isClaim },
 ])}
-<label>Classroom code<input id="join-classroom-code" placeholder="e.g. FOX7K2" autocomplete="off"></label>
-<label>Your student ID<input id="join-student-id" placeholder="e.g. 07" autocomplete="off"></label>
-${isClaim ? `<label>Display name (optional)<input id="join-display-name" placeholder="How your teacher sees you" autocomplete="off"></label>` : ""}
-<label>Password${passwordFieldMarkup("join-password", "••••••••")}</label>
+${fieldMarkup({ id: "join-classroom-code", label: "Classroom code", placeholder: "e.g. FOX7K2", autocomplete: "off" })}
+${fieldMarkup({ id: "join-student-id", label: "Your student ID", placeholder: "e.g. 07", autocomplete: "off" })}
+${isClaim ? fieldMarkup({ id: "join-display-name", label: "Display name", optional: true, placeholder: "How your teacher sees you", autocomplete: "off" }) : ""}
+${fieldMarkup({ id: "join-password", label: "Password", control: passwordFieldMarkup("join-password", "••••••••") })}
 ${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="${isClaim ? "submit-join-claim" : "submit-join-signin"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isClaim ? "Claim my seat →" : "Sign in →"}</button>
 <button class="back-link" data-action="open-main-menu" type="button">← Back</button>
@@ -2179,14 +2209,13 @@ function loginScreen() {
   const isSignIn = authUiState.teacherTab !== "signup";
   if (isSignIn) {
     return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
-<p class="kicker">${esc(BRAND.engine)}</p>
-<h1>Teacher Sign In</h1>
+${pageHeaderMarkup({ eyebrow: BRAND.engine, title: "Teacher Sign In" })}
 ${authTabsMarkup([
   { label: "Sign In", action: "teacher-tab-signin", selected: true },
   { label: "Create Account", action: "teacher-tab-signup", selected: false },
 ])}
-<label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" autocomplete="off"></label>
-<label>Password${passwordFieldMarkup("teacher-password", "••••••••")}</label>
+${fieldMarkup({ id: "teacher-email", label: "Email", type: "email", placeholder: "you@school.edu", autocomplete: "off" })}
+${fieldMarkup({ id: "teacher-password", label: "Password", control: passwordFieldMarkup("teacher-password", "••••••••") })}
 ${authUiState.info ? `<p class="feedback" role="status" aria-live="polite">${esc(authUiState.info)}</p>` : ""}
 ${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="submit-teacher-signin" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Sign In →"}</button>
@@ -2199,16 +2228,36 @@ ${import.meta.env.DEV ? btn({ label: "🧪 Dev: Fake Teacher", action: "dev-fake
     const rows = authUiState.classroomRows
       .map(
         (row, i) => `<div class="classroom-setup-row">
-<label>Classroom ${i + 1} name<input data-classroom-row-name data-row-index="${i}" value="${esc(row.name)}" autocomplete="off"></label>
-<label>Students<input data-classroom-row-count data-row-index="${i}" type="number" min="1" max="200" value="${row.studentCount}"></label>
+${fieldMarkup({
+  id: `signup-classroom-row-name-${i}`,
+  label: `Classroom ${i + 1} name`,
+  value: row.name,
+  autocomplete: "off",
+  attrs: `data-classroom-row-name data-row-index="${i}"`,
+})}
+${fieldMarkup({
+  id: `signup-classroom-row-count-${i}`,
+  label: "Students",
+  type: "number",
+  value: row.studentCount,
+  attrs: `data-classroom-row-count data-row-index="${i}" min="1" max="200"`,
+})}
 </div>`
       )
       .join("");
     return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
-<p class="kicker">${esc(BRAND.engine)} · Step 2 of 2</p>
-<h1>Set Up Classrooms</h1>
-<p class="c-page-description">Choose how many classrooms to create now — you can always add more later from your dashboard.</p>
-<label>How many classrooms?<input id="signup-classroom-count" data-classroom-count type="number" min="1" max="20" value="${authUiState.classroomRows.length}"></label>
+${pageHeaderMarkup({
+  eyebrow: `${BRAND.engine} · Step 2 of 2`,
+  title: "Set Up Classrooms",
+  description: "Choose how many classrooms to create now — you can always add more later from your dashboard.",
+})}
+${fieldMarkup({
+  id: "signup-classroom-count",
+  label: "How many classrooms?",
+  type: "number",
+  value: authUiState.classroomRows.length,
+  attrs: 'data-classroom-count min="1" max="20"',
+})}
 ${rows}
 ${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="submit-teacher-signup" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : "Create Account & Classrooms →"}</button>
@@ -2217,17 +2266,16 @@ ${feedbackError(authUiState)}
   }
   const draft = authUiState.signupDraft;
   return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
-<p class="kicker">${esc(BRAND.engine)} · Step 1 of 2</p>
-<h1>Create Teacher Account</h1>
+${pageHeaderMarkup({ eyebrow: `${BRAND.engine} · Step 1 of 2`, title: "Create Teacher Account" })}
 ${authTabsMarkup([
   { label: "Sign In", action: "teacher-tab-signin", selected: false },
   { label: "Create Account", action: "teacher-tab-signup", selected: true },
 ])}
-<label>Your name<input id="teacher-display-name" placeholder="Ms. Rivera" value="${esc(draft?.displayName || "")}" autocomplete="off"></label>
-<label>School / organization<input id="teacher-school-name" placeholder="e.g. Lincoln High School" value="${esc(draft?.schoolName || "")}" autocomplete="off"></label>
-<label>Email<input id="teacher-email" type="email" placeholder="you@school.edu" value="${esc(draft?.email || "")}" autocomplete="off"></label>
-<label>Password${passwordFieldMarkup("teacher-password", "••••••••", draft?.password || "")}</label>
-<label>Confirm password${passwordFieldMarkup("teacher-confirm-password", "••••••••")}</label>
+${fieldMarkup({ id: "teacher-display-name", label: "Your name", placeholder: "Ms. Rivera", value: draft?.displayName || "", autocomplete: "off" })}
+${fieldMarkup({ id: "teacher-school-name", label: "School / organization", placeholder: "e.g. Lincoln High School", value: draft?.schoolName || "", autocomplete: "off" })}
+${fieldMarkup({ id: "teacher-email", label: "Email", type: "email", placeholder: "you@school.edu", value: draft?.email || "", autocomplete: "off" })}
+${fieldMarkup({ id: "teacher-password", label: "Password", control: passwordFieldMarkup("teacher-password", "••••••••", draft?.password || "") })}
+${fieldMarkup({ id: "teacher-confirm-password", label: "Confirm password", control: passwordFieldMarkup("teacher-confirm-password", "••••••••") })}
 ${authUiState.info ? `<p class="feedback" role="status" aria-live="polite">${esc(authUiState.info)}</p>` : ""}
 ${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="teacher-signup-continue" type="button" ${authUiState.pending ? "disabled" : ""}>Continue →</button>
@@ -2294,11 +2342,11 @@ function teacherClassroomsTabMarkup() {
     })
     .join("");
   return `
-<label>New classroom name<input id="new-classroom-name" placeholder="e.g. APUSH Period 4" autocomplete="off"></label>
+${fieldMarkup({ id: "new-classroom-name", label: "New classroom name", placeholder: "e.g. APUSH Period 4", autocomplete: "off" })}
 <button class="btn btn-outline" data-action="create-classroom" type="button">Create classroom</button>
 ${
   teacherUiState.selectedClassroomId
-    ? `<label>Add N students<input id="provision-count" type="number" min="1" max="200" value="5"></label><button class="btn btn-outline" data-action="provision-roster" type="button">Add roster slots</button>`
+    ? `${fieldMarkup({ id: "provision-count", label: "Add N students", type: "number", value: 5, attrs: 'min="1" max="200"' })}<button class="btn btn-outline" data-action="provision-roster" type="button">Add roster slots</button>`
     : ""
 }
 ${
@@ -2370,9 +2418,13 @@ function teacherDashboardScreen() {
   // but was baked into the button's primary label — now a visually
   // secondary span within the same button, not competing with the name.
   const classroomButtons = teacherUiState.classrooms
-    .map(
-      (c) =>
-        `<button class="btn ${c.id === teacherUiState.selectedClassroomId ? "btn-gold" : "btn-outline"}" data-action="select-classroom" data-classroom-id="${esc(c.id)}" type="button">${esc(c.name)}<span class="classroom-switch-code">${esc(c.join_code)}</span></button>`
+    .map((c) =>
+      btn({
+        labelHtml: `${esc(c.name)}<span class="classroom-switch-code">${esc(c.join_code)}</span>`,
+        action: "select-classroom",
+        variant: c.id === teacherUiState.selectedClassroomId ? "primary" : "secondary",
+        attrs: `data-classroom-id="${esc(c.id)}"`,
+      })
     )
     .join("");
   const tabBodies = {
@@ -2466,7 +2518,7 @@ function sourceFullTextBlockMarkup(item) {
 // visual entries have different fields), not the gameplay Source schema.
 function sourcePoolPreviewMarkup(item, kind) {
   const externalLink = item.externalUrl
-    ? `<a class="btn btn-outline" href="${esc(item.externalUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>`
+    ? btn({ label: "View source ↗", href: item.externalUrl, variant: "secondary" })
     : "";
   if (kind === "text") {
     const key = `${kind}:${item.id}`;
@@ -2578,14 +2630,22 @@ ${PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta }) => teacherSourcesUnitSectionMarkup
 
 function gradingScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1><p>Sign in as a teacher to review submissions.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell completion-shell c-app"><section>${pageHeaderMarkup({
+      eyebrow: BRAND.engine,
+      title: "Grading",
+      description: "Sign in as a teacher to review submissions.",
+      actions: [{ label: "Teacher Sign In →", action: "open-teacher-login", variant: "secondary" }],
+    })}</section></main>${authorPanel()}`;
   }
   const submission = gradingUiState.submission;
   if (!submission) {
     const body = gradingUiState.error
       ? feedbackError(gradingUiState)
       : loadingNote("Loading submission…");
-    return `${chrome()}<main class="shell completion-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1>${body}<button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell completion-shell c-app"><section>${pageHeaderMarkup({ eyebrow: BRAND.engine, title: "Grading" })}
+${body}
+<button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button>
+</section></main>${authorPanel()}`;
   }
   const grades =
     submission.grades
@@ -2607,8 +2667,8 @@ ${submission.stimulus ? `<blockquote>${esc(submission.stimulus)}</blockquote>` :
 ${archiveFeedbackMarkup(submission.feedback)}
 <h2>Manual grade</h2>
 ${grades}
-<label>Grade<input id="grade-label" placeholder="e.g. 3/3 or Meets expectations" autocomplete="off"></label>
-<label>Feedback to student (optional)<textarea id="grade-teacher-feedback" placeholder="Additional notes for the student"></textarea></label>
+${fieldMarkup({ id: "grade-label", label: "Grade", placeholder: "e.g. 3/3 or Meets expectations", autocomplete: "off" })}
+${fieldMarkup({ id: "grade-teacher-feedback", label: "Feedback to student", optional: true, textarea: true, placeholder: "Additional notes for the student" })}
 ${feedbackError(gradingUiState)}
 <button class="btn btn-gold" data-action="save-manual-grade" type="button">Save grade</button>
 </section></main>${authorPanel()}`;

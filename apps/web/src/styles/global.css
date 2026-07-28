@@ -2323,11 +2323,14 @@ dd {
   padding: 40px 36px;
 }
 /* Teacher sign-in/create-account/join screens (Phase 44, C5) — .completion-
-   shell's 820px max-width is right for the dashboard, which also uses that
-   class, but swims the auth card at large monitor sizes. Scoped modifier so
-   the dashboard is untouched. Also dims the page's background grid behind
-   the card via a radial vignette, so the form reads as the clear focal
-   point rather than competing with the grid pattern. */
+   shell's 820px max-width swims the auth card at large monitor sizes (the
+   dashboard moved off .completion-shell in Phase 47B, so this is now the
+   only consumer of that width, but is still scoped as a modifier rather
+   than edited directly since mainMenuScreen()/completionScreen() are real
+   baseline-covered gameplay screens sharing the base class). Also dims the
+   page's background grid behind the card via a radial vignette, so the
+   form reads as the clear focal point rather than competing with the grid
+   pattern. */
 .auth-shell {
   position: relative;
 }
@@ -2349,7 +2352,10 @@ dd {
   gap: 8px;
   margin: 4px 0 22px;
 }
-.auth-shell label {
+/* Was `.auth-shell label` — Phase 47E wraps every field in fieldMarkup()'s
+   .c-field div instead of a bare <label>, so this now targets the field
+   row itself (still the right selector to space stacked fields apart). */
+.auth-shell .c-field {
   margin-top: 20px;
 }
 .auth-shell .btn {
@@ -7619,10 +7625,15 @@ button:hover,
 }
 
 /* -------------------------------------------------------------------------
-   Real accounts/classrooms: join/login/teacher-dashboard/grading screens.
-   Form fields mirror .author-panel's existing label/input treatment so
-   these new screens stay in the same parchment/gold language rather than
-   rendering as unstyled browser-default form controls.
+   .completion-shell label/input/textarea: NOT just the real-accounts
+   screens — identityScreen() (a real gameplay onboarding screen, part of
+   the committed director-intro visual-regression baseline) also renders a
+   bare <label><input data-profile="name"> inside plain .completion-shell
+   with no .c-app scope, and depends on this exact styling. Phase 47E
+   converted every join/login/teacher-dashboard/grading field to
+   fieldMarkup() instead (self-contained .c-field/.c-input/.c-textarea
+   styling), but that does NOT make this rule dead — confirmed the hard
+   way when deleting it broke the identity-screen baseline. Leave it.
    ------------------------------------------------------------------------- */
 .completion-shell label {
   display: grid;
@@ -7681,6 +7692,12 @@ button:hover,
   grid-template-columns: 2fr 1fr;
   gap: 10px;
   margin-top: 12px;
+}
+/* Both cells are .c-field now (Phase 47E) — without this, the second
+   cell's own default margin-top (its :first-child zero-out only applies
+   to the first cell) would sit lower than the first, misaligning the row. */
+.classroom-setup-row .c-field {
+  margin-top: 0;
 }
 /* The join code within a classroom-switcher button — was baked into the
    button's primary label ("Period 4 (RTZ547)"); now visually secondary. */
