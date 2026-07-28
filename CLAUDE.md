@@ -98,7 +98,7 @@ Beyond Author Mode's content overrides, Chronicle now has real teacher-facing to
 **Near-term architecture is deliberately minimal**, per the review: keep working code where it already lives (`main.js`, `content/*.js`) and add thin wrappers/tests/schemas around it rather than moving it. Concretely:
 
 - **Vitest and Zod are the only approved immediate major dependencies.** Both are adopt-now, zero-POC-required.
-- **Playwright, Phaser, Tiled, and inkjs are deferred** — real candidates for later, not currently being adopted, no POC scheduled unless a task explicitly says otherwise.
+- **Playwright is no longer deferred** — Phase 29 committed a real, rerunnable `npm run test:e2e` suite (`playwright.config.js`, `tests/e2e/*.spec.js`, 11 specs including 20 visual-regression baselines). Use it as the default verification path — see "Verification ladder" below. **Tiled is no longer fully deferred either** — `.tmj` rendering via `apps/web/src/engine/tiled-map-loader.js` is an established pattern for three real, live maps (see `ARCHITECTURE-QUICKREF.md` §8), though this is not license for a bigger Tiled-authoring pipeline. **Phaser and inkjs remain deferred** — real candidates for later, no concrete forcing function yet, no POC scheduled unless a task explicitly says otherwise.
 - **`PlatformCore`, `WorldComposition`, runtime registries, activity-renderer registries, full subject-pack extraction (`packs/<subject>/`), accounts, classrooms, publishing, and any database** are documented future directions in the proposal above — not current implementation tasks. Don't scaffold them because the proposal describes them.
 - **Do not create empty future-architecture folders** (`platform-core/`, `world-composition/`, `quest-engine/`, `runtime/`, `packs/`, etc.) "for structure." The repo already has a cautionary example of this exact mistake: `apps/web/src/features/{assessment,codex,character-creation}/` are empty `.gitkeep` folders from an earlier modularization attempt that a future reader has to investigate and discover are nothing. Don't add more.
 - **Do not physically extract working movement, collision, camera, or NPC logic out of `main.js` merely for architectural neatness.** It works, it has no test coverage either way, and moving it is pure code-motion risk with no near-term payoff — per the review, add `export` to specific functions worth unit-testing and test them in place instead. Only physically extract this code if/when a proven Phaser adapter is actually replacing it, which is not scheduled.
@@ -147,6 +147,30 @@ These patterns recurred as bugs across many hotfix milestones (3.4.5 through 3.4
 
 - Prefer small, focused changes over broad refactors; don't fix unrelated things in the same pass.
 - Avoid modifying `vite.config.js` unless the task genuinely requires it.
-- Compilation/syntax passing is not sufficient to call something fixed — this is a visual/interactive game. Run `npm run dev`, reproduce the reported behavior in the browser, and verify the specific interaction (movement, collision, dialogue, camera) before considering a change done, per this repo's `/verify` skill expectations.
-- Don't commit until the requested behavior has actually been tested.
+- Compilation/syntax passing is not sufficient to call something fixed — this is a visual/interactive game. Verify using the ladder below before considering a change done. Don't commit until the requested behavior has actually been tested.
+- **No `/verify` skill exists in this repo** — an earlier revision of this file referenced one; don't look for it or invent an ad hoc equivalent. The verification ladder below is the actual expectation.
+
+### Verification ladder (cheapest first — escalate only as needed)
+
+Run the cheapest check that actually exercises what you changed; stop once you've cleared the tier that matters for this change. Don't jump straight to a manual/MCP browser pass by default — it is the *most* expensive tier, not the default one.
+
+1. **Targeted `vitest`**, scoped to the changed file/pattern: `npx vitest run tests/unit/<file>.test.js`, not a bare `npm run test`.
+2. **`npm run validate:content`** — only if content files changed (schemas, `unit-0N-campaign.js`, `content/quests/*`).
+3. **`npm run test:e2e`** — the real, committed Playwright suite (`tests/e2e/*.spec.js`, 11 specs, added Phase 29). This is the default way to verify a player-visible interaction — run it before reaching for a manual browser pass, not after. For a CSS-only change, run `npm run test:e2e -- visual-regression` specifically: it screenshots every gameplay screen at 1366×768 against 20 committed baselines and will show you a pixel diff if anything moved.
+4. **Full `npm run test` / `npm run lint` / `npm run build`** — at milestone boundaries or when the change touches shared infrastructure (a screen-routing guard, a repository facade, a quest-type contract all four types implement).
+5. **A manual browser pass (`npm run dev`, by hand or via an MCP browser tool)** — only for an interaction genuinely uncovered by any committed spec. When you do this, **bank it**: add the scenario as a new `tests/e2e/*.spec.js` file (or a case in an existing one) so the next session doesn't re-derive it by hand. A manual pass that isn't banked is cost paid twice for the same coverage.
+
+### Minimum required reading by task type
+
+Read only what the task needs — don't open `main.js` in full or re-derive the whole architecture history for a scoped change.
+
+| Task type | Read | Don't read |
+|---|---|---|
+| CSS-only / visual | The specific `global.css` region (grep the selector), `docs/architecture/UI-DESIGN-SYSTEM.md` if touching design tokens | `main.js` in full |
+| Content (units/quests/sources) | The specific `content/unit-0N-campaign.js` / `content/quests/*.js` file, its Zod schema in `apps/web/src/content/schemas/` | `ARCHITECTURE-QUICKREF.md`, `main.js` |
+| Gameplay logic (`main.js`) | Grep for the specific function/screen; read its immediate neighborhood | The whole 9,000+-line file top to bottom |
+| Architecture/process decisions | `docs/architecture/ARCHITECTURE-QUICKREF.md` (now ≤150 lines by design) | `docs/architecture/PHASE-HISTORY.md` — an archive, consult only for one named phase's specific rationale |
+
+**Subagent dispatch**: don't spawn one for a single-file edit, a targeted grep, or work already scoped by the user in the prompt — do it inline. Reserve subagents for genuinely open-ended or multi-area work; each one inherits this whole file plus the tool surface, so spawning several for what's really one small task multiplies cost for no benefit.
+
 - **Standing permission to `git push` to `main`.** The user (jtrocsa) wants their Vercel deployment (auto-deploys on push to `main`, connected via GitHub) to reflect changes in real time without approving every push — granted 2026-07-12. Commit and push to `main` after finishing and verifying a change, without asking first each time. This does not relax the testing bar above: still verify the change (build passes at minimum; browser-check interactive changes) before pushing, since a push here is an immediate production deploy. Still avoid other destructive/shared-state git operations (force-push, history rewrites, branch deletion) without asking, per the general git safety rules — this exception covers plain `git push` to `main` only.
