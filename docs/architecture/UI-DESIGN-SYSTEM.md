@@ -207,15 +207,21 @@ breakpoints without a dedicated gameplay-responsive audit first.
 ## What this pass deliberately did not do
 
 - **Did not restructure gameplay CSS** (`.field-*`, `.hub-*`, `.quest-*`,
-  `.map-*`, `.director-*`) — approved scope decision, see above.
-- **Did not do a full dead-CSS sweep.** One confirmed-orphaned class
-  (`.roster-progress-pill`, superseded by `chip()`) was removed. A 2026-07
-  audit found ~93 candidate dead selectors across the whole file (mostly
-  pre-Tiled static field-scene and foyer/institute clusters) — that sweep
-  needs careful per-class verification against dynamically-built class
-  names (e.g. the jigsaw puzzle's `` `map-piece--p${n}` `` pattern) and was
-  out of scope for this pass. Don't assume an apparently-unused class is
-  dead without grepping for template-literal construction first.
+  `.map-*`, `.director-*`) at the time this pass (Phase 44) ran — that
+  restructuring, plus the dead-CSS sweep below, is exactly what Phase 45
+  (`ARCHITECTURE-QUICKREF.md`) did once a real visual-regression net
+  existed to make it safe.
+- **The full dead-CSS sweep referenced here as "not done" shipped in
+  Phase 45D.** One confirmed-orphaned class (`.roster-progress-pill`,
+  superseded by `chip()`) was removed in this pass; the ~93-candidate
+  figure this section originally cited was never itself individually
+  verified or enumerated anywhere — Phase 45D built a real scanner
+  (literal + template-literal-stem matching, e.g. the jigsaw puzzle's
+  `` `map-piece--p${n}` `` pattern) and verified every removal by hand
+  rather than trusting that count. A large "stem-only" bucket (79
+  classes, mostly legitimate dynamic-class usage) is still deliberately
+  unswept — don't assume an apparently-unused class is dead without
+  grepping for template-literal construction first.
 - **Did not add roving-tabindex arrow-key navigation** to the new tablist
   markup — see the accessibility section above.
 - **Did not adopt axe-core or Lighthouse CI** — both are on
