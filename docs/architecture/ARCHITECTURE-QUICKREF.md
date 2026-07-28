@@ -70,6 +70,7 @@
 - Phase 48 — The Full Mission Board: every case now gets a Navigation Table marker (route enum simplified to `field`/`archive-challenges`, no null routes); locked markers stay clickable and explain their unlock reason instead of being `disabled`; a per-classroom teacher visibility opt-out (`navTableVisible` override, pending one manual Supabase migration); Unit 3's bonus challenge promoted to a real third case (case-009, "Appeals to Liberty"). See `docs/architecture/PHASES-46-50.md`.
 - Phase 49A — a real `saq` quest type in `QUEST_TYPES` (`quest-types/history/saq-quest.js`): synchronous render/grade like every other type ("complete" = "submitted," not AI-graded), with the AI Archive Evaluator round trip composed separately at the call site, same pattern `sourceReader()`/`reviewScreen()` already use. Real content shipped as a new Unit 3 bonus Archive Challenge. Fixed a pre-existing bug found along the way: unit-level bonus Archive Challenges never persisted their completion (`archiveChallengeQuestCard()` now calls `save()` itself instead of relying on `onComplete`). See `docs/architecture/PHASES-46-50.md`.
 - Phase 49B — skill mastery surfaced to the student. New optional 5th `QUEST_TYPES` contract slot `skillOutcomes()` (mirrors `answeredAny`/`isComplete`/`partialSuccess`/`hint`) extends `SKILL_CATEGORIES` tagging from evidence-organizing-only to mcq/sequencing (new opaque `skillCategory` string field, kept generic per those modules' own subject-agnostic design) and hipp (hardcoded "Sourcing" — no field needed, HIPP sourcing reasoning *is* that skill). SAQ excluded (no binary correct/incorrect signal without a grade). New persisted `progress.skillMastery` (upsert-by-item, not an attempt log) and a new student-facing Skill Mastery Record screen (`masteryScreen()`, reached from the Preservation Case). See `docs/architecture/PHASES-46-50.md`.
+- Phase 49C — "The Archive Rotation": a daily spaced-repetition loop (new, pure, unit-tested `engine/spaced-repetition.js` — a 5-box Leitner system) over the existing mcq/sequencing/hipp pool (evidence-organizing/saq excluded — no clean binary correct/incorrect signal). New `progress.archiveRotation`; new `archiveRotationScreen()` reached via a new button in the Preservation Case dialog. Explicitly framed as non-graded — never touches unlocks/badges, only optionally feeds the already-formative skillMastery record. See `docs/architecture/PHASES-46-50.md`.
 
 ## 5. Current active phase
 
@@ -77,7 +78,7 @@
 
 ## 6. Next approved phase
 
-Phase 49C ("The Archive Rotation" — a spaced-repetition daily loop reusing the existing MCQ/sequencing/HIPP pool as its item bank) follows 49A/49B, per `PHASES-46-50.md`'s stated sequencing.
+Phase 49D (CED alignment tagging — Period/Key Concept/Theme/Historical Thinking Skill — surfaced on the teacher dashboard) follows 49A/49B/49C, per `PHASES-46-50.md`'s stated sequencing.
 
 ## 7. Approved immediate dependencies
 

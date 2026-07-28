@@ -34,6 +34,20 @@ export const DEFAULT_PROGRESS = {
   // reflects current mastery state rather than an ever-growing attempt log —
   // a student who fixes a wrong answer sees that item flip to correct.
   skillMastery: {},
+  // Phase 49C ("The Archive Rotation") — a daily spaced-repetition loop over
+  // the existing mcq/sequencing/hipp pool. itemStates is keyed by
+  // "<questType>::<questId>" (see engine/spaced-repetition.js); queue/
+  // queueDate/position are today's drawn items and where the player is in
+  // them; streakDays/lastCompletedDate are cosmetic only — none of this
+  // feeds skillMastery weighting or unlocks/badges.
+  archiveRotation: {
+    itemStates: {},
+    queueDate: null,
+    queue: [],
+    position: 0,
+    streakDays: 0,
+    lastCompletedDate: null,
+  },
   settings: { miniGamesEnabled: true },
   miniGameScores: { stormNavigationBest: 0 },
   tutorial: { step: "not-started", completed: false, skipped: false },
@@ -67,6 +81,15 @@ export function readProgress() {
       activityState: { ...DEFAULT_PROGRESS.activityState, ...(saved.activityState || {}) },
       questResponses: { ...DEFAULT_PROGRESS.questResponses, ...(saved.questResponses || {}) },
       skillMastery: { ...DEFAULT_PROGRESS.skillMastery, ...(saved.skillMastery || {}) },
+      archiveRotation: {
+        ...DEFAULT_PROGRESS.archiveRotation,
+        ...(saved.archiveRotation || {}),
+        itemStates: {
+          ...DEFAULT_PROGRESS.archiveRotation.itemStates,
+          ...(saved.archiveRotation?.itemStates || {}),
+        },
+        queue: Array.isArray(saved.archiveRotation?.queue) ? saved.archiveRotation.queue : [],
+      },
       settings: { ...DEFAULT_PROGRESS.settings, ...(saved.settings || {}) },
       miniGameScores: {
         ...DEFAULT_PROGRESS.miniGameScores,

@@ -82,6 +82,13 @@ import {
   updateMusicForScreen,
   isAudioEnabled,
 } from "./engine/audio-engine.js";
+import {
+  DEFAULT_DAILY_ROTATION_TARGET,
+  reviewRotationItem,
+  selectDailyRotationQueue,
+  rotationDateString,
+  nextStreakDays,
+} from "./engine/spaced-repetition.js";
 import riverbendTmjRaw from "./content/maps/riverbend-field.tmj?raw";
 import caribbeanTmjRaw from "./content/maps/caribbean-field.tmj?raw";
 import archiveRoomTmjRaw from "./content/maps/archive-room.tmj?raw";
@@ -1449,6 +1456,7 @@ const VALID_SCREENS = new Set([
   "source",
   "codex",
   "mastery",
+  "archive-rotation",
   "reconstruction",
   "upload",
   "return-warp",
@@ -6119,7 +6127,7 @@ function unitOneBadgeCaseMarkup() {
     const badges = badgeRecordsForUnit(unit);
     return `<h3 class="badge-case-unit-title">${esc(unit.period)}</h3><div class="badge-case-grid">${badges.map((badge) => `<section class="badge-card ${badge.earned ? "is-earned" : "is-locked"}"><div class="badge-medallion"><span>${badge.earned ? badge.icon : "○"}</span></div><div><b>${esc(badge.title)}</b><small>${badge.earned ? "Preserved" : "Locked"}</small><p>${esc(badge.description)}</p></div></section>`).join("")}</div>`;
   }).join("");
-  return `<div class="preservation-case" role="dialog" aria-modal="true" aria-labelledby="preservationCaseTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close preservation case">×</button><p class="kicker">Preservation Case</p><h2 id="preservationCaseTitle">Chronicle Badge Case</h2><p class="preservation-case__subtitle">Badges are preserved here after each field area is completed and transmitted through the Codex.</p>${sections}<button class="btn btn-outline preservation-case__mastery-link" data-action="open-mastery">Skill Mastery Record →</button></article></div>`;
+  return `<div class="preservation-case" role="dialog" aria-modal="true" aria-labelledby="preservationCaseTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close preservation case">×</button><p class="kicker">Preservation Case</p><h2 id="preservationCaseTitle">Chronicle Badge Case</h2><p class="preservation-case__subtitle">Badges are preserved here after each field area is completed and transmitted through the Codex.</p>${sections}<button class="btn btn-outline preservation-case__mastery-link" data-action="open-mastery">Skill Mastery Record →</button><button class="btn btn-outline preservation-case__mastery-link" data-action="open-archive-rotation">The Archive Rotation →</button></article></div>`;
 }
 
 function institutePositionStyle() {
@@ -7354,6 +7362,89 @@ function masteryScreen() {
   return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy"><button class="back-link" data-action="home">← Return to Institute</button><p class="kicker">Institute Archive · Chronicler record</p><h1>Skill Mastery Record</h1><p>Every graded record you restore is tagged to the historical-thinking skill it exercises — Archive Challenges and Sourcing Practice Check items both count. This tracks how you're doing at each skill, not just which cases are complete.</p></section><section class="activity-board mastery-board">${totalAttempted ? rows : '<p class="bank-empty">No graded records yet. Complete an Archive Challenge or a Sourcing Practice Check to start building your skill mastery record.</p>'}</section></main>`;
 }
 
+// Phase 49C ("The Archive Rotation") item bank: every mcq/sequencing/hipp
+// practice item from a unit the player has already unlocked. Deliberately
+// excludes evidence-organizing (multi-part placement, no single binary
+// correct/incorrect signal a Leitner box can key off of) and saq ("complete"
+// means submitted, not graded — see saq-quest.js) — see PHASES-46-50.md's
+// Phase 49C entry. Teacher-swapped content resolves the same way Practice
+// Check's own item lists do (resolveQuestSlot), so a classroom override is
+// reflected here too.
+function rotationItemPool() {
+  const items = [];
+  Object.entries(PRACTICE_CHECK_QUESTS).forEach(([caseId, questSet]) => {
+    if (!isUnlocked(caseId)) return;
+    ["mcq", "sequencing", "hipp"].forEach((questType) => {
+      (questSet[questType] || []).forEach((quest) => {
+        const resolved = resolveQuestSlot(questType, quest);
+        items.push({ key: `${questType}::${resolved.id}`, questType, quest: resolved });
+      });
+    });
+  });
+  return items;
+}
+
+// Regenerates progress.archiveRotation.queue once per UTC day from whatever
+// is currently due (or, failing that, unseen) in the pool — idempotent
+// within the same day, mirroring the render-time-side-effect convention
+// recordSkillOutcomes()/sourceReader() already use elsewhere in this file.
+function ensureTodaysRotationQueue() {
+  const pool = rotationItemPool();
+  const today = rotationDateString(Date.now());
+  if (progress.archiveRotation.queueDate !== today) {
+    progress.archiveRotation.queue = selectDailyRotationQueue(
+      pool.map((item) => item.key),
+      progress.archiveRotation.itemStates,
+      Date.now(),
+      DEFAULT_DAILY_ROTATION_TARGET
+    );
+    progress.archiveRotation.queueDate = today;
+    progress.archiveRotation.position = 0;
+    save();
+  }
+  return pool;
+}
+
+function archiveRotationScreen() {
+  const pool = ensureTodaysRotationQueue();
+  const rotation = progress.archiveRotation;
+  const total = rotation.queue.length;
+  const streakLine =
+    rotation.streakDays > 0
+      ? `<p class="quest-practice-summary">Current streak: ${rotation.streakDays} day${rotation.streakDays === 1 ? "" : "s"}</p>`
+      : "";
+  const header = `<button class="back-link" data-action="home">← Return to Institute</button><p class="kicker">Institute Archive · Chronicler record</p><h1>The Archive Rotation</h1>`;
+
+  if (!total) {
+    return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy">${header}<p>A short daily review pulled from records you've already secured. Explore a field mission's Sourcing Practice Check first to build up today's rotation.</p></section><section class="activity-board mastery-board"><p class="bank-empty">Nothing to review yet.</p></section></main>`;
+  }
+  if (rotation.position >= total) {
+    return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy">${header}<p>Today's rotation is complete — come back tomorrow for a new set.</p>${streakLine}</section><section class="activity-board mastery-board"><p class="bank-empty">${total}/${total} reviewed today.</p></section></main>`;
+  }
+
+  const key = rotation.queue[rotation.position];
+  const item = pool.find((entry) => entry.key === key);
+  if (!item) {
+    // A previously-scheduled item can disappear from the pool (content edit,
+    // teacher swap, or a case getting re-locked) between when it was queued
+    // and today — skip it rather than render a broken card.
+    rotation.position += 1;
+    save();
+    return archiveRotationScreen();
+  }
+  const state = progress.questResponses[item.quest.id] || {};
+  const result = gradeQuest(item.questType, item.quest, state);
+  recordSkillOutcomes(item.questType, item.quest, state, result);
+  const answered = questAnsweredAny(item.questType, state);
+  const correct = isQuestComplete(item.questType, result);
+  const feedback = answered
+    ? `<p class="activity-feedback ${correct ? "success" : "error"}" role="status" aria-live="polite">${
+        correct ? "Correct." : "Not quite — review, then move on when ready."
+      }</p>`
+    : "";
+  return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy">${header}<p>A short daily review, not a graded assessment — reviewing here never affects your Preservation Case progress.</p><p class="quest-practice-summary">Item ${rotation.position + 1}/${total}</p>${streakLine}</section><section class="activity-board mastery-board"><div class="quest-practice-item">${renderQuest(item.questType, item.quest, state)}${feedback}</div><button class="btn btn-gold" type="button" data-action="rotation-next" data-rotation-quest-type="${esc(item.questType)}" data-rotation-quest-id="${esc(item.quest.id)}" ${answered ? "" : "disabled"}>${rotation.position + 1 === total ? "Finish rotation →" : "Next →"}</button></section></main>`;
+}
+
 const RECONSTRUCTION_LANES = {
   "case-001": [
     {
@@ -7530,6 +7621,9 @@ function render() {
         break;
       case "mastery":
         html = masteryScreen();
+        break;
+      case "archive-rotation":
+        html = archiveRotationScreen();
         break;
       case "reconstruction":
         html = reconstructionScreen();
@@ -8253,6 +8347,38 @@ function handleSourceReaderClick(target, action) {
     // afterward doesn't reopen a stale dialogue on top of a screen change.
     hubDialogueId = null;
     progress.currentScreen = "mastery";
+    save();
+    render();
+    return true;
+  }
+  if (action === "open-archive-rotation") {
+    hubDialogueId = null;
+    progress.currentScreen = "archive-rotation";
+    save();
+    render();
+    return true;
+  }
+  if (action === "rotation-next") {
+    const questType = target.dataset.rotationQuestType;
+    const questId = target.dataset.rotationQuestId;
+    const key = `${questType}::${questId}`;
+    const item = rotationItemPool().find((entry) => entry.key === key);
+    const rotation = progress.archiveRotation;
+    if (item) {
+      const state = progress.questResponses[questId] || {};
+      const result = gradeQuest(questType, item.quest, state);
+      const correct = isQuestComplete(questType, result);
+      const now = Date.now();
+      rotation.itemStates[key] = reviewRotationItem(rotation.itemStates[key], correct, now);
+      rotation.position += 1;
+      if (rotation.position >= rotation.queue.length) {
+        const today = rotationDateString(now);
+        rotation.streakDays = nextStreakDays(rotation.lastCompletedDate, today, rotation.streakDays);
+        rotation.lastCompletedDate = today;
+      }
+    } else {
+      rotation.position += 1;
+    }
     save();
     render();
     return true;

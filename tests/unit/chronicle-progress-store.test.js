@@ -69,6 +69,38 @@ describe("readProgress", () => {
       "case-006": { questState: { placements: {} }, completed: true },
     });
   });
+
+  it("merges a saved `archiveRotation` bucket over the defaults (normal case)", () => {
+    saveProgress({
+      ...DEFAULT_PROGRESS,
+      archiveRotation: {
+        itemStates: { "mcq::case-001-mcq-1": { box: 2, dueAt: 123, lastSeenAt: 100 } },
+        queueDate: "2026-07-28",
+        queue: ["mcq::case-001-mcq-1"],
+        position: 0,
+        streakDays: 3,
+        lastCompletedDate: "2026-07-27",
+      },
+    });
+
+    expect(readProgress().archiveRotation).toEqual({
+      itemStates: { "mcq::case-001-mcq-1": { box: 2, dueAt: 123, lastSeenAt: 100 } },
+      queueDate: "2026-07-28",
+      queue: ["mcq::case-001-mcq-1"],
+      position: 0,
+      streakDays: 3,
+      lastCompletedDate: "2026-07-27",
+    });
+  });
+
+  it("discards a corrupted non-array `archiveRotation.queue` field instead of trusting it (regression case)", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ archiveRotation: { queue: "not-an-array" } })
+    );
+
+    expect(readProgress().archiveRotation.queue).toEqual([]);
+  });
 });
 
 describe("tutorial field (retroactive onboarding for pre-existing saves)", () => {
