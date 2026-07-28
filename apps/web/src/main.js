@@ -1758,7 +1758,7 @@ function loadingNote(text) {
 //   actions: an array of btn() options objects, breadcrumb: raw HTML }
 function pageHeaderMarkup({ eyebrow, title, description, status, actions = [], breadcrumb = "" }) {
   return `${breadcrumb}<div class="c-page-header">
-<div><p class="c-eyebrow">${esc(eyebrow)}</p><h1 class="c-page-title">${esc(title)}</h1>${description ? `<p class="c-page-description">${esc(description)}</p>` : ""}</div>
+<div>${eyebrow ? `<p class="c-eyebrow">${esc(eyebrow)}</p>` : ""}<h1 class="c-page-title">${esc(title)}</h1>${description ? `<p class="c-page-description">${esc(description)}</p>` : ""}</div>
 <div class="c-page-actions">${status ? chip(status) : ""}${actions.map(btn).join("")}</div>
 </div>`;
 }
@@ -2346,14 +2346,25 @@ function teacherUnitsTabMarkup() {
   const unitSections = UNITS.map(manageContentUnitSectionMarkup).join("");
   return `
 ${teacherUiState.selectedClassroomId ? teacherUnitAccessMarkup() : ""}
-<h2>Missions</h2>
-<p>Pick a unit to see its missions, then open one to review its intent, preview its content, and swap its practice questions — and, for non-map missions, its sources — for this classroom.</p>
+${sectionHeadMarkup({
+  title: "Missions",
+  description:
+    "Pick a unit to see its missions, then open one to review its intent, preview its content, and swap its practice questions — and, for non-map missions, its sources — for this classroom.",
+})}
 ${unitSections}`;
 }
 
 function teacherDashboardScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="c-page c-app">${pageHeaderMarkup({
+      eyebrow: BRAND.engine,
+      title: "Teacher Dashboard",
+      description: "Sign in as a teacher to manage classrooms.",
+      actions: [
+        { label: "Teacher Sign In →", action: "open-teacher-login", variant: "secondary" },
+        { label: "← Back", action: "open-main-menu", variant: "secondary" },
+      ],
+    })}</main>${authorPanel()}`;
   }
   // Join code is real, useful info (what a teacher hands students to join)
   // but was baked into the button's primary label — now a visually
@@ -2371,17 +2382,21 @@ function teacherDashboardScreen() {
     units: teacherUnitsTabMarkup,
   };
   const activeTabBody = (tabBodies[teacherUiState.activeTab] || teacherClassroomsTabMarkup)();
-  return `${chrome()}<main class="shell completion-shell c-app"><section>
-<p class="kicker">${esc(BRAND.engine)}</p>
-<h1>Teacher Dashboard</h1>
-<p>Signed in as ${esc(currentProfile.displayName)}.</p>
-<div class="completion-actions">${classroomButtons}</div>
+  return `${chrome()}<main class="c-page c-app">
+${pageHeaderMarkup({
+  eyebrow: BRAND.engine,
+  title: "Teacher Dashboard",
+  description: `Signed in as ${currentProfile.displayName}.`,
+  actions: [
+    { label: "Sign out", action: "teacher-sign-out", variant: "secondary" },
+    { label: "← Back", action: "open-main-menu", variant: "secondary" },
+  ],
+})}
+<div class="c-toolbar">${classroomButtons}</div>
 ${feedbackError(teacherUiState)}
 ${teacherDashboardTabsMarkup()}
 <div id="teacher-dashboard-tabpanel" role="tabpanel" aria-label="${esc(TEACHER_DASHBOARD_TABS.find((t) => t.id === teacherUiState.activeTab)?.label || "Classrooms")}">${activeTabBody}</div>
-<button class="btn btn-outline" data-action="teacher-sign-out" type="button">Sign out</button>
-<button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button>
-</section></main>${authorPanel()}`;
+</main>${authorPanel()}`;
 }
 
 // Compact status card, not a shouted banner — was a bare .kicker rendering
@@ -2390,7 +2405,7 @@ function teacherUnitAccessMarkup() {
   const index = teacherUiState.enabledUnitIndex;
   const currentUnit = UNITS[index];
   const nextUnit = UNITS[index + 1];
-  return `<h2>Unit access</h2>
+  return `${sectionHeadMarkup({ title: "Unit access" })}
 <div class="c-panel manage-content-unit-access">
 <div class="manage-content-unit-access-row">
 <p class="c-help">Students can currently reach <strong>${esc(resolvedUnitTitle(currentUnit))}</strong> and everything before it.</p>
