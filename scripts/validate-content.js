@@ -37,6 +37,7 @@ import {
   SourceAnalysisQuestSchema,
   SourceAnalysisQuestListSchema,
 } from "../apps/web/src/quest-types/history/source-analysis-quest.js";
+import { SaqQuestListSchema } from "../apps/web/src/quest-types/history/saq-quest.js";
 import { QUEST_TYPES } from "../apps/web/src/quest-types/index.js";
 import {
   buildPrimarySourcesSchema,
@@ -305,6 +306,13 @@ function main() {
       content.unit03.archiveChallengeQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_ARCHIVE_SAQ_QUESTS",
+      SaqQuestListSchema,
+      content.unit03.archiveSaqQuests
+    )
+  );
 
   // Primary source reference library (apps/web/src/content/primary-source-library/)
   // — syllabus-wide research reference for Units 1-9, not gameplay content.
@@ -440,6 +448,12 @@ function main() {
       {
         source: "unit-03-quests.js:UNIT_03_INVESTIGATION_QUESTS",
         items: content.unit03.investigationQuests,
+      },
+    ],
+    saq: [
+      {
+        source: "unit-03-quests.js:UNIT_03_ARCHIVE_SAQ_QUESTS",
+        items: content.unit03.archiveSaqQuests,
       },
     ],
   };

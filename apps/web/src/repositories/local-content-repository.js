@@ -71,6 +71,7 @@ export function loadChronicleContent() {
       investigationQuests: unit03Quests.UNIT_03_INVESTIGATION_QUESTS,
       investigationMcqQuests: unit03Quests.UNIT_03_INVESTIGATION_MCQ_QUESTS,
       archiveChallengeQuests: unit03Quests.UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
+      archiveSaqQuests: unit03Quests.UNIT_03_ARCHIVE_SAQ_QUESTS,
     },
   };
 }

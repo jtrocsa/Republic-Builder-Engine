@@ -44,6 +44,16 @@ import {
   hippPartialSuccess,
   hippHint,
 } from "./history/source-analysis-quest.js";
+import {
+  SaqQuestSchema,
+  SaqQuestListSchema,
+  renderSaqQuest,
+  gradeSaqQuest,
+  saqAnsweredAny,
+  isSaqComplete,
+  saqPartialSuccess,
+  saqHint,
+} from "./history/saq-quest.js";
 
 // Key naming note: the evidence-organizing entry keeps the key
 // "evidence-organizing" (established in Phase 8, already wired into
@@ -96,6 +106,16 @@ export const QUEST_TYPES = {
     isComplete: isHippComplete,
     partialSuccess: hippPartialSuccess,
     hint: hippHint,
+  },
+  saq: {
+    schema: SaqQuestSchema,
+    listSchema: SaqQuestListSchema,
+    render: renderSaqQuest,
+    grade: gradeSaqQuest,
+    answeredAny: saqAnsweredAny,
+    isComplete: isSaqComplete,
+    partialSuccess: saqPartialSuccess,
+    hint: saqHint,
   },
 };
 

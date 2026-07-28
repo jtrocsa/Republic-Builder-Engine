@@ -346,4 +346,77 @@ test.describe("Archive Challenge", () => {
     await expect(marker).toHaveCount(1);
     await expect(marker).toHaveClass(/route-marker--locked/);
   });
+
+  // Unit 3's bonus Archive Challenge (Phase 49A) — the real "saq" quest type's
+  // proving ground. Unlike case-005/006/008/009 above, this isn't tied to any
+  // case (unit.archiveChallenges[], not cases[].archiveChallenge), so
+  // completing it doesn't unlock a case or write to progress.completedCases —
+  // only progress.archiveChallenges[questId].status. "Complete" here means
+  // "submitted" (every part has a response), not AI-graded — the Archive
+  // Evaluator button that then appears is a separate, optional feedback step.
+  const SAQ_QUEST_ID = "unit-03-archive-common-cause-saq";
+
+  test("unit-03 bonus SAQ: draft all three parts and complete", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${SAQ_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+
+    for (let index = 0; index < 3; index += 1) {
+      const field = quest.locator(
+        `[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="${index}"]`
+      );
+      await field.fill(`Draft response for part ${index}.`);
+      // handleAppChange persists on the "change" event (fires on blur), same
+      // as every other reflection/response textarea in this suite — fill()
+      // alone doesn't commit a change event, so each field needs its own
+      // explicit blur before moving to the next one re-renders the DOM.
+      await field.blur();
+    }
+
+    await expect(quest.locator("..").locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+    await expect(
+      quest.locator("..").getByRole("button", { name: "Get Archive Evaluator feedback →" })
+    ).toBeVisible();
+
+    const stored = await readProgress(page);
+    expect(stored.questResponses[SAQ_QUEST_ID].responses).toEqual({
+      0: "Draft response for part 0.",
+      1: "Draft response for part 1.",
+      2: "Draft response for part 2.",
+    });
+    expect(stored.archiveChallenges[SAQ_QUEST_ID]?.status).toBe("complete");
+    // Bonus challenge, not tied to any case — doesn't unlock/complete a case.
+    expect(stored.completedCases).not.toContain("case-009");
+  });
+
+  test("unit-03 bonus SAQ: incomplete until every part has a response", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${SAQ_QUEST_ID}"]`);
+    await quest
+      .locator(`[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="0"]`)
+      .fill("Only part A answered.");
+    await quest
+      .locator(`[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="0"]`)
+      .blur();
+
+    await expect(quest.locator("..").locator(".activity-feedback.success")).toHaveCount(0);
+    await expect(
+      quest.locator("..").getByRole("button", { name: "Get Archive Evaluator feedback →" })
+    ).toHaveCount(0);
+
+    const stored = await readProgress(page);
+    expect(stored.archiveChallenges[SAQ_QUEST_ID]?.status).not.toBe("complete");
+  });
 });

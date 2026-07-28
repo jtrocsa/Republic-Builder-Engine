@@ -28,7 +28,10 @@ export const McqQuestionSchema = z
 // docs/content/CONTENT-VALIDATION.md's "Known limitations".
 const RUBRIC_TOTAL_PATTERN = /(\d+)\s*points?\s*total/i;
 
-const SaqSchema = z
+// Exported because apps/web/src/quest-types/history/saq-quest.js reuses this
+// exact shape (plus an `id` field) as the generic SAQ quest-type content
+// contract, rather than duplicating an equivalent schema.
+export const SaqSchema = z
   .object({
     stimulus: z.string().min(1, "saq.stimulus is required"),
     prompts: z.array(z.string().min(1)).min(1, "saq.prompts must contain at least one prompt"),

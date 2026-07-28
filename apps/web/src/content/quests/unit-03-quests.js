@@ -423,6 +423,28 @@ export const UNIT_03_ARCHIVE_CHALLENGE_QUESTS = [
   },
 ];
 
+// Real per-quest SAQ content (Phase 49A) — proves the new "saq" quest type
+// (apps/web/src/quest-types/history/saq-quest.js) end to end as Unit 3's
+// bonus Archive Challenge (unit.archiveChallenges[], see
+// unit-03-campaign.js). Reuses Dickinson's "Letters from a Farmer" excerpt,
+// already a real case-007 source, as the stimulus — the same
+// already-covered-source convention REVIEW.saq/UNIT_02_REVIEW.saq already
+// use for the unit-level Archive Review SAQ block.
+export const UNIT_03_ARCHIVE_SAQ_QUESTS = [
+  {
+    id: "unit-03-archive-common-cause-saq",
+    stimulus:
+      "“The parliament unquestionably possesses a legal authority to regulate the trade of Great Britain and all her colonies… But here I apprehend the parliament has exceeded the bounds of that authority… If you once admit that Great Britain may lay duties upon her exportations to us, for the purpose of levying money on us only, she will then have nothing to do but to lay those duties on the articles which she prohibits us to manufacture — and the tragedy of American liberty is finished.” — John Dickinson, Letters from a Farmer in Pennsylvania, Letter II, December 10, 1767",
+    prompts: [
+      "A. Identify one distinction Dickinson draws between Parliament's authority to regulate colonial trade and its authority to tax colonists for revenue.",
+      "B. Explain one reason why arguments like Dickinson's contributed to growing colonial resistance to British policy in the period 1765–1776.",
+      "C. Explain one way that appeals to natural rights similar to Dickinson's were used by another group in America to argue for rights they had been denied in the period 1776–1800.",
+    ],
+    rubric:
+      "SAQ practice rubric: 3 points total. Earn 1 point for each response that gives a historically defensible claim and supports it with accurate, relevant historical information.",
+  },
+];
+
 export const UNIT_03_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-007-hipp-henry-speech",

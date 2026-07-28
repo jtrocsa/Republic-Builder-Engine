@@ -40,3 +40,25 @@ export function buildSaqEvaluationRequest(unit, review, saqAnswers, priorSubmiss
     isRevision: Boolean(priorSubmission),
   };
 }
+
+// Same "saq" taskType/rubric as buildSaqEvaluationRequest above, but for a
+// per-quest-instance SAQ (apps/web/src/quest-types/history/saq-quest.js)
+// rather than the unit-level Archive Review SAQ block — the only difference
+// is taskId is derived from the quest's own id, not a unit id, and the quest
+// shape (quest.prompts/quest.stimulus) already matches review.saq's shape.
+export function buildSaqQuestEvaluationRequest(quest, responses, priorSubmission) {
+  const prompts = quest.prompts;
+  const studentResponse = prompts
+    .map((prompt, index) => `${prompt}\n${(responses[index] || "").trim()}`)
+    .join("\n\n");
+  return {
+    taskType: "saq",
+    taskId: `saq-quest-${quest.id}`,
+    prompt: prompts.join(" "),
+    stimulus: quest.stimulus,
+    sourceMetadata: null,
+    elementsAsked: null,
+    studentResponse,
+    isRevision: Boolean(priorSubmission),
+  };
+}

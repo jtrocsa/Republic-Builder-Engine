@@ -63,6 +63,7 @@ import {
   UNIT_03_INVESTIGATION_QUESTS,
   UNIT_03_INVESTIGATION_MCQ_QUESTS,
   UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
+  UNIT_03_ARCHIVE_SAQ_QUESTS,
 } from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -170,6 +171,7 @@ import { validateJoinCode, validateStudentIdCode, validatePassword } from "./eng
 import {
   buildHippEvaluationRequest,
   buildSaqEvaluationRequest,
+  buildSaqQuestEvaluationRequest,
 } from "./engine/evaluator-requests.js";
 import { evaluateSubmission } from "./engine/evaluator-client.js";
 
@@ -1963,6 +1965,7 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
   ],
   sequencing: UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
   mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
+  saq: UNIT_03_ARCHIVE_SAQ_QUESTS,
 };
 // Returns {questType, quest} rather than just the content — a published
 // teacher-authored replacement can be a genuinely different quest type than
@@ -6340,6 +6343,12 @@ function archiveChallengeQuestCard(
     };
     if (!alreadyComplete) playSfx("upload");
     onComplete?.();
+    // Case-level challenges get re-saved as a side effect of onComplete's
+    // unlockNext() (which calls save() itself) — but a unit-level bonus
+    // challenge (unit.archiveChallenges[], no onComplete) has nothing else to
+    // trigger a save after this mutation, so the completion above would
+    // otherwise only ever exist in memory, never actually persisted.
+    save();
   }
   if (alreadyComplete) {
     return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(kicker)}</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — this collection has already been restored and preserved.</p></div>`;
@@ -6352,7 +6361,18 @@ function archiveChallengeQuestCard(
     : questAnsweredAny(questType, state)
       ? "in-progress"
       : "unanswered";
-  return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}</div>`;
+  // SAQ's "complete" only means "submitted" (see saq-quest.js's module doc
+  // comment) — the AI Archive Evaluator round trip is a separate, optional
+  // step composed here rather than inside renderQuest/gradeQuest, the same
+  // way sourceReader()/reviewScreen() layer their own evaluator sections
+  // around their own bespoke content.
+  const saqTaskId = questType === "saq" ? `saq-quest-${quest.id}` : null;
+  const existingSaqSubmission = saqTaskId ? progress.submissions[saqTaskId] : null;
+  const saqEvaluatorSection =
+    questType === "saq" && complete
+      ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-saq-quest" data-quest="${esc(quest.id)}" ${evaluatorPendingTaskIds.has(saqTaskId) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(saqTaskId) ? "Consulting the Archive Evaluator…" : existingSaqSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[saqTaskId] ? `<p class="feedback error">${esc(evaluatorErrors[saqTaskId])}</p>` : ""}${archiveFeedbackMarkup(existingSaqSubmission?.feedback?.payload)}</section>`
+      : "";
+  return `<div class="quest-practice-item archive-challenge-item" data-quest-status="${status}"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state)}${feedback}${saqEvaluatorSection}</div>`;
 }
 
 function archiveChallengeCard(kicker, questType, questId, opts) {
@@ -8834,6 +8854,19 @@ function handleEvaluatorClick(target, action) {
     runEvaluation(taskId, buildSaqEvaluationRequest(unit, review, state.saq || {}, prior));
     return true;
   }
+  if (action === "evaluate-saq-quest") {
+    const questId = target.dataset.quest;
+    const resolved = archiveChallengeQuestFor("saq", questId);
+    if (!resolved?.quest) return true;
+    const state = progress.questResponses[questId] || {};
+    const taskId = `saq-quest-${questId}`;
+    const prior = progress.submissions[taskId];
+    runEvaluation(
+      taskId,
+      buildSaqQuestEvaluationRequest(resolved.quest, state.responses || {}, prior)
+    );
+    return true;
+  }
   return false;
 }
 
@@ -9021,6 +9054,18 @@ async function handleAppChange(event) {
     progress.questResponses[questId] = {
       ...state,
       selected: { ...(state.selected || {}), [promptId]: field.value },
+    };
+    playQuestSfx(questId);
+    save();
+    render();
+  } else if (field.matches("[data-saq-quest]")) {
+    const questId = field.dataset.saqQuest;
+    const index = field.dataset.saqIndex;
+    if (!questId || index === undefined) return;
+    const state = progress.questResponses[questId] || {};
+    progress.questResponses[questId] = {
+      ...state,
+      responses: { ...(state.responses || {}), [index]: field.value },
     };
     playQuestSfx(questId);
     save();

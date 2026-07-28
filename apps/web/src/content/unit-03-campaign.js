@@ -51,12 +51,15 @@ export const UNIT_03 = {
     "How a widening imperial crisis over land, taxation, and representation after the Seven Years' War escalated into armed revolution — and how the ideals colonists invoked to justify independence were claimed, extended, and denied unevenly among Indigenous nations, enslaved and free Black Americans, women, and Loyalists.",
   centralQuestion:
     "How did the ideals colonists used to justify revolution against Britain both inspire and fail to extend equally to the many peoples who lived through Period 3?",
-  // No unit-level bonus Archive Challenges — this unit's only one
+  // This unit's original bonus Archive Challenge
   // ("unit-03-archive-appeal-form-comparison") was promoted to case-009's
-  // own archiveChallenge below (Phase 48D), so every unit completion
-  // requirement now flows through unit.cases.every(isComplete) alone (see
-  // main.js's unitReadyForReview()/unitArchiveChallengesComplete()).
-  archiveChallenges: [],
+  // own archiveChallenge (Phase 48D). Phase 49A adds a new bonus entry here —
+  // the real per-quest SAQ content type's proving ground
+  // (unit-03-archive-common-cause-saq, content/quests/unit-03-quests.js) —
+  // so unit completion once again requires this array too, alongside
+  // unit.cases.every(isComplete) (see main.js's
+  // unitReadyForReview()/unitArchiveChallengesComplete()).
+  archiveChallenges: [{ questType: "saq", questId: "unit-03-archive-common-cause-saq" }],
   cases: [
     {
       id: "case-007",

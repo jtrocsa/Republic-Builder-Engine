@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildHippEvaluationRequest,
   buildSaqEvaluationRequest,
+  buildSaqQuestEvaluationRequest,
 } from "../../apps/web/src/engine/evaluator-requests.js";
 
 const SOURCE = {
@@ -79,6 +80,39 @@ describe("buildSaqEvaluationRequest", () => {
 
   it("marks isRevision true when a prior submission is passed", () => {
     const request = buildSaqEvaluationRequest(unit, review, {}, { some: "prior" });
+    expect(request.isRevision).toBe(true);
+  });
+});
+
+describe("buildSaqQuestEvaluationRequest", () => {
+  const quest = {
+    id: "unit-03-archive-common-cause-saq",
+    stimulus: "A quoted primary source stimulus.",
+    prompts: ["A. Identify one feature.", "B. Explain one change.", "C. Explain one cause."],
+  };
+
+  it("concatenates all three SAQ parts into one studentResponse, in prompt order", () => {
+    const responses = { 0: "Answer A", 1: "Answer B", 2: "Answer C" };
+    const request = buildSaqQuestEvaluationRequest(quest, responses, null);
+
+    expect(request.taskType).toBe("saq");
+    expect(request.taskId).toBe("saq-quest-unit-03-archive-common-cause-saq");
+    expect(request.stimulus).toBe(quest.stimulus);
+    expect(request.elementsAsked).toBeNull();
+    expect(request.isRevision).toBe(false);
+    expect(request.studentResponse).toBe(
+      "A. Identify one feature.\nAnswer A\n\nB. Explain one change.\nAnswer B\n\nC. Explain one cause.\nAnswer C"
+    );
+  });
+
+  it("treats a missing answer for a part as an empty string rather than throwing", () => {
+    const responses = { 0: "Answer A" };
+    const request = buildSaqQuestEvaluationRequest(quest, responses, null);
+    expect(request.studentResponse).toContain("B. Explain one change.\n\n");
+  });
+
+  it("marks isRevision true when a prior submission is passed", () => {
+    const request = buildSaqQuestEvaluationRequest(quest, {}, { some: "prior" });
     expect(request.isRevision).toBe(true);
   });
 });
