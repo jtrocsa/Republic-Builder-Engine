@@ -2574,7 +2574,7 @@ function teacherSourcesUnitSectionMarkup(meta) {
   if (isOpen) {
     const locked = lockedSourcesForUnitNumber(unitNumber);
     const lockedMarkup = locked.length
-      ? `<h4>Locked (official)</h4><ul class="source-pool-list">${locked
+      ? `${sectionHeadMarkup({ title: "Locked (official)" })}<ul class="source-pool-list">${locked
           .map(
             ({ source, caseTitle }) =>
               `<li class="source-pool-row">${chip({ label: "Locked", tone: "muted" })}<span class="source-pool-row-copy"><strong>${esc(source.title)}</strong><span class="kicker">Required by ${esc(caseTitle)}</span></span></li>`
@@ -2599,11 +2599,16 @@ function teacherSourcesUnitSectionMarkup(meta) {
         ? sourceRowListMarkup(unitNumber, added, pool)
         : `<p class="case-summary-note">No sources added yet — add one from the pool below.</p>`;
       poolSectionsMarkup = `
-<h4>Unit ${unitNumber}: ${esc(meta.label)} Mission Pool Sources</h4>
-<p class="case-summary-note">Mission pool sources are available when you design quests for this unit. Come back to this page anytime to add or remove a source.</p>
+${sectionHeadMarkup({
+        title: `Unit ${unitNumber}: ${meta.label} Mission Pool Sources`,
+        description:
+          "Mission pool sources are available when you design quests for this unit. Come back to this page anytime to add or remove a source.",
+      })}
 ${missionPoolMarkup}
-<h4>Available pool</h4>
-<p class="case-summary-note">Browse every researched source for this unit and add the ones you want available for quest design.</p>
+${sectionHeadMarkup({
+        title: "Available pool",
+        description: "Browse every researched source for this unit and add the ones you want available for quest design.",
+      })}
 ${sourceRowListMarkup(unitNumber, available, pool)}`;
     }
     body = `<div class="manage-content-unit-body">
@@ -2611,13 +2616,12 @@ ${lockedMarkup}
 ${poolSectionsMarkup}
 </div>`;
   }
-  return `<section class="manage-content-unit ${isOpen ? "is-open" : ""}">
-<button class="manage-content-unit-toggle" data-action="toggle-sources-unit" data-unit="${unitNumber}" type="button" aria-expanded="${isOpen}">
-<span class="manage-content-unit-chevron" aria-hidden="true">${isOpen ? "▾" : "▸"}</span>
+  return `<details class="manage-content-unit"${isOpen ? " open" : ""}>
+<summary class="manage-content-unit-toggle" data-action="toggle-sources-unit" data-unit="${unitNumber}">
 <span class="manage-content-unit-heading"><span class="manage-content-unit-number">Unit ${unitNumber}</span><span class="manage-content-unit-title">${esc(meta.label)}</span><span class="kicker">${esc(meta.period)} · ${esc(meta.years)}</span></span>
-</button>
+</summary>
 ${body}
-</section>`;
+</details>`;
 }
 
 function teacherSourcesTabMarkup() {
@@ -3015,18 +3019,16 @@ ${detail ? `<p class="c-help">${esc(detail)}</p>` : ""}
 </article>`;
 }
 
-// Prototype of native <details>/<summary> in place of the hand-rolled
-// disclosure button+chevron used elsewhere (e.g. teacherSourcesUnitMarkup()'s
-// "manage-content-unit" pattern) — see FOCUSED-MODERNIZATION-ROADMAP.md item
-// 8. render() fully replaces app.innerHTML on every state change, so the
-// `open` attribute below still has to be driven from manageContentExpandedUnitId
-// exactly like the old aria-expanded/chevron were — it isn't relying on the
-// browser to remember native disclosure state across a re-render. What native
-// <details> actually buys here is that handleAppClick() already calls
-// event.preventDefault() before dispatching to toggle-manage-content-unit,
-// which suppresses the browser's own click-to-toggle on <summary> so there's
-// no double-toggle race with our render() — letting us drop the manual
-// aria-expanded and chevron glyph in favor of the built-in disclosure marker.
+// Native <details>/<summary> disclosure (Phase 47F unified the Sources tab's
+// teacherSourcesUnitSectionMarkup() onto this same pattern — both accordions
+// on the Teacher Dashboard now share one "manage-content-unit" markup shape).
+// render() fully replaces app.innerHTML on every state change, so the `open`
+// attribute below still has to be driven from manageContentExpandedUnitId
+// rather than relying on the browser to remember native disclosure state
+// across a re-render. handleAppClick() already calls event.preventDefault()
+// before dispatching any [data-action] click, which suppresses the browser's
+// own click-to-toggle on <summary> so there's no double-toggle race with
+// render().
 function manageContentUnitSectionMarkup(unit) {
   const isOpen = manageContentExpandedUnitId === unit.id;
   const unitNumber = Number(unit.id.split("-")[1]);
