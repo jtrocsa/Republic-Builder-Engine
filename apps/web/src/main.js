@@ -2550,7 +2550,7 @@ function sourceRowMarkup(item, kind, unitNumber, inPool) {
   const key = `${kind}:${item.id}`;
   const previewExpanded = teacherUiState.sourcesPreviewKeys.has(key);
   const toggleLabel = inPool ? "− Remove" : "+ Add";
-  return `<li class="source-pool-row ${inPool ? "is-selected" : ""} ${previewExpanded ? "is-expanded" : ""}">
+  return `<li class="source-pool-row c-card ${inPool ? "is-selected" : ""} ${previewExpanded ? "is-expanded" : ""}">
 <div class="source-pool-row-main">
 <button class="btn ${inPool ? "btn-gold" : "btn-outline"}" data-action="toggle-source-pool" data-unit="${unitNumber}" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button">${toggleLabel}</button>
 <button class="btn btn-plain" data-action="toggle-source-preview" data-source-id="${esc(item.id)}" data-source-kind="${kind}" type="button" aria-expanded="${previewExpanded}">${previewExpanded ? "View ▾" : "View ▸"}</button>
@@ -3010,7 +3010,7 @@ ${body}
 
 function manageContentMissionCardMarkup(c) {
   const detail = caseKindDetail(c);
-  return `<article class="manage-content-mission-card">
+  return `<article class="manage-content-mission-card c-card c-card--interactive">
 <div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p>${chip({ label: caseKindLabel(c), tone: "gold" })}</div>
 <h3>${esc(resolvedCaseTitle(c))}</h3>
 ${detail ? `<p class="c-help">${esc(detail)}</p>` : ""}
@@ -3263,7 +3263,7 @@ function selectedSourceSummaryCardMarkup(fieldKey, poolValue, currentText, slot,
   const restoreNote = slot?.latestCustomAltId
     ? `<p class="manage-content-source-summary-restore-note">This activity has a saved custom version. Use Restore Standard Version below to reset everything — source, prompt, and excerpt — back to the official version.</p>`
     : "";
-  return `<div class="manage-content-source-summary-card">
+  return `<div class="manage-content-source-summary-card c-card">
 <div class="manage-content-source-summary-head">
 <strong>${esc(resolved.label)}</strong>
 ${customized ? `<span class="manage-content-source-summary-customized-badge">✎ Customized excerpt</span>` : ""}
@@ -3428,7 +3428,7 @@ function manageContentEditorSectionMarkup(sectionKey, title, { summary, body, co
   const toggleBtn = canCollapse
     ? `<button type="button" class="btn btn-plain manage-content-editor-section-toggle" data-action="toggle-authoring-section" data-section-key="${esc(sectionKey)}">${collapsed ? "Edit" : "Collapse"}</button>`
     : "";
-  return `<div class="manage-content-editor-section${collapsed ? " is-collapsed" : ""}" data-section-key="${esc(sectionKey)}" tabindex="-1">
+  return `<div class="manage-content-editor-section c-card${collapsed ? " is-collapsed" : ""}" data-section-key="${esc(sectionKey)}" tabindex="-1">
 <div class="manage-content-editor-section-head"><span class="manage-content-editor-section-title">${esc(title)}</span>${toggleBtn}</div>
 ${collapsed ? `<p class="manage-content-editor-section-summary-text">${esc(summary)}</p>` : ""}
 <div class="manage-content-editor-section-body"${collapsed ? " hidden" : ""}>${body}</div>
@@ -4271,9 +4271,9 @@ ${
 ${isReplace ? `<button class="btn btn-plain" data-action="replace-choose-type" type="button">← Back to activity types</button>` : ""}
 ${showRestore ? `<button class="btn btn-plain" data-action="restore-standard-version" type="button">Restore Standard Version</button>` : ""}
 <div class="manage-content-status-bar">
-<span class="manage-content-status-pill">Published Mission: ${slot?.publishedAltId ? "Customized" : "Standard"}</span>
-<span class="manage-content-status-pill">Student View: Ready</span>
-<span class="manage-content-status-pill">Source: ${esc(sourceHandlingStatusLabel(auth.slotKind, auth.fields))}</span>
+${chip({ label: `Published Mission: ${slot?.publishedAltId ? "Customized" : "Standard"}` })}
+${chip({ label: "Student View: Ready" })}
+${chip({ label: `Source: ${sourceHandlingStatusLabel(auth.slotKind, auth.fields)}` })}
 </div>`
     : ""
 }

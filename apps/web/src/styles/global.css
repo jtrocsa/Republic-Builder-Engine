@@ -7924,22 +7924,14 @@ details[open] > summary.manage-content-unit-toggle::before {
   gap: 14px;
   margin-top: 14px;
 }
+/* Surface (border/radius/background/hover-lift) comes from .c-card/
+   .c-card--interactive (Phase 47G) — this class now only carries the
+   card's own internal layout. */
 .manage-content-mission-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 16px 18px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.22);
-  border-radius: 14px;
-  background: rgba(4, 26, 38, 0.32);
-  transition:
-    border-color var(--c-dur-base) ease,
-    transform var(--c-dur-base) ease;
-}
-.manage-content-mission-card:hover,
-.manage-content-mission-card:focus-within {
-  border-color: var(--c-border-strong);
-  transform: translateY(-2px);
 }
 .manage-content-mission-head {
   display: flex;
@@ -7978,13 +7970,11 @@ details[open] > summary.manage-content-unit-toggle::before {
   padding: 0;
   list-style: none;
 }
+/* Surface comes from .c-card (Phase 47G) — this class only carries layout. */
 .source-pool-row {
   display: flex;
   flex-direction: column;
   padding: 8px 12px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.18);
-  border-radius: 10px;
-  background: rgba(4, 26, 38, 0.28);
 }
 /* Without this, the row's default column-flex stretch pulls the chip to
    the row's full width instead of hugging its own text (Phase 47C, found
@@ -8446,12 +8436,12 @@ details[open] > summary.manage-content-unit-toggle::before {
 
 /* Guided editor sections (Source & stimulus / Student directions / Question
    / Answer structure) — see manageContentEditorSectionMarkup(). */
+/* Surface comes from .c-card (Phase 47G); .is-collapsed below still
+   overrides the background for its dimmed state, since that selector's
+   higher specificity wins over .c-card's regardless of source order. */
 .manage-content-editor-section {
   margin-bottom: 16px;
   padding: 12px 14px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.22);
-  border-radius: 10px;
-  background: rgba(var(--c-black-rgb), 0.12);
 }
 .manage-content-editor-section:focus {
   outline: 2px solid var(--gold);
@@ -8656,9 +8646,10 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 
 /* Bottom status row (Published Mission / Student View / Source Text
-   Handling) — a pill look matching .c-chip's (Phase 47C removed the old
-   .case-kind-badge this used to reference; folding this onto .c-chip
-   itself is tracked as Phase 47G's surface sweep). */
+   Handling) — Phase 47G folded the pills onto chip(), since
+   .manage-content-status-pill's recipe (padding 5px 12px, rgba(gold,0.4)
+   border, 999px radius, #d8e3de text) was a byte-for-byte duplicate of
+   .c-chip's default tone. */
 .manage-content-status-bar {
   display: flex;
   flex-wrap: wrap;
@@ -8666,16 +8657,6 @@ details[open] > summary.manage-content-unit-toggle::before {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
-}
-.manage-content-status-pill {
-  padding: 5px 12px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.4);
-  border-radius: 999px;
-  background: rgba(4, 26, 38, 0.4);
-  color: #d8e3de;
-  font-size: var(--c-text-label);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .field-preview-banner {
   display: flex;
@@ -8859,15 +8840,13 @@ details[open] > summary.manage-content-unit-toggle::before {
   font-size: var(--c-text-body);
 }
 
+/* Surface comes from .c-card (Phase 47G) — this class only carries layout. */
 .manage-content-source-summary-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 14px;
   margin-bottom: 10px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.28);
-  border-radius: 12px;
-  background: rgba(5, 40, 56, 0.4);
 }
 .manage-content-source-summary-head {
   display: flex;
