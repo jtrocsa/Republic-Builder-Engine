@@ -4037,11 +4037,20 @@ function manageContentStepIndicatorMarkup(activeCase) {
 
 function manageContentCaseScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section>${pageHeaderMarkup({
+      eyebrow: BRAND.engine,
+      title: "Manage Content",
+      description: "Sign in as a teacher to manage content.",
+      actions: [{ label: "Teacher Sign In →", action: "open-teacher-login", variant: "secondary" }],
+    })}</section></main>${authorPanel()}`;
   }
   const activeCase = caseById(contentUiState.selectedCaseId);
   if (!activeCase) {
-    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p></section></main>${authorPanel()}`;
+    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section>${pageHeaderMarkup({
+      eyebrow: BRAND.engine,
+      title: "Manage Content",
+      description: contentUiState.error || "Loading case…",
+    })}</section></main>${authorPanel()}`;
   }
   // Map Missions are entirely fixed content — the walkable map, its NPCs/
   // sources, and its Practice Check questions are all locked — so this is
@@ -4051,6 +4060,7 @@ function manageContentCaseScreen() {
   // "Back" buttons used to.
   if (activeCase.route === "field") {
     return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell c-app"><section>
+${pageHeaderMarkup({ eyebrow: activeCase.shortTitle, title: resolvedCaseTitle(activeCase) })}
 ${missionRenameControlMarkup(activeCase)}
 <p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
 </section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
@@ -4081,9 +4091,11 @@ function manageContentWizardHeaderMarkup(activeCase) {
     .prefix.replace(/\s*—\s*$/, "")
     .trim();
   return `<div class="manage-content-wizard-header-top">${helpIconMarkup(MANAGE_CONTENT_WIZARD_HELP_TEXT)}</div>
-<p class="kicker">${esc(caseNumber || activeCase.shortTitle)}</p>
-<h1>${esc(resolvedCaseTitle(activeCase))}</h1>
-<p>${esc(activeCase.summary)}</p>`;
+${pageHeaderMarkup({
+  eyebrow: caseNumber || activeCase.shortTitle,
+  title: resolvedCaseTitle(activeCase),
+  description: activeCase.summary,
+})}`;
 }
 
 // Step 1 — "Mission Overview": the only thing a teacher sees before
