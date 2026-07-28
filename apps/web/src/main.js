@@ -140,7 +140,13 @@ import {
   listForClassroom,
   getSubmissionWithGrades,
   recordManualGrade,
+  getGradedEvaluationIds,
 } from "./repositories/remote-submission-repository.js";
+import {
+  listClassroomAssignments,
+  createAssignment,
+  deleteAssignment,
+} from "./repositories/remote-assignment-repository.js";
 import {
   getClassroomUnitFloor,
   advanceClassroomUnit,
@@ -1542,6 +1548,15 @@ let teacherUiState = {
   enabledUnitIndex: 0,
   error: "",
   pending: false,
+  // Assignments (Phase 50D) — due-date records layered on the existing
+  // submissions/evaluations/manual_grades tables; gradedEvaluationIds is a
+  // flat Set (not per-assignment) since computeAssignmentReport() cross-
+  // references it against teacherUiState.submissions itself. The create-form
+  // fields themselves are read straight from the DOM at click time (see
+  // "create-assignment"), matching new-classroom-name's existing convention
+  // — no controlled-input state needed.
+  assignments: [],
+  gradedEvaluationIds: new Set(),
   // Sources tab (Teacher Dashboard) — a classroom's curated pool of
   // candidate sources per unit, lazy-loaded per unit the first time its
   // accordion section is opened (also loaded from Manage Content's
@@ -2431,20 +2446,91 @@ ${
 const SUBMISSION_TASK_TYPE_LABEL = {
   "hipp-sourcing": "HIPP Sourcing",
   saq: "SAQ",
+  dbq: "DBQ",
 };
+
+// Task types a teacher can actually assign — deliberately narrower than the
+// DB's task_type check constraint (which also allows 'leq'): no real `leq`
+// quest type exists in QUEST_TYPES yet (see quest-types/index.js), so
+// offering it here would let a teacher create an assignment no submission
+// could ever match.
+const ASSIGNABLE_TASK_TYPES = ["hipp-sourcing", "saq", "dbq"];
+
+// Pure "class outcome reporting" math (Phase 50D): how many of a classroom's
+// claimed students have submitted / been graded against one assignment.
+// Deliberately student-deduplicated (a revision submission shouldn't double
+// count) rather than a raw submission count, and takes its three inputs
+// exactly as teacherUiState already loads them so this needs no Supabase
+// round trip of its own — it's a client-side join over data already fetched
+// for the Classrooms/Assignments tabs.
+export function computeAssignmentReport(assignment, roster, submissions, gradedEvaluationIds) {
+  const claimedCount = roster.filter((slot) => slot.status === "claimed").length;
+  const matching = submissions.filter(
+    (sub) => sub.taskType === assignment.taskType && sub.taskId === assignment.taskId
+  );
+  const submittedStudentIds = new Set(matching.map((sub) => sub.studentUserId));
+  const gradedStudentIds = new Set(
+    matching
+      .filter((sub) => gradedEvaluationIds.has(sub.evaluationId))
+      .map((sub) => sub.studentUserId)
+  );
+  return {
+    claimedCount,
+    submittedCount: submittedStudentIds.size,
+    gradedCount: gradedStudentIds.size,
+  };
+}
+
+function assignmentCreateFormMarkup() {
+  return `<div class="c-panel assignment-create-form">
+${fieldMarkup({ id: "new-assignment-title", label: "Assignment title", placeholder: "e.g. Unit 3 SAQ: Common Cause", autocomplete: "off" })}
+${fieldMarkup({
+  id: "new-assignment-task-type",
+  label: "Assessment type",
+  select: ASSIGNABLE_TASK_TYPES.map((value) => ({
+    value,
+    label: SUBMISSION_TASK_TYPE_LABEL[value] || value,
+  })),
+})}
+${fieldMarkup({ id: "new-assignment-task-id", label: "Task id", placeholder: "e.g. unit-03-archive-common-cause-saq", help: "The quest/source id this assignment tracks — matches the id a student's submission is recorded under.", autocomplete: "off" })}
+${fieldMarkup({ id: "new-assignment-due-at", label: "Due date", type: "date" })}
+<button class="btn btn-outline" data-action="create-assignment" type="button">Create assignment</button>
+</div>`;
+}
+
+function assignmentReportRowMarkup(assignment) {
+  const report = computeAssignmentReport(
+    assignment,
+    teacherUiState.roster,
+    teacherUiState.submissions,
+    teacherUiState.gradedEvaluationIds
+  );
+  const dueDate = new Date(assignment.dueAt);
+  const isOverdue = dueDate.getTime() < Date.now() && report.submittedCount < report.claimedCount;
+  return `<tr><td>${esc(assignment.title)}<br><span class="c-help">${esc(SUBMISSION_TASK_TYPE_LABEL[assignment.taskType] || assignment.taskType)} · ${esc(assignment.taskId)}</span></td><td>${chip({ label: dueDate.toLocaleDateString(), tone: isOverdue ? "error" : "muted" })}</td><td>${report.submittedCount}/${report.claimedCount} submitted</td><td>${report.gradedCount}/${report.submittedCount || 0} graded</td><td><button class="text-button is-danger" data-action="delete-assignment" data-assignment-id="${esc(assignment.id)}" type="button">Delete</button></td></tr>`;
+}
 
 function teacherAssignmentsTabMarkup() {
   if (!teacherUiState.selectedClassroomId)
     return emptyState({ body: "Select or create a classroom to review its submissions." });
+  const assignmentRows = teacherUiState.assignments.map(assignmentReportRowMarkup).join("");
+  const assignmentsTable = assignmentRows
+    ? `<table class="roster-table"><caption class="c-help">Assignments for this classroom</caption><thead><tr><th scope="col">Assignment</th><th scope="col">Due</th><th scope="col">Submitted</th><th scope="col">Graded</th><th scope="col"></th></tr></thead><tbody>${assignmentRows}</tbody></table>`
+    : emptyState({ body: "No assignments yet — create one below." });
   const submissionRows = teacherUiState.submissions
     .map(
       (sub) =>
         `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(SUBMISSION_TASK_TYPE_LABEL[sub.taskType] || sub.taskType)}<br><span class="c-help">${esc(sub.taskId)}</span></td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
     )
     .join("");
-  return submissionRows
+  const submissionsTable = submissionRows
     ? `<table class="roster-table"><caption class="c-help">Student submissions for this classroom</caption><thead><tr><th scope="col">Student</th><th scope="col">Assessment</th><th scope="col">Readiness</th><th scope="col"></th></tr></thead><tbody>${submissionRows}</tbody></table>`
     : emptyState({ body: "No submissions yet for this classroom." });
+  return `${sectionHeadMarkup({ title: "Assignments", description: "Track due dates and see class-wide submission/grading progress at a glance." })}
+${assignmentsTable}
+${assignmentCreateFormMarkup()}
+${sectionHeadMarkup({ title: "Submissions", description: "Every student submission for this classroom, regardless of assignment." })}
+${submissionsTable}`;
 }
 
 function teacherUnitsTabMarkup() {
@@ -2761,6 +2847,8 @@ async function loadSelectedClassroomDetails() {
     teacherUiState.submissions = [];
     teacherUiState.progressByStudent = {};
     teacherUiState.enabledUnitIndex = 0;
+    teacherUiState.assignments = [];
+    teacherUiState.gradedEvaluationIds = new Set();
     return;
   }
   teacherUiState.roster = await getRoster(teacherUiState.selectedClassroomId);
@@ -2769,6 +2857,10 @@ async function loadSelectedClassroomDetails() {
     teacherUiState.selectedClassroomId
   );
   teacherUiState.enabledUnitIndex = await getClassroomUnitFloor(teacherUiState.selectedClassroomId);
+  teacherUiState.assignments = await listClassroomAssignments(teacherUiState.selectedClassroomId);
+  teacherUiState.gradedEvaluationIds = await getGradedEvaluationIds(
+    teacherUiState.submissions.map((s) => s.evaluationId)
+  );
 }
 
 async function openGradingScreen(submissionId) {
@@ -8910,6 +9002,37 @@ function handleAuthScreenClick(target, action) {
       .catch(catchUiError(teacherUiState, "Could not remove this student."));
     return true;
   }
+  if (action === "create-assignment") {
+    if (!teacherUiState.selectedClassroomId) return true;
+    const title = document.getElementById("new-assignment-title")?.value.trim() || "";
+    const taskType = document.getElementById("new-assignment-task-type")?.value || "";
+    const taskId = document.getElementById("new-assignment-task-id")?.value.trim() || "";
+    const dueAtInput = document.getElementById("new-assignment-due-at")?.value || "";
+    if (!title || !taskId || !dueAtInput || !ASSIGNABLE_TASK_TYPES.includes(taskType)) {
+      teacherUiState.error = "Enter a title, task id, and due date.";
+      render();
+      return true;
+    }
+    teacherUiState.error = "";
+    // <input type="date"> yields "YYYY-MM-DD" with no time-of-day — treated
+    // as end-of-day local time so "due 2026-08-01" doesn't read as already
+    // overdue the moment it's created.
+    const dueAt = new Date(`${dueAtInput}T23:59:59`).toISOString();
+    createAssignment(teacherUiState.selectedClassroomId, { title, taskType, taskId, dueAt })
+      .then(() => loadSelectedClassroomDetails())
+      .then(() => render())
+      .catch(catchUiError(teacherUiState, "Could not create this assignment."));
+    return true;
+  }
+  if (action === "delete-assignment") {
+    const assignmentId = target.dataset.assignmentId;
+    teacherUiState.error = "";
+    deleteAssignment(assignmentId)
+      .then(() => loadSelectedClassroomDetails())
+      .then(() => render())
+      .catch(catchUiError(teacherUiState, "Could not delete this assignment."));
+    return true;
+  }
   if (action === "advance-classroom-unit") {
     if (!teacherUiState.selectedClassroomId) return true;
     teacherUiState.error = "";
@@ -9002,6 +9125,8 @@ function handleAuthScreenClick(target, action) {
         enabledUnitIndex: 0,
         error: "",
         pending: false,
+        assignments: [],
+        gradedEvaluationIds: new Set(),
         sourcePoolByUnit: {},
         sourcesExpandedUnit: null,
       };

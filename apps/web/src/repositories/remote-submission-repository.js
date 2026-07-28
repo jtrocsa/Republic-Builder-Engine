@@ -80,6 +80,7 @@ export async function listForClassroom(classroomId) {
       prompt: row.prompt,
       stimulus: row.stimulus,
       studentResponse: row.student_response,
+      studentUserId: row.student_user_id,
       studentDisplayName: row.profiles?.display_name ?? "Unknown student",
       createdAt: row.created_at,
       evaluationId: evaluation?.id ?? null,
@@ -87,6 +88,23 @@ export async function listForClassroom(classroomId) {
       readiness: evaluation?.feedback?.readiness ?? null,
     };
   });
+}
+
+// Assignment reporting (Phase 50D) needs to know which submissions already
+// have a teacher-entered grade, but listForClassroom() above doesn't fetch
+// manual_grades (only ever needed one at a time before, via
+// getSubmissionWithGrades). A flat `.in()` lookup against the evaluation ids
+// already on hand is simpler and less fragile than a nested embedded-filter
+// query across manual_grades -> evaluations -> submissions.
+export async function getGradedEvaluationIds(evaluationIds) {
+  const ids = evaluationIds.filter(Boolean);
+  if (!ids.length) return new Set();
+  const { data, error } = await supabase
+    .from("manual_grades")
+    .select("evaluation_id")
+    .in("evaluation_id", ids);
+  if (error) throw error;
+  return new Set(data.map((row) => row.evaluation_id));
 }
 
 export async function getSubmissionWithGrades(submissionId) {
