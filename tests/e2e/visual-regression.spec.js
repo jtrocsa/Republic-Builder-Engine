@@ -66,6 +66,13 @@ async function waitForTiledCanvas(page, canvasId) {
   );
 }
 
+// 1366x768 (Phase 45E) — the project's own named target hardware ("Chromebook 1366x768 is the
+// target case"), not Playwright's arbitrary 1280x720 device default. Phase 45E found and fixed
+// a real bug at this exact resolution (the Institute Main Hall and the field's Evidence Channel
+// both silently clipped real content past the right edge with no scrollbar); testing at the
+// actual target width going forward is what would have caught it originally.
+test.use({ viewport: { width: 1366, height: 768 } });
+
 test.describe("Gameplay visual-regression baselines", () => {
   test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });

@@ -7385,9 +7385,37 @@ button:hover,
 .hub-trophy b {
   font-size: 9px !important;
 }
-@media (max-width: 1220px) {
+/* Widened from 1220px to 1400px (Phase 45E) — a real 1366x768 Chromebook viewport (this
+   project's named target hardware) sat just above the old 1220px threshold, so the Institute's
+   forced min-width:860px plus its min-height:650px/aspect-ratio:1.67:1 combination (which
+   implies a ~1085px intrinsic width on its own, wider than the 860px floor) pushed the map
+   column past the viewport's right edge with no scrollbar — real content silently cut off, not
+   just a squeeze. Resetting min-height here too, not just min-width: the aspect-ratio was the
+   actual binding constraint forcing the overflow, not the min-width alone. */
+@media (max-width: 1400px) {
   .hub-shell--status-left .institute-map {
     min-width: 0 !important;
+    min-height: 480px !important;
+  }
+  /* Same class of bug as the Institute above, on the case-field-living grid: .field-viewport's
+     min-height:640px (Phase 45B consolidation)/aspect-ratio:1.47:1 implies a ~941px intrinsic
+     width, crowding the .case-field--living grid's third (Evidence Channel) column down to its
+     bare 220px minmax floor — real button/paragraph text then overflowed visibly past the
+     viewport's right edge with no scrollbar, confirmed live at 1366x768. Shrinking the map's
+     min-height here frees enough width for the channel column to grow past its floor. */
+  .field-viewport {
+    min-height: 480px !important;
+  }
+  /* The actual mechanism completing the overflow, found by direct measurement (the channel's
+     own bounding box extended past both its grid track AND the viewport edge): CSS Grid items
+     default to min-width:auto, i.e. their content's min-content size, not 0 — so .field-channel
+     refused to shrink to its assigned ~220px track no matter how much space the fix above frees
+     up, as long as some child (a nowrap button label, an unbreakable phrase) has a larger
+     intrinsic minimum. min-width:0 is the standard, textbook fix for this specific Grid
+     overflow class — let the item actually honor its track's width and let its own children
+     wrap/wrap-break instead. */
+  .field-channel {
+    min-width: 0;
   }
 }
 
