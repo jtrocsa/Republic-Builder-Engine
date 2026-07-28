@@ -1,0 +1,301 @@
+import { test, expect } from "@playwright/test";
+import { PROGRESS_KEY, seedProgress, loadSeededSave } from "./helpers/progress-seed.js";
+
+// Phase 45A: the visual-regression net that makes the rest of Phase 45 (and the CSS
+// consolidation/token work in 45B-45E, plus Phases 47-48's animation/hub-camera work) safe to
+// attempt at all — see docs/architecture/UI-DESIGN-SYSTEM.md and the Phase 44 decision to
+// explicitly exclude every gameplay CSS family (.field-*, .hub-*, .quest-*, .map-*, .director-*)
+// from that pass "because there was no visual-regression coverage to make a restyle safe."
+//
+// Every screenshot here is a BASELINE, not a behavior assertion — this file has almost no
+// `expect(locator)` calls beyond visibility gates, just `expect(page).toHaveScreenshot()`. First
+// run creates the baseline PNGs under visual-regression.spec.js-snapshots/ (commit them);
+// subsequent runs diff against them. Regenerate deliberately with
+// `npx playwright test visual-regression --update-snapshots` after an intentional visual
+// change, and review the diff before committing new baselines.
+//
+// Determinism notes (read before adding more screenshots to this file):
+// - `page.emulateMedia({ reducedMotion: "reduce" })` is set on every test. main.js's own
+//   prefersReducedMotion() checks (drifting ambient-phrase layer, hallway walk timing) key off
+//   this, and Playwright's default `animations: "disabled"` on toHaveScreenshot freezes CSS
+//   transitions/animations at their end state regardless.
+// - `#directorArchiveClock` (main.js:5478) is a live elapsed-time readout on the three director
+//   intro scenes, driven by `setInterval`, not CSS — it survives `animations: "disabled"` and
+//   must be masked explicitly.
+// - Mini-game "playing" states (Storm Navigation, Cargo Sorting) tick via requestAnimationFrame
+//   with randomized hazard/card placement, not CSS — deliberately NOT screenshotted here beyond
+//   the static mini-game *select* screen. Covering the in-progress states would need either a
+//   frozen/seeded RNG or full-stage masking, neither of which exists yet; flagged as a gap, not
+//   silently skipped.
+// - The intro-hallway scripted walk and the Institute badge-case modal (reached by walking to
+//   the Preservation Case, HUB_TARGETS.trophy at (1.7, 1.0) from the default (7, 9) spawn,
+//   crossing several HUB_BLOCK_RECTS) are also out of this pass's bounded scope — same reason,
+//   flagged as follow-up, not silently dropped.
+//
+// Jumping between screens mid-test: `seedProgress()` (via addInitScript) only ever writes if
+// the key is still empty — correct for save-persistence.spec.js's reload-survives-real-writes
+// check, but useless for re-pointing the save at a *different* screen mid-test. `setScreen()`
+// below writes localStorage directly (page.evaluate, not addInitScript) and re-does the
+// Student -> Load Save landing click reload always requires (main.js's `showMainMenu` is a
+// runtime-only variable that resets to true on every full navigation — see
+// save-persistence.spec.js's own comment on this).
+async function setScreen(page, overrides) {
+  await page.evaluate(
+    ({ key, data }) => window.localStorage.setItem(key, JSON.stringify(data)),
+    { key: PROGRESS_KEY, data: overrides }
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "Student" }).click();
+  await page.getByRole("button", { name: "Load Save" }).click();
+}
+
+function snap(name, extra = {}) {
+  return { animations: "disabled", ...extra, name: `${name}.png` };
+}
+
+// Tiled maps (Caribbean field, Archive Room, Riverbend, hallway, Common Cause) draw via
+// engine/tiled-map-loader.js's renderTiledMap(), which is async (it awaits image decode before
+// the first ctx.drawImage) — its main.js wrapper (e.g. renderCaribbeanTiledMap()) marks
+// `canvas.dataset.rendered = "true"` only once that first real draw completes. A screenshot
+// taken before that lands on a blank canvas — not a rendering bug, a test-timing race — so wait
+// for the flag rather than trusting the canvas element's mere presence in the DOM.
+async function waitForTiledCanvas(page, canvasId) {
+  await page.waitForFunction(
+    (id) => document.getElementById(id)?.dataset.rendered === "true",
+    canvasId
+  );
+}
+
+test.describe("Gameplay visual-regression baselines", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+  });
+
+  test("onboarding: director welcome scene + identity screen", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Student" }).click();
+    await page.getByRole("button", { name: "Start New Game" }).click();
+
+    const dialogueBox = page.locator(".director-dialogue-box");
+    await expect(dialogueBox).toBeVisible();
+    // First frame of the shared director-scene shell (intro-welcome). Reduced motion means the
+    // typewriter has already resolved to its full first line — deterministic without a wait.
+    await expect(page).toHaveScreenshot(
+      snap("director-welcome-scene", { mask: [page.locator("#directorArchiveClock")] })
+    );
+
+    const nameInput = page.locator('input[data-profile="name"]');
+    for (let i = 0; i < 40; i += 1) {
+      if (await nameInput.isVisible().catch(() => false)) break;
+      if (!(await dialogueBox.isVisible().catch(() => false))) break;
+      await dialogueBox.click();
+      await page.waitForTimeout(30);
+    }
+    await expect(nameInput).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("identity-screen"));
+  });
+
+  test("institute: Main Hall and Archive Room", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "institute",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#instituteMap")).toBeVisible();
+    // Hub NPCs patrol on a requestAnimationFrame loop tied to real elapsed time, not CSS — see
+    // CLAUDE.md's "NPC movement respects the same collision as the player" invariant. This loop
+    // deliberately keeps running regardless of prefers-reduced-motion (only the ambient
+    // decorative phrase layer and hallway-walk speed key off that setting), so `.hub-npc`
+    // positions/frames are never pixel-stable between two consecutive screenshots.
+    // Playwright's `mask` option paints a box over the element's *current* bounding box each
+    // screenshot — since the NPC keeps moving, that box lands a few px off between the two
+    // stability-check frames and the edges themselves show up as a diff. Hiding via CSS instead
+    // removes the element from the render entirely, so there's nothing left to drift.
+    await page.addStyleTag({ content: ".hub-npc { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("institute-main-hall"));
+
+    await setScreen(page, {
+      currentScreen: "institute",
+      currentHubRoom: "archive",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await expect(page.locator("#archiveRoomMap")).toBeVisible();
+    await waitForTiledCanvas(page, "archiveRoomTiledCanvas");
+    await expect(page).toHaveScreenshot(snap("institute-archive-room"));
+  });
+
+  test("archive: Navigation Table and Mini-Games select", async ({ page }) => {
+    await seedProgress(page, { currentScreen: "archive" });
+    await loadSeededSave(page);
+    await expect(page.locator(".atlas-table")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("archive-navigation-table"));
+
+    await setScreen(page, { currentScreen: "mini-games" });
+    await expect(page.locator(".mini-game-select")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mini-games-select"));
+  });
+
+  test("travel transition (Case 1.01)", async ({ page }) => {
+    await seedProgress(page, { currentScreen: "travel", activeCaseId: "case-001" });
+    await loadSeededSave(page);
+    await expect(page.locator(".chronotravel-vortex")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("travel-transition"));
+  });
+
+  test("field: Caribbean, village activity, Columbus encounter, map jigsaw", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-001",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "caribbeanTiledCanvas");
+    // Same requestAnimationFrame patrol-loop reasoning as institute-main-hall above — field
+    // NPCs (`[data-npc]`) are never pixel-stable between two consecutive frames, and masking
+    // (vs. hiding) has the same bounding-box-drift problem noted there.
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-caribbean"));
+
+    await setScreen(page, { currentScreen: "village-activity", activeCaseId: "case-001" });
+    await expect(page.locator(".village-investigation-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("village-activity"));
+
+    await setScreen(page, { currentScreen: "columbus-activity", activeCaseId: "case-001" });
+    await expect(page.locator(".spanish-encounter-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("columbus-activity"));
+
+    await setScreen(page, { currentScreen: "map-jigsaw", activeCaseId: "case-001" });
+    await expect(page.locator(".jigsaw-board")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("map-jigsaw"));
+  });
+
+  test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({
+    page,
+  }) => {
+    await seedProgress(page, { currentScreen: "practice-check" });
+    await loadSeededSave(page);
+    await expect(page.locator(".quest-practice-summary")).toContainText("0/6");
+    await expect(page).toHaveScreenshot(snap("practice-check-unanswered"));
+
+    // Same real-graded walkthrough as tests/e2e/practice-check.spec.js, condensed: this file's
+    // job is what it looks like once every card is answered, not re-proving the grading logic.
+    const mcqAnswers = {
+      "case-001-mcq-taino-sourcing": "1",
+      "case-001-mcq-columbus-audience": "0",
+      "case-001-mcq-waldseemuller-change": "1",
+    };
+    for (const [questId, answerIndex] of Object.entries(mcqAnswers)) {
+      await page
+        .locator(`.quest[data-quest-id="${questId}"] input[type="radio"][value="${answerIndex}"]`)
+        .check();
+    }
+    const seqQuest = page.locator('.quest[data-quest-id="case-001-sequencing-columbian-exchange"]');
+    const moveUp = (itemId) =>
+      seqQuest
+        .locator(
+          `[data-action="sequence-move"][data-sequence-item="${itemId}"][data-direction="up"]`
+        )
+        .click();
+    await moveUp("taino-society-precontact");
+    await moveUp("taino-society-precontact");
+    await moveUp("columbus-first-contact-letter");
+    await moveUp("columbus-first-contact-letter");
+    await moveUp("waldseemuller-map-knowledge");
+    await moveUp("waldseemuller-map-knowledge");
+
+    const evidenceQuest = page.locator('.quest[data-quest-id="case-001-evidence-record-sourcing"]');
+    await evidenceQuest
+      .locator('[data-evidence-select="taino-context"]')
+      .selectOption("contextualization");
+    await evidenceQuest
+      .locator('[data-evidence-select="columbus-letter"]')
+      .selectOption("sourcing-situation");
+    await evidenceQuest
+      .locator('[data-evidence-select="waldseemuller-map"]')
+      .selectOption("continuity-and-change");
+    const reflection = evidenceQuest.locator(
+      '[data-evidence-reflection="case-001-evidence-record-sourcing"]'
+    );
+    await reflection.fill(
+      "Using context, a letter, and a map together builds a stronger argument than any one record alone."
+    );
+    await reflection.blur();
+
+    const hippQuest = page.locator('.quest[data-quest-id="case-001-hipp-columbus-letter"]');
+    await hippQuest
+      .locator(
+        '[data-hipp-prompt="columbus-audience"] input[data-hipp-option="audience-explained"]'
+      )
+      .check();
+    await hippQuest
+      .locator('[data-hipp-prompt="columbus-purpose"] input[data-hipp-option="purpose-explained"]')
+      .check();
+    await expect(page.locator(".quest-practice-summary")).toContainText("6/6");
+    await expect(page).toHaveScreenshot(snap("practice-check-graded"));
+  });
+
+  test("investigation challenge, village activity completion, and source reader", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    // Same approach path as tests/e2e/investigation-challenge.spec.js.
+    await page.keyboard.down("ArrowRight");
+    await page.keyboard.down("ArrowUp");
+    await page.waitForTimeout(800);
+    await page.keyboard.up("ArrowRight");
+    await page.keyboard.up("ArrowUp");
+    await page
+      .locator('[data-action="start-source-activity"][data-source="taino-context"]')
+      .click();
+
+    const quest = page.locator('[data-quest-id="case-001-investigation-mcq-taino-origins"]');
+    await expect(quest).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("investigation-challenge"));
+
+    await quest.locator('input[type="radio"][value="0"]').check();
+    await page.locator('[data-action="investigation-continue"]').click();
+
+    // Lands on village-activity (taino-context's bespoke activityRoute). Complete all 3
+    // observations for real, then open the context record to reach the source reader.
+    await expect(page.locator(".village-investigation-shell")).toBeVisible();
+    for (const observeId of ["elder", "garden", "bohio"]) {
+      await page.locator(`[data-action="observe-village"][data-observe="${observeId}"]`).click();
+    }
+    const openSourceButton = page.locator('[data-action="open-activity-source"]');
+    await expect(openSourceButton).toBeVisible();
+    await openSourceButton.click();
+
+    await expect(page.locator(".reader-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("source-reader"));
+  });
+
+  test("archive challenges, review, completion, codex, and reconstruction", async ({ page }) => {
+    await seedProgress(page, { currentScreen: "archive-challenges", selectedUnitId: "unit-01" });
+    await loadSeededSave(page);
+    await expect(page.locator(".archive-challenges-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("archive-challenges"));
+
+    await setScreen(page, { currentScreen: "review", selectedUnitId: "unit-01" });
+    await expect(page.locator(".review-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("review"));
+
+    await setScreen(page, { currentScreen: "completion", selectedUnitId: "unit-01" });
+    await expect(page.locator(".completion-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("completion"));
+
+    await setScreen(page, { currentScreen: "codex", activeCaseId: "case-001" });
+    await expect(page.locator(".codex-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("codex"));
+
+    await setScreen(page, { currentScreen: "reconstruction", activeCaseId: "case-001" });
+    await expect(page.locator(".puzzle-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("reconstruction"));
+  });
+});
