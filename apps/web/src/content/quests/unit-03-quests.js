@@ -305,16 +305,16 @@ export const UNIT_03_INVESTIGATION_MCQ_QUESTS = [
   },
 ];
 
-// Unit-level bonus Archive Challenge content (Phase C of the
-// Investigation/Archive Challenge plan's catalog-expansion pass) — the first
-// content in UNIT_03.archiveChallenges[] (a Zod field that existed but had
-// never been populated by any unit). Not tied to relocating any single
-// case's activity screen; reachable from archiveChallengesScreen()'s new
-// bonus section. Reuses Prince Hall's petition and Abigail Adams's letter —
-// the same two sources UNIT_03_EVIDENCE_ORGANIZING_QUESTS above already
-// tags "Comparison" — but with a freshly authored, distinct 2-slot framing
-// (sorted by the *form* of appeal each made, not by historical-thinking
-// skill) and a new reflection prompt, rather than duplicating that quest.
+// Originally authored as a unit-level bonus Archive Challenge (Phase C of
+// the Investigation/Archive Challenge plan's catalog-expansion pass);
+// promoted to case-009's own archiveChallenge (Phase 48D, see
+// unit-03-campaign.js) so it reads as this unit's third real mission
+// instead of an unmoored bonus with no map marker of its own. Reuses Prince
+// Hall's petition and Abigail Adams's letter — the same two sources
+// UNIT_03_EVIDENCE_ORGANIZING_QUESTS above already tags "Comparison" — but
+// with a freshly authored, distinct 2-slot framing (sorted by the *form* of
+// appeal each made, not by historical-thinking skill) and its own
+// reflection prompt, rather than duplicating that quest.
 export const UNIT_03_ARCHIVE_CHALLENGE_QUESTS = [
   {
     id: "unit-03-archive-appeal-form-comparison",

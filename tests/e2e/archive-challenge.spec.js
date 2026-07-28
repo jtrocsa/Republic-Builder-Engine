@@ -289,4 +289,61 @@ test.describe("Archive Challenge", () => {
     await expect(marker).toHaveCount(1);
     await expect(marker).toHaveClass(/route-marker--locked/);
   });
+
+  // case-009 "Appeals to Liberty" (Phase 48D) — promoted from what used to be
+  // this unit's only archiveChallenges[] bonus entry into a real third
+  // mission with its own case-level framing. Same real quest content
+  // ("unit-03-archive-appeal-form-comparison": Prince Hall's 1777 petition
+  // vs. Abigail Adams's 1776 letter), now reached the same way as any other
+  // Archive Challenge case rather than only from the Archive Terminal's
+  // bonus section.
+  const APPEAL_QUEST_ID = "unit-03-archive-appeal-form-comparison";
+  const APPEAL_CORRECT_PLACEMENTS = {
+    "hall-petition-appeal-form": "public-petition",
+    "adams-letter-appeal-form": "private-appeal",
+  };
+
+  test("case-009: place both records via the select fallback, reflect, and complete", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-03",
+      activeCaseId: "case-009",
+    });
+    await loadSeededSave(page);
+
+    const quest = page.locator(`.quest[data-quest-id="${APPEAL_QUEST_ID}"]`);
+    await expect(quest).toBeVisible();
+
+    for (const [sourceId, slotId] of Object.entries(APPEAL_CORRECT_PLACEMENTS)) {
+      await quest.locator(`[data-evidence-select="${sourceId}"]`).selectOption(slotId);
+    }
+
+    const reflection = quest.locator(`[data-evidence-reflection="${APPEAL_QUEST_ID}"]`);
+    await reflection.fill(
+      "Hall's petition was a formal public appeal to a legislature, so it had to argue in the shared legal language of natural rights the assembly already used; Adams's letter was a private appeal to her husband, so it could speak more bluntly and personally, but had no formal standing to compel a response."
+    );
+    await reflection.blur();
+
+    await expect(page.locator(".activity-feedback.success")).toContainText(
+      "Archive Challenge complete"
+    );
+
+    const stored = await readProgress(page);
+    expect(stored.archiveChallenges[APPEAL_QUEST_ID]?.status).toBe("complete");
+    expect(stored.completedCases).toContain("case-009");
+  });
+
+  test("case-009 appears as a locked Navigation Table marker", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-03",
+    });
+    await loadSeededSave(page);
+
+    const marker = page.locator('[data-case="case-009"]');
+    await expect(marker).toHaveCount(1);
+    await expect(marker).toHaveClass(/route-marker--locked/);
+  });
 });

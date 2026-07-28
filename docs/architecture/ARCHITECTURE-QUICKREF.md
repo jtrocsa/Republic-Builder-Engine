@@ -67,6 +67,7 @@
 - Phase 45 — Gameplay Visual Foundation: 20 visual-regression baselines, CSS redeclaration cleanup, gold/black/ink token governance, dead-CSS sweep, 1366×768 Chromebook fixes.
 - Phase 46 — session cost discipline: this file split from `PHASE-HISTORY.md`, `CLAUDE.md` verification ladder rewritten, `.claude/settings.json` added, Playwright MCP gated by default. See `docs/architecture/PHASES-46-50.md`.
 - Phase 47 — Professional Teacher Interface: one type scale, one `.c-card` surface, one `pageHeaderMarkup()`/`sectionHeadMarkup()`, one 1180px container, one `<details>/<summary>` accordion pattern across every teacher screen (sub-phases 47A–47G). See `docs/architecture/PHASES-46-50.md`.
+- Phase 48 — The Full Mission Board: every case now gets a Navigation Table marker (route enum simplified to `field`/`archive-challenges`, no null routes); locked markers stay clickable and explain their unlock reason instead of being `disabled`; a per-classroom teacher visibility opt-out (`navTableVisible` override, pending one manual Supabase migration); Unit 3's bonus challenge promoted to a real third case (case-009, "Appeals to Liberty"). See `docs/architecture/PHASES-46-50.md`.
 
 ## 5. Current active phase
 
@@ -74,7 +75,7 @@
 
 ## 6. Next approved phase
 
-Phase 48 (The Full Mission Board — unhide all missions on the Navigation Table) follows Phase 47, per `PHASES-46-50.md`'s stated sequencing.
+Phase 49 (Chronicle content/mechanics ROI moves — a real SAQ quest type is 49A, the highest-ranked item) follows Phase 48, per `PHASES-46-50.md`'s stated sequencing.
 
 ## 7. Approved immediate dependencies
 

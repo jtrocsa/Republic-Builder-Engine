@@ -4,15 +4,23 @@
  * Structural mirror of unit-02-campaign.js. Real, cited historical content
  * for case-007 ("The Common Cause") — the flagship field-route case covering
  * CED topics 3.1 through 3.6, from the post–Seven Years' War frontier crisis
- * through the Revolution's unevenly extended ideals — and case-008 ("The
+ * through the Revolution's unevenly extended ideals — case-008 ("The
  * Founding Debate"), whose entire mechanic is now its archiveChallenge quest
  * (content/quests/unit-03-quests.js's "case-008-archive-ratification-claims",
  * migrated off a bespoke ledger-mechanic screen the same way Unit 1's
  * case-002 was) covering the Founding Era, 1783–1789: the Articles of
  * Confederation's weaknesses, the Constitutional Convention's compromises,
  * the Federalist/Anti-Federalist ratification debate, and the Bill of
- * Rights. Case-009 remains an explicit future phase and is deliberately not
- * added here.
+ * Rights — and case-009 ("Appeals to Liberty", Phase 48D), which promotes
+ * what used to be this unit's only unit-level bonus Archive Challenge
+ * ("unit-03-archive-appeal-form-comparison": Prince Hall's 1777 public
+ * petition for freedom vs. Abigail Adams's 1776 private letter to John
+ * Adams, both invoking the Revolution's rights language) into a real
+ * third mission with its own case-level framing, rather than leaving it an
+ * unmoored bonus with no map marker, mission card, or Manage Content entry
+ * of its own. No new quest content was authored — the same real, cited
+ * evidence-organizing quest simply moved from `archiveChallenges[]` to
+ * `cases[].archiveChallenge`.
  *
  * This unit is also the vehicle for real "Comparison" content — the
  * SKILL_CATEGORIES taxonomy in
@@ -43,17 +51,12 @@ export const UNIT_03 = {
     "How a widening imperial crisis over land, taxation, and representation after the Seven Years' War escalated into armed revolution — and how the ideals colonists invoked to justify independence were claimed, extended, and denied unevenly among Indigenous nations, enslaved and free Black Americans, women, and Loyalists.",
   centralQuestion:
     "How did the ideals colonists used to justify revolution against Britain both inspire and fail to extend equally to the many peoples who lived through Period 3?",
-  // Unit-level bonus Archive Challenge (Phase C of the Investigation/Archive
-  // Challenge plan's catalog-expansion pass) — not tied to relocating any
-  // single case's activity screen; reachable from the Archive Terminal's
-  // archiveChallengesScreen(). Completing it, alongside every case, is
-  // required for unit completion (see main.js's unitReadyForReview()).
-  archiveChallenges: [
-    {
-      questType: "evidence-organizing",
-      questId: "unit-03-archive-appeal-form-comparison",
-    },
-  ],
+  // No unit-level bonus Archive Challenges — this unit's only one
+  // ("unit-03-archive-appeal-form-comparison") was promoted to case-009's
+  // own archiveChallenge below (Phase 48D), so every unit completion
+  // requirement now flows through unit.cases.every(isComplete) alone (see
+  // main.js's unitReadyForReview()/unitArchiveChallengesComplete()).
+  archiveChallenges: [],
   cases: [
     {
       id: "case-007",
@@ -92,6 +95,33 @@ export const UNIT_03 = {
       archiveChallenge: {
         questType: "evidence-organizing",
         questId: "case-008-archive-ratification-claims",
+      },
+    },
+    {
+      id: "case-009",
+      shortTitle: "Appeals to Liberty",
+      title: "Appeals to Liberty",
+      date: "1776–1777",
+      // Boston, Massachusetts — where Prince Hall's petition was addressed
+      // to the state legislature; Abigail Adams's letter was written from
+      // nearby Braintree. Deliberately distinct from case-007/008's shared
+      // Philadelphia coordinates, so this mission gets its own clean marker
+      // rather than joining that cluster.
+      mapPosition: { lat: 42.36, lon: -71.06 },
+      location: "Boston, Massachusetts · 1776–1777",
+      question:
+        "What did a formal petition for freedom and a private letter between spouses reveal about how far the Revolution's promise of ‘unalienable rights’ could reach — and who had to fight to be heard at all?",
+      mechanic: "Appeal Ledger",
+      // An Archive Challenge mission (Phase 48D) — promoted from this
+      // unit's former archiveChallenges[] bonus entry rather than freshly
+      // authored; same real quest content, now with genuine case-level
+      // framing so it reads as this unit's third mission.
+      route: "archive-challenges",
+      summary:
+        "Sort a public petition for freedom and a private letter between spouses by the form of appeal each made, and weigh how each author's audience and standing shaped what could be said — and how it was likely received.",
+      archiveChallenge: {
+        questType: "evidence-organizing",
+        questId: "unit-03-archive-appeal-form-comparison",
       },
     },
   ],
