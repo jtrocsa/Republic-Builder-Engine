@@ -913,6 +913,9 @@ select {
 .legend-complete {
   color: #a2d7ab;
 }
+.legend-locked {
+  color: #7e9296;
+}
 .atlas-table {
   position: relative;
   aspect-ratio: 1.58/1;
@@ -994,7 +997,8 @@ select {
     0 0 18px rgba(135, 208, 157, 0.35);
 }
 .route-marker--locked {
-  cursor: not-allowed;
+  /* Still clickable (Phase 48B) — reads its unlock reason in the route
+     panel rather than doing nothing, so this is pointer, not not-allowed. */
   opacity: 0.52;
   background: #49626a;
   box-shadow: none;
@@ -1058,6 +1062,12 @@ select {
 .route-panel .btn {
   width: 100%;
   margin-top: 5px;
+}
+.route-locked-reason {
+  margin: 8px 0 0;
+  color: #e3c27e;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 .route-hint {
   margin: 15px 0 0;

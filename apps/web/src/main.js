@@ -6486,7 +6486,12 @@ function atlasSvgMarkup(view, viewport, ariaLabel) {
 function caseMarker(c, xy, viewport) {
   const state = isComplete(c.id) ? "complete" : isUnlocked(c.id) ? "available" : "locked";
   const { left, top } = xyToPercent(xy, viewport);
-  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? "disabled" : ""} aria-label="${esc(resolvedCaseTitle(c))}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
+  // Locked markers stay clickable (Phase 48B) — select-case has no unlock
+  // gate, so clicking one reads its details/unlock reason in the route panel
+  // instead of doing nothing. aria-disabled (not disabled) keeps that
+  // reachable for assistive tech while still announcing the locked state.
+  const label = state === "locked" ? `${resolvedCaseTitle(c)} — locked` : resolvedCaseTitle(c);
+  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? 'aria-disabled="true"' : ""} aria-label="${esc(label)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
 }
 
 // Whether every unit-level Archive Challenge (unit.archiveChallenges[] — bonus
@@ -6525,6 +6530,11 @@ function archiveScreen() {
     selected.route === "field"
       ? `${countEvidence(selected.id)}/${sourcesForCase(selected.id).length || 3} evidence records secured`
       : selected.question;
+  const chronotravelLabel =
+    selected.route === "field" ? "Initiate Chronotravel" : "Open Archive Challenge";
+  const lockedReasonMarkup = isUnlocked(selected.id)
+    ? ""
+    : `<p class="route-locked-reason">${esc(lockedReasonForCase(selected))}</p>`;
   const view = MAP_VIEWS[UNIT_MAP_VIEW[selectedUnit.id]] || MAP_VIEWS[DEFAULT_MAP_VIEW];
   const viewport = NAV_TABLE_VIEWPORT;
   const labelsMarkup = view.labels
@@ -6541,7 +6551,7 @@ function archiveScreen() {
     markerPositions.get(selected.id) ||
     projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
   const { left: threadLeft, top: threadTop } = xyToPercent(threadXY, viewport);
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the map. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>Initiate Chronotravel <span>→</span></button><p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the map. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
@@ -7523,6 +7533,21 @@ export function unlockNext(caseId) {
   const next = unit.cases[index + 1];
   if (next && !progress.unlocked.includes(next.id)) progress.unlocked.push(next.id);
   save();
+}
+
+// Explains why a locked case's Chronotravel button is disabled, in the route
+// panel — mirrors unlockNext()'s own array-index logic rather than
+// introducing a second notion of "what unlocks what" (Phase 48B). A case at
+// index 0 of its unit can only be locked because the unit itself isn't open
+// yet (see hydrateClassroomUnitFloor()); any later case is locked because its
+// immediate predecessor isn't complete.
+function lockedReasonForCase(kase) {
+  const unit = unitForCase(kase.id);
+  const index = unit ? unit.cases.findIndex((c) => c.id === kase.id) : -1;
+  const prior = index > 0 ? unit.cases[index - 1] : null;
+  return prior
+    ? `Complete ${prior.shortTitle} to unlock this mission.`
+    : "Your teacher hasn't opened this unit yet.";
 }
 
 function unlockNextUnit(unitId) {
