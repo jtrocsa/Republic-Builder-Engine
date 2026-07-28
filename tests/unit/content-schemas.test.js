@@ -75,14 +75,13 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     expect(result.data.cases[0].archiveChallenge).toBeNull();
   });
 
-  it("accepts a case relocated to the Archive Room, with a null route (normal case)", () => {
+  it("accepts a case relocated to the Archive Room, with an archive-challenges route (normal case)", () => {
     const relocated = {
       ...validUnit,
       cases: [
         {
           ...validCase,
-          route: null,
-          navigationTableVisible: false,
+          route: "archive-challenges",
           archiveChallenge: {
             questType: "evidence-organizing",
             questId: "unit-02-charter-compact",
@@ -92,12 +91,16 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     };
     const result = UnitSchema.safeParse(relocated);
     expect(result.success).toBe(true);
-    expect(result.data.cases[0].route).toBeNull();
-    expect(result.data.cases[0].navigationTableVisible).toBe(false);
+    expect(result.data.cases[0].route).toBe("archive-challenges");
     expect(result.data.cases[0].archiveChallenge).toEqual({
       questType: "evidence-organizing",
       questId: "unit-02-charter-compact",
     });
+  });
+
+  it("rejects a case with a null route (route is required, not nullable, as of Phase 48A)", () => {
+    const broken = { ...validUnit, cases: [{ ...validCase, route: null }] };
+    expect(UnitSchema.safeParse(broken).success).toBe(false);
   });
 
   it("defaults unit-level archiveChallenges to an empty array when omitted (normal case)", () => {

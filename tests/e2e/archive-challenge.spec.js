@@ -8,9 +8,10 @@ import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-s
 // (it reads only progress.selectedUnitId/questResponses/completedCases/archiveChallenges) —
 // directly seedable via currentScreen: "archive-challenges".
 //
-// case-006 "Charter & Compact" is the cleanest target: its Navigation Table route was fully
-// removed (route: null, navigationTableVisible: false) once its Archive Challenge shipped, so
-// it's single-path. Real content (unit-02-quests.js): 6 sources map 2:1 onto 3 region slots.
+// case-006 "Charter & Compact" is the cleanest target: it has route: "archive-challenges"
+// (no field screen — its entire mechanic is this Archive Challenge, reached by Chronotravel
+// or directly from the Archive Terminal), so it's single-path. Real content
+// (unit-02-quests.js): 6 sources map 2:1 onto 3 region slots.
 const QUEST_ID = "case-006-archive-region-display";
 const CORRECT_PLACEMENTS = {
   "town-covenant": "new-england",
@@ -97,17 +98,19 @@ test.describe("Archive Challenge", () => {
     expect(stored.unlocked).toContain("case-006");
   });
 
-  // Confirms Case 1.05's Navigation Table marker is gone now that route/navigationTableVisible
-  // were retired in the same migration (mirrors the case-006 precedent this table never
-  // separately re-checked).
-  test("case-005 no longer appears as a Navigation Table marker", async ({ page }) => {
+  // As of Phase 48A every case gets a Navigation Table marker, including Archive
+  // Challenge missions like case-005 — locked (not yet teacher-unlocked) rather
+  // than hidden, since the default seeded save only unlocks case-001.
+  test("case-005 appears as a locked Navigation Table marker", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "archive",
       selectedUnitId: "unit-02",
     });
     await loadSeededSave(page);
 
-    await expect(page.locator('[data-case="case-005"]')).toHaveCount(0);
+    const marker = page.locator('[data-case="case-005"]');
+    await expect(marker).toHaveCount(1);
+    await expect(marker).toHaveClass(/route-marker--locked/);
   });
 
   // case-003 "Empire's Foundations" — migrated the same way as case-005/case-006 above (bespoke
@@ -165,14 +168,16 @@ test.describe("Archive Challenge", () => {
     expect(stored.completedCases).toContain("case-003");
   });
 
-  test("case-003 no longer appears as a Navigation Table marker", async ({ page }) => {
+  test("case-003 appears as a locked Navigation Table marker", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "archive",
       selectedUnitId: "unit-01",
     });
     await loadSeededSave(page);
 
-    await expect(page.locator('[data-case="case-003"]')).toHaveCount(0);
+    const marker = page.locator('[data-case="case-003"]');
+    await expect(marker).toHaveCount(1);
+    await expect(marker).toHaveClass(/route-marker--locked/);
   });
 
   // case-002 "The Exchange Ledger" — migrated the same way as case-003/1.05/1.06 above (bespoke
@@ -218,14 +223,16 @@ test.describe("Archive Challenge", () => {
     expect(stored.unlocked).toContain("case-003");
   });
 
-  test("case-002 no longer appears as a Navigation Table marker", async ({ page }) => {
+  test("case-002 appears as a locked Navigation Table marker", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "archive",
       selectedUnitId: "unit-01",
     });
     await loadSeededSave(page);
 
-    await expect(page.locator('[data-case="case-002"]')).toHaveCount(0);
+    const marker = page.locator('[data-case="case-002"]');
+    await expect(marker).toHaveCount(1);
+    await expect(marker).toHaveClass(/route-marker--locked/);
   });
 
   // case-008 "The Founding Debate" — migrated the same way as case-002/1.03/1.05/1.06 above
@@ -271,13 +278,15 @@ test.describe("Archive Challenge", () => {
     expect(stored.completedCases).toContain("case-008");
   });
 
-  test("case-008 no longer appears as a Navigation Table marker", async ({ page }) => {
+  test("case-008 appears as a locked Navigation Table marker", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "archive",
       selectedUnitId: "unit-03",
     });
     await loadSeededSave(page);
 
-    await expect(page.locator('[data-case="case-008"]')).toHaveCount(0);
+    const marker = page.locator('[data-case="case-008"]');
+    await expect(marker).toHaveCount(1);
+    await expect(marker).toHaveClass(/route-marker--locked/);
   });
 });

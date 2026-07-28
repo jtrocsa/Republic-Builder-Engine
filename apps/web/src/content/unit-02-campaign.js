@@ -54,13 +54,12 @@ export const UNIT_02 = {
       question:
         "What did each leg of the transatlantic trade actually carry, and who bore its human and economic costs?",
       mechanic: "Trade Route Plotter",
-      // Relocated into the Institute Archive Room (Archive Terminal) — no
-      // longer shown as a Navigation Table marker. The mission's mechanic is
-      // now entirely its archiveChallenge quest below (see the now-deleted
-      // triangleScreen()/TRIANGLE_LEGS/TRIANGLE_CARGO note further down this
-      // file), matching the Case 1.06 precedent.
-      route: null,
-      navigationTableVisible: false,
+      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
+      // to archiveChallengesScreen() rather than a bespoke field screen. The
+      // mission's mechanic is entirely its archiveChallenge quest below (see
+      // the now-deleted triangleScreen()/TRIANGLE_LEGS/TRIANGLE_CARGO note
+      // further down this file), matching the Case 1.06 precedent.
+      route: "archive-challenges",
       summary:
         "Reconstruct the triangular trade from six real shipping and testimony records — plot each cargo onto the leg of the circuit that carried it, then weigh what each record proves about the system binding Europe, Africa, and the Americas together.",
       archiveChallenge: {
@@ -78,16 +77,12 @@ export const UNIT_02 = {
       question:
         "What do a town covenant, a headright grant, an indenture, a liberty-of-conscience clause, a grain manifest, and a school law reveal about the different societies colonists built in British North America?",
       mechanic: "Region Builder",
-      // No ChronoTravel route — this case is played entirely as an Archive
-      // Challenge from the Institute Archive Terminal (see archiveChallenge
-      // below and navigationTableVisible above).
-      route: null,
+      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
+      // to archiveChallengesScreen() rather than a bespoke field screen (see
+      // archiveChallenge below).
+      route: "archive-challenges",
       summary:
         "Restore the Archive's damaged display of the colonial regions by returning each founding record — from a Puritan town covenant to a Quaker liberty-of-conscience clause — to the society it built, then defend one difference between two regions in your own words.",
-      // Relocated into the Institute Archive Room (Archive Terminal) — no longer
-      // shown as a Navigation Table marker. regionsScreen()/the "regions" route
-      // stays reachable until plan Phase 5 deletes it.
-      navigationTableVisible: false,
       archiveChallenge: {
         questType: "evidence-organizing",
         questId: "case-006-archive-region-display",

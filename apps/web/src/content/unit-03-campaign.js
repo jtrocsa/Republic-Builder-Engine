@@ -79,13 +79,14 @@ export const UNIT_03 = {
       question:
         "What did a bankrupt confederation, a secret convention, a fierce war of pamphlets, and a promised bill of rights reveal about how much power a free people should entrust to a new national government — and how they would decide?",
       mechanic: "Ratification Ledger",
-      // Relocated into the Institute Archive Room (Archive Terminal) — no
-      // longer shown as a Navigation Table marker. The mission's mechanic is
-      // now entirely its archiveChallenge quest below (see the now-deleted
-      // foundingScreen()/FOUNDING_RECORDS note further down this file),
-      // matching the Case 1.02/1.03/1.05/1.06 precedent.
-      route: null,
-      navigationTableVisible: false,
+      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
+      // to archiveChallengesScreen() rather than a bespoke field screen. The
+      // mission's mechanic is entirely its archiveChallenge quest below (see
+      // the now-deleted foundingScreen()/FOUNDING_RECORDS note further down
+      // this file), matching the Case 1.02/1.03/1.05/1.06 precedent. Shares
+      // case-007's exact map coordinates (Philadelphia) — the two-marker
+      // cluster declutterMarkerPositions() spreads apart.
+      route: "archive-challenges",
       summary:
         "Build a ratification ledger weighing the Articles of Confederation's failures, the Constitutional Convention's compromises, and the Federalist–Anti-Federalist debate that produced the Bill of Rights.",
       archiveChallenge: {

@@ -2758,7 +2758,7 @@ function caseKindLabel(kase) {
 // which need none.
 function caseKindDetail(kase) {
   if (kase.route === "field") return null;
-  if (kase.route === null) return "Archive Challenge only";
+  if (kase.route === "archive-challenges") return "Archive Challenge only";
   return kase.mechanic;
 }
 
@@ -6362,7 +6362,19 @@ function archiveChallengeAdditionCard(kicker, addition) {
 // that's still required for unit completion via unitArchiveChallengesComplete()).
 function archiveChallengesScreen() {
   const unit = unitById(progress.selectedUnitId) || UNIT_01;
-  const caseCards = unit.cases
+  // Chronotravel to an Archive Challenge mission (goToCase() -> travelScreen())
+  // lands here — the traveled-to case's card leads the list instead of
+  // sitting wherever its authored position falls, so the mission the student
+  // just selected is the first thing they see (Phase 48A). No-op reorder for
+  // any other entry point (e.g. direct from the Archive Terminal) where
+  // activeCaseId doesn't belong to this unit.
+  const orderedCases =
+    unitForCase(progress.activeCaseId)?.id === unit.id
+      ? [...unit.cases].sort((a, b) =>
+          a.id === progress.activeCaseId ? -1 : b.id === progress.activeCaseId ? 1 : 0
+        )
+      : unit.cases;
+  const caseCards = orderedCases
     .filter((c) => c.archiveChallenge)
     .map((c) =>
       archiveChallengeCard(
@@ -6521,7 +6533,9 @@ function archiveScreen() {
       return `<div class="atlas-label" style="left:${(x / viewport.width) * 100}%;top:${(y / viewport.height) * 100}%">${esc(l.text)}</div>`;
     })
     .join("");
-  const visibleCases = selectedUnit.cases.filter((c) => c.navigationTableVisible !== false);
+  // Every case gets a marker as of Phase 48A (locked ones render greyed out
+  // via caseMarker()'s own state check) — no visibility filter here anymore.
+  const visibleCases = selectedUnit.cases;
   const markerPositions = declutterMarkerPositions(visibleCases, view.bounds, viewport);
   const threadXY =
     markerPositions.get(selected.id) ||
@@ -7596,6 +7610,7 @@ function resetCaseOneDemo() {
 function goToCase(caseId) {
   playSfx("chrono");
   progress.activeCaseId = caseId;
+  progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
   if (caseById(caseId)?.route === "field") resetFieldPosition();
   progress.currentScreen = "travel";
   save();

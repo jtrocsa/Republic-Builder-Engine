@@ -1,10 +1,14 @@
 import { z } from "zod";
 
 // Route names a case hands off to on Chronotravel (`goToCase()` sets
-// `currentScreen = "travel"`, which self-advances to `caseById(id).route`).
-// Zod can't see main.js's route dispatch, so this list is a second source of
-// truth — update it by hand if a new case route is ever added in main.js.
-const CASE_ROUTES = ["field", "ledger", "empire", "triangle", "founding"];
+// `currentScreen = "travel"`, which self-advances to `caseById(id).route`) —
+// named after the screen id it dispatches to, so travelScreen()'s handoff is
+// a pure passthrough with no null special case (Phase 48A). Zod can't see
+// main.js's route dispatch, so this list is a second source of truth —
+// update it by hand if a new case route is ever added in main.js. The
+// former per-case bespoke route names ("ledger"/"empire"/"triangle"/
+// "founding") are retired along with the screens they dispatched to.
+const CASE_ROUTES = ["field", "archive-challenges"];
 
 const MapPositionSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -38,20 +42,19 @@ export const CaseSchema = z.object({
   location: z.string().min(1, "case.location is required"),
   question: z.string().min(1, "case.question is required"),
   mechanic: z.string().min(1, "case.mechanic is required"),
-  // Null for a case relocated entirely into the Institute Archive Room (its
-  // Archive Challenge is the destination, not a ChronoTravel route) — see
-  // navigationTableVisible/archiveChallenge below. Every ChronoTravel
-  // destination (route: "field") and not-yet-migrated standalone case still
-  // requires a real route name.
-  route: z
-    .enum(CASE_ROUTES, {
-      message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
-    })
-    .nullable(),
+  // Every case requires a real route name — "field" for a ChronoTravel
+  // destination, "archive-challenges" for a case relocated entirely into the
+  // Institute Archive Room (its archiveChallenge below is the destination,
+  // not a field screen).
+  route: z.enum(CASE_ROUTES, {
+    message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
+  }),
   summary: z.string().min(1, "case.summary is required"),
-  // Whether this case still gets a marker on the Chronicle Navigation Table.
-  // Defaults true so every pre-existing case validates unchanged; cases
-  // relocated into the Institute Archive Room are flagged false in content.
+  // Whether this case gets a marker on the Chronicle Navigation Table.
+  // Defaults true; as of Phase 48A no content sets this false (every case
+  // shows, locked ones greyed out) — the field is retained here pending
+  // Phase 48C, which replaces it with a per-classroom teacher override
+  // instead of a global content-authored default.
   navigationTableVisible: z.boolean().default(true),
   // Present only for cases relocated into the Archive Room; null for
   // ChronoTravel destination cases (route: "field") and for
