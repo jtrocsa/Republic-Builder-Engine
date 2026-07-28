@@ -22,6 +22,7 @@ export const UNIT_03_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "A source's path from an event to the page a Chronicler reads (translation, recording, editorial reprinting) doesn't make it worthless — but it does mean claims resting on its precise wording need to account for how many hands shaped that wording before it survived.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-007-mcq-dunmore-causation",
@@ -36,6 +37,7 @@ export const UNIT_03_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "By exempting enslaved people held by Loyalists, Dunmore revealed the proclamation's purpose was military and punitive toward rebels, not a principled stand against slavery itself.",
+    skillCategory: "Causation",
   },
   {
     id: "case-007-mcq-comparison-hall-adams",
@@ -50,6 +52,7 @@ export const UNIT_03_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "Both documents borrow the Revolution's own justifying language — natural, unalienable rights and no binding law without consent or representation — to press claims for groups (enslaved Black Americans, women) the Revolution's institutions did not extend those rights to; neither was acted on by the bodies they addressed.",
+    skillCategory: "Comparison",
   },
 ];
 
@@ -177,6 +180,7 @@ export const UNIT_03_SEQUENCING_QUESTS = [
     ],
     explanation:
       "Post-war frontier encroachment provoked Pontiac's resistance; escalating parliamentary taxation provoked organized protest like Dickinson's; that protest escalated toward Henry's call to arms; the war Henry helped bring about gave Dunmore a strategic reason to offer enslaved people freedom for joining the Crown; and the Revolution's own declared ideals, once articulated, were then claimed by groups — enslaved Black Americans and women — the Revolution's leaders had not intended to include, completing the chain from frontier grievance to a founding whose promises reached unevenly.",
+    skillCategory: "Causation",
   },
 ];
 
@@ -288,6 +292,7 @@ export const UNIT_03_INVESTIGATION_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "A modest, reasonable “Farmer” persona — rather than Dickinson's own well-known name as a lawyer and assemblyman, or an inflammatory pen name — fits a strategy aimed at winning over moderate, undecided readers rather than preaching only to colonists already committed to resistance.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-007-investigation-mcq-dickinson-strategy",
@@ -302,6 +307,7 @@ export const UNIT_03_INVESTIGATION_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "Writing for an audience that had not denied Parliament's trade-regulating power outright, a persuasive strategy would concede that narrower authority while drawing a sharper line against taxation for revenue — which is exactly the distinction Dickinson's Letter II goes on to draw.",
+    skillCategory: "Sourcing",
   },
 ];
 

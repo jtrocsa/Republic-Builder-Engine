@@ -31,6 +31,7 @@ import {
   isQuestComplete,
   questPartialSuccess,
   questHint,
+  questSkillOutcomes,
 } from "./quest-types/index.js";
 import {
   REFLECTION_MIN_LENGTH,
@@ -1447,6 +1448,7 @@ const VALID_SCREENS = new Set([
   "mini-games",
   "source",
   "codex",
+  "mastery",
   "reconstruction",
   "upload",
   "return-warp",
@@ -2038,6 +2040,36 @@ const save = () => {
   if (isPreviewingContent()) return;
   saveProgress(progress);
 };
+
+// Upserts each of a graded quest's skill-mastery outcomes (see
+// quest-types/index.js's questSkillOutcomes()) into progress.skillMastery,
+// keyed by outcome.key. Safe to call on every render of a graded quest
+// (screens here re-grade on every render — no separate "submit" step,
+// per archiveChallengeQuestCard()'s own doc comment) because it's a no-op
+// unless an outcome actually changed since last recorded — comparing first
+// avoids both double-saving on every unrelated re-render and the
+// off-my-own-precedent persistence bug archiveChallengeQuestCard() had for
+// unit-level bonus challenges (see that function's own save() comment).
+function recordSkillOutcomes(questType, quest, state, result) {
+  if (isPreviewingContent() || !quest) return;
+  let changed = false;
+  questSkillOutcomes(questType, quest, state, result).forEach((outcome) => {
+    if (!outcome.skillCategory) return;
+    const correct = !!outcome.correct;
+    const existing = progress.skillMastery[outcome.key];
+    if (existing && existing.skillCategory === outcome.skillCategory && existing.correct === correct) {
+      return;
+    }
+    progress.skillMastery[outcome.key] = {
+      skillCategory: outcome.skillCategory,
+      correct,
+      questType,
+      updatedAt: new Date().toISOString(),
+    };
+    changed = true;
+  });
+  if (changed) save();
+}
 
 // Exactly 3 real, distinguishable version labels — deliberately not a 4th
 // "current student version": Published *is* the current student version by
@@ -6087,7 +6119,7 @@ function unitOneBadgeCaseMarkup() {
     const badges = badgeRecordsForUnit(unit);
     return `<h3 class="badge-case-unit-title">${esc(unit.period)}</h3><div class="badge-case-grid">${badges.map((badge) => `<section class="badge-card ${badge.earned ? "is-earned" : "is-locked"}"><div class="badge-medallion"><span>${badge.earned ? badge.icon : "○"}</span></div><div><b>${esc(badge.title)}</b><small>${badge.earned ? "Preserved" : "Locked"}</small><p>${esc(badge.description)}</p></div></section>`).join("")}</div>`;
   }).join("");
-  return `<div class="preservation-case" role="dialog" aria-modal="true" aria-labelledby="preservationCaseTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close preservation case">×</button><p class="kicker">Preservation Case</p><h2 id="preservationCaseTitle">Chronicle Badge Case</h2><p class="preservation-case__subtitle">Badges are preserved here after each field area is completed and transmitted through the Codex.</p>${sections}</article></div>`;
+  return `<div class="preservation-case" role="dialog" aria-modal="true" aria-labelledby="preservationCaseTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close preservation case">×</button><p class="kicker">Preservation Case</p><h2 id="preservationCaseTitle">Chronicle Badge Case</h2><p class="preservation-case__subtitle">Badges are preserved here after each field area is completed and transmitted through the Codex.</p>${sections}<button class="btn btn-outline preservation-case__mastery-link" data-action="open-mastery">Skill Mastery Record →</button></article></div>`;
 }
 
 function institutePositionStyle() {
@@ -6335,6 +6367,7 @@ function archiveChallengeQuestCard(
   const questId = quest.id;
   const state = progress.questResponses[questId] || {};
   const result = alreadyComplete ? { complete: true } : gradeQuest(questType, quest, state);
+  if (!alreadyComplete) recordSkillOutcomes(questType, quest, state, result);
   const complete = alreadyComplete || isQuestComplete(questType, result);
   if (complete && progress.archiveChallenges[questId]?.status !== "complete") {
     progress.archiveChallenges[questId] = {
@@ -6454,6 +6487,7 @@ function investigationScreen() {
   const quest = investigationQuestFor(questType, questId);
   const state = progress.questResponses[questId] || {};
   const result = quest ? gradeQuest(questType, quest, state) : {};
+  if (quest) recordSkillOutcomes(questType, quest, state, result);
   const complete = quest ? isQuestComplete(questType, result) : false;
   const answeredAny = questAnsweredAny(questType, state);
   const status = !answeredAny ? "unanswered" : complete ? "correct" : "in-progress";
@@ -7094,6 +7128,7 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("mcq", quest, state);
+      recordSkillOutcomes("mcq", quest, state, result);
       const answered = questAnsweredAny("mcq", state);
       const correct = isQuestComplete("mcq", result);
       overallTotal += 1;
@@ -7113,6 +7148,7 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("sequencing", quest, state);
+      recordSkillOutcomes("sequencing", quest, state, result);
       const answered = questAnsweredAny("sequencing", state);
       const correct = isQuestComplete("sequencing", result);
       overallTotal += 1;
@@ -7132,6 +7168,7 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("evidence-organizing", quest, state);
+      recordSkillOutcomes("evidence-organizing", quest, state, result);
       const answered = questAnsweredAny("evidence-organizing", state);
       const complete = isQuestComplete("evidence-organizing", result);
       overallTotal += 1;
@@ -7153,6 +7190,7 @@ function practiceCheckScreen() {
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
       const result = gradeQuest("hipp", quest, state);
+      recordSkillOutcomes("hipp", quest, state, result);
       const answeredAny = questAnsweredAny("hipp", state);
       const complete = isQuestComplete("hipp", result);
       overallTotal += 1;
@@ -7285,6 +7323,35 @@ function codexScreen() {
     })
     .join("");
   return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>Evidence Satchel</h1><p>Temporary records for the current case. Your initial notes stay attached to the evidence you secured.</p></section><section class="codex-grid">${entries}</section></main>`;
+}
+
+// Aggregates progress.skillMastery (one upserted entry per graded quest
+// item — see recordSkillOutcomes()) into per-category totals, in
+// SKILL_CATEGORIES' own fixed order so the record screen's row order never
+// shuffles as new entries are added.
+function skillMasterySummary() {
+  return SKILL_CATEGORIES.map((category) => {
+    const entries = Object.values(progress.skillMastery).filter(
+      (entry) => entry.skillCategory === category
+    );
+    return {
+      category,
+      attempted: entries.length,
+      correct: entries.filter((entry) => entry.correct).length,
+    };
+  });
+}
+
+function masteryScreen() {
+  const summary = skillMasterySummary();
+  const totalAttempted = summary.reduce((sum, row) => sum + row.attempted, 0);
+  const rows = summary
+    .map(({ category, attempted, correct }) => {
+      const pct = attempted ? Math.round((correct / attempted) * 100) : 0;
+      return `<div class="mastery-row" data-mastery-category="${esc(category)}"><div class="mastery-row-head"><b>${esc(category)}</b><span>${attempted ? `${correct}/${attempted} correct` : "Not yet practiced"}</span></div><div class="mastery-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(category)} mastery"><div class="mastery-bar-fill" style="width:${pct}%"></div></div></div>`;
+    })
+    .join("");
+  return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy"><button class="back-link" data-action="home">← Return to Institute</button><p class="kicker">Institute Archive · Chronicler record</p><h1>Skill Mastery Record</h1><p>Every graded record you restore is tagged to the historical-thinking skill it exercises — Archive Challenges and Sourcing Practice Check items both count. This tracks how you're doing at each skill, not just which cases are complete.</p></section><section class="activity-board mastery-board">${totalAttempted ? rows : '<p class="bank-empty">No graded records yet. Complete an Archive Challenge or a Sourcing Practice Check to start building your skill mastery record.</p>'}</section></main>`;
 }
 
 const RECONSTRUCTION_LANES = {
@@ -7460,6 +7527,9 @@ function render() {
         break;
       case "codex":
         html = codexScreen();
+        break;
+      case "mastery":
+        html = masteryScreen();
         break;
       case "reconstruction":
         html = reconstructionScreen();
@@ -8173,6 +8243,16 @@ function handleSourceReaderClick(target, action) {
   if (action === "return-codex") {
     progress.currentScreen =
       sourceOrigin === "source" ? "source" : sourceOrigin === "hub" ? "institute" : "field";
+    save();
+    render();
+    return true;
+  }
+  if (action === "open-mastery") {
+    // Reached from the Preservation Case dialog — clear its hub-dialogue
+    // state (matching hub-dialogue-close) so returning to the Institute
+    // afterward doesn't reopen a stale dialogue on top of a screen change.
+    hubDialogueId = null;
+    progress.currentScreen = "mastery";
     save();
     render();
     return true;

@@ -8,6 +8,7 @@ import {
   isEvidenceOrganizingComplete,
   evidenceOrganizingPartialSuccess,
   evidenceOrganizingHint,
+  evidenceOrganizingSkillOutcomes,
 } from "../../apps/web/src/quest-types/history/evidence-organizing-quest.js";
 import { UNIT_01_EVIDENCE_ORGANIZING_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -258,5 +259,27 @@ describe("evidenceOrganizingHint", () => {
   it("returns the placement instruction otherwise (normal case)", () => {
     const result = gradeEvidenceOrganizingQuest(validQuest, { placements: {} });
     expect(evidenceOrganizingHint(result)).toContain("slot");
+  });
+});
+
+describe("evidenceOrganizingSkillOutcomes", () => {
+  it("returns one outcome per placed source, keyed by <questId>::<sourceId> (normal case)", () => {
+    const placements = { "source-1": "slot-a", "source-2": "slot-b" };
+    expect(evidenceOrganizingSkillOutcomes(validQuest, { placements })).toEqual([
+      { key: "sample-evidence-quest::source-1", skillCategory: "Comparison", correct: true },
+      { key: "sample-evidence-quest::source-2", skillCategory: "Causation", correct: true },
+    ]);
+  });
+
+  it("reports correct: false for a misplaced source (normal case)", () => {
+    const placements = { "source-1": "slot-b" };
+    expect(evidenceOrganizingSkillOutcomes(validQuest, { placements })).toEqual([
+      { key: "sample-evidence-quest::source-1", skillCategory: "Comparison", correct: false },
+    ]);
+  });
+
+  it("only reports outcomes for sources that have been placed (boundary case)", () => {
+    expect(evidenceOrganizingSkillOutcomes(validQuest, { placements: {} })).toEqual([]);
+    expect(evidenceOrganizingSkillOutcomes(validQuest)).toEqual([]);
   });
 });

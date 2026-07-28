@@ -6976,6 +6976,48 @@ html {
   opacity: 0.68;
   filter: saturate(0.65);
 }
+.preservation-case__mastery-link {
+  display: block;
+  width: fit-content;
+  margin: 20px auto 0;
+}
+.mastery-board {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mastery-row {
+  padding: 14px 18px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+}
+.mastery-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.mastery-row-head b {
+  font-size: 1.05rem;
+}
+.mastery-row-head span {
+  color: var(--ink-soft, #7a8a86);
+  font-size: 0.85rem;
+}
+.mastery-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(var(--c-black-rgb), 0.18);
+  overflow: hidden;
+}
+.mastery-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c48235, #f1cb74);
+  transition: width 0.2s ease;
+}
 @media (max-width: 760px) {
   .badge-case-grid {
     grid-template-columns: 1fr;

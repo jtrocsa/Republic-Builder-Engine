@@ -17,6 +17,7 @@ export const UNIT_02_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "The headright system offered fifty acres per person transported — including servants — turning labor recruitment directly into a land-grant strategy, not a religious, military, or abolition measure.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-004-mcq-frethorne-audience",
@@ -31,6 +32,7 @@ export const UNIT_02_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "A private letter home to parents gave Frethorne a different incentive than official colonial reporting to investors — he had every reason to be candid about hunger, sickness, and fear rather than promote the colony.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-004-mcq-ledger-sourcing",
@@ -45,6 +47,7 @@ export const UNIT_02_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "Cargo and invoice entries like this one document economic exchange — tobacco for manufactured goods — not religious practice, governance, or personal relationships.",
+    skillCategory: "Sourcing",
   },
 ];
 
@@ -130,6 +133,7 @@ export const UNIT_02_SEQUENCING_QUESTS = [
     ],
     explanation:
       "The headright system's land-per-person incentive is what drove planters to recruit bound labor in the first place; Frethorne's letter shows the human reality of the labor that incentive produced; and the labor performed by servants like Frethorne is precisely what filled the hogsheads recorded leaving the wharf in the ledger — completing the chain from land policy to lived labor to export economy.",
+    skillCategory: "Causation",
   },
 ];
 

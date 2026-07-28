@@ -27,6 +27,13 @@ export const DEFAULT_PROGRESS = {
   activityState: {},
   completedUnits: [],
   questResponses: {},
+  // One entry per graded quest item that has ever been answered, keyed by
+  // the quest's id (or `<questId>::<sourceId>` for evidence-organizing's
+  // per-source outcomes — see quest-types/index.js's questSkillOutcomes()).
+  // Overwritten (not appended to) each time that item is re-graded, so it
+  // reflects current mastery state rather than an ever-growing attempt log —
+  // a student who fixes a wrong answer sees that item flip to correct.
+  skillMastery: {},
   settings: { miniGamesEnabled: true },
   miniGameScores: { stormNavigationBest: 0 },
   tutorial: { step: "not-started", completed: false, skipped: false },
@@ -59,6 +66,7 @@ export function readProgress() {
       submissions: { ...DEFAULT_PROGRESS.submissions, ...(saved.submissions || {}) },
       activityState: { ...DEFAULT_PROGRESS.activityState, ...(saved.activityState || {}) },
       questResponses: { ...DEFAULT_PROGRESS.questResponses, ...(saved.questResponses || {}) },
+      skillMastery: { ...DEFAULT_PROGRESS.skillMastery, ...(saved.skillMastery || {}) },
       settings: { ...DEFAULT_PROGRESS.settings, ...(saved.settings || {}) },
       miniGameScores: {
         ...DEFAULT_PROGRESS.miniGameScores,

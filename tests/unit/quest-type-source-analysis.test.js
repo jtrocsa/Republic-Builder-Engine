@@ -10,6 +10,7 @@ import {
   isHippComplete,
   hippPartialSuccess,
   hippHint,
+  sourceAnalysisSkillOutcomes,
 } from "../../apps/web/src/quest-types/history/source-analysis-quest.js";
 import { UNIT_01_SOURCE_ANALYSIS_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -332,5 +333,27 @@ describe("hippPartialSuccess", () => {
 describe("hippHint", () => {
   it("returns a non-empty instructive string (normal case)", () => {
     expect(hippHint().length).toBeGreaterThan(0);
+  });
+});
+
+describe("sourceAnalysisSkillOutcomes", () => {
+  it("hardcodes the 'Sourcing' bucket once answered — no schema tag needed (normal case)", () => {
+    expect(
+      sourceAnalysisSkillOutcomes(validQuest, {
+        selected: { "sample-hipp-prompt": "explained" },
+      })
+    ).toEqual([{ key: "sample-source-analysis", skillCategory: "Sourcing", correct: true }]);
+  });
+
+  it("reports correct: false for a wrong/identification-only selection (normal case)", () => {
+    expect(
+      sourceAnalysisSkillOutcomes(validQuest, {
+        selected: { "sample-hipp-prompt": "named-only" },
+      })
+    ).toEqual([{ key: "sample-source-analysis", skillCategory: "Sourcing", correct: false }]);
+  });
+
+  it("returns [] when unanswered (boundary case)", () => {
+    expect(sourceAnalysisSkillOutcomes(validQuest, {})).toEqual([]);
   });
 });

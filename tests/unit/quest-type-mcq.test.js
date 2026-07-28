@@ -8,6 +8,7 @@ import {
   isMcqComplete,
   mcqPartialSuccess,
   mcqHint,
+  mcqSkillOutcomes,
 } from "../../apps/web/src/quest-types/generic/mcq-quest.js";
 import { UNIT_01_MCQ_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -136,5 +137,32 @@ describe("mcqPartialSuccess", () => {
 describe("mcqHint", () => {
   it("returns a non-empty instructive string (normal case)", () => {
     expect(mcqHint().length).toBeGreaterThan(0);
+  });
+});
+
+describe("mcqSkillOutcomes", () => {
+  const tagged = { ...validQuest, skillCategory: "Causation" };
+
+  it("returns one outcome keyed by quest id once answered (normal case)", () => {
+    expect(mcqSkillOutcomes(tagged, { selected: 1 })).toEqual([
+      { key: "sample-mcq", skillCategory: "Causation", correct: true },
+    ]);
+    expect(mcqSkillOutcomes(tagged, { selected: 0 })).toEqual([
+      { key: "sample-mcq", skillCategory: "Causation", correct: false },
+    ]);
+  });
+
+  it("returns [] when unanswered (boundary case)", () => {
+    expect(mcqSkillOutcomes(tagged, {})).toEqual([]);
+  });
+
+  it("returns [] when the quest has no skillCategory tag (normal case)", () => {
+    expect(mcqSkillOutcomes(validQuest, { selected: 1 })).toEqual([]);
+  });
+
+  it("reuses an already-computed result instead of re-grading (normal case)", () => {
+    expect(mcqSkillOutcomes(tagged, { selected: 1 }, { answered: true, correct: false })).toEqual([
+      { key: "sample-mcq", skillCategory: "Causation", correct: false },
+    ]);
   });
 });

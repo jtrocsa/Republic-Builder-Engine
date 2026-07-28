@@ -39,6 +39,11 @@ export const SequencingQuestSchema = z
     // Optional, non-graded reference source — same purely-decorative role as
     // mcq-quest.js's own relatedSource, see that file's doc comment.
     relatedSource: SequencingRelatedSourceSchema.nullable().optional(),
+    // Optional, opaque taxonomy tag — same rationale as mcq-quest.js's own
+    // skillCategory field (a plain string, not an enum tied to
+    // evidence-organizing-quest.js's history-specific SKILL_CATEGORIES, to
+    // keep this module subject-agnostic). See that file's doc comment.
+    skillCategory: z.string().min(1).optional(),
   })
   .superRefine((quest, ctx) => {
     const firstSeenAt = new Map();
@@ -189,4 +194,20 @@ export function sequencingHint(result) {
     return "The order is correct. Add a reflection of at least a sentence to complete this challenge.";
   }
   return "Use the ↑/↓ buttons (or drag) to arrange the records in order.";
+}
+
+// Optional 5th contract slot — see mcq-quest.js's mcqSkillOutcomes for the
+// full rationale. Uses `correct` (the ordering itself), not the reflection
+// gate, as the mastery signal: the skill this quest type exercises is
+// causal/developmental ordering, not the separate reflection-writing task.
+/**
+ * @param {import("zod").infer<typeof SequencingQuestSchema>} quest
+ * @param {{ order?: string[], reflection?: string }} [state]
+ * @param {ReturnType<typeof gradeSequencingQuest>} [result]
+ */
+export function sequencingSkillOutcomes(quest, state = {}, result) {
+  if (!quest.skillCategory || !sequencingAnsweredAny(state)) return [];
+  const graded = result || gradeSequencingQuest(quest, state);
+  if (!graded.answered) return [];
+  return [{ key: quest.id, skillCategory: quest.skillCategory, correct: !!graded.correct }];
 }

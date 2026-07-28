@@ -9,6 +9,7 @@ import {
   isSequencingComplete,
   sequencingPartialSuccess,
   sequencingHint,
+  sequencingSkillOutcomes,
 } from "../../apps/web/src/quest-types/generic/sequencing-quest.js";
 import { UNIT_01_SEQUENCING_QUESTS } from "../../apps/web/src/content/quests/unit-01-quests.js";
 
@@ -289,5 +290,32 @@ describe("sequencing quest with a reflectionPrompt (Case 1.03 migration)", () =>
     });
     expect(isSequencingComplete(fullyComplete)).toBe(true);
     expect(sequencingPartialSuccess(fullyComplete)).toBe(false);
+  });
+});
+
+describe("sequencingSkillOutcomes", () => {
+  const tagged = { ...validQuest, skillCategory: "Causation" };
+  const correctOrder = ["item-a", "item-b", "item-c"];
+
+  it("returns one outcome keyed by quest id once fully ordered (normal case)", () => {
+    expect(sequencingSkillOutcomes(tagged, { order: correctOrder })).toEqual([
+      { key: "sample-sequencing", skillCategory: "Causation", correct: true },
+    ]);
+  });
+
+  it("reports correct: false for a wrong order (normal case)", () => {
+    const wrongOrder = ["item-b", "item-a", "item-c"];
+    expect(sequencingSkillOutcomes(tagged, { order: wrongOrder })).toEqual([
+      { key: "sample-sequencing", skillCategory: "Causation", correct: false },
+    ]);
+  });
+
+  it("returns [] when unanswered or only partially ordered (boundary case)", () => {
+    expect(sequencingSkillOutcomes(tagged, {})).toEqual([]);
+    expect(sequencingSkillOutcomes(tagged, { order: ["item-a"] })).toEqual([]);
+  });
+
+  it("returns [] when the quest has no skillCategory tag (normal case)", () => {
+    expect(sequencingSkillOutcomes(validQuest, { order: correctOrder })).toEqual([]);
   });
 });

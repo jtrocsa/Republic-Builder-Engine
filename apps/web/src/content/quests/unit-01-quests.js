@@ -17,6 +17,7 @@ export const UNIT_01_MCQ_QUESTS = [
     answer: 1,
     explanation:
       "The exhibition text was written in 1991 to summarize existing scholarship — useful context, but a secondary source, not a Taíno-authored primary account.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-001-mcq-columbus-audience",
@@ -31,6 +32,7 @@ export const UNIT_01_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "The letter was addressed to Rafael Sánchez, treasurer to the Spanish monarchs — Columbus had reason to frame his account to justify continued royal backing.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-001-mcq-waldseemuller-change",
@@ -44,6 +46,7 @@ export const UNIT_01_MCQ_QUESTS = [
     answer: 1,
     explanation:
       "As a printed European map made after early Atlantic voyages, it documents how European geographic understanding was changing — not what Caribbean life looked like on the ground.",
+    skillCategory: "Continuity and Change",
   },
 ];
 
@@ -142,6 +145,7 @@ export const UNIT_01_SEQUENCING_QUESTS = [
     ],
     explanation:
       "Each step enables the next: organized pre-contact Taíno society is what Columbus's expedition actually encountered; his letter's success in reassuring the crown's treasurer helped secure the continued backing that funded further voyages; those repeated voyages are what changed European geographic knowledge, shown in the Waldseemüller map; that same sustained contact and colonization is what exposed Taíno populations to Old World pathogens, causing the Hispaniola smallpox epidemic that began in December 1518 and killed roughly a third of the island's remaining Taíno population by May 1519; and the ongoing exchange of the same period introduced horses, which went on to reshape conquest, transport, and Indigenous ways of life well beyond the moment of first contact.",
+    skillCategory: "Causation",
   },
 ];
 
@@ -175,6 +179,7 @@ export const UNIT_01_INVESTIGATION_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "Because no Taíno-authored written account from before contact survives, any modern record describing pre-contact Taíno society — including this 1991 exhibition text — has to be built from archaeological and later documentary evidence rather than a Taíno-authored original.",
+    skillCategory: "Sourcing",
   },
   {
     id: "case-001-investigation-mcq-taino-emphasis",
@@ -189,6 +194,7 @@ export const UNIT_01_INVESTIGATION_MCQ_QUESTS = [
     answer: 0,
     explanation:
       "A record titled around Caribbean “society,” framed as background context rather than voyage narrative, most plausibly emphasizes how communities were organized and governed — which the full record confirms by describing villages led by caciques.",
+    skillCategory: "Sourcing",
   },
 ];
 
@@ -237,6 +243,7 @@ export const UNIT_01_INVESTIGATION_SEQUENCING_QUESTS = [
     ],
     explanation:
       "Columbus's voyages made first contact but he never accepted these lands were anything other than Asia; Vespucci's later voyages and published account were what first argued in print that this was a separate “New World”; that argument is what led Waldseemüller and Ringmann to label the 1507 map “America” after Vespucci; Waldseemüller himself then had second thoughts and dropped the name from his 1513 edition; and it was Mercator's 1538 map, not Waldseemüller's own later doubts, that permanently cemented “America” as the name for both continents.",
+    skillCategory: "Causation",
   },
 ];
 
@@ -304,6 +311,7 @@ export const UNIT_01_ARCHIVE_CHALLENGE_QUESTS = [
       "Each step enables the next: the Requerimiento's assertion of Spanish authority over Indigenous communities is what colonists used to justify demanding their labor and tribute under the encomienda; encomienda's labor demands, combined with Indigenous population losses, are what drove colonists to rely increasingly on forced African migration; the labor systems built on both encomienda tribute and African slavery are what produced a caste hierarchy ranking people by ancestry, legal status, and birthplace; that same hierarchy is what Indigenous and African communities resisted and adapted within and against; and it was precisely that ongoing conflict, coercion, and adaptation that reshaped language, religion, foodways, and customs into the new cultural forms of the Atlantic world.",
     reflectionPrompt:
       "Explain one connection in the chain above using evidence from two of the records.",
+    skillCategory: "Causation",
   },
 ];
 

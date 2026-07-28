@@ -15,6 +15,16 @@
 // scale.
 import { z } from "zod";
 import { escapeHtml } from "../shared/html.js";
+import { SKILL_CATEGORIES } from "./evidence-organizing-quest.js";
+
+// Every source-analysis (HIPP) quest is a sourcing exercise by definition —
+// see sourceAnalysisSkillOutcomes() below. Sourced from the shared taxonomy
+// (asserted, not hardcoded) so a future rename of the taxonomy's "Sourcing"
+// entry fails loudly here instead of silently mislabeling every outcome.
+const SOURCING_SKILL_CATEGORY = SKILL_CATEGORIES.find((category) => category === "Sourcing");
+if (!SOURCING_SKILL_CATEGORY) {
+  throw new Error('evidence-organizing-quest.js SKILL_CATEGORIES no longer includes "Sourcing".');
+}
 
 export const HIPP_DIMENSIONS = [
   "Historical situation",
@@ -223,4 +233,24 @@ export function hippPartialSuccess() {
 
 export function hippHint() {
   return "Choose the option that explains how or why this shapes the source's argument, not just names it.";
+}
+
+// Optional 5th contract slot — see mcq-quest.js's mcqSkillOutcomes for the
+// full rationale. No schema field needed here (unlike mcq/sequencing):
+// source-analysis quests are HIPP sourcing exercises by definition, so every
+// instance is hardcoded to the "Sourcing" bucket from
+// evidence-organizing-quest.js's SKILL_CATEGORIES taxonomy rather than
+// needing a per-quest tag — this module is already history-coupled (see
+// header comment), so referencing that taxonomy by name here doesn't cross
+// the generic/history boundary the way it would in mcq-quest.js/
+// sequencing-quest.js.
+/**
+ * @param {import("zod").infer<typeof SourceAnalysisQuestSchema>} quest
+ * @param {{ selected?: Record<string, string> }} [state]
+ * @param {ReturnType<typeof gradeSourceAnalysisQuest>} [result]
+ */
+export function sourceAnalysisSkillOutcomes(quest, state = {}, result) {
+  if (!hippAnsweredAny(state)) return [];
+  const graded = result || gradeSourceAnalysisQuest(quest, state);
+  return [{ key: quest.id, skillCategory: SOURCING_SKILL_CATEGORY, correct: !!graded.complete }];
 }

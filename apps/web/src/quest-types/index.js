@@ -13,6 +13,7 @@ import {
   isMcqComplete,
   mcqPartialSuccess,
   mcqHint,
+  mcqSkillOutcomes,
 } from "./generic/mcq-quest.js";
 import {
   SequencingQuestSchema,
@@ -23,6 +24,7 @@ import {
   isSequencingComplete,
   sequencingPartialSuccess,
   sequencingHint,
+  sequencingSkillOutcomes,
 } from "./generic/sequencing-quest.js";
 import {
   EvidenceOrganizingQuestSchema,
@@ -33,6 +35,7 @@ import {
   isEvidenceOrganizingComplete,
   evidenceOrganizingPartialSuccess,
   evidenceOrganizingHint,
+  evidenceOrganizingSkillOutcomes,
 } from "./history/evidence-organizing-quest.js";
 import {
   SourceAnalysisQuestSchema,
@@ -43,6 +46,7 @@ import {
   isHippComplete,
   hippPartialSuccess,
   hippHint,
+  sourceAnalysisSkillOutcomes,
 } from "./history/source-analysis-quest.js";
 import {
   SaqQuestSchema,
@@ -76,6 +80,7 @@ export const QUEST_TYPES = {
     isComplete: isMcqComplete,
     partialSuccess: mcqPartialSuccess,
     hint: mcqHint,
+    skillOutcomes: mcqSkillOutcomes,
   },
   sequencing: {
     schema: SequencingQuestSchema,
@@ -86,6 +91,7 @@ export const QUEST_TYPES = {
     isComplete: isSequencingComplete,
     partialSuccess: sequencingPartialSuccess,
     hint: sequencingHint,
+    skillOutcomes: sequencingSkillOutcomes,
   },
   "evidence-organizing": {
     schema: EvidenceOrganizingQuestSchema,
@@ -96,6 +102,7 @@ export const QUEST_TYPES = {
     isComplete: isEvidenceOrganizingComplete,
     partialSuccess: evidenceOrganizingPartialSuccess,
     hint: evidenceOrganizingHint,
+    skillOutcomes: evidenceOrganizingSkillOutcomes,
   },
   hipp: {
     schema: SourceAnalysisQuestSchema,
@@ -106,6 +113,7 @@ export const QUEST_TYPES = {
     isComplete: isHippComplete,
     partialSuccess: hippPartialSuccess,
     hint: hippHint,
+    skillOutcomes: sourceAnalysisSkillOutcomes,
   },
   saq: {
     schema: SaqQuestSchema,
@@ -116,6 +124,10 @@ export const QUEST_TYPES = {
     isComplete: isSaqComplete,
     partialSuccess: saqPartialSuccess,
     hint: saqHint,
+    // No skillOutcomes: SAQ's "complete" means submitted, not graded (see
+    // saq-quest.js's module doc comment) — there is no binary correct/
+    // incorrect signal available without the AI evaluator or a teacher
+    // grade, so it deliberately doesn't feed the skill-mastery record yet.
   },
 };
 
@@ -151,4 +163,12 @@ export function questPartialSuccess(questType, result) {
 
 export function questHint(questType, result) {
   return requireQuestType(questType).hint(result);
+}
+
+// skillOutcomes is the one optional contract slot (saq has none — see its
+// QUEST_TYPES entry) — returns [] rather than throwing when a type doesn't
+// implement it, so callers don't need to branch on questType themselves.
+export function questSkillOutcomes(questType, quest, state, result) {
+  const outcomes = requireQuestType(questType).skillOutcomes;
+  return outcomes ? outcomes(quest, state, result) : [];
 }

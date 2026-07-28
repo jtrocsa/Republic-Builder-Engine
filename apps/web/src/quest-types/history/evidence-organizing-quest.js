@@ -243,3 +243,24 @@ export function evidenceOrganizingHint(result) {
     ? "All records restored to the right slot. Add a reflection of at least a sentence to complete this challenge."
     : 'Drag each record into the slot it belongs in (or use the "Place in" menu on each card).';
 }
+
+// Optional 5th contract slot — see mcq-quest.js's mcqSkillOutcomes for the
+// full rationale. Unlike the other quest types, evidence-organizing already
+// tags skillCategory per-source rather than once per quest (its sources
+// commonly span several different skills), so this reports one outcome per
+// placed source rather than one per quest — `key` is scoped to
+// `<questId>::<sourceId>` so two different quests' sources never collide.
+/**
+ * @param {import("zod").infer<typeof EvidenceOrganizingQuestSchema>} quest
+ * @param {{ placements?: Record<string,string> }} [state]
+ */
+export function evidenceOrganizingSkillOutcomes(quest, state = {}) {
+  const placements = state.placements || {};
+  return quest.sources
+    .filter((source) => placements[source.id])
+    .map((source) => ({
+      key: `${quest.id}::${source.id}`,
+      skillCategory: source.skillCategory,
+      correct: placements[source.id] === source.correctSlotId,
+    }));
+}

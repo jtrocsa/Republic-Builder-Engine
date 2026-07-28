@@ -22,6 +22,15 @@ export const McqQuestSchema = McqQuestionSchema.extend({
   // fields; this one is purely decorative student-facing context and has no
   // bearing on gradeMcqQuest().
   relatedSource: McqRelatedSourceSchema.nullable().optional(),
+  // Optional, opaque taxonomy tag — deliberately a plain string, not an enum
+  // tied to evidence-organizing-quest.js's history-specific SKILL_CATEGORIES,
+  // since this module stays subject-agnostic (see header comment). History
+  // content authors should set this to one of SKILL_CATEGORIES' values by
+  // convention (see docs/content-guide/skill-taxonomy.md); a future non-
+  // history subject could set it to its own taxonomy instead. Feeds the
+  // Phase 49B skill-mastery record screen via skillOutcomes() below; omitted
+  // questions simply don't contribute to any mastery bucket.
+  skillCategory: z.string().min(1).optional(),
 });
 
 export const McqQuestListSchema = z.array(McqQuestSchema).superRefine((items, ctx) => {
@@ -98,4 +107,21 @@ export function mcqPartialSuccess() {
 
 export function mcqHint() {
   return "Choose the option that best explains why, not just the option that names the correct answer.";
+}
+
+// Optional 5th contract slot (see docs/architecture/QUEST-TYPE-ARCHITECTURE.md
+// and quest-types/index.js's questSkillOutcomes() wrapper) — reports one
+// mastery-bucket outcome once the question has been answered, keyed by the
+// quest's own id so a later re-render/edit overwrites rather than
+// double-counts the same item. Returns [] (no outcome yet) for an unanswered
+// question or one with no skillCategory tag.
+/**
+ * @param {import("zod").infer<typeof McqQuestSchema>} quest
+ * @param {{ selected?: number|string }} [state]
+ * @param {ReturnType<typeof gradeMcqQuest>} [result]
+ */
+export function mcqSkillOutcomes(quest, state = {}, result) {
+  if (!quest.skillCategory || !mcqAnsweredAny(state)) return [];
+  const graded = result || gradeMcqQuest(quest, state);
+  return [{ key: quest.id, skillCategory: quest.skillCategory, correct: !!graded.correct }];
 }
