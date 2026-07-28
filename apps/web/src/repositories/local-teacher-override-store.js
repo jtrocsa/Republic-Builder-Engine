@@ -17,7 +17,10 @@ import { z } from "zod";
 const STORAGE_KEY = "republic-builder.chronicle.teacher-overrides.v1";
 
 // Add a field name here only once a real Author Mode input edits it.
-const SUPPORTED_FIELD_NAMES = ["title", "centralQuestion"];
+// "navTableVisible" (Phase 48C) stores "true"/"false" as strings, matching
+// this store's string-only value schema — the per-classroom Navigation
+// Table visibility toggle in missionRenameControlMarkup().
+const SUPPORTED_FIELD_NAMES = ["title", "centralQuestion", "navTableVisible"];
 
 const FieldValueSchema = z.string().max(4000);
 

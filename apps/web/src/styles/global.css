@@ -8088,6 +8088,15 @@ details[open] > summary.manage-content-unit-toggle::before {
   color: #f0e4c4;
   font-size: var(--c-text-body);
 }
+.manage-content-rename label.manage-content-visibility-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.manage-content-visibility-toggle input[type="checkbox"] {
+  accent-color: var(--gold);
+}
 .manage-content-field-label {
   margin: 4px 0 6px;
   color: var(--gold-soft);

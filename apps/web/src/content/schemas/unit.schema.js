@@ -33,6 +33,13 @@ const ArchiveChallengeSchema = z.object({
   questId: z.string().min(1, "case.archiveChallenge.questId is required"),
 });
 
+// Whether a case gets a marker on the Chronicle Navigation Table has no
+// field here — it's purely a per-classroom teacher override
+// ("navTableVisible" in teacher-override-repository.js, default visible),
+// not a content-authored global default. A content-level field would be the
+// wrong layer: every case shows by default (Phase 48A), and a teacher hiding
+// one mission for their own classroom shouldn't require re-authoring
+// content. See resolvedNavTableVisible()/archiveScreen() in main.js.
 export const CaseSchema = z.object({
   id: z.string().min(1, "case.id is required"),
   shortTitle: z.string().min(1, "case.shortTitle is required"),
@@ -50,12 +57,6 @@ export const CaseSchema = z.object({
     message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
   }),
   summary: z.string().min(1, "case.summary is required"),
-  // Whether this case gets a marker on the Chronicle Navigation Table.
-  // Defaults true; as of Phase 48A no content sets this false (every case
-  // shows, locked ones greyed out) — the field is retained here pending
-  // Phase 48C, which replaces it with a per-classroom teacher override
-  // instead of a global content-authored default.
-  navigationTableVisible: z.boolean().default(true),
   // Present only for cases relocated into the Archive Room; null for
   // ChronoTravel destination cases (route: "field") and for
   // not-yet-migrated standalone cases.

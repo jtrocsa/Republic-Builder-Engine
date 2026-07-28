@@ -2109,6 +2109,14 @@ function resolvedCaseTitle(kase) {
   return prefix + resolveTeacherOverride(kase.id, "title", name);
 }
 
+// Per-classroom Navigation Table visibility (Phase 48C) — default visible,
+// same string-valued override system title/centralQuestion already use
+// rather than a content-authored global default (see unit.schema.js's
+// CaseSchema comment for why this has no content field of its own).
+function resolvedNavTableVisible(kase) {
+  return resolveTeacherOverride(kase.id, "navTableVisible", "true") !== "false";
+}
+
 function authorPanel() {
   if (!authorMode || !authorPanelOpen) return "";
   const anyOverride = Object.values(AUTHOR_COPY_FIELDS).some(({ contentId, fieldName }) =>
@@ -2772,9 +2780,14 @@ function missionRenameControlMarkup(kase) {
   const { prefix, name } = splitCaseTitle(kase);
   const edited = hasTeacherOverride(kase.id, "title");
   const resolvedName = resolveTeacherOverride(kase.id, "title", name);
+  const visible = resolvedNavTableVisible(kase);
   return `<div class="manage-content-rename">
 <label>Mission name${edited ? ' <span class="author-override-flag">edited</span>' : ""}
 <span class="manage-content-rename-input-row">${prefix ? `<span class="manage-content-rename-prefix">${esc(prefix)}</span>` : ""}<input type="text" data-case-title="${esc(kase.id)}" value="${esc(resolvedName)}"></span>
+</label>
+<label class="manage-content-visibility-toggle">
+<input type="checkbox" data-case-visibility="${esc(kase.id)}" ${visible ? "checked" : ""}>
+Show on Navigation Table for this classroom
 </label>
 </div>`;
 }
@@ -6543,9 +6556,10 @@ function archiveScreen() {
       return `<div class="atlas-label" style="left:${(x / viewport.width) * 100}%;top:${(y / viewport.height) * 100}%">${esc(l.text)}</div>`;
     })
     .join("");
-  // Every case gets a marker as of Phase 48A (locked ones render greyed out
-  // via caseMarker()'s own state check) — no visibility filter here anymore.
-  const visibleCases = selectedUnit.cases;
+  // Every case shows by default as of Phase 48A (locked ones render greyed
+  // out via caseMarker()'s own state check); Phase 48C adds a per-classroom
+  // opt-out on top of that default via resolvedNavTableVisible().
+  const visibleCases = selectedUnit.cases.filter((c) => resolvedNavTableVisible(c));
   const markerPositions = declutterMarkerPositions(visibleCases, view.bounds, viewport);
   const threadXY =
     markerPositions.get(selected.id) ||
@@ -8875,7 +8889,7 @@ function handleAppClick(event) {
   }
 }
 
-function handleAppChange(event) {
+async function handleAppChange(event) {
   const field = event.target;
   if (field.matches("[data-profile]")) {
     progress.profile[field.dataset.profile] = field.value;
@@ -8889,11 +8903,14 @@ function handleAppChange(event) {
   } else if (field.matches("[data-copy]")) {
     const mapping = AUTHOR_COPY_FIELDS[field.dataset.copy];
     if (mapping) {
-      setTeacherOverride(mapping.contentId, mapping.fieldName, field.value);
+      await setTeacherOverride(mapping.contentId, mapping.fieldName, field.value);
       render();
     }
   } else if (field.matches("[data-case-title]")) {
-    setTeacherOverride(field.dataset.caseTitle, "title", field.value);
+    await setTeacherOverride(field.dataset.caseTitle, "title", field.value);
+    render();
+  } else if (field.matches("[data-case-visibility]")) {
+    await setTeacherOverride(field.dataset.caseVisibility, "navTableVisible", field.checked ? "true" : "false");
     render();
   } else if (field.matches("[data-sequence-position-select]")) {
     const formEl = field.closest("[data-authoring-form]");

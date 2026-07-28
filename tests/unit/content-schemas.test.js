@@ -68,10 +68,9 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     expect(UnitSchema.safeParse(broken).success).toBe(false);
   });
 
-  it("defaults navigationTableVisible to true and archiveChallenge to null when omitted (normal case)", () => {
+  it("defaults archiveChallenge to null when omitted (normal case)", () => {
     const result = UnitSchema.safeParse(validUnit);
     expect(result.success).toBe(true);
-    expect(result.data.cases[0].navigationTableVisible).toBe(true);
     expect(result.data.cases[0].archiveChallenge).toBeNull();
   });
 
