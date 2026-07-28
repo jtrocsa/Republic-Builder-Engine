@@ -7935,12 +7935,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px 12px;
-  flex-wrap: wrap;
-}
-.manage-content-mission-head .case-kind-badge {
-  margin-top: 0;
-  white-space: normal;
-  text-align: right;
+  flex-wrap: nowrap;
 }
 .manage-content-mission-card h3 {
   margin: 2px 0 0;
@@ -7950,18 +7945,12 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .manage-content-mission-card .btn {
   align-self: flex-start;
-  margin-top: 8px;
-}
-.case-kind-badge {
-  display: inline-block;
-  margin-top: 4px;
-  padding: 2px 8px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.35);
-  border-radius: 999px;
-  color: var(--gold-soft);
-  font: 700 var(--c-text-micro) "Cinzel", serif;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  /* auto, not a fixed value — .manage-content-mission-grid stretches every
+     card in a row to equal height, so this is what actually pins the
+     button to the bottom of shorter cards, aligning it with taller
+     siblings' buttons instead of leaving it wherever the card's own
+     content happens to end (Phase 47C). */
+  margin-top: auto;
 }
 .case-summary-note {
   margin: 6px 0 0;
@@ -7985,6 +7974,12 @@ details[open] > summary.manage-content-unit-toggle::before {
   border: 1px solid rgba(var(--c-gold-rgb), 0.18);
   border-radius: 10px;
   background: rgba(4, 26, 38, 0.28);
+}
+/* Without this, the row's default column-flex stretch pulls the chip to
+   the row's full width instead of hugging its own text (Phase 47C, found
+   live after swapping the old .case-kind-badge markup for chip()). */
+.source-pool-row > .c-chip {
+  align-self: flex-start;
 }
 .source-pool-row-main {
   display: flex;
@@ -8650,7 +8645,9 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 
 /* Bottom status row (Published Mission / Student View / Source Text
-   Handling), based on .case-kind-badge's pill look. */
+   Handling) — a pill look matching .c-chip's (Phase 47C removed the old
+   .case-kind-badge this used to reference; folding this onto .c-chip
+   itself is tracked as Phase 47G's surface sweep). */
 .manage-content-status-bar {
   display: flex;
   flex-wrap: wrap;

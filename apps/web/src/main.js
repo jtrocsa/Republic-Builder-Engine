@@ -2525,7 +2525,7 @@ function teacherSourcesUnitSectionMarkup(meta) {
       ? `<h4>Locked (official)</h4><ul class="source-pool-list">${locked
           .map(
             ({ source, caseTitle }) =>
-              `<li class="source-pool-row"><span class="case-kind-badge">Locked</span><span class="source-pool-row-copy"><strong>${esc(source.title)}</strong><span class="kicker">Required by ${esc(caseTitle)}</span></span></li>`
+              `<li class="source-pool-row">${chip({ label: "Locked", tone: "muted" })}<span class="source-pool-row-copy"><strong>${esc(source.title)}</strong><span class="kicker">Required by ${esc(caseTitle)}</span></span></li>`
           )
           .join("")}</ul>`
       : "";
@@ -2671,18 +2671,31 @@ async function openGradingScreen(submissionId) {
 
 // --- Manage Content (Teacher Mode's per-mission source/quest swap editor) --------
 // Listed by Unit → Mission (case) so a teacher sees what kind of mission
-// they're about to edit before opening it — see caseKindLabel(). Map
-// Missions (case.route === "field") are entirely fixed content — geography,
-// NPC/source placement, and Practice Check questions alike — so
-// manageContentCaseScreen() shows them as locked with no editable slots at
-// all. Every other case is an Activity Mission: its questions are editable,
-// plus any generic-schema sources it has (UNIT_SOURCES today only covers
-// the 3 map cases, so that path is currently a no-op for Activity Missions —
-// see the plan this shipped against).
+// they're about to edit before opening it — see caseKindLabel()/
+// caseKindDetail(). Map Missions (case.route === "field") are entirely
+// fixed content — geography, NPC/source placement, and Practice Check
+// questions alike — so manageContentCaseScreen() shows them as locked with
+// no editable slots at all. Every other case is an Activity Mission: its
+// questions are editable, plus any generic-schema sources it has
+// (UNIT_SOURCES today only covers the 3 map cases, so that path is
+// currently a no-op for Activity Missions — see the plan this shipped
+// against).
+//
+// Kept short enough to always render as a single-line chip — the qualifier
+// (Archive Challenge only / the specific mechanic) is a separate detail
+// line via caseKindDetail(), not crammed into the badge (Phase 47C; the
+// combined "Activity Mission — Archive Challenge only" string used to wrap
+// to 2-3 lines while "Map Mission" stayed a one-line pill).
 function caseKindLabel(kase) {
-  if (kase.route === "field") return "Map Mission";
-  if (kase.route === null) return "Activity Mission — Archive Challenge only";
-  return `Activity Mission — ${kase.mechanic}`;
+  return kase.route === "field" ? "Map Mission" : "Activity Mission";
+}
+
+// The qualifier caseKindLabel() no longer carries — null for Map Missions,
+// which need none.
+function caseKindDetail(kase) {
+  if (kase.route === "field") return null;
+  if (kase.route === null) return "Archive Challenge only";
+  return kase.mechanic;
 }
 
 // Renaming is metadata, not editable mission content, so it's offered even
@@ -2932,9 +2945,11 @@ ${body}
 }
 
 function manageContentMissionCardMarkup(c) {
+  const detail = caseKindDetail(c);
   return `<article class="manage-content-mission-card">
-<div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p><span class="case-kind-badge">${esc(caseKindLabel(c))}</span></div>
+<div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p>${chip({ label: caseKindLabel(c), tone: "gold" })}</div>
 <h3>${esc(resolvedCaseTitle(c))}</h3>
+${detail ? `<p class="c-help">${esc(detail)}</p>` : ""}
 <p class="case-summary-note">${esc(c.summary)}</p>
 <button class="btn btn-outline" data-action="open-manage-content-case" data-case-id="${esc(c.id)}" type="button">Edit mission →</button>
 </article>`;
