@@ -2153,7 +2153,7 @@ function authTabsMarkup(tabs) {
 
 function joinScreen() {
   const isClaim = authUiState.studentTab !== "signin";
-  return `${chrome()}<main class="shell completion-shell auth-shell"><section>
+  return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Join a Classroom</h1>
 <p class="c-page-description">${
@@ -2178,7 +2178,7 @@ ${feedbackError(authUiState)}
 function loginScreen() {
   const isSignIn = authUiState.teacherTab !== "signup";
   if (isSignIn) {
-    return `${chrome()}<main class="shell completion-shell auth-shell"><section>
+    return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Teacher Sign In</h1>
 ${authTabsMarkup([
@@ -2204,7 +2204,7 @@ ${import.meta.env.DEV ? btn({ label: "🧪 Dev: Fake Teacher", action: "dev-fake
 </div>`
       )
       .join("");
-    return `${chrome()}<main class="shell completion-shell auth-shell"><section>
+    return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
 <p class="kicker">${esc(BRAND.engine)} · Step 2 of 2</p>
 <h1>Set Up Classrooms</h1>
 <p class="c-page-description">Choose how many classrooms to create now — you can always add more later from your dashboard.</p>
@@ -2216,7 +2216,7 @@ ${feedbackError(authUiState)}
 </section></main>${authorPanel()}`;
   }
   const draft = authUiState.signupDraft;
-  return `${chrome()}<main class="shell completion-shell auth-shell"><section>
+  return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
 <p class="kicker">${esc(BRAND.engine)} · Step 1 of 2</p>
 <h1>Create Teacher Account</h1>
 ${authTabsMarkup([
@@ -2353,7 +2353,7 @@ ${unitSections}`;
 
 function teacherDashboardScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell completion-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Teacher Dashboard</h1><p>Sign in as a teacher to manage classrooms.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button><button class="btn btn-outline" data-action="open-main-menu" type="button">← Back</button></section></main>${authorPanel()}`;
   }
   // Join code is real, useful info (what a teacher hands students to join)
   // but was baked into the button's primary label — now a visually
@@ -2371,7 +2371,7 @@ function teacherDashboardScreen() {
     units: teacherUnitsTabMarkup,
   };
   const activeTabBody = (tabBodies[teacherUiState.activeTab] || teacherClassroomsTabMarkup)();
-  return `${chrome()}<main class="shell completion-shell"><section>
+  return `${chrome()}<main class="shell completion-shell c-app"><section>
 <p class="kicker">${esc(BRAND.engine)}</p>
 <h1>Teacher Dashboard</h1>
 <p>Signed in as ${esc(currentProfile.displayName)}.</p>
@@ -2563,14 +2563,14 @@ ${PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta }) => teacherSourcesUnitSectionMarkup
 
 function gradingScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1><p>Sign in as a teacher to review submissions.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell completion-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1><p>Sign in as a teacher to review submissions.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
   const submission = gradingUiState.submission;
   if (!submission) {
     const body = gradingUiState.error
       ? feedbackError(gradingUiState)
       : loadingNote("Loading submission…");
-    return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1>${body}<button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button></section></main>${authorPanel()}`;
+    return `${chrome()}<main class="shell completion-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Grading</h1>${body}<button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button></section></main>${authorPanel()}`;
   }
   const grades =
     submission.grades
@@ -2579,7 +2579,7 @@ function gradingScreen() {
           `<article class="manual-grade-entry"><p class="kicker">${esc(new Date(g.created_at).toLocaleString())}</p><h3>${esc(g.grade_label)}</h3>${g.teacher_feedback ? `<p>${esc(g.teacher_feedback)}</p>` : ""}</article>`
       )
       .join("") || emptyState({ body: "No grade entered yet." });
-  return `${chrome()}<main class="shell review-shell"><section class="review-copy">
+  return `${chrome()}<main class="shell review-shell c-app"><section class="review-copy">
 <button class="back-link" data-action="back-to-teacher-dashboard">← Back to dashboard</button>
 <p class="kicker">${esc(SUBMISSION_TASK_TYPE_LABEL[submission.taskType] || submission.taskType)}</p>
 <h1>${esc(submission.studentDisplayName)}</h1>
@@ -4007,11 +4007,11 @@ function manageContentStepIndicatorMarkup(activeCase) {
 
 function manageContentCaseScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
-    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
+    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>Sign in as a teacher to manage content.</p><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher Sign In →</button></section></main>${authorPanel()}`;
   }
   const activeCase = caseById(contentUiState.selectedCaseId);
   if (!activeCase) {
-    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p></section></main>${authorPanel()}`;
+    return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>Manage Content</h1><p>${contentUiState.error ? esc(contentUiState.error) : "Loading case…"}</p></section></main>${authorPanel()}`;
   }
   // Map Missions are entirely fixed content — the walkable map, its NPCs/
   // sources, and its Practice Check questions are all locked — so this is
@@ -4020,7 +4020,7 @@ function manageContentCaseScreen() {
   // student"/breadcrumb now cover what the old inline "Student Preview"/
   // "Back" buttons used to.
   if (activeCase.route === "field") {
-    return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><section>
+    return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell c-app"><section>
 ${missionRenameControlMarkup(activeCase)}
 <p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
 </section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
@@ -4034,7 +4034,7 @@ ${missionRenameControlMarkup(activeCase)}
         : step === "published"
           ? manageContentPublishedStepMarkup(activeCase)
           : manageContentNameStepMarkup(activeCase);
-  return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell"><div class="manage-content-layout">
+  return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell c-app"><div class="manage-content-layout">
 <aside class="manage-content-journey-rail">${manageContentStepIndicatorMarkup(activeCase)}</aside>
 <section>
 ${stepMarkup}

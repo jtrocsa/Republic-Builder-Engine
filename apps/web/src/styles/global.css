@@ -64,6 +64,7 @@
   --c-text-body: 1rem;
   --c-text-meta: 0.85rem;
   --c-text-label: 0.72rem;
+  --c-text-micro: 0.68rem;
   --c-leading-tight: 1.1;
   --c-leading-normal: 1.5;
   --c-leading-relaxed: 1.7;
@@ -508,6 +509,52 @@ select {
 }
 .c-step.is-done {
   color: var(--c-success);
+}
+
+/* ============================================================
+   Teacher-app scope (Phase 47A)
+   Every teacher-facing screen (sign-in/join, dashboard, mission
+   editor, grading) wraps its <main> in .c-app. Rules here are
+   ADDITIVE ONLY — never edits to a shared gameplay selector — so
+   the 20 gameplay visual-regression baselines stay byte-identical.
+   Where a teacher screen used to share a gameplay class
+   (.completion-shell, .review-shell), the fix is to stop emitting
+   that class from the teacher screen, not to override it here.
+
+   This block also gives bare heading tags a real rule: several
+   teacher screens render plain <h2>/<h3>/<h4> with no CSS rule
+   anywhere, falling back to the browser's default DM-Sans-bold
+   sizes (1.5em/1.17em/1em) and clashing with the rest of the type
+   scale. Scoped to .c-app so it can never affect a gameplay screen
+   that happens to use a bare heading tag of its own.
+   ============================================================ */
+.c-app h1 {
+  margin: 0;
+  color: var(--c-text);
+  font: 700 var(--c-text-page) / var(--c-leading-tight) var(--c-font-display);
+  letter-spacing: -0.02em;
+}
+.c-app h2 {
+  margin: 0;
+  color: var(--c-text);
+  font: 700 var(--c-text-section) / 1.3 var(--c-font-display);
+}
+.c-app h3 {
+  margin: 0;
+  color: var(--c-gold-soft);
+  font: 700 var(--c-text-body) / 1.3 var(--c-font-label);
+}
+.c-app h4 {
+  margin: 0;
+  color: var(--c-gold-soft);
+  font: 700 var(--c-text-label) / 1.25 var(--c-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.c-app p,
+.c-app li,
+.c-app dd {
+  font-size: var(--c-text-body);
 }
 
 .chrome {
@@ -7624,9 +7671,7 @@ button:hover,
   background: none;
   padding: 4px;
   color: #4a6b76;
-  font:
-    700 0.65rem "Cinzel",
-    serif;
+  font: 700 var(--c-text-micro) "Cinzel", serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -7642,7 +7687,7 @@ button:hover,
 .classroom-switch-code {
   display: block;
   margin-top: 2px;
-  font-size: 0.68rem;
+  font-size: var(--c-text-micro);
   font-weight: 400;
   opacity: 0.7;
   letter-spacing: 0.04em;
@@ -7673,7 +7718,7 @@ button:hover,
   width: 100%;
   margin-top: 14px;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
 }
 .roster-table th,
 .roster-table td {
@@ -7684,9 +7729,7 @@ button:hover,
 }
 .roster-table th {
   color: var(--gold-soft);
-  font:
-    700 0.68rem "Cinzel",
-    serif;
+  font: 700 var(--c-text-micro) "Cinzel", serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -7713,14 +7756,14 @@ button:hover,
 .archive-feedback-item h3 {
   margin: 0 0 4px;
   color: var(--gold-soft);
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .archive-feedback-item p {
   margin: 0;
   color: #d5e1dd;
-  font-size: 0.88rem;
+  font-size: var(--c-text-meta);
   line-height: 1.5;
 }
 .archive-feedback-gap {
@@ -7734,7 +7777,7 @@ button:hover,
 .archive-feedback-readiness {
   margin: 6px 0 0 !important;
   color: var(--gold-soft) !important;
-  font-size: 0.78rem !important;
+  font-size: var(--c-text-meta) !important;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -7842,7 +7885,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   background: rgba(var(--c-gold-rgb), 0.12);
   color: var(--gold);
   font-family: "Cinzel", serif;
-  font-size: 0.75rem;
+  font-size: var(--c-text-label);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -7916,16 +7959,14 @@ details[open] > summary.manage-content-unit-toggle::before {
   border: 1px solid rgba(var(--c-gold-rgb), 0.35);
   border-radius: 999px;
   color: var(--gold-soft);
-  font:
-    700 0.65rem "Cinzel",
-    serif;
+  font: 700 var(--c-text-micro) "Cinzel", serif;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 .case-summary-note {
   margin: 6px 0 0;
   color: #b9c7c2;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
 }
 
 /* Teacher Dashboard "Sources" tab: locked/pool source lists */
@@ -7957,7 +7998,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .source-pool-row-copy strong {
   color: #f0e4c4;
-  font-size: 0.9rem;
+  font-size: var(--c-text-body);
 }
 .source-pool-preview {
   margin-top: 10px;
@@ -7969,13 +8010,11 @@ details[open] > summary.manage-content-unit-toggle::before {
   flex-direction: column;
   gap: 6px;
   margin: 0 0 8px;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
 }
 .source-pool-preview dt {
   color: var(--gold-soft);
-  font:
-    700 0.62rem "Cinzel",
-    serif;
+  font: 700 var(--c-text-micro) "Cinzel", serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -8005,12 +8044,12 @@ details[open] > summary.manage-content-unit-toggle::before {
 .source-pool-fulltext-note {
   margin: 0 0 10px;
   color: #b9c7c2;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
   font-style: italic;
 }
 .locked-note {
   color: #b9c7c2;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
   font-style: italic;
 }
 .manage-content-rename {
@@ -8021,7 +8060,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   flex-direction: column;
   gap: 6px;
   color: #b9c7c2;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
 }
 .manage-content-rename-input-row {
   display: flex;
@@ -8030,7 +8069,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .manage-content-rename-prefix {
   color: #b9c7c2;
-  font-size: 0.95rem;
+  font-size: var(--c-text-body);
   white-space: nowrap;
 }
 .manage-content-rename input[type="text"] {
@@ -8041,12 +8080,12 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 10px;
   background: rgba(4, 26, 38, 0.28);
   color: #f0e4c4;
-  font-size: 0.95rem;
+  font-size: var(--c-text-body);
 }
 .manage-content-field-label {
   margin: 4px 0 6px;
   color: var(--gold-soft);
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -8115,7 +8154,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border: 1px dashed rgba(159, 179, 172, 0.35);
   border-radius: 8px;
   color: #9fb3ac;
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
 }
 .manage-content-copy-field select {
   flex: 1;
@@ -8128,7 +8167,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   gap: 6px;
   margin: 0;
   color: var(--gold-soft);
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -8142,7 +8181,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   gap: 4px;
   margin: 0;
   color: #d8e3de;
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   text-transform: none;
   letter-spacing: normal;
   white-space: nowrap;
@@ -8178,7 +8217,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 999px;
   background: none;
   color: #e3a3a3;
-  font-size: 0.9rem;
+  font-size: var(--c-text-body);
   line-height: 1.4;
   cursor: pointer;
 }
@@ -8193,7 +8232,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 999px;
   background: none;
   color: var(--gold-soft);
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   line-height: 1.4;
   cursor: pointer;
 }
@@ -8213,7 +8252,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 8px;
   background: none;
   color: var(--gold-soft);
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   cursor: pointer;
 }
 .manage-content-add-row-btn:disabled {
@@ -8237,7 +8276,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 8px;
   background: rgba(4, 26, 38, 0.4);
   color: #f0e4c4;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   font-family: inherit;
 }
 .manage-content-authoring-form [data-sequence-position-select],
@@ -8249,7 +8288,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 8px;
   background: rgba(4, 26, 38, 0.4);
   color: #f0e4c4;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
   font-family: inherit;
 }
 /* Was a solid full-strength gold border — exactly the "one large
@@ -8272,7 +8311,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   display: block;
   margin-bottom: 12px;
   color: var(--gold-soft);
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -8286,7 +8325,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 8px;
   background: rgba(4, 26, 38, 0.4);
   color: #f0e4c4;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   text-transform: none;
   letter-spacing: normal;
   white-space: pre-wrap;
@@ -8339,10 +8378,10 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .manage-content-type-card-pick strong {
   color: var(--gold-soft);
-  font-size: 0.95rem;
+  font-size: var(--c-text-body);
 }
 .manage-content-type-card-pick span {
-  font-size: 0.8rem;
+  font-size: var(--c-text-meta);
   color: #b9c7c2;
 }
 .manage-content-type-card .manage-content-help-trigger {
@@ -8378,7 +8417,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 10px;
   background: rgba(120, 40, 40, 0.22);
   color: #f3caca;
-  font-size: 0.8rem;
+  font-size: var(--c-text-meta);
 }
 .manage-content-authoring-errors ul {
   margin: 0;
@@ -8422,7 +8461,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-editor-section-title {
   color: var(--gold-soft);
   font-family: "Cinzel", serif;
-  font-size: 0.88rem;
+  font-size: var(--c-text-meta);
   letter-spacing: 0.02em;
 }
 .manage-content-editor-section-toggle {
@@ -8432,7 +8471,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 999px;
   background: none;
   color: var(--gold-soft);
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
   cursor: pointer;
 }
 .manage-content-editor-section-toggle:hover {
@@ -8445,7 +8484,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-editor-section-summary-text {
   margin: 0;
   color: #d8e3de;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
 }
 .manage-content-directions {
   border-left-color: var(--gold);
@@ -8457,7 +8496,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-jump-links {
   margin: 0 0 14px;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--c-text-meta);
 }
 .manage-content-jump-links .text-button {
   margin: 0 2px;
@@ -8491,7 +8530,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   padding: 8px 10px;
   border-left: 2px solid rgba(var(--c-gold-rgb), 0.35);
   color: #b9c7c2;
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   line-height: 1.4;
 }
 .manage-content-help-icon {
@@ -8504,7 +8543,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 50%;
   border: 1px solid var(--gold);
   color: var(--gold);
-  font-size: 0.7rem;
+  font-size: var(--c-text-label);
   line-height: 1;
   cursor: help;
   user-select: none;
@@ -8558,7 +8597,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   gap: 10px;
   margin: 10px 0 6px;
   color: var(--gold-soft);
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -8573,7 +8612,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 10px;
   background: rgba(4, 20, 30, 0.5);
   color: #d8e3de;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   line-height: 1.55;
   max-height: 220px;
   overflow-y: auto;
@@ -8606,7 +8645,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-char-counter {
   margin: 4px 0 0;
   color: #b9c7c2;
-  font-size: 0.75rem;
+  font-size: var(--c-text-label);
   text-align: right;
 }
 
@@ -8626,7 +8665,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 999px;
   background: rgba(4, 26, 38, 0.4);
   color: #d8e3de;
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -8694,10 +8733,10 @@ details[open] > summary.manage-content-unit-toggle::before {
   align-items: center;
   gap: 4px;
   color: #d8e3de;
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
 }
 .manage-content-breadcrumb .text-button {
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   text-transform: none;
   letter-spacing: normal;
 }
@@ -8707,7 +8746,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: 999px;
   background: rgba(4, 26, 38, 0.4);
   color: #d8e3de;
-  font-size: 0.72rem;
+  font-size: var(--c-text-label);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -8792,7 +8831,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .manage-content-source-requirement {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--c-text-meta);
   color: rgba(var(--c-ink-rgb), 0.72);
 }
 .manage-content-source-requirement[data-requirement="required"] {
@@ -8804,12 +8843,12 @@ details[open] > summary.manage-content-unit-toggle::before {
   border: 1px dashed rgba(var(--c-gold-rgb), 0.35);
   border-radius: 10px;
   background: rgba(5, 40, 56, 0.35);
-  font-size: 0.9rem;
+  font-size: var(--c-text-body);
   color: rgba(var(--c-ink-rgb), 0.78);
 }
 .manage-content-source-selector.manage-content-empty-state p {
   margin: 0 0 8px;
-  font-size: 0.9rem;
+  font-size: var(--c-text-body);
 }
 
 .manage-content-source-summary-card {
@@ -8830,7 +8869,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   justify-content: space-between;
 }
 .manage-content-source-summary-customized-badge {
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   color: var(--gold-soft);
   white-space: nowrap;
 }
@@ -8839,7 +8878,7 @@ details[open] > summary.manage-content-unit-toggle::before {
   flex-wrap: wrap;
   gap: 4px 6px;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   color: rgba(var(--c-ink-rgb), 0.78);
 }
 .manage-content-source-summary-meta dt {
@@ -8850,7 +8889,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .manage-content-source-summary-excerpt-label {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--c-text-meta);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: rgba(var(--c-ink-rgb), 0.6);
@@ -8867,12 +8906,12 @@ details[open] > summary.manage-content-unit-toggle::before {
   border-radius: var(--c-radius-sm);
   background: rgba(233, 213, 163, 0.16);
   color: #f3e6c8;
-  font-size: 0.9rem;
+  font-size: var(--c-text-body);
   line-height: 1.5;
 }
 .manage-content-source-summary-restore-note {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   color: rgba(var(--c-ink-rgb), 0.72);
 }
 .manage-content-source-summary-actions {
@@ -8913,7 +8952,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .manage-content-help-drawer-section h3 {
   margin: 0 0 4px;
-  font-size: 0.95rem;
+  font-size: var(--c-text-body);
   color: var(--gold-soft);
 }
 .manage-content-help-drawer-apush-name {
@@ -8923,7 +8962,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 .manage-content-help-drawer-chronicle-name {
   display: block;
   margin-top: 4px;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   font-weight: 400;
   color: rgba(var(--c-ink-rgb), 0.65);
 }
@@ -8934,11 +8973,11 @@ details[open] > summary.manage-content-unit-toggle::before {
   margin-top: 8px;
   color: var(--gold-soft);
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--c-text-meta);
 }
 .manage-content-help-key-terms dd {
   margin: 2px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   color: rgba(var(--c-ink-rgb), 0.82);
 }
 .manage-content-help-trigger {
@@ -8960,7 +8999,7 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 
 .manage-content-loading-note {
-  font-size: 0.85rem;
+  font-size: var(--c-text-meta);
   font-style: italic;
   color: rgba(var(--c-ink-rgb), 0.65);
 }
