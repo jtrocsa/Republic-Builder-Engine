@@ -57,3 +57,21 @@ export const RIVERBEND_FIELD_BLOCKS = [
   { x1: 50.0, y1: 30.0, x2: 52.0, y2: 31.0, kind: "field fence" },
   { x1: 24.0, y1: 30.4, x2: 28.0, y2: 31.0, kind: "shade tree" },
 ];
+
+// The cell each building is entered from — below the centre of its front row.
+// Every one of these must have road within reach; see the test named above.
+export const RIVERBEND_FIELD_DOORS = [
+  { col: 46, row: 5 },
+  { col: 32, row: 9 },
+  { col: 26, row: 10 },
+  { col: 21, row: 14 },
+  { col: 29, row: 14 },
+  { col: 35, row: 14 },
+  { col: 30, row: 17 },
+  { col: 34, row: 17 },
+  { col: 38, row: 19 },
+  { col: 22, row: 20 },
+  { col: 19, row: 21 },
+  { col: 46, row: 21 },
+  { col: 23, row: 24 },
+];

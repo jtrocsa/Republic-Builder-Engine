@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 
 import palette from "../apps/web/src/content/tilesets/maps/common-cause-field.palette.js";
 import { MapBuilder, hash01, pick } from "./lib/map-builder.js";
+import { RoadNetwork, blockGids, connectAll, doorCellOf } from "./lib/paths.js";
 import { resolvePalette } from "./lib/palette-gids.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,23 +70,42 @@ for (let row = 0; row < HEIGHT; row += 1) {
   }
 }
 
-// Paved streets running out of the square: south to the quay, west and east into the residential
-// quarters, and north past the statehouse.
-const paveAt = (col, row) => map.groundBlock(col, row, T.cobble);
-for (let row = 22; row <= 27; row += 1) for (let col = 26; col <= 29; col += 1) paveAt(col, row);
-for (let row = 15; row <= 16; row += 1) {
-  for (let col = 8; col <= 20; col += 1) paveAt(col, row);
-  for (let col = 36; col <= 49; col += 1) paveAt(col, row);
-}
-for (let row = 6; row <= 10; row += 1) for (let col = 32; col <= 34; col += 1) paveAt(col, row);
+// Every gid the square's cobble can paint. Used twice below: to keep the merchants' yard from
+// punching a brown hole in the paving, and to fold the square and quay into the road network.
+const COBBLE_GIDS = blockGids(map, T.cobble);
 
-// The lane down to the warehouse yard, packed earth rather than paving — the town's paved streets
-// stop where the merchants' ground begins. It runs from the east-west street to the quay so it
-// reads as a route rather than as a brown rectangle dropped on the grass.
-for (let row = 16; row <= 28; row += 1) {
-  for (let col = 39; col <= 41; col += 1) {
+// The trunk: the paved streets running out of the square — south to the quay, west and east into the
+// residential quarters, and north past the statehouse. Everything else that leads to a door is a
+// spur generated from the door itself, at the bottom of this file. See scripts/lib/paths.js.
+const roads = new RoadNetwork(map, T[palette.road]);
+roads.run(26, 22, 29, 27); // south to the quay
+roads.run(8, 15, 20, 16); // west into the residential quarter
+roads.run(36, 15, 49, 16); // east into the residential quarter
+roads.run(32, 6, 34, 10); // north past the statehouse
+// The square and the quay are already paved by the ground loop above, so they are road too — without
+// this, a spur from a house on the square's edge would route all the way to the nearest *street*
+// rather than stopping at the paving two cells away.
+for (let row = 0; row < HEIGHT; row += 1) {
+  for (let col = 0; col < WIDTH; col += 1) {
+    if (COBBLE_GIDS.has(map.ground[map.index(col, row)])) roads.cells.add(roads.key(col, row));
+  }
+}
+
+// The merchants' yard: packed earth immediately north of the warehouse, where the town's paved
+// streets stop and unloaded cargo is dragged across bare ground.
+//
+// This was a 3-wide lane running rows 16-28, stopped by a hand-tuned `row + 3.5 >= waterline`
+// offset. Two things were wrong with it. The offset didn't work — the waterline is a sine, so the
+// lane's south end punched a hard-edged brown rectangle into the grey paving at some columns and
+// stopped three tiles short at others, which is the seam that prompted this pass. And at 3x13 it
+// read as a brown field, not as a route: it was wider than the streets it joined and led nowhere
+// the warehouse's own spur doesn't now reach. A compact bounded yard is what the art wants to be.
+for (let row = 21; row <= 23; row += 1) {
+  for (let col = 37; col <= 42; col += 1) {
     if (!isCommonCauseLand(col + 0.5, row + 0.5)) continue;
-    if (row + 3.5 >= commonCauseWaterline(col + 0.5)) continue; // the quay stays paved
+    // Never overwrite paving. Ending where the cobble begins, whatever shape that edge is, is the
+    // general form of the fix — no offsets to keep in sync with the waterline curve.
+    if (COBBLE_GIDS.has(map.ground[map.index(col, row)])) continue;
     map.groundBlock(col, row, T.dirt);
   }
 }
@@ -110,16 +130,22 @@ map.groundRect(31, 34, T.rowboat);
 // Every stamp declares what it is and its collision rect falls out of that. `solid` blocks the
 // whole footprint: before Phase 53 a building's rect covered only its ground-contact row, so the
 // player could walk up onto the roof and render pasted on the facade.
-map.stamp(25, 5, T.assemblyHall, "solid", "assembly hall");
-map.stamp(31, 4, T.statehouse, "solid", "statehouse");
-map.stamp(14, 4, T.printShop, "solid", "print shop");
-map.stamp(45, 5, T.chapel, "solid", "chapel");
-map.stamp(9, 22, T.chapelSmall, "solid", "riverside meeting house");
-map.stamp(38, 5, T.townhouse, "solid", "merchant townhouse");
-map.stamp(38, 24, T.warehouse, "solid", "warehouse");
+// Each of these is collected as a door: `doorCellOf()` reads the cell below the centre of the
+// stamp's ground-contact row, so the spur the router paints starts where a person would step out.
+const doors = [];
+const withDoor = (col, row, entry, label) =>
+  doors.push(doorCellOf(map.stamp(col, row, entry, "solid", label)));
+
+withDoor(25, 5, T.assemblyHall, "assembly hall");
+withDoor(31, 4, T.statehouse, "statehouse");
+withDoor(14, 4, T.printShop, "print shop");
+withDoor(45, 5, T.chapel, "chapel");
+withDoor(9, 22, T.chapelSmall, "riverside meeting house");
+withDoor(38, 5, T.townhouse, "merchant townhouse");
+withDoor(38, 24, T.warehouse, "warehouse");
 // UNIT3_FIELD_SOURCE_POINTS puts the frontier dispatch at (7.5,15.5); it needs a door to have
 // come out of, on the west street.
-map.stamp(5, 13, T.dispatchPost, "solid", "frontier dispatch post");
+withDoor(5, 13, T.dispatchPost, "frontier dispatch post");
 
 // The square itself. The well is stamped after the liberty pole so its tiles win any shared cell —
 // the well reads better as the grounded object at that junction.
@@ -162,7 +188,7 @@ const HOUSES = [
   [50, 13, T.houseCream],
   [44, 25, T.houseBrown],
 ];
-for (const [col, row, entry] of HOUSES) map.stamp(col, row, entry, "solid", "dwelling");
+for (const [col, row, entry] of HOUSES) withDoor(col, row, entry, "dwelling");
 
 // --- moored shipping ---------------------------------------------------------------------------
 // On open water beyond the land mask, which already stops the player, so no collision. Kept clear
@@ -248,10 +274,32 @@ for (let row = 0; row < HEIGHT; row += 1) {
   }
 }
 
+// --- spurs: every door reaches the street network ------------------------------------------------
+// Run last of all the ground work, after every `solid`, `base` and `decor` stamp: the router treats
+// anything already occupied as impassable, so routing earlier would thread a lane under a tree trunk
+// whose collision rect then blocks the very lane it painted.
+//
+// Spurs are cobble, not dirt. This is a paved 1770s town, and a one-cell paved lane between two
+// houses reads as a street; the same lane in packed earth reads as a scar. The dead-grey-field
+// failure the plaza comment above warns about came from paving a 30x18 rectangle, not from paving
+// lanes — the whole spur network here adds a few hundred cells, not five hundred.
+const spurs = connectAll(roads, { doors, isLand: isCommonCauseLand });
+
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
-  map.toBlocksModule("COMMON_CAUSE_FIELD_BLOCKS", "scripts/generate-common-cause-tmj.js")
+  map.toBlocksModule("COMMON_CAUSE_FIELD_BLOCKS", "scripts/generate-common-cause-tmj.js", {
+    doors,
+  })
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
 console.log(`  ${map.blocks.length} collision rects`);
+console.log(`  ${spurs.connected}/${doors.length} doors connected to the street network`);
+if (spurs.unreachable.length > 0) {
+  // Hard failure, not a warning. A building with no path to it is the exact defect this pipeline
+  // exists to prevent, and a warning in a build nobody watches is how it would come back.
+  throw new Error(
+    `no route to the road network from: ${JSON.stringify(spurs.unreachable)} - either the door is ` +
+      `walled in by neighbouring stamps, or the trunk does not reach that part of the map`
+  );
+}

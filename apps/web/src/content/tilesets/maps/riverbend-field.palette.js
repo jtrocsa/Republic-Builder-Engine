@@ -26,6 +26,9 @@ export default {
   period: 2,
   status: "live",
   map: "apps/web/src/content/maps/riverbend-field.tmj",
+  // Which of `tiles` this map's roads are painted in. Read by the generator's RoadNetwork and by
+  // tests/unit/map-path-network.test.js, so "what is a road here" is stated once.
+  road: "shoreSand",
 
   // Ordered — firstgid is assigned in this order and must not be reshuffled.
   sheets: [

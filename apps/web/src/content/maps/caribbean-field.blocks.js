@@ -50,3 +50,19 @@ export const CARIBBEAN_FIELD_BLOCKS = [
   { x1: 19.0, y1: 30.4, x2: 20.0, y2: 31.0, kind: "palm" },
   { x1: 26.0, y1: 30.4, x2: 27.0, y2: 31.0, kind: "palm" },
 ];
+
+// The cell each building is entered from — below the centre of its front row.
+// Every one of these must have road within reach; see the test named above.
+export const CARIBBEAN_FIELD_DOORS = [
+  { col: 30, row: 8 },
+  { col: 35, row: 9 },
+  { col: 26, row: 10 },
+  { col: 32, row: 12 },
+  { col: 38, row: 12 },
+  { col: 25, row: 13 },
+  { col: 21, row: 14 },
+  { col: 36, row: 14 },
+  { col: 11, row: 19 },
+  { col: 44, row: 22 },
+  { col: 47, row: 23 },
+];

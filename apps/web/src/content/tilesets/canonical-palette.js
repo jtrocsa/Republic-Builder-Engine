@@ -117,9 +117,15 @@ export const CANONICAL = {
   // DIRT & PATHS
   // ---------------------------------------------------------------------------------------
 
-  /** Tropical dirt path, left half (grass edge on the left). [live: caribbean-field] */
+  // Tropical dirt path, as a left/right pair with a baked-in grass edge down the outside of each.
+  //
+  // **No consumer, and do not add one for a road.** These were live on caribbean-field until Phase 55
+  // and are the reason that island's only path could ever be a single north-south strip: an
+  // east-west run with an edge-baked tile is impossible. Roads are now painted in a full-bleed
+  // material tiled by parity, which runs in any direction — see scripts/lib/paths.js. Kept listed
+  // because the coordinates are verified and the pair is still the right answer for a *deliberately*
+  // vertical, grass-flanked lane; it is the wrong answer for a network. [labeled]
   "path.tropical.left": tile("Island survival/tile-B-01.png", 9, 4),
-  /** Tropical dirt path, right half (grass edge on the right). [live: caribbean-field] */
   "path.tropical.right": tile("Island survival/tile-B-01.png", 9, 5),
   /** Colonial dirt road. [live: riverbend-field ground] */
   "path.colonial.dirt": tile("Medieval Fantasy Town/1.png", 10, 4),

@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import palette from "../apps/web/src/content/tilesets/maps/caribbean-field.palette.js";
 import { MapBuilder, hash01, pick } from "./lib/map-builder.js";
+import { RoadNetwork, blockGids, connectAll, doorCellOf } from "./lib/paths.js";
 import { resolvePalette } from "./lib/palette-gids.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -61,21 +62,27 @@ for (let row = 0; row < HEIGHT; row += 1) {
   }
 }
 
-// Village path: a 2-wide vertical dirt strip running from the Taíno village down through the
-// island's middle, cols 28-29. Structures-layer stamps draw on top of it wherever they overlap,
-// which is what makes it read as "the path leads to the huts" rather than needing to dodge their
-// footprints.
+// The trunk: the island's one deliberate route. It leaves the Taíno village heading south, then runs
+// west along the island's waist to the cove where Columbus's party landed. Everything else that leads
+// to a door — every bohío, the work canopy, the drying rack, the conuco garden, the chart table, the
+// Spanish camp — is a spur generated from the object itself, at the bottom of this file. See
+// scripts/lib/paths.js.
 //
-// There are no east-west connectors. The tileset only has *vertical* path art — every path tile
-// carries a baked-in grass edge down one side — so a horizontal run has to be faked with plain
-// sand, and at this map size that read as a beige airstrip cutting across the island. The island
-// is open grass and walkable everywhere, so the single north-south path is enough wayfinding.
-const PATH_LEFT = gid(T.pathLeft);
-const PATH_RIGHT = gid(T.pathRight);
-for (let row = 9; row <= 26; row += 1) {
-  map.setGround(28, row, PATH_LEFT);
-  map.setGround(29, row, PATH_RIGHT);
-}
+// What this replaced was the clearest example of the defect this pass is about: a 2-wide strip down
+// cols 28-29 from row 9 to row 26 that passed *near* the village and then continued through empty
+// grass to nothing. Not one hut had a path to its door, and the southern two-thirds of it led
+// nowhere at all.
+//
+// It could only ever be one vertical line, too. It was painted in `path.tropical.left`/`.right`, and
+// each of those carries a baked-in grass edge down one side, so an east-west run with them is
+// impossible — this generator's own comment recorded that a horizontal connector "has to be faked
+// with plain sand." So the whole network is now that sand: full-bleed, tiles in any direction, and it
+// reads as a worn track through grass, the same material and the same reasoning as Riverbend's.
+// `path.tropical.left`/`.right` have no consumer left anywhere in the project.
+const roads = new RoadNetwork(map, T[palette.road]);
+roads.run(28, 9, 28, 16); // out of the village, south
+roads.run(13, 16, 28, 16); // west along the waist toward the landing cove
+roads.run(13, 16, 13, 18); // down to the cartographer's table on the cove
 
 const snapTo = (col, row, wanted, maxRadius) => map.snapTo(col, row, wanted, maxRadius);
 
@@ -97,20 +104,28 @@ const isClearBeach = (col, row, width = 1) => {
 // so the player could walk up onto the thatch. `base` blocks the ground-contact row and lifts
 // everything above it to the overlay layer. `decor` blocks nothing.
 
+// Each of these is collected as a door: `doorCellOf()` reads the cell below the centre of the
+// stamp's ground-contact row, so the spur the router paints starts where a person would step out.
+const doors = [];
+const withDoor = (col, row, entry, label) =>
+  doors.push(doorCellOf(map.stamp(col, row, entry, "solid", label)));
+
 // Taíno village, north lobe.
-map.stamp(29, 6, T.hutLarge, "solid", "principal dwelling");
-map.stamp(25, 8, T.hutOpenDoor, "solid", "bohio one");
-map.stamp(34, 7, T.hutDoorWindow, "solid", "bohio two");
-map.stamp(37, 10, T.hutClosedDoorRound, "solid", "bohio three");
-map.stamp(24, 11, T.hutClosedDoorSquare, "solid", "bohio four");
-map.stamp(31, 10, T.workCanopy, "solid", "work canopy");
-map.stamp(35, 12, T.dryingRack, "solid", "drying rack");
+withDoor(29, 6, T.hutLarge, "principal dwelling");
+withDoor(25, 8, T.hutOpenDoor, "bohio one");
+withDoor(34, 7, T.hutDoorWindow, "bohio two");
+withDoor(37, 10, T.hutClosedDoorRound, "bohio three");
+withDoor(24, 11, T.hutClosedDoorSquare, "bohio four");
+withDoor(31, 10, T.workCanopy, "work canopy");
+withDoor(35, 12, T.dryingRack, "drying rack");
 
 // Conuco garden: a run of planted rows with bamboo posts baked into the art. The sheet draws this
 // continuously across its own row, so each cell's neighbour is placed adjacently and the run reads
 // as one hedge rather than as repeated cut-off segments.
 for (let col = 20; col <= 23; col += 1) {
-  map.stamp(col, 12, T.gardenRow, "solid", "conuco garden");
+  const stamp = map.stamp(col, 12, T.gardenRow, "solid", "conuco garden");
+  // One door for the run, not four — a track to each cell of a continuous hedge would read as a rake.
+  if (col === 21) doors.push(doorCellOf(stamp));
 }
 
 // Taíno canoes drawn up on the shore, and the village fire. A canoe belongs on the sand — the
@@ -122,8 +137,8 @@ map.stamp(canoeTwoCol, canoeTwoRow, T.canoe, "solid", "second canoe");
 map.stamp(31, 16, T.campfire, "solid", "village fire");
 
 // Spanish landing camp on the southeast point.
-map.stamp(44, 21, T.tent, "solid", "command tent");
-map.stamp(47, 22, T.tent, "solid", "second tent");
+withDoor(44, 21, T.tent, "command tent");
+withDoor(47, 22, T.tent, "second tent");
 map.stamp(45, 23, T.campfire, "solid", "camp fire");
 map.stamp(42, 24, T.crateA, "solid", "supply crates");
 map.stamp(43, 24, T.crateB, "solid", "supply crates");
@@ -131,7 +146,7 @@ map.stamp(43, 24, T.crateB, "solid", "supply crates");
 // Columbus's landing on the northwest cove. The chart table stays where it is: the Waldseemüller
 // puzzle's interaction point (FIELD_SOURCE_POINTS["waldseemuller-map"], 11.5,17.2) sits inside it,
 // as does Columbus's own patrol, so this is a fixed coordinate, not a free one.
-map.stamp(10, 17, T.chartTable, "solid", "cartographer table");
+withDoor(10, 17, T.chartTable, "cartographer table");
 
 // Everything the landing party carried ashore snaps to the sand beside it.
 const [anchorCol, anchorRow] = snapTo(8, 20, (c, r) => isClearBeach(c, r, 2));
@@ -194,11 +209,23 @@ for (const [col, row, variant] of PALMS) {
 // One boulder pile as large natural cover on the south spit.
 map.stamp(23, 30, T.boulderPile, "solid", "boulders");
 
+// --- spurs: every door reaches the track network ------------------------------------------------
+// Run after every `solid` and `base` stamp: the router treats anything already occupied as
+// impassable, so routing earlier would thread a track under a palm trunk whose collision rect then
+// blocks the very track it painted.
+//
+// `isLand` is padded inward by 1.2 — the same inset the ground loop uses to decide where grass ends
+// and the beach ring begins. Without it a track would route out onto the sand and become invisible,
+// since the road material and the beach are the same tile. (Membership in the network is recorded
+// rather than read off the tile for the same reason: see note 1 in scripts/lib/paths.js.)
+const spurs = connectAll(roads, { doors, isLand: (x, y) => isCaribbeanLand(x, y, -1.2) });
+
 // --- decor: transparent props, no collision ----------------------------------------------------
 // This is the replacement for the terrain-quadrant "accents" the previous revision scattered onto
 // the ground layer. A prop sits on top of the sand or grass; a swapped ground tile replaces it,
 // which is why the old map showed tan squares in green grass and logs cut off at a tile edge.
 
+const SAND_GIDS = blockGids(map, T.sand);
 const BEACH_DEBRIS = [T.shellConch, T.shellScallop, T.scatterPebble];
 const REEF = [T.coralBranch, T.coralSoft, T.coralFan, T.seaweed];
 const SCRUB = [
@@ -219,7 +246,11 @@ for (let row = 0; row < HEIGHT; row += 1) {
     const cy = row + 0.5;
 
     if (isCaribbeanLand(cx, cy, -1.6)) {
-      if (col >= 27 && col <= 30) continue; // leave the village path clear
+      // Keep scrub off the tracks. This was `col >= 27 && col <= 30` — a hardcoded band around the
+      // one hand-written path, which no longer describes where the roads are now that they are
+      // generated. Testing the painted gid instead can't go stale. Safe in this branch only: the
+      // road material and the beach are the same tile, and the beach gets its own branch below.
+      if (SAND_GIDS.has(map.ground[map.index(col, row)])) continue;
       if (hash01(col, row, 11) >= 0.075) continue;
       map.stamp(col, row, pick(SCRUB, col, row, 12), "decor", "scrub");
     } else if (isCaribbeanLand(cx, cy, 0)) {
@@ -244,7 +275,16 @@ for (let row = 0; row < HEIGHT; row += 1) {
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
-  map.toBlocksModule("CARIBBEAN_FIELD_BLOCKS", "scripts/generate-caribbean-tmj.js")
+  map.toBlocksModule("CARIBBEAN_FIELD_BLOCKS", "scripts/generate-caribbean-tmj.js", { doors })
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
 console.log(`  ${map.blocks.length} collision rects`);
+console.log(`  ${spurs.connected}/${doors.length} doors connected to the track network`);
+if (spurs.unreachable.length > 0) {
+  // Hard failure, not a warning. A building with no path to it is the exact defect this pipeline
+  // exists to prevent, and a warning in a build nobody watches is how it would come back.
+  throw new Error(
+    `no route to the road network from: ${JSON.stringify(spurs.unreachable)} - either the door is ` +
+      `walled in by neighbouring stamps, or the trunk does not reach that part of the map`
+  );
+}

@@ -72,3 +72,30 @@ export const COMMON_CAUSE_FIELD_BLOCKS = [
   { x1: 44.0, y1: 28.0, x2: 45.0, y2: 29.0, kind: "quayside cargo" },
   { x1: 45.0, y1: 28.0, x2: 46.0, y2: 29.0, kind: "quayside cargo" },
 ];
+
+// The cell each building is entered from — below the centre of its front row.
+// Every one of these must have road within reach; see the test named above.
+export const COMMON_CAUSE_FIELD_DOORS = [
+  { col: 10, row: 8 },
+  { col: 33, row: 8 },
+  { col: 16, row: 9 },
+  { col: 27, row: 9 },
+  { col: 39, row: 9 },
+  { col: 46, row: 9 },
+  { col: 49, row: 10 },
+  { col: 44, row: 14 },
+  { col: 6, row: 15 },
+  { col: 18, row: 15 },
+  { col: 38, row: 15 },
+  { col: 13, row: 16 },
+  { col: 51, row: 17 },
+  { col: 10, row: 20 },
+  { col: 18, row: 21 },
+  { col: 44, row: 21 },
+  { col: 49, row: 23 },
+  { col: 6, row: 25 },
+  { col: 10, row: 26 },
+  { col: 16, row: 27 },
+  { col: 39, row: 27 },
+  { col: 45, row: 27 },
+];

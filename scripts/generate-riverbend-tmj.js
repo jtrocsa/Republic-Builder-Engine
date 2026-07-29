@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 
 import palette from "../apps/web/src/content/tilesets/maps/riverbend-field.palette.js";
 import { MapBuilder, hash01, pick } from "./lib/map-builder.js";
+import { RoadNetwork, connectAll, doorCellOf } from "./lib/paths.js";
 import { resolvePalette } from "./lib/palette-gids.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -72,20 +73,34 @@ for (let row = 0; row < HEIGHT; row += 1) {
   }
 }
 
-// Packed-earth tracks: the wharf up through the village to the field gate, a village spur north
-// past the meetinghouse, and a south spur to the barn yard. Sand reads as a worn track and, being
-// full-bleed, tiles in any direction — farm/6's own path art carries a baked-in grass edge down
-// one side and can only run vertically.
-const trackAt = (col, row) => map.setGround(col, row, map.blockGidAt(col, row, T.shoreSand));
-for (let col = 17; col <= 46; col += 1) trackAt(col, 20);
-for (let row = 10; row <= 20; row += 1) trackAt(26, row);
-for (let row = 20; row <= 27; row += 1) trackAt(40, row);
+// The trunk: the three deliberate runs. The high street east from the wharf to the field gate, a
+// village spine north past the meetinghouse, and a south spur to the barn yard. Everything else that
+// leads to a door is a spur generated from the door itself, at the bottom of this file — see
+// scripts/lib/paths.js for why roads are no longer authored as coordinates.
+//
+// Sand reads as a worn track and, being full-bleed, tiles in any direction. farm/6's own path art
+// carries a baked-in grass edge down one side and can only run vertically, which is the whole reason
+// this map uses shore sand for its roads.
+//
+// The network records which cells it owns rather than looking at the tile, which matters here more
+// than anywhere: the river shore is painted in this same shore sand, so a tile-based check would
+// count the beach as road and connect the wharf-side buildings to the waterline instead of to the
+// high street.
+const roads = new RoadNetwork(map, T[palette.road]);
+roads.run(17, 20, 46, 20); // the high street, wharf to the field gate
+roads.run(26, 10, 26, 20); // the village spine, north past the meetinghouse
+roads.run(40, 20, 40, 27); // south to the barn yard
 
 // Crop plots. Worked soil on the ground, the planted rows above it: the pack draws a plot as a
 // bed of plants with transparent gaps between the stems, so it needs real ground beneath it or
 // every field shows the page background through in hard black specks. Both layers tile the
 // authored 2x2 block by parity. Crops carry no collision — the player walks the rows.
+// Recorded so the path router can route *around* the fields rather than through them. Their planted
+// cells are `occupied` and therefore already excluded, but the ~8% left bare are not, and a spur
+// threading between those would put a road through the middle of a crop bed.
+const PLOT_RECTS = [];
 function plot(col1, row1, col2, row2, block) {
+  PLOT_RECTS.push({ col1, row1, col2, row2 });
   for (let row = row1; row <= row2; row += 1) {
     for (let col = col1; col <= col2; col += 1) {
       if (!isRiverbendLand(col + 0.5, row + 0.5)) continue;
@@ -125,18 +140,25 @@ map.groundRect(6, 15, T.fishingBoat);
 // ground-contact row and lifts everything above it to the overlay layer, which is what puts the
 // player behind a canopy. `decor` blocks nothing.
 
-map.stamp(24, 6, T.meetinghouse, "solid", "meetinghouse");
-map.stamp(20, 12, T.houseRed, "solid", "dwelling one");
-map.stamp(31, 6, T.houseYellow, "solid", "dwelling two");
-map.stamp(34, 11, T.houseBlue, "solid", "dwelling three");
-map.stamp(21, 16, T.houseCream, "solid", "dwelling four");
-map.stamp(29, 15, T.houseBrown, "solid", "dwelling five");
-map.stamp(37, 16, T.barn, "solid", "barn");
-map.stamp(28, 12, T.well, "solid", "well");
-map.stamp(22, 22, T.shed, "solid", "storage shed");
-map.stamp(33, 15, T.coop, "solid", "hen house");
+// Each of these is collected as a door: `doorCellOf()` reads the cell below the centre of the
+// stamp's ground-contact row, so the spur the router paints starts where a person would step out.
+const doors = [];
+const withDoor = (col, row, entry, label) =>
+  doors.push(doorCellOf(map.stamp(col, row, entry, "solid", label)));
+
+withDoor(24, 6, T.meetinghouse, "meetinghouse");
+withDoor(20, 12, T.houseRed, "dwelling one");
+withDoor(31, 6, T.houseYellow, "dwelling two");
+withDoor(34, 11, T.houseBlue, "dwelling three");
+withDoor(21, 16, T.houseCream, "dwelling four");
+withDoor(29, 15, T.houseBrown, "dwelling five");
+withDoor(37, 16, T.barn, "barn");
+withDoor(28, 12, T.well, "well");
+withDoor(22, 22, T.shed, "storage shed");
+withDoor(33, 15, T.coop, "hen house");
 // Kept two columns west of the player's spawn at (26,18) — a 2-wide stamp anchored at 24 reaches
-// x=26 and the spawn foot-box straddles it.
+// x=26 and the spawn foot-box straddles it. No door: a cold frame is a garden bed, not a building
+// anyone walks into, so a path running up to it would read as a path to nowhere.
 map.stamp(23, 18, T.coldFrame, "solid", "cold frame");
 
 // Field fencing. Split-rail runs along each plot's north and south edges; the east and west ends
@@ -147,6 +169,10 @@ function fenceRun(col1, col2, row, gateCol) {
     const entry =
       col === gateCol ? T.fenceGate : (col / 2) % 2 === 0 ? T.fenceRail : T.fenceRailAlt;
     map.stamp(col, row, entry, entry === T.fenceGate ? "decor" : "solid", "field fence");
+    // A gate with no track running up to it is the same defect as a house standing in open grass.
+    // The door is the cell *outside* the fence — both gated runs are their plot's north fence, and
+    // the cell inside is the crop bed itself, which the router is told to route around.
+    if (entry === T.fenceGate) doors.push({ col, row: row - 1 });
   }
 }
 fenceRun(42, 51, 6, 46);
@@ -155,7 +181,7 @@ fenceRun(42, 51, 22, 46);
 fenceRun(42, 51, 30);
 
 // --- wharf ------------------------------------------------------------------------------------
-map.stamp(18, 19, T.marketStall, "solid", "wharf market stall");
+withDoor(18, 19, T.marketStall, "wharf market stall");
 // At the pier head rather than in the middle of the landing: the river fisher stands at (19,23)
 // and paces east of that, and a stall on top of an NPC is how a patrol ends up walled in.
 map.stamp(16, 21, T.fishStall, "solid", "fish stall");
@@ -250,6 +276,14 @@ map.stamp(33, 19, T.treeApple, "base", "shade tree");
 map.stamp(24, 28, T.treeOak, "base", "shade tree");
 map.stamp(36, 7, T.treeMaple, "base", "shade tree");
 
+// --- spurs: every door reaches the road network ------------------------------------------------
+// Run last of all the ground work, after every `solid`, `base` and `decor` stamp: the router treats
+// anything already occupied as impassable, so routing earlier would thread a spur under a tree trunk
+// whose collision rect then blocks the very path it painted.
+const inPlot = (col, row) =>
+  PLOT_RECTS.some((r) => col >= r.col1 && col <= r.col2 && row >= r.row1 && row <= r.row2);
+const spurs = connectAll(roads, { doors, isLand: isRiverbendLand, avoid: inPlot });
+
 // --- decor: transparent props, no collision ---------------------------------------------------
 const BUSHES = [T.bushRose, T.bushBerry, T.bushFlowering];
 const GRASS_GIDS = new Set([
@@ -271,7 +305,16 @@ for (let row = 0; row < HEIGHT; row += 1) {
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
-  map.toBlocksModule("RIVERBEND_FIELD_BLOCKS", "scripts/generate-riverbend-tmj.js")
+  map.toBlocksModule("RIVERBEND_FIELD_BLOCKS", "scripts/generate-riverbend-tmj.js", { doors })
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
 console.log(`  ${map.blocks.length} collision rects`);
+console.log(`  ${spurs.connected}/${doors.length} doors connected to the road network`);
+if (spurs.unreachable.length > 0) {
+  // Hard failure, not a warning. A building with no path to it is the exact defect this pipeline
+  // exists to prevent, and a warning in a build nobody watches is how it would come back.
+  throw new Error(
+    `no route to the road network from: ${JSON.stringify(spurs.unreachable)} - either the door is ` +
+      `walled in by neighbouring stamps, or the trunk does not reach that part of the map`
+  );
+}

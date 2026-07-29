@@ -85,6 +85,30 @@ a benched pack.
 - **Shore props are derived from the coastline, not transcribed from it.** Every field map draws
   its shoreline from a curve, so a hand-picked coordinate that is beach today is open grass or
   open water after any rescale. Seed the prop and settle it with `MapBuilder.snapTo()`.
+- **Every building has a road to its door, and the road is routed, not authored** (Phase 55,
+  decision log `0038`). A generator declares only a trunk — a high street, a quay, a village spine —
+  on a `RoadNetwork`, then hands `connectAll()` the door cell of every building it stamped;
+  `doorCellOf(stamp)` derives that cell from the stamp itself. An unreachable door is a hard
+  generator failure, and `tests/unit/map-path-network.test.js` re-checks the committed maps.
+
+  _This replaces "paths are hand-placed tile runs."_ That rule produced roads with no relationship to
+  the buildings: the Caribbean's only path ran past the Taíno village and on through empty grass to
+  nothing, with no hut connected to it at all.
+
+  Four rules follow from it, each of which was a defect first:
+
+  - **A road material must be full-bleed and tiled by parity.** `path.tropical.left`/`.right` carry a
+    baked-in grass edge down one side, so a run using them can only ever go north–south. That is
+    literally why the Caribbean had one vertical line. Use a full-bleed block via `groundBlock()`.
+  - **Network membership is recorded, never inferred from the tile.** Caribbean's tracks are the same
+    sand as its beach and Riverbend's are the same sand as its river shore, so "is the tile here the
+    road material?" connects waterfront buildings to the shoreline instead of to the village.
+  - **A softer material yields to a harder one at a seam.** Pass `harder` and let the spur join a
+    paved cell without repainting it. Hand-tuned stop offsets do not survive a curved boundary —
+    Philadelphia's dirt lane punched a brown rectangle into the quay at some columns and stopped
+    three tiles short at others.
+  - **Route after every stamp, before the final scatter pass.** Routing earlier threads a spur under a
+    tree trunk whose collision rect then blocks the path it just painted.
 
 ## The art-style rule
 

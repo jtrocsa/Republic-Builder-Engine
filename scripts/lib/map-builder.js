@@ -254,8 +254,13 @@ export class MapBuilder {
   /**
    * The collision module that main.js imports in place of the old hand-written rect arrays.
    * Sorted so a layout change produces a readable diff rather than a reshuffle.
+   *
+   * `doors`, when given, is emitted as a second export. Nothing in the running game reads it; it
+   * exists so tests/unit/map-path-network.test.js can assert the property this whole pipeline is for
+   * — that every door a generator declared has road within reach of it — against exactly the cells
+   * the generator used, rather than against a guess about which collision rects are buildings.
    */
-  toBlocksModule(mapId, generatorPath) {
+  toBlocksModule(mapId, generatorPath, { doors } = {}) {
     const sorted = [...this.blocks].sort(
       (a, b) => a.y1 - b.y1 || a.x1 - b.x1 || a.kind.localeCompare(b.kind)
     );
@@ -280,6 +285,15 @@ export class MapBuilder {
       );
     }
     lines.push("];");
+    if (doors) {
+      const sortedDoors = [...doors].sort((a, b) => a.row - b.row || a.col - b.col);
+      lines.push("");
+      lines.push("// The cell each building is entered from — below the centre of its front row.");
+      lines.push("// Every one of these must have road within reach; see the test named above.");
+      lines.push(`export const ${mapId.replace(/_BLOCKS$/, "_DOORS")} = [`);
+      for (const door of sortedDoors) lines.push(`  { col: ${door.col}, row: ${door.row} },`);
+      lines.push("];");
+    }
     lines.push("");
     return lines.join("\n");
   }

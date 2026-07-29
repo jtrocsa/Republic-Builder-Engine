@@ -20,6 +20,9 @@ export default {
   period: 1,
   status: "live",
   map: "apps/web/src/content/maps/caribbean-field.tmj",
+  // Which of `tiles` this map's roads are painted in. Read by the generator's RoadNetwork and by
+  // tests/unit/map-path-network.test.js, so "what is a road here" is stated once.
+  road: "sand",
 
   // Ordered — firstgid is assigned in this order and must not be reshuffled, or every GID in
   // the committed .tmj changes.
@@ -42,8 +45,12 @@ export default {
     grass: { ...CANONICAL["grass.tropical"], h: 2, w: 2 },
     waterShallow: { ...CANONICAL["water.tropical.shallow"], h: 2, w: 2 },
     waterDeep: { ...CANONICAL["water.tropical.deep"], h: 2, w: 2 },
-    pathLeft: CANONICAL["path.tropical.left"],
-    pathRight: CANONICAL["path.tropical.right"],
+    // No `pathLeft`/`pathRight` any more. Those were `path.tropical.left`/`.right`, and each carries
+    // a baked-in grass edge down one side — which is why this island's only road could ever be a
+    // single north-south strip, and why the generator's own comment recorded that an east-west
+    // connector "has to be faked with plain sand." Phase 55 made the whole track network that sand,
+    // which tiles in any direction, so the router can run a lane to every hut. See
+    // docs/decision-log/0038-generated-path-network.md and scripts/lib/paths.js.
 
     // --- decor props: transparent, stamped on structures, never on the ground layer ------------
     // These replace the terrain quadrants the previous revision used as accents. Each one is a

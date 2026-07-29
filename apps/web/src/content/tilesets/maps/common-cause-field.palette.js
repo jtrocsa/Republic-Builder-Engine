@@ -35,6 +35,11 @@ export default {
   period: 3,
   status: "live",
   map: "apps/web/src/content/maps/common-cause-field.tmj",
+  // Which of `tiles` this map's roads are painted in. Read by the generator's RoadNetwork and by
+  // tests/unit/map-path-network.test.js, so "what is a road here" is stated once. Spurs are cobble,
+  // not the `dirt` of the merchants' yard: this is a paved town, and a one-cell packed-earth lane
+  // between two houses reads as a scar where the same lane in stone reads as a street.
+  road: "cobble",
 
   // Ordered — reshuffling changes every GID in the committed .tmj.
   sheets: [
