@@ -25,13 +25,14 @@ import riverbend from "../../apps/web/src/content/tilesets/maps/riverbend-field.
 import commonCause from "../../apps/web/src/content/tilesets/maps/common-cause-field.palette.js";
 import archiveRoom from "../../apps/web/src/content/tilesets/maps/archive-room.palette.js";
 import hallway from "../../apps/web/src/content/tilesets/maps/hallway.palette.js";
+import instituteHall from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../..");
 const TILESET_ROOT = path.join(REPO_ROOT, "apps", "web", "src", "assets", "tilesets");
 const TILE = 48;
 
-const MAP_PALETTES = [caribbean, riverbend, commonCause, archiveRoom, hallway];
+const MAP_PALETTES = [caribbean, riverbend, commonCause, archiveRoom, hallway, instituteHall];
 
 /** Reads width/height straight from the PNG IHDR chunk. */
 function pngDimensions(relativeSheetPath) {

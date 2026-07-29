@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "maps:build": "node scripts/generate-caribbean-tmj.js && node scripts/generate-riverbend-tmj.js && node scripts/generate-common-cause-tmj.js && node scripts/generate-institute-hall-tmj.js && node scripts/generate-archive-room-tmj.js apps/web/src/content/maps/archive-room.tmj && node scripts/generate-hallway-tmj.js apps/web/src/content/maps/hallway.tmj",
     "assets:audit": "node scripts/assets/audit.js",
     "assets:label": "node scripts/assets/label-tilesheet.js",
     "assets:measure": "node scripts/assets/measure-sprite.js",

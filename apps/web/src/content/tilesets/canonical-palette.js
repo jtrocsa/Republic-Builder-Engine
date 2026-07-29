@@ -186,8 +186,34 @@ export const CANONICAL = {
   "floor.archive.stone.c": tile("Medieval Tavern/tile-B-05.png", 14, 2),
   /** Archive Room floor accent. [live: archive-room + hallway ground] */
   "floor.archive.stone.d": tile("Medieval Tavern/tile-B-05.png", 15, 4),
-  /** Archive Room secondary floor (warmer sandstone), used for the alcove. [live] */
+  /**
+   * Archive Room secondary floor, used for its alcove. The name says "sandstone" and the art is
+   * plank **wood** — a misnomer inherited from before this file existed, kept because
+   * archive-room.palette.js references the key and renaming it would churn a live map for nothing.
+   * The tan cut-stone floor the name implies is `floor.institute.sandstone` below. [live]
+   */
   "floor.archive.sandstone": tile("Medieval Tavern/tile-B-05.png", 12, 8),
+  /** Warm plank flooring for Institute interiors — the Main Hall's foyer runner and table dais.
+   *  Same material family as the (misnamed) entry above, one block lower on the sheet.
+   *  [live: institute-hall ground] */
+  "floor.institute.wood": tile("Medieval Tavern/tile-B-05.png", 13, 8),
+  /** Tan cut-stone floor — the Main Hall's Preservation Case alcove. Genuinely a third material,
+   *  not a warmer grey: needed so the hall's three zones read apart. [live: institute-hall ground] */
+  "floor.institute.sandstone": tile("Medieval Tavern/tile-B-05.png", 12, 12),
+
+  // ---------------------------------------------------------------------------------------
+  // INTERIOR WALLS
+  //
+  // Only the flat surface rows of the A4 wall sheets. Rows 0-2, 5-7 and 10-12 of those sheets
+  // are the RPG-Maker corner/edge blob set, which this project has no autotiler for — and needs
+  // none, because a full-bleed material paves an arbitrary shape correctly on its own. Stamping a
+  // blob-set cell would draw a fragment of wall trim floating on the floor.
+  // ---------------------------------------------------------------------------------------
+
+  /** Wood-panelled interior wall, Institute/tavern family. [live: institute-hall ground] */
+  "wall.interior.plank": tile("Medieval Tavern/Auto-tile-A4-walls-2.png", 3, 8),
+  /** Grey masonry interior wall, same family. [live: institute-hall ground] */
+  "wall.interior.stone": tile("Medieval Tavern/Auto-tile-A4-walls-2.png", 3, 6),
 
   // ---------------------------------------------------------------------------------------
   // DOCK & MARITIME PROPS

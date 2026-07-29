@@ -38,10 +38,15 @@ for (let row = 0; row < HEIGHT; row += 1) {
 }
 
 // --- structures layer: shelving/rack/torch accents lining both long edges ---
-// No fabricated wall tiles — Medieval Tavern's wall sheets are an RPG-Maker-style autotile blob
-// layout tiled-map-loader.js can't parse (see decision-log 0030); "walls" are still the existing
-// .hallway-viewport CSS vignette frame, not tile art. These accents read as archive record
-// storage lining the corridor, tying it visually to the Archive Room beyond it.
+// No wall tiles here: "walls" are still the .hallway-viewport CSS vignette frame. These accents read
+// as archive record storage lining the corridor, tying it visually to the Archive Room beyond it.
+//
+// This used to be justified by the claim that Medieval Tavern's wall sheets are "an RPG-Maker-style
+// autotile blob layout tiled-map-loader.js can't parse." That claim is wrong and Phase 54 disproved
+// it: institute-hall.tmj draws real walls from Auto-tile-A4-walls-2. The loader parses the sheet
+// fine; what it cannot do is *choose* a blob cell, and restricting a palette to the sheet's flat
+// full-bleed surface rows sidesteps that entirely. Adding walls here is now a small, unblocked
+// change — it just hasn't been done, because this corridor is a two-second scripted cutscene.
 const structuresData = new Array(WIDTH * HEIGHT).fill(0);
 function stamp(anchorCol, anchorRow, block) {
   block.forEach((rowGids, r) => {

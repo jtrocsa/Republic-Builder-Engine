@@ -8,7 +8,7 @@ The codebase already has an unused `progress.tutorial` field sitting in `DEFAULT
 
 **Decisions already made with the user:**
 
-- No new art assets. The "hallway" is built by cropping/zooming the _existing_ `chronicle-institute-hub.png` background via CSS to frame the door already visible at the bottom of that art — not a new scene image.
+- No new art assets. The "hallway" is built by cropping/zooming the _existing_ `chronicle-institute-hub.png` background via CSS to frame the door already visible at the bottom of that art — not a new scene image. **Superseded:** the corridor is now `hallway.tmj` and, since Phase 54 retired that PNG, the door at its far end is drawn with CSS gradients — see `docs/decision-log/0037-institute-hall-tiled-rebuild.md`.
 - The in-hub tour is **click-through captions with movement locked**, not "walk to each target." Simpler, matches the user's own description ("once the player clicks through those, then the player is free to move around").
 
 ## Flow being built

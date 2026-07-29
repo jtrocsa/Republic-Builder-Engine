@@ -2915,17 +2915,38 @@ dd {
 .hallway-scaler canvas {
   image-rendering: pixelated;
 }
-/* Cropped slice of the institute hub background framing just its door, positioned at the far
-   (top) end of the corridor so the walk ends facing the same door the player spawns beside. */
+/* The far (top) end of the corridor: the Main Hall's panelled south wall with light spilling
+   through its open doorway, so the walk ends facing the same doors the player then spawns beside.
+
+   Drawn in CSS rather than cropped out of a bitmap. Until Phase 54 this was a `background-image`
+   slice of `chronicle-institute-hub.png` positioned at 29%/92% of a 650%-scaled copy — a set of
+   magic numbers that only meant anything relative to that one hand-drawn PNG, which the tiled
+   Main Hall rebuild retired. Gradients in the project's own navy/gold/timber palette need no
+   asset and don't go stale when the room beyond is re-laid-out. */
 .hallway-door {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 30%;
-  background-repeat: no-repeat;
-  background-size: 650% auto;
-  background-position: 29% 92%;
+  background:
+    /* warm light spilling out of the opening */
+    radial-gradient(
+      ellipse 34% 78% at 50% 100%,
+      rgba(var(--c-gold-rgb), 0.55),
+      rgba(var(--c-gold-rgb), 0.16) 55%,
+      transparent 78%
+    ),
+    /* the dark opening itself */
+    linear-gradient(
+        to right,
+        transparent 0 34%,
+        rgba(10, 22, 33, 0.92) 34% 66%,
+        transparent 66% 100%
+      ),
+    /* panelled wall either side, with a plank rhythm */
+    repeating-linear-gradient(to right, rgba(84, 56, 34, 1) 0 22px, rgba(66, 43, 26, 1) 22px 24px);
+  box-shadow: inset 0 -10px 26px rgba(var(--c-black-rgb), 0.45);
 }
 .hallway-sprite {
   position: absolute;
@@ -3751,19 +3772,17 @@ dd {
     0 26px 54px rgba(var(--c-black-rgb), 0.3),
     inset 0 0 0 6px rgba(var(--c-gold-rgb), 0.045);
 }
-.institute-map__art {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  image-rendering: auto;
-  filter: saturate(0.97) contrast(1.03);
-}
-/* The Archive Room is now a camera room: ARCHIVE_ROOM_GRID is 20x12 at 48px, so the world is
-   960x576 and scrolls inside this box rather than being stretched to fit it. The 1.67:1 aspect
-   matches the Main Hall's, which keeps the two Institute interiors framed alike. */
-.institute-map--archive-room {
-  aspect-ratio: 1.67/1;
+/* `.institute-map__art` removed in Phase 54 — it styled the stretched `chronicle-institute-hub.png`
+   that the tiled Main Hall replaced. Both Institute rooms now draw into canvases inside `.hub-world`
+   and are styled by `.field-world-art` / `.field-world-overlay` like the field maps. */
+/* Both Institute rooms are camera rooms: the world is sized in px and scrolls inside this box rather
+   than being stretched to fit it. The Archive Room's 20x12 grid matches its frame exactly, so it
+   never scrolls at all. The Main Hall is 23x12 — one grid row shorter than its frame so nothing on
+   the north wall is ever clipped, and wider than it so the camera pans east and west. Its frame
+   therefore keeps the Archive Room's ratio rather than its own, and the extra width scrolls. */
+.institute-map--archive-room,
+.institute-map--main-hall {
+  aspect-ratio: 20/12;
 }
 /* The scrolling world of a camera-driven hub room. Sized in px by the screen that renders it
    (grid columns x tile), translated by updateHubCamera(). Its parent clips via
@@ -3785,6 +3804,15 @@ dd {
   width: 55px;
   height: 83px;
 }
+/* Same reason for the hub NPCs: a later `.hub-npc { width: 7.1% !important }` sizes them as a
+   fraction of their container, which was the stretched map box before Phase 54 and is now the
+   world div — so an NPC would silently change size whenever a room's grid width changed. Fixed
+   pixels here, matched to the player, so all four sprites in a room are the same scale.
+   `!important` only because that later percentage rule carries it too. */
+.hub-world .hub-npc {
+  width: 55px !important;
+  aspect-ratio: 1/1.22;
+}
 .institute-map::after {
   content: "";
   position: absolute;
@@ -3793,7 +3821,12 @@ dd {
   background:
     radial-gradient(circle at 25% 72%, rgba(var(--c-gold-rgb), 0.13), transparent 21%),
     radial-gradient(circle at 73% 57%, rgba(91, 160, 151, 0.1), transparent 26%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 35% 70%, rgba(var(--c-black-rgb), 0.17));
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.035),
+      transparent 35% 70%,
+      rgba(var(--c-black-rgb), 0.17)
+    );
   mix-blend-mode: screen;
 }
 /* .hub-zone/.hub-zone--foyer/.hub-zone--archive removed (Phase 45D dead-CSS sweep) — an old
@@ -7403,9 +7436,12 @@ body {
   left: 410px !important;
   top: 545px !important;
 }
-.hub-trophy {
-  top: 12.8% !important;
-}
+/* Two `.hub-trophy { top: <pct> !important }` overrides used to sit here and further down. They
+   nudged the Preservation Case button onto the shelf drawn near the top-left of the retired
+   `chronicle-institute-hub.png`, and being `!important` percentages they beat the inline pixel `top`
+   that hubPointStyle() now writes — which pinned the button to the hall's north wall regardless of
+   where HUB_TARGETS.trophy actually is. Removed in Phase 54; the button's position comes from the
+   target coordinate, like every other hub target's. */
 
 @media (max-width: 1220px) {
   .hub-shell--status-left {
@@ -7510,9 +7546,7 @@ button:hover,
 .hub-npc[data-facing="up"] img {
   filter: brightness(0.94) saturate(0.96) drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.25)) !important;
 }
-.hub-trophy {
-  top: 11.5% !important;
-}
+/* The second retired `.hub-trophy { top: <pct> }` override — see the note further up this file. */
 .hub-trophy b {
   font-size: 9px !important;
 }
@@ -7772,7 +7806,9 @@ button:hover,
   background: none;
   padding: 4px;
   color: #4a6b76;
-  font: 700 var(--c-text-micro) "Cinzel", serif;
+  font:
+    700 var(--c-text-micro) "Cinzel",
+    serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -7836,7 +7872,9 @@ button:hover,
 }
 .roster-table th {
   color: var(--gold-soft);
-  font: 700 var(--c-text-micro) "Cinzel", serif;
+  font:
+    700 var(--c-text-micro) "Cinzel",
+    serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -8108,7 +8146,9 @@ details[open] > summary.manage-content-unit-toggle::before {
 }
 .source-pool-preview dt {
   color: var(--gold-soft);
-  font: 700 var(--c-text-micro) "Cinzel", serif;
+  font:
+    700 var(--c-text-micro) "Cinzel",
+    serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
