@@ -5,13 +5,13 @@ import { seedProgress, loadSeededSave, holdKey } from "./helpers/progress-seed.j
 // where the real "camera is a pure function of position" regression check belongs — the Main
 // Hall (hub-movement.spec.js) has no scroll/camera transform at all.
 
-// FIELD_GRID = { columns: 40, rows: 24, tile: 40 } (main.js) — mirrors updateFieldPlayer()'s
+// FIELD_GRID = { columns: 56, rows: 36, tile: 48 } (main.js) — mirrors updateFieldPlayer()'s
 // own camera formula so the test can independently recompute the expected transform from the
 // player's current pixel position and assert the app's live value matches exactly (both are
 // Math.round'ed integers, so an exact match is the right bar, not a fuzzy tolerance).
-const TILE = 40;
-const WORLD_WIDTH = 40 * TILE;
-const WORLD_HEIGHT = 24 * TILE;
+const TILE = 48;
+const WORLD_WIDTH = 56 * TILE;
+const WORLD_HEIGHT = 36 * TILE;
 
 function parsePx(value) {
   return Number.parseFloat(value.replace("px", ""));
@@ -57,24 +57,27 @@ test.describe("Field movement, collision, and dialogue", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    // fieldMovement's module-level default is (20, 12) facing "down" — matches case-001's
+    // fieldMovement's module-level default is (28, 22) facing "down" — matches case-001's
     // declared spawn, so no extra positioning is needed for this case specifically.
     const initial = await readFieldState(page);
     expect(initial.camera).toEqual(expectedCamera(initial));
 
     // Distant NPC interaction attempt: clicking a far-away NPC should show a "too far" notice,
-    // not open dialogue — taino-fisher (30.4, 15.1) is well outside the 1.45-tile reach from
-    // the (20, 12) spawn.
+    // not open dialogue — taino-fisher (37.5, 17.5) is well outside the 1.45-tile reach from
+    // the (28, 22) spawn.
     await page.locator('[data-npc="taino-fisher"]').click();
     await expect(page.locator("#fieldNotice")).toContainText("Move closer");
     await expect(page.locator(".field-speech-bubble")).toHaveCount(0);
 
-    // Walk toward taino-elder (22.0, 10.9) — hold right+up together (diagonal).
-    await page.keyboard.down("ArrowRight");
+    // Walk toward taino-elder (30.0, 13.5): north up the village path, then a short step east.
+    // Held axes aren't normalized, so a diagonal hold covers the same distance on both axes and
+    // would overshoot east long before arriving north.
     await page.keyboard.down("ArrowUp");
-    await page.waitForTimeout(700);
-    await page.keyboard.up("ArrowRight");
+    await page.waitForTimeout(2300);
     await page.keyboard.up("ArrowUp");
+    await page.keyboard.down("ArrowRight");
+    await page.waitForTimeout(300);
+    await page.keyboard.up("ArrowRight");
 
     const afterWalk = await readFieldState(page);
     expect(afterWalk.px).toBeGreaterThan(initial.px);

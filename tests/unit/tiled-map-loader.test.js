@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   tilesForFrame,
   createTilesetImageResolver,
+  isOverlayLayer,
+  selectLayers,
+  hasOverlayLayers,
 } from "../../apps/web/src/engine/tiled-map-loader.js";
 
 function tileset({ firstgid, columns = 4, tilewidth = 48, tileheight = 48, tiles }) {
@@ -97,6 +100,78 @@ describe("tilesForFrame", () => {
       layers: [{ type: "tilelayer", visible: true, width: 1, height: 1, data: [5] }],
     };
     expect(tilesForFrame(tmj, 0)).toEqual(tilesForFrame(tmj, 99999));
+  });
+});
+
+describe("overlay layers (walk-behind depth)", () => {
+  function twoBandMap() {
+    return {
+      tilewidth: 48,
+      tileheight: 48,
+      tilesets: [tileset({ firstgid: 1 })],
+      layers: [
+        { type: "tilelayer", name: "ground", visible: true, width: 1, height: 1, data: [5] },
+        { type: "tilelayer", name: "structures", visible: true, width: 1, height: 1, data: [6] },
+        { type: "tilelayer", name: "overlay", visible: true, width: 1, height: 1, data: [7] },
+      ],
+    };
+  }
+
+  it("classifies a layer as overlay by its name prefix, case-insensitively (normal case)", () => {
+    expect(isOverlayLayer({ name: "overlay" })).toBe(true);
+    expect(isOverlayLayer({ name: "Overlay-Canopy" })).toBe(true);
+    expect(isOverlayLayer({ name: "  overlay2 " })).toBe(true);
+    expect(isOverlayLayer({ name: "ground" })).toBe(false);
+    expect(isOverlayLayer({ name: "structures" })).toBe(false);
+  });
+
+  it("treats a nameless layer as below-player rather than throwing (edge case)", () => {
+    expect(isOverlayLayer({})).toBe(false);
+    expect(isOverlayLayer(undefined)).toBe(false);
+  });
+
+  it("does not misclassify a layer that merely contains the word overlay (edge case)", () => {
+    // Only a prefix counts, so "structures-overlay-shadow" stays below the player.
+    expect(isOverlayLayer({ name: "structures-overlay-shadow" })).toBe(false);
+  });
+
+  it("splits layers into below/overlay bands that partition the map (normal case)", () => {
+    const tmj = twoBandMap();
+    expect(selectLayers(tmj, "below").map((l) => l.name)).toEqual(["ground", "structures"]);
+    expect(selectLayers(tmj, "overlay").map((l) => l.name)).toEqual(["overlay"]);
+    expect(selectLayers(tmj, "all")).toHaveLength(3);
+  });
+
+  it("draws only the requested band, and the two bands sum to the whole map (normal case)", () => {
+    const tmj = twoBandMap();
+    const below = tilesForFrame(tmj, 0, undefined, "below");
+    const overlay = tilesForFrame(tmj, 0, undefined, "overlay");
+    const all = tilesForFrame(tmj, 0, undefined, "all");
+    expect(below).toHaveLength(2);
+    expect(overlay).toHaveLength(1);
+    expect(below.length + overlay.length).toBe(all.length);
+    // gid 7 -> localId 6 -> col 2, row 1 of a 4-column tileset
+    expect(overlay[0].sx).toBe(96);
+    expect(overlay[0].sy).toBe(48);
+  });
+
+  it("defaults to drawing every layer, so pre-overlay callers are unaffected (boundary case)", () => {
+    const tmj = twoBandMap();
+    expect(tilesForFrame(tmj)).toEqual(tilesForFrame(tmj, 0, undefined, "all"));
+  });
+
+  it("reports whether a second canvas is worth creating (normal case)", () => {
+    expect(hasOverlayLayers(twoBandMap())).toBe(true);
+    const noOverlay = twoBandMap();
+    noOverlay.layers = noOverlay.layers.filter((l) => l.name !== "overlay");
+    expect(hasOverlayLayers(noOverlay)).toBe(false);
+  });
+
+  it("does not count a hidden overlay layer as needing a canvas (edge case)", () => {
+    const tmj = twoBandMap();
+    tmj.layers[2].visible = false;
+    expect(hasOverlayLayers(tmj)).toBe(false);
+    expect(tilesForFrame(tmj, 0, undefined, "overlay")).toHaveLength(0);
   });
 });
 

@@ -21,12 +21,11 @@ test.describe("Investigation Challenge", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    // fieldMovement's default spawn (20, 12) is 3.16 tiles from taino-context's field point
-    // (22.6, 10.2) — outside the 1.55-tile interaction reach. Walk closer first.
-    await page.keyboard.down("ArrowRight");
+    // The spawn (28, 22) is 11 tiles south of taino-context's field point (27, 11) — the map is
+    // 56x36 now, so the village is a real walk north rather than a few steps. Column 28 is the
+    // village dirt path and is clear of collision the whole way up.
     await page.keyboard.down("ArrowUp");
-    await page.waitForTimeout(800);
-    await page.keyboard.up("ArrowRight");
+    await page.waitForTimeout(2900);
     await page.keyboard.up("ArrowUp");
 
     await page

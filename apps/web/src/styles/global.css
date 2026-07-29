@@ -3288,8 +3288,8 @@ dd {
 .case-field-player {
   position: absolute;
   z-index: 80 !important;
-  width: 46px;
-  height: 69px;
+  width: 55px;
+  height: 83px;
   aspect-ratio: 2 / 3;
   transform: translate(-50%, -50%);
   transition: none !important;
@@ -3309,8 +3309,8 @@ dd {
 .case-field-player img {
   position: absolute;
   inset: 0;
-  width: 46px;
-  height: 69px;
+  width: 55px;
+  height: 83px;
   object-fit: contain;
   image-rendering: pixelated;
   filter: drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.25));
@@ -3759,10 +3759,31 @@ dd {
   image-rendering: auto;
   filter: saturate(0.97) contrast(1.03);
 }
-/* Archive Room's ARCHIVE_ROOM_GRID is 10x8 (1.25:1) — narrower than the Main Hall's 18x12
-   (1.67:1) — so its .field-world-art canvas isn't stretched off its own tile grid. */
+/* The Archive Room is now a camera room: ARCHIVE_ROOM_GRID is 20x12 at 48px, so the world is
+   960x576 and scrolls inside this box rather than being stretched to fit it. The 1.67:1 aspect
+   matches the Main Hall's, which keeps the two Institute interiors framed alike. */
 .institute-map--archive-room {
-  aspect-ratio: 1.25/1;
+  aspect-ratio: 1.67/1;
+}
+/* The scrolling world of a camera-driven hub room. Sized in px by the screen that renders it
+   (grid columns x tile), translated by updateHubCamera(). Its parent clips via
+   .institute-map's overflow: hidden. */
+.hub-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(0, 0);
+  transition: transform 92ms linear;
+}
+/* Inside a camera room the player is a fixed pixel size, matching the field, instead of a
+   percentage of a box that stretches. */
+.hub-world .hub-player {
+  width: 55px;
+  height: 83px;
+}
+.hub-world .hub-player img {
+  width: 55px;
+  height: 83px;
 }
 .institute-map::after {
   content: "";
@@ -4086,10 +4107,11 @@ dd {
 .hub-dialogue--tour h2 {
   font-size: 2rem;
 }
-/* The director sprite's native 48x64 pixel art is almost the same aspect ratio as the 82x112
-   portrait render (0.75 vs 0.732), so object-fit: contain leaves almost no margin — the
-   character's feet sit flush against the box edge and read as clipped even though nothing is
-   technically cropped. Rendering it smaller inside the same box gives real breathing room. */
+/* The director sprite (natively 30x46 — an earlier revision of this comment said 48x64, which
+   was the pre-PixelLab art) is close enough in aspect ratio to the 82x112 portrait render that
+   object-fit: contain leaves almost no margin — the character's feet sit flush against the box
+   edge and read as clipped even though nothing is technically cropped. Rendering it smaller
+   inside the same box gives real breathing room. */
 .hub-dialogue--tour .hub-dialogue__portrait img {
   width: 68px;
   height: 90px;
@@ -4377,8 +4399,8 @@ dd {
 .field-npc {
   position: absolute;
   z-index: 70 !important;
-  width: 46px !important;
-  height: 66px !important;
+  width: 55px !important;
+  height: 79px !important;
   transform: translate(-50%, -50%) !important;
   border: 0;
   background: none;
@@ -4563,11 +4585,11 @@ dd {
    into the single .field-npc rule near the top of this file (Phase 45B). */
 .field-npc img {
   display: block;
-  width: 62px;
-  height: 88px;
+  width: 74px;
+  height: 106px;
   object-fit: contain;
   filter: drop-shadow(0 6px 4px rgba(var(--c-black-rgb), 0.28));
-  image-rendering: auto;
+  image-rendering: pixelated;
 }
 .field-npc i {
   display: none !important;
@@ -5295,12 +5317,12 @@ dd {
   transform: translate(-50%, -53%) !important;
 }
 .field-npc img {
-  width: 46px !important;
-  height: 66px !important;
+  width: 55px !important;
+  height: 79px !important;
   object-fit: contain !important;
 }
 .field-npc span {
-  top: 62px !important;
+  top: 74px !important;
   font-size: 8.5px !important;
   padding: 3px 6px !important;
   max-width: 118px;
@@ -6480,8 +6502,11 @@ dd {
 .field-npc em {
   display: none !important;
 }
+/* Nearest-neighbour, matching .case-field-player. These NPCs were previously forced to
+   image-rendering: auto, so every NPC rendered bilinear-blurred while the player next to them
+   rendered crisp — a sharpness split that had nothing to do with the art itself. */
 .field-npc .npc-frame {
-  image-rendering: auto !important;
+  image-rendering: pixelated !important;
 }
 .field-npc.is-walking-npc .npc-frame--idle {
   animation: npcIdleFrame 0.48s steps(1, end) infinite !important;
@@ -7167,7 +7192,8 @@ html {
 }
 .hub-npc img {
   transform-origin: 50% 90%;
-  image-rendering: auto !important;
+  /* See the .field-npc .npc-frame note above — same fix, hub side. */
+  image-rendering: pixelated !important;
 }
 .hub-npc.is-walking-npc img {
   animation: hubNpcWalk 0.48s steps(2, end) infinite;
@@ -7623,6 +7649,18 @@ button:hover,
   inset: 0;
   width: 100%;
   height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* The map's "overlay" tile layers, stacked above the player (z-index 80) and NPCs (70) so tree
+   canopies and roof eaves occlude them — the walk-behind depth cue. Same box and same source
+   .tmj as .field-world-art, so the two canvases line up exactly. */
+.field-world-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 90;
   image-rendering: pixelated;
   pointer-events: none;
 }

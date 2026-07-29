@@ -59,13 +59,23 @@ const RECORD_SHELF_LEFT = gidRect(T.recordShelfLeft, 2, 1);
 const RECORD_RACK_RIGHT = gidRect(T.recordRackRight, 2, 1);
 const WALL_TORCH = gid(T.wallTorch);
 
-// Left edge: shelving at two points down the corridor. Right edge: wine-rack-style record racks,
-// offset a few rows so the two edges don't read as a mirrored repeat. A torch pair near the door
-// end (row 0) lights the corridor's far end, matching the Archive Room's corner torches.
-stamp(0, 1, RECORD_SHELF_LEFT);
-stamp(0, 6, RECORD_SHELF_LEFT);
-stamp(5, 3, RECORD_RACK_RIGHT);
-stamp(5, 7, RECORD_RACK_RIGHT);
+// Both edges are lined the whole length of the corridor rather than carrying two accents each.
+// The cabinet fronts are cycled and the two sides are offset from one another so the walls don't
+// read as a mirrored repeat, matching how the Archive Room's wall runs are laid.
+const CABINETS = [T.cabinetA, T.cabinetB, T.cabinetC, T.cabinetD];
+[0, 2, 4, 6, 8].forEach((row, index) => {
+  stamp(0, row, gidRect(CABINETS[index % CABINETS.length], 2, 1));
+});
+[1, 3, 5, 7, 9].forEach((row, index) => {
+  stamp(5, row, gidRect(CABINETS[(index + 2) % CABINETS.length], 2, 1));
+});
+
+// Record shelving and racks break up the cabinet runs at eye-catching points down the walk.
+stamp(0, 4, RECORD_SHELF_LEFT);
+stamp(5, 5, RECORD_RACK_RIGHT);
+
+// Institute banners flank the door the player walks toward, and a torch pair lights it.
+stamp(1, 0, gidRect(T.bannerPair, 2, 2));
 stamp(0, 0, [[WALL_TORCH]]);
 stamp(5, 0, [[WALL_TORCH]]);
 

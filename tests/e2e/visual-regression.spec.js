@@ -253,10 +253,8 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
     // Same approach path as tests/e2e/investigation-challenge.spec.js.
-    await page.keyboard.down("ArrowRight");
     await page.keyboard.down("ArrowUp");
-    await page.waitForTimeout(800);
-    await page.keyboard.up("ArrowRight");
+    await page.waitForTimeout(2900);
     await page.keyboard.up("ArrowUp");
     await page
       .locator('[data-action="start-source-activity"][data-source="taino-context"]')

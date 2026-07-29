@@ -19,7 +19,9 @@
     "test:e2e": "playwright test",
     "assets:audit": "node scripts/assets/audit.js",
     "assets:label": "node scripts/assets/label-tilesheet.js",
-    "assets:optimize:waldseemuller": "node scripts/assets/optimize-waldseemuller.js"
+    "assets:optimize:waldseemuller": "node scripts/assets/optimize-waldseemuller.js",
+    "assets:normalize-sprites": "node scripts/assets/normalize-sprite-frames.js",
+    "assets:preview-map": "node scripts/assets/preview-map.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

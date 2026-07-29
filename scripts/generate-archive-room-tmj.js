@@ -1,12 +1,16 @@
 // Generates apps/web/src/content/maps/archive-room.tmj for the Institute Archive Room,
 // composited from the "Medieval Tavern" tileset — the same 48px/16-column/no-margin grid
-// family already proven by scripts/generate-caribbean-tmj.js and the live Riverbend map
-// (Medieval Fishing Village/Medieval Fantasy Town/farm), confirmed by direct pixel
-// inspection (see docs/decision-log/0030-archive-room-tiled-interior.md). "Modern Interiors"
-// (the other unused pack) was evaluated and rejected: its sheets are hand-packed with no
-// uniform tile grid, and its blue-plastic/office-monitor furniture would clash with the
-// project's gold/bronze/parchment visual language (see CLAUDE.md's visual design section).
-// Run with: node scripts/generate-archive-room-tmj.js
+// family already proven by the field maps, confirmed by direct pixel inspection (see
+// docs/decision-log/0030-archive-room-tiled-interior.md). "Modern Interiors" (the other unused
+// pack) was evaluated and rejected: its sheets are hand-packed with no uniform tile grid, and
+// its blue-plastic/office-monitor furniture would clash with the project's gold/bronze/parchment
+// visual language (see CLAUDE.md's visual design section).
+//
+// The room is 20x12 (was 10x8). At the old size it stretched to fill its viewport, so the art
+// rendered at roughly 1.7x with no camera; at 20x12 with the hub camera it draws 1:1 and reads
+// as a hall rather than a closet.
+//
+// Run with: node scripts/generate-archive-room-tmj.js apps/web/src/content/maps/archive-room.tmj
 //
 // Which tile is floor or shelving is NOT decided here — it comes from
 // apps/web/src/content/tilesets/maps/archive-room.palette.js. This script owns layout only.
@@ -15,25 +19,21 @@ import { writeFileSync } from "node:fs";
 import palette from "../apps/web/src/content/tilesets/maps/archive-room.palette.js";
 import { resolvePalette } from "./lib/palette-gids.js";
 
-const WIDTH = 10;
-const HEIGHT = 8;
+const WIDTH = 20;
+const HEIGHT = 12;
 const TILE = 48;
 
-// firstgid assignment, sheet geometry and the tilesets[] array are all derived from the
-// palette's sheet order by resolvePalette() — see scripts/lib/palette-gids.js.
 const { tilesets, gid, gidRect } = resolvePalette(palette);
 const T = palette.tiles;
 
 const STONE_FLOOR = T.stoneFloor.map(gid); // slight variety
 const WOOD_FLOOR = T.woodFloor.map(gid);
 
-// Ground layer: stone floor everywhere, with a wood-floor "reading nook" patch under the
-// table (cols 0-5, rows 4-7) for visual zoning — the same low-key variety approach
-// generate-caribbean-tmj.js uses for its interior-land grass, deterministic (no randomness,
-// reproducible), not a real terrain mask (this is an interior room, not outdoor land).
+// Ground layer: grey flagstone through the main hall, warmer sandstone through the east alcove
+// (cols 13-19) for visual zoning. Deterministic, not random, so the map is reproducible.
 function groundTileAt(col, row) {
-  const inNook = col <= 5 && row >= 4;
-  const variants = inNook ? WOOD_FLOOR : STONE_FLOOR;
+  const inAlcove = col >= 13;
+  const variants = inAlcove ? WOOD_FLOOR : STONE_FLOOR;
   return variants[(col * 3 + row * 5) % variants.length];
 }
 
@@ -58,27 +58,57 @@ function stamp(anchorCol, anchorRow, block) {
   });
 }
 
-// Archive record shelf (bottle/jar shelf, 2x2) — the Terminal's "shelving," left half.
-const RECORD_SHELF = gidRect(T.recordShelf, 2, 2);
-// Diamond wine rack (2x2) — reads as an "archive record rack," right half.
-const RECORD_RACK = gidRect(T.recordRack, 2, 2);
-// Long reading table (4 wide x 2 tall, plain dark wood, no tavern mugs).
-const READING_TABLE = gidRect(T.readingTable, 2, 4);
-const WALL_TORCH = gid(T.wallTorch);
+// Wall runs of shelving. The cabinet fronts are cycled so a long run doesn't read as one tile
+// repeated, and gaps are left at the entrance (north, cols 8-11) and the exit (south, cols 8-13).
+const CABINETS = [T.cabinetA, T.cabinetB, T.cabinetC, T.cabinetD];
+const CHESTS = [T.chestA, T.chestB];
+function shelfRun(cols, row, set) {
+  cols.forEach((col, index) => stamp(col, row, gidRect(set[index % set.length], 2, 2)));
+}
+shelfRun([0, 2, 4, 6], 0, CABINETS); //  north wall, west of the entrance
+shelfRun([12, 14, 16, 18], 0, CABINETS); //  north wall, east of the entrance
+shelfRun([0, 2, 4, 6], 10, CHESTS); //  south wall, west of the exit
+shelfRun([14, 16, 18], 10, CHESTS); //  south wall, east of the exit
+
+// Institute banners over the entrance.
+stamp(9, 0, gidRect(T.bannerPair, 2, 2));
+
+// Full-height record storage lining the alcove's east wall.
+stamp(16, 3, gidRect(T.recordShelf, 4, 2)); //  (16.0,5.0-18.0,7.0)
+stamp(18, 3, gidRect(T.recordRack, 4, 2)); //  (18.0,5.0-20.0,7.0)
+stamp(16, 7, gidRect(T.recordCanisters, 4, 2)); //  (16.0,9.0-18.0,11.0)
+
+// The reading hall: a long table with stools drawn up to it.
+stamp(4, 5, gidRect(T.readingTable, 2, 4)); //  (4.1,5.1-7.9,6.9)
 const STOOL = gid(T.stool);
+for (const [col, row] of [
+  [3, 5],
+  [3, 6],
+  [8, 5],
+  [8, 6],
+  [4, 4],
+  [6, 4],
+  [5, 7],
+  [7, 7],
+]) {
+  stamp(col, row, [[STOOL]]);
+}
 
-// Anchors below are each stamp's top-left cell; the shelf+rack pair sits directly behind
-// the Archive Terminal interaction point (ARCHIVE_ROOM_TARGETS.terminal, x5.0/y3.7 in
-// apps/web/src/main.js), and ARCHIVE_ROOM_BLOCK_RECTS was re-measured to match these
-// placements (see main.js) rather than the other way around.
-stamp(3, 1, RECORD_SHELF); // x3.0-5.0, y1.0-3.0
-stamp(5, 1, RECORD_RACK); // x5.0-7.0, y1.0-3.0
-stamp(1, 5, READING_TABLE); // x1.0-5.0, y5.0-7.0
-stamp(6, 5, [[STOOL]]); // small stool beside the reading table
-stamp(0, 0, [[WALL_TORCH]]); // corner ambiance
-stamp(9, 0, [[WALL_TORCH]]);
+// Hearth on the west wall, and the alcove's study furniture.
+stamp(0, 4, gidRect(T.fireplace, 2, 2)); //  (0.0,4.6-2.0,6.0)
+stamp(13, 7, gidRect(T.writingDesk, 2, 2)); //  (13.0,7.6-15.0,9.0)
+stamp(13, 3, gidRect(T.roundTable, 2, 2)); //  (13.0,3.6-15.0,5.0)
+stamp(13, 5, gidRect(T.rugRed, 1, 2));
+stamp(9, 8, gidRect(T.rugGreen, 1, 2));
 
-// --- emit Tiled JSON, matching the existing Caribbean/Riverbend .tmj shape/conventions ---
+// Greenery and wall torches. The torches sit on row 2, immediately below the north shelving, so
+// they read as wall-mounted rather than free-standing on the floor.
+stamp(11, 3, gidRect(T.plantA, 2, 2));
+stamp(11, 8, gidRect(T.plantB, 2, 2));
+const WALL_TORCH = gid(T.wallTorch);
+for (const col of [2, 8, 15, 19]) stamp(col, 2, [[WALL_TORCH]]);
+
+// --- emit Tiled JSON, matching the existing field maps' shape/conventions ---
 const tmj = {
   compressionlevel: -1,
   height: HEIGHT,

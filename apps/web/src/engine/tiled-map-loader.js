@@ -5,6 +5,12 @@
 // Handles, generically (not per-map hardcoded): empty cells, any number of tilesets, and
 // per-tile animation. See docs/architecture/tiled-map-import-checklist.md for the authoring
 // convention this expects (tileset images living under apps/web/src/assets/tilesets/).
+//
+// Layer depth: a map's layers are drawn in file order into one canvas that sits *below* the
+// player and NPC sprites. A layer whose name begins with "overlay" is the exception — it is
+// meant to be drawn into a second canvas stacked *above* those sprites, so the player can walk
+// behind a roof eave or a tree canopy. This module only splits the layers (see selectLayers);
+// creating the second canvas and giving it a higher z-index is the caller's job.
 
 const imageCache = new Map();
 
@@ -93,6 +99,37 @@ function animationIndexByTileset(tmj) {
   return new Map(tmj.tilesets.map((tileset) => [tileset, animationIndexForTileset(tileset)]));
 }
 
+// A layer is "above the player" purely by naming convention, because Tiled's JSON export carries
+// no depth concept of its own and this loader deliberately doesn't read custom layer properties.
+// Generators name such a layer "overlay" (or "overlay-canopy", "overlay2", ...).
+export function isOverlayLayer(layer) {
+  return String(layer?.name || "")
+    .trim()
+    .toLowerCase()
+    .startsWith("overlay");
+}
+
+/**
+ * Splits a map's layers by depth band.
+ * @param {"all"|"below"|"overlay"} depth
+ *   "below"   — everything that is not an overlay layer (ground, structures, ...)
+ *   "overlay" — only the overlay layers
+ *   "all"     — every layer, the pre-overlay behaviour and still the default
+ */
+export function selectLayers(tmj, depth = "all") {
+  const layers = tmj.layers || [];
+  if (depth === "below") return layers.filter((layer) => !isOverlayLayer(layer));
+  if (depth === "overlay") return layers.filter(isOverlayLayer);
+  return layers;
+}
+
+/** True if the map has anything to draw above the player — i.e. a second canvas is worth creating. */
+export function hasOverlayLayers(tmj) {
+  return selectLayers(tmj, "overlay").some(
+    (layer) => layer.type === "tilelayer" && layer.visible !== false
+  );
+}
+
 // Pure (no canvas) resolution of "what to draw where" for one frame: walks every visible
 // tile layer, skips empty cells, resolves each GID to its owning tileset (however many
 // tilesets the map has) and source rect, and picks the animated frame active at elapsedMs.
@@ -101,10 +138,11 @@ function animationIndexByTileset(tmj) {
 export function tilesForFrame(
   tmj,
   elapsedMs = 0,
-  animationByTileset = animationIndexByTileset(tmj)
+  animationByTileset = animationIndexByTileset(tmj),
+  depth = "all"
 ) {
   const tiles = [];
-  for (const layer of tmj.layers) {
+  for (const layer of selectLayers(tmj, depth)) {
     if (layer.type !== "tilelayer" || !layer.visible) continue;
     for (let row = 0; row < layer.height; row += 1) {
       for (let col = 0; col < layer.width; col += 1) {
@@ -137,7 +175,12 @@ export function tilesForFrame(
 }
 
 // resolveImageUrl(tileset) -> string. Build one with createTilesetImageResolver() above.
-export async function renderTiledMap(canvas, tmj, resolveImageUrl) {
+//
+// `depth` selects which layers this canvas draws — see selectLayers(). It defaults to "all",
+// so existing single-canvas callers are unaffected. To get walk-behind depth, render the same
+// map twice: once with depth "below" beneath the sprites, once with "overlay" above them. Both
+// canvases are sized to the full map, so they line up when stacked at the same inset.
+export async function renderTiledMap(canvas, tmj, resolveImageUrl, { depth = "all" } = {}) {
   const ctx = canvas.getContext("2d");
   canvas.width = tmj.width * tmj.tilewidth;
   canvas.height = tmj.height * tmj.tileheight;
@@ -148,11 +191,18 @@ export async function renderTiledMap(canvas, tmj, resolveImageUrl) {
   );
   const imageByTileset = new Map(tmj.tilesets.map((tileset, index) => [tileset, images[index]]));
   const animationByTileset = animationIndexByTileset(tmj);
-  const hasAnimation = [...animationByTileset.values()].some((index) => index.size > 0);
+  // Scoped to the tilesets this canvas actually draws, so an overlay canvas made of static art
+  // doesn't start a repaint loop just because some other layer of the map animates.
+  const drawnTilesets = new Set(
+    tilesForFrame(tmj, 0, animationByTileset, depth).map((t) => t.tileset)
+  );
+  const hasAnimation = [...drawnTilesets].some(
+    (tileset) => (animationByTileset.get(tileset)?.size || 0) > 0
+  );
 
   function drawFrame(elapsedMs) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const tile of tilesForFrame(tmj, elapsedMs, animationByTileset)) {
+    for (const tile of tilesForFrame(tmj, elapsedMs, animationByTileset, depth)) {
       const image = imageByTileset.get(tile.tileset);
       ctx.drawImage(
         image,

@@ -44,14 +44,43 @@ export default {
       tile("Medieval Tavern/tile-B-05.png", 14, 9),
     ],
 
-    /** Bottle/jar shelf, top-left of a 2x2 stamp — reads as archive shelving. */
+    /** Bottle/jar shelf — 4 rows x 2 cols at full height. Reads as archive shelving. */
     recordShelf: tile("Medieval Tavern/tile-B-03.png", 2, 8),
-    /** Diamond rack, top-left of a 2x2 stamp — reads as an archive record rack. */
+    /** Diamond rack — 4 rows x 2 cols. Reads as an archive record rack. */
     recordRack: tile("Medieval Tavern/tile-B-03.png", 2, 10),
+    /** Barrel rack — 4 rows x 2 cols. Reads as sealed record canisters. */
+    recordCanisters: tile("Medieval Tavern/tile-B-03.png", 2, 12),
     /** Long plain dark-wood table, top-left of a 4-wide x 2-tall stamp. Deliberately not the
      *  tankard-covered tavern table — see the "avoid overtly tavern-specific props" rule. */
     readingTable: tile("Medieval Tavern/tile-B-01.png", 4, 8),
     wallTorch: tile("Medieval Tavern/tile-B-03.png", 1, 9),
     stool: tile("Medieval Tavern/tile-B-05.png", 11, 8),
+
+    // Tall wooden cabinets, 2 cols x 2 rows each, in several carved fronts. Laid in runs along
+    // the walls, these are what turn the room from a bare box into a library hall — they are
+    // the closest thing this sheet family has to a stack of shelving. [labeled]
+    cabinetA: tile("Medieval Tavern/tile-B-03.png", 12, 0),
+    cabinetB: tile("Medieval Tavern/tile-B-03.png", 12, 2),
+    cabinetC: tile("Medieval Tavern/tile-B-03.png", 12, 4),
+    cabinetD: tile("Medieval Tavern/tile-B-03.png", 12, 6),
+    /** Lower chests/presses, 2x2. [labeled] */
+    chestA: tile("Medieval Tavern/tile-B-03.png", 14, 0),
+    chestB: tile("Medieval Tavern/tile-B-03.png", 14, 4),
+
+    /** Writing desk with a chair, 2 rows x 2 cols. [labeled] */
+    writingDesk: tile("Medieval Tavern/tile-B-03.png", 10, 4),
+    /** Small round table, 2 rows x 2 cols. [labeled] */
+    roundTable: tile("Medieval Tavern/tile-B-03.png", 10, 6),
+    /** Stone hearth with a lit fire, 2 rows x 2 cols. [labeled] */
+    fireplace: tile("Medieval Tavern/tile-B-03.png", 10, 14),
+    /** Hanging banners, 2 rows x 2 cols — Institute colours on the entrance wall. [labeled] */
+    bannerPair: tile("Medieval Tavern/tile-B-03.png", 0, 12),
+    /** Potted greenery, 2 rows x 2 cols. [labeled] */
+    plantA: tile("Medieval Tavern/tile-B-03.png", 6, 8),
+    plantB: tile("Medieval Tavern/tile-B-03.png", 6, 10),
+    /** Woven rugs, 1 row x 2 cols. [labeled] */
+    rugRed: tile("Medieval Tavern/tile-B-03.png", 14, 10),
+    rugBlue: tile("Medieval Tavern/tile-B-03.png", 14, 12),
+    rugGreen: tile("Medieval Tavern/tile-B-03.png", 15, 8),
   },
 };

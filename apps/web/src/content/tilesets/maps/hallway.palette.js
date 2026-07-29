@@ -37,5 +37,15 @@ export default {
     /** Right-wall rack, top-left of a 1-wide x 2-tall stamp. */
     recordRackRight: tile("Medieval Tavern/tile-B-03.png", 2, 10),
     wallTorch: tile("Medieval Tavern/tile-B-03.png", 1, 9),
+
+    // Cabinet fronts, 2 cols x 2 rows, same entries the Archive Room uses. Laid down both walls
+    // of the corridor so the walk into the Institute reads as passing through stacks rather than
+    // down a bare stone passage. [labeled]
+    cabinetA: tile("Medieval Tavern/tile-B-03.png", 12, 0),
+    cabinetB: tile("Medieval Tavern/tile-B-03.png", 12, 2),
+    cabinetC: tile("Medieval Tavern/tile-B-03.png", 12, 4),
+    cabinetD: tile("Medieval Tavern/tile-B-03.png", 12, 6),
+    /** Institute banners, 2 rows x 2 cols. [labeled] */
+    bannerPair: tile("Medieval Tavern/tile-B-03.png", 0, 12),
   },
 };
