@@ -5,15 +5,23 @@ renders correctly, without needing back-and-forth. This is the authoring contrac
 (`apps/web/src/engine/tiled-map-loader.js`) is written against — follow it and a new map should
 just work.
 
+> **All five live maps are generated, not hand-built.** Each has a `scripts/generate-*-tmj.js` that
+> is the source of truth; re-run it rather than editing the JSON. This checklist stays the contract
+> those generators are written against, and the reference for importing a hand-built map should one
+> ever arrive. If you are adding a map to the repo today, add a generator and a palette — see
+> `art-and-map-style-guide.md` and `scripts/lib/map-builder.js`.
+
 ## 1. Map settings (set these before you start building, not after)
 
 - **Orientation:** Orthogonal.
 - **Tile layer format:** CSV (uncompressed). Tiled defaults to Base64/zlib for some project
   templates — the loader reads plain `data: [gid, gid, ...]` arrays, not compressed strings.
   Map Properties → Tile Layer Format → **CSV**.
-- **Map size:** 40 columns × 24 rows, tile size 48×48px, to match the existing field viewport
-  (`FIELD_GRID` in `main.js`). A different size will still render (the canvas is scaled to fit
-  its container via CSS), but the world will look stretched relative to how collision/NPC/source
+- **Map size:** 56 columns × 36 rows for a field map, 20 × 12 for the Archive Room, tile size
+  48×48px — matching `FIELD_GRID` / `ARCHIVE_ROOM_GRID` in `main.js`. (Phase 52 rescaled these
+  from 40 × 24 and 10 × 8, and corrected `FIELD_GRID.tile` from 40 to 48 so the world stopped
+  resampling 48px art to 5/6.) A different size will still render — the canvas is scaled to fit
+  its container via CSS — but the world will look stretched relative to how NPC and source
   coordinates are authored, so don't change this without also revisiting those.
 - **Don't use flip/rotate** on placed tiles (horizontal/vertical/diagonal flip flags) — not
   currently read by the loader; a flipped tile will draw using its unflipped source rect.

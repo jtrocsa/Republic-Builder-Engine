@@ -63,7 +63,11 @@ test.describe("The Archive Rotation", () => {
       currentScreen: "archive-rotation",
       archiveRotation: {
         itemStates: {},
-        queueDate: "2026-07-28",
+        // Today, matching engine/spaced-repetition.js's rotationDateString(). A hardcoded date
+        // here was a time bomb: the app rebuilds the queue whenever `queueDate` isn't today, so
+        // this seeded one-item queue silently became a fresh five-item one the day after it was
+        // written, and the test then failed every day thereafter.
+        queueDate: new Date().toISOString().slice(0, 10),
         queue: ["mcq::case-001-mcq-taino-sourcing"],
         position: 0,
         streakDays: 0,

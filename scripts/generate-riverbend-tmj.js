@@ -1,42 +1,49 @@
-// Generates apps/web/src/content/maps/riverbend-field.tmj for case-004 ("Riverbend Settlement",
-// Unit 2's 1620s New England river settlement).
+// Generates apps/web/src/content/maps/riverbend-field.tmj and its collision module for case-004
+// ("Riverbend Settlement", Unit 2's 1620s New England river settlement).
 //
-// This map previously had no generator at all — it was the original .tmj proof of concept,
-// hand-built in the Tiled desktop app, which made it the one live map whose layout could not be
-// re-derived. Two defects came along with that: transparent crop tiles were stamped over cells
-// with no ground tile beneath them (the field showed hard black gaps), and pier decking was
-// tiled across the whole river, so the water read as a floor of loose planks.
+// Run with: node scripts/generate-riverbend-tmj.js
 //
 // Which tile is grass, water or a dwelling comes from
-// apps/web/src/content/tilesets/maps/riverbend-field.palette.js. This script owns layout and the
-// land mask only.
+// apps/web/src/content/tilesets/maps/riverbend-field.palette.js. Layering, terrain-block tiling
+// and collision come from scripts/lib/map-builder.js. This script owns layout and the land mask.
 //
-// Run with: node scripts/generate-riverbend-tmj.js apps/web/src/content/maps/riverbend-field.tmj
+// Building anchors are load-bearing: UNIT2_FIELD_NPCS and UNIT2_FIELD_SOURCE_POINTS in
+// apps/web/src/main.js place people and readable sources relative to them, so a building may be
+// resized but not moved without checking those. tests/unit/field-map-coordinates.test.js holds
+// the two together.
 import { writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import palette from "../apps/web/src/content/tilesets/maps/riverbend-field.palette.js";
+import { MapBuilder, hash01, pick } from "./lib/map-builder.js";
 import { resolvePalette } from "./lib/palette-gids.js";
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const MAP_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/riverbend-field.tmj");
+const BLOCKS_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/riverbend-field.blocks.js");
 
 const WIDTH = 56;
 const HEIGHT = 36;
-const TILE = 48;
 
 // --- must stay in lockstep with apps/web/src/main.js's isRiverbendLand() ---
-// The river runs down the western edge and widens south-west into an estuary, so the shoreline
-// is a meandering diagonal rather than the old straight north-south channel with a bridge. There
-// is no far bank: everything west of the river is open water, so the settlement is one connected
-// landmass and the player can never be stranded across the channel.
+// Deliberately duplicated rather than imported: main.js is a browser bundle entry, and the one
+// thing that must never silently diverge is the coastline the player collides with versus the
+// coastline that got painted.
+//
+// The river runs down the western edge and widens south-west into an estuary, so the shoreline is
+// a meandering diagonal rather than a straight north-south channel with a bridge. There is no far
+// bank: everything west of the river is open water, so the settlement is one connected landmass
+// and the player can never be stranded across the channel.
 function riverEastBank(y) {
   return 8.0 + Math.max(0, y - 12.0) * 0.62 + Math.sin(y * 0.34) * 1.8;
 }
 function isRiver(x, y) {
   return x <= riverEastBank(y);
 }
-// The walkable rectangle stops short of the map edge on three sides so the framing tree line
-// falls entirely OUTSIDE it. That is deliberate: a tree whose trunk is reachable needs its own
-// collision rect in main.js, and hand-maintaining two dozen of those against this script's
-// TREE_SITES list is precisely the kind of parallel bookkeeping that drifts. Only the three
-// shade trees planted inside the settlement carry collision.
+// The walkable rectangle stops short of the map edge on three sides so the framing tree line falls
+// entirely OUTSIDE it. That is deliberate: a reachable trunk needs collision, and the tree line is
+// scenery, not an obstacle course.
 function isRiverbendLand(x, y) {
   if (x < 1.5 || x > 52.5 || y < 5.0 || y > 31.5) return false;
   return !isRiver(x, y);
@@ -44,167 +51,166 @@ function isRiverbendLand(x, y) {
 
 const { tilesets, gid, gidRect } = resolvePalette(palette);
 const T = palette.tiles;
+const map = new MapBuilder({ width: WIDTH, height: HEIGHT, gid, gidRect, tilesets });
 
-function hash01(col, row, salt) {
-  let h = (col + 1) * 374761393 + (row + 1) * 668265263 + salt * 2246822519;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-// Authored 2x2 block order: [top-left, top-right, bottom-left, bottom-right].
-const GRASS = [T.grass, T.grassB, T.grassC, T.grassD].map(gid);
-const WATER = gid(T.water);
-const WATER_ALT = gid(T.waterAlt);
-const SHORE_EDGE = gid(T.shoreEdge);
-const SHORE_SAND = gid(T.shoreSand);
-const ROAD = gid(T.shoreSand); // packed-earth track; full-bleed, so it tiles in any direction
-const TILLED = gid(T.tilled);
-const TILLED_ALT = gid(T.tilledAlt);
-
-// Ground layer. Grass is drawn across the whole out-of-bounds margin too, not just the walkable
-// area — the margin is framed by a tree line rather than by a visible edge of nothing.
-function groundTileAt(col, row) {
-  const cx = col + 0.5;
-  const cy = row + 0.5;
-  if (isRiver(cx, cy)) {
-    // The single row of water immediately west of the bank gets the surf/shore-edge tile so the
-    // coastline reads as a beach rather than as a hard step from blue to green.
-    if (!isRiver(cx + 1.0, cy)) return SHORE_EDGE;
-    return hash01(col, row, 1) < 0.22 ? WATER_ALT : WATER;
-  }
-  if (isRiver(cx - 1.0, cy)) return SHORE_SAND; // first land cell east of the water
-  // farm/6's four grass cells are one coherent 2x2 texture block, not four interchangeable
-  // variants — picking among them at random produces a visible patchwork quilt. Tiling them in
-  // their authored arrangement is what makes a large lawn read as continuous ground.
-  return GRASS[(row % 2) * 2 + (col % 2)];
-}
-
-const groundData = [];
+// --- ground -----------------------------------------------------------------------------------
+// Grass covers the out-of-bounds margin too, not just the walkable area: the margin is framed by
+// a tree line rather than by a visible edge of nothing.
 for (let row = 0; row < HEIGHT; row += 1) {
   for (let col = 0; col < WIDTH; col += 1) {
-    groundData.push(groundTileAt(col, row));
+    const cx = col + 0.5;
+    const cy = row + 0.5;
+    let block = T.grass;
+    if (isRiver(cx, cy)) {
+      // One row of surf immediately west of the bank, so the coastline reads as a beach rather
+      // than as a hard step from blue to green.
+      block = isRiver(cx + 1.0, cy) ? T.water : T.surf;
+    } else if (isRiver(cx - 1.0, cy)) {
+      block = T.shoreSand; // first land cell east of the water
+    }
+    map.groundBlock(col, row, block);
   }
 }
-function setGround(col, row, tileGid) {
-  if (col < 0 || col >= WIDTH || row < 0 || row >= HEIGHT) return;
-  groundData[row * WIDTH + col] = tileGid;
-}
 
-// --- roads: a packed-earth track from the wharf up through the village to the field gate ---
-for (let col = 17; col <= 46; col += 1) setGround(col, 20, ROAD); // wharf -> fields, east-west
-for (let row = 10; row <= 20; row += 1) setGround(26, row, ROAD); // village spur, north-south
-for (let row = 20; row <= 27; row += 1) setGround(40, row, ROAD); // south spur to the barn yard
+// Packed-earth tracks: the wharf up through the village to the field gate, a village spur north
+// past the meetinghouse, and a south spur to the barn yard. Sand reads as a worn track and, being
+// full-bleed, tiles in any direction — farm/6's own path art carries a baked-in grass edge down
+// one side and can only run vertically.
+const trackAt = (col, row) => map.setGround(col, row, map.blockGidAt(col, row, T.shoreSand));
+for (let col = 17; col <= 46; col += 1) trackAt(col, 20);
+for (let row = 10; row <= 20; row += 1) trackAt(26, row);
+for (let row = 20; row <= 27; row += 1) trackAt(40, row);
 
-// --- structures ---
-const structuresData = new Array(WIDTH * HEIGHT).fill(0);
-const overlayData = new Array(WIDTH * HEIGHT).fill(0);
-function stampInto(target, anchorCol, anchorRow, block) {
-  block.forEach((rowGids, r) => {
-    rowGids.forEach((tileGid, c) => {
-      if (!tileGid) return;
-      const col = anchorCol + c;
-      const row = anchorRow + r;
-      if (col < 0 || col >= WIDTH || row < 0 || row >= HEIGHT) return;
-      target[row * WIDTH + col] = tileGid;
-    });
-  });
-}
-const stamp = (col, row, block) => stampInto(structuresData, col, row, block);
-
-// --- crop plots ---
-// The planted-row tiles are transparent *between* the plants — they are props meant to be laid
-// over soil, not full-bleed ground. The old hand-authored map treated them as ground, so every
-// field showed hard black gaps where the map background came through. Here the soil goes down as
-// ground and the crop goes on structures above it, which is the only arrangement that fills the
-// cell. Crops carry no collision rect: the player walks through the rows.
-function fillPlot(col1, row1, col2, row2, cropEntry) {
-  const cropGid = gid(cropEntry);
+// Crop plots. Worked soil on the ground, the planted rows above it: the pack draws a plot as a
+// bed of plants with transparent gaps between the stems, so it needs real ground beneath it or
+// every field shows the page background through in hard black specks. Both layers tile the
+// authored 2x2 block by parity. Crops carry no collision — the player walks the rows.
+function plot(col1, row1, col2, row2, block) {
   for (let row = row1; row <= row2; row += 1) {
     for (let col = col1; col <= col2; col += 1) {
       if (!isRiverbendLand(col + 0.5, row + 0.5)) continue;
-      const roll = hash01(col, row, 3);
-      setGround(col, row, roll < 0.5 ? TILLED : TILLED_ALT);
-      if (roll >= 0.08) stamp(col, row, [[cropGid]]); // ~8% left as bare worked soil
+      map.groundBlock(col, row, T.soil);
+      // The odd bed is left bare so the fields don't read as printed wallpaper. Decided per 2x2
+      // bed, not per cell: one bare cell inside a planted block reads as a hole punched in the
+      // crop rather than as a bed waiting to be sown.
+      if (hash01(Math.floor(col / 2), Math.floor(row / 2), 3) < 0.08) continue;
+      map.decorBlock(col, row, block);
     }
   }
 }
-fillPlot(42, 7, 51, 13, T.cropCorn); // north plot — maize
-fillPlot(42, 23, 51, 29, T.cropCabbage); // south plot — kitchen garden
-fillPlot(31, 24, 38, 29, T.cropRoot); // river-side plot — roots
+plot(42, 7, 51, 13, T.plotMaize); // north plot — maize
+plot(42, 23, 51, 29, T.plotCabbage); // south plot — kitchen garden
+plot(31, 24, 38, 29, T.plotRoot); // river-side plot — roots
+plot(44, 16, 49, 18, T.plotPumpkin); // the field the indentured servant works
 
-// Buildings. Anchors are each stamp's top-left cell, chosen so the building's ground-contact row
-// lines up with the matching UNIT2_FIELD_BLOCKS rect in apps/web/src/main.js — cross-checked by
-// tests/unit/field-map-coordinates.test.js.
-stamp(24, 6, gidRect(T.meetinghouse, 4, 4)); // meetinghouse   (24.0,8.6-28.0,10.0)
-stamp(20, 12, gidRect(T.houseRed, 2, 2)); // dwelling one   (20.0,12.6-22.0,14.0)
-stamp(31, 6, gidRect(T.houseYellow, 2, 2)); // dwelling two   (31.0,6.6-33.0,8.0)
-stamp(34, 11, gidRect(T.houseBlue, 2, 2)); // dwelling three (34.0,11.6-36.0,13.0)
-stamp(21, 16, gidRect(T.houseCream, 2, 2)); // dwelling four  (21.0,16.6-23.0,18.0)
-stamp(29, 15, gidRect(T.houseBrown, 2, 2)); // dwelling five  (29.0,15.6-31.0,17.0)
-stamp(37, 15, gidRect(T.barn, 4, 3)); // barn           (37.0,17.6-40.0,19.0)
-stamp(28, 12, gidRect(T.well, 2, 2)); // well           (28.0,12.6-30.0,14.0)
-stamp(22, 22, gidRect(T.shed, 2, 2)); // storage shed   (22.0,22.6-24.0,24.0)
-stamp(45, 9, gidRect(T.scarecrow, 2, 1)); // scarecrow      (45.0,9.6-46.0,11.0)
+// --- waterfront floor: decking and moored boats, all on the ground layer ----------------------
+// These are river tiles with planking or a hull painted into them, opaque edge to edge. Stamped
+// above the ground they would lay a hard square of slightly different blue over the river; on the
+// ground they replace it.
+// The wharf's pier is placed against the bank rather than at a transcribed coordinate: the bank
+// is a sine curve, and the previous fixed columns left the deck running three tiles up onto the
+// beach with its planks buried in the sand.
+const PIER_ROW = 21;
+const pierEndCol = Math.floor(riverEastBank(PIER_ROW + 0.5) - 0.5); // last water column
+map.groundRect(pierEndCol - 3, PIER_ROW, T.pierDeck);
+map.groundRect(pierEndCol - 7, PIER_ROW, T.pierDeck);
+map.groundRect(12, 24, T.rowboatWhite);
+map.groundRect(14, 27, T.rowboatRed);
+map.groundRect(6, 15, T.fishingBoat);
+
+// --- structures -------------------------------------------------------------------------------
+// Every stamp declares what it is and its collision rect falls out of that. `solid` blocks the
+// whole footprint — before Phase 53 a dwelling's rect covered only its ground-contact row, so the
+// player could walk up onto the roof and render pasted on the facade. `base` blocks the
+// ground-contact row and lifts everything above it to the overlay layer, which is what puts the
+// player behind a canopy. `decor` blocks nothing.
+
+map.stamp(24, 6, T.meetinghouse, "solid", "meetinghouse");
+map.stamp(20, 12, T.houseRed, "solid", "dwelling one");
+map.stamp(31, 6, T.houseYellow, "solid", "dwelling two");
+map.stamp(34, 11, T.houseBlue, "solid", "dwelling three");
+map.stamp(21, 16, T.houseCream, "solid", "dwelling four");
+map.stamp(29, 15, T.houseBrown, "solid", "dwelling five");
+map.stamp(37, 16, T.barn, "solid", "barn");
+map.stamp(28, 12, T.well, "solid", "well");
+map.stamp(22, 22, T.shed, "solid", "storage shed");
+map.stamp(33, 15, T.coop, "solid", "hen house");
+// Kept two columns west of the player's spawn at (26,18) — a 2-wide stamp anchored at 24 reaches
+// x=26 and the spawn foot-box straddles it.
+map.stamp(23, 18, T.coldFrame, "solid", "cold frame");
 
 // Field fencing. Split-rail runs along each plot's north and south edges; the east and west ends
 // are left open so the plots read as enclosures rather than as boxes, and so the player can walk
-// in (crop tiles are ground, not obstacles).
-const FENCE = [gid(T.fenceRail), gid(T.fenceRailAlt)];
-function fenceRun(col1, col2, row) {
-  for (let col = col1; col <= col2; col += 1) {
-    stamp(col, row, [[FENCE[(col + row) % 2]]]);
+// in — the crop rows are ground, not obstacles. Each section is two tiles wide.
+function fenceRun(col1, col2, row, gateCol) {
+  for (let col = col1; col + 1 <= col2; col += 2) {
+    const entry =
+      col === gateCol ? T.fenceGate : (col / 2) % 2 === 0 ? T.fenceRail : T.fenceRailAlt;
+    map.stamp(col, row, entry, entry === T.fenceGate ? "decor" : "solid", "field fence");
   }
 }
-fenceRun(42, 51, 6);
+fenceRun(42, 51, 6, 46);
 fenceRun(42, 51, 14);
-fenceRun(42, 51, 22);
+fenceRun(42, 51, 22, 46);
 fenceRun(42, 51, 30);
-stamp(46, 6, [[gid(T.fenceGate)]]); // gate onto the north plot, on the road's line
-stamp(46, 22, [[gid(T.fenceGate)]]);
 
-// --- waterfront ---
-// Pier decking laid over water only (rows 21-22), meeting the bank at col 17. The old map tiled
-// this decking across the entire river, which is what made the water look like a plank floor.
-const PIER_DECK = gid(T.pierDeck);
-const PIER_POST = gid(T.pierPost);
-// Runs to col 18 so the decking overlaps the bank instead of stopping a tile short of it and
-// leaving the pier apparently floating.
-for (let col = 11; col <= 18; col += 1) {
-  stamp(col, 21, [[PIER_DECK]]);
-  stamp(col, 22, [[PIER_POST]]);
-}
-stamp(12, 24, gidRect(T.rowboatWhite, 1, 2)); // moored boats, on open water
-stamp(14, 26, gidRect(T.rowboatRed, 1, 2));
-stamp(18, 19, gidRect(T.marketStall, 2, 2)); // wharf market  (18.0,20.6-20.0,21.0)
+// --- wharf ------------------------------------------------------------------------------------
+map.stamp(18, 19, T.marketStall, "solid", "wharf market stall");
+// At the pier head rather than in the middle of the landing: the river fisher stands at (19,23)
+// and paces east of that, and a stall on top of an NPC is how a patrol ends up walled in.
+map.stamp(16, 21, T.fishStall, "solid", "fish stall");
 
-// Dockside clutter on the landward side of the wharf.
+// Dockside clutter belongs against the water, so it is placed by *row* and the column is read off
+// the bank curve rather than transcribed. Seeding these by column is how they ended up scattered
+// across the settlement green: the bank is a sine, so the same column is waterfront at one row and
+// the middle of a lawn six rows down. `offset` steps them inland from the first land cell.
+const shoreCol = (row) => Math.ceil(riverEastBank(row + 0.5) - 0.5) + 1;
 const DOCK_PROPS = [
-  [17, 23, T.crate],
-  [18, 23, T.barrel],
-  [17, 24, T.barrelAlt],
-  [19, 24, T.netPile],
-  [18, 25, T.ropeCoil],
-  [20, 23, T.anchorProp],
-  [16, 18, T.shoreRocks],
+  [17, 0, T.shoreRocks],
+  [19, 0, T.crate],
+  [19, 1, T.barrel],
+  [20, 1, T.barrelAlt],
+  // Rows 22-24 are left clear: the river fisher stands at (19,23) and paces south-east of it.
+  [25, 0, T.netPile],
+  [25, 1, T.ropeCoil],
+  [26, 0, T.lobsterPots],
+  [27, 1, T.anchorProp],
+  [28, 0, T.buoy],
+];
+for (const [row, offset, entry] of DOCK_PROPS) {
+  const [c, r] = map.snapTo(
+    shoreCol(row) + offset,
+    row,
+    (cc, rr) => isRiverbendLand(cc + 0.5, rr + 0.5) && !map.occupied(cc, rr),
+    3
+  );
+  map.stamp(c, r, entry, "solid", "dockside stores");
+}
+
+// Farmyard stores, out by the plots and the barn.
+const FARM_PROPS = [
   [43, 20, T.produceCrate],
   [44, 21, T.hayBale],
   [42, 21, T.grainSack],
+  [39, 20, T.produceCrate],
 ];
-for (const [col, row, entry] of DOCK_PROPS) stamp(col, row, [[gid(entry)]]);
-
-// --- tree line: frames the playfield on the north, east and south margins, mostly outside the
-// walkable bounds so it reads as forest closing in rather than as obstacles to path around ---
-const TREES = [T.treeOak, T.treeAutumn, T.treePine, T.treeBirch, T.treeApple];
-const TREE_WIDTH = new Map([
-  [T.treeOak, 3],
-  [T.treeAutumn, 3],
-  [T.treePine, 2],
-  [T.treeBirch, 2],
-  [T.treeApple, 2],
-]);
-function plantTree(col, row, entry) {
-  stamp(col, row, gidRect(entry, 3, TREE_WIDTH.get(entry)));
+for (const [col, row, entry] of FARM_PROPS) {
+  const [c, r] = map.snapTo(
+    col,
+    row,
+    (cc, rr) => isRiverbendLand(cc + 0.5, rr + 0.5) && !map.occupied(cc, rr),
+    3
+  );
+  map.stamp(c, r, entry, "solid", "farm stores");
 }
+
+// --- tree line --------------------------------------------------------------------------------
+// Frames the playfield on the north, east and south margins. Every site is outside the walkable
+// rectangle, which is the whole point: `decor` solidity, no collision rects at all. A tree the
+// player can never reach does not need one, and giving the line 24 rects would put two dozen
+// collision boxes out in the unreachable margin — the land mask already stops the player at the
+// boundary, and the map's own bounds check stops them at the edge.
+const TREES = [T.treeOak, T.treeMaple, T.treePine, T.treeBirch, T.treeApple, T.treeCherry];
 const TREE_SITES = [
   // north margin
   [12, 0],
@@ -219,13 +225,14 @@ const TREE_SITES = [
   [15, 2],
   [30, 2],
   [45, 2],
-  // east margin
-  [53, 6],
-  [53, 11],
-  [53, 16],
-  [53, 21],
-  [53, 26],
-  [53, 31],
+  // East margin. Col 52, not 53: the widest tree in the set is 4 tiles, and anchoring at 53 runs
+  // its last column off a 56-wide map.
+  [52, 6],
+  [52, 11],
+  [52, 16],
+  [52, 21],
+  [52, 26],
+  [52, 31],
   // south margin
   [22, 32],
   [27, 32],
@@ -234,79 +241,37 @@ const TREE_SITES = [
   [42, 32],
   [47, 32],
 ];
-TREE_SITES.forEach(([col, row], index) => plantTree(col, row, TREES[index % TREES.length]));
+TREE_SITES.forEach(([col, row], index) =>
+  map.stamp(col, row, TREES[index % TREES.length], "decor", "tree line")
+);
 
-// Three shade trees stand inside the settlement. Their canopies are lifted to the overlay layer
-// so the player walks *behind* them; the trunk row stays on structures and has a collision rect
-// in UNIT2_FIELD_BLOCKS. Each entry names its own width — an earlier revision assumed 2 for all
-// three and left the third column of the 3-wide oak and maple stranded on the lower layer.
-const SHADE_TREES = [
-  [33, 19, T.treeApple, 2], // trunk row 21  (33.0,21.4-35.0,22.0)
-  [24, 28, T.treeOak, 3], // trunk row 30  (24.0,30.4-27.0,31.0)
-  [36, 7, T.treeAutumn, 3], // trunk row 9   (36.0,9.4-39.0,10.0)
-];
-for (const [col, row, entry, width] of SHADE_TREES) {
-  stamp(col, row, gidRect(entry, 3, width));
-  for (let c = 0; c < width; c += 1) {
-    const index = row * WIDTH + col + c;
-    if (!structuresData[index]) continue;
-    overlayData[index] = structuresData[index];
-    structuresData[index] = 0;
-  }
-}
+// Three shade trees stand inside the settlement, where the player can walk behind them.
+map.stamp(33, 19, T.treeApple, "base", "shade tree");
+map.stamp(24, 28, T.treeOak, "base", "shade tree");
+map.stamp(36, 7, T.treeMaple, "base", "shade tree");
 
-// Bushes: small scatter across open grass, decorative only (no collision rects).
-const BUSHES = [T.bushA, T.bushB, T.bushC].map(gid);
+// --- decor: transparent props, no collision ---------------------------------------------------
+const BUSHES = [T.bushRose, T.bushBerry, T.bushFlowering];
+const GRASS_GIDS = new Set([
+  map.blockGidAt(0, 0, T.grass),
+  map.blockGidAt(1, 0, T.grass),
+  map.blockGidAt(0, 1, T.grass),
+  map.blockGidAt(1, 1, T.grass),
+]);
 for (let row = 0; row < HEIGHT; row += 1) {
   for (let col = 0; col < WIDTH; col += 1) {
-    if (structuresData[row * WIDTH + col]) continue;
-    const cx = col + 0.5;
-    const cy = row + 0.5;
-    if (!isRiverbendLand(cx, cy)) continue;
-    if (!GRASS.includes(groundData[row * WIDTH + col])) continue; // roads/soil/shore stay clear
+    if (map.occupied(col, row) || map.occupied(col + 1, row)) continue; // bushes are 2 wide
+    if (!isRiverbendLand(col + 0.5, row + 0.5)) continue;
+    if (!GRASS_GIDS.has(map.ground[map.index(col, row)])) continue; // tracks, soil and shore stay clear
     if (hash01(col, row, 4) >= 0.05) continue;
-    stamp(col, row, [[BUSHES[Math.floor(hash01(col, row, 5) * BUSHES.length)]]]);
+    map.stamp(col, row, pick(BUSHES, col, row, 5), "decor", "bush");
   }
 }
 
-function tileLayer({ data, id, name, locked = false }) {
-  return {
-    data,
-    height: HEIGHT,
-    id,
-    ...(locked ? { locked: true } : {}),
-    name,
-    opacity: 1,
-    type: "tilelayer",
-    visible: true,
-    width: WIDTH,
-    x: 0,
-    y: 0,
-  };
-}
-
-const tmj = {
-  compressionlevel: -1,
-  height: HEIGHT,
-  infinite: false,
-  layers: [
-    tileLayer({ data: groundData, id: 1, name: "ground" }),
-    tileLayer({ data: structuresData, id: 2, name: "structures", locked: true }),
-    tileLayer({ data: overlayData, id: 3, name: "overlay", locked: true }),
-  ],
-  nextlayerid: 4,
-  nextobjectid: 1,
-  orientation: "orthogonal",
-  renderorder: "right-down",
-  tiledversion: "1.12.2",
-  tileheight: TILE,
-  tilesets,
-  tilewidth: TILE,
-  type: "map",
-  version: "1.10",
-  width: WIDTH,
-};
-
-const outPath = process.argv[2];
-writeFileSync(outPath, JSON.stringify(tmj));
-console.log("wrote", outPath);
+writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
+writeFileSync(
+  BLOCKS_OUT,
+  map.toBlocksModule("RIVERBEND_FIELD_BLOCKS", "scripts/generate-riverbend-tmj.js")
+);
+console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
+console.log(`  ${map.blocks.length} collision rects`);

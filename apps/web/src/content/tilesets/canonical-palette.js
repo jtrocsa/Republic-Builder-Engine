@@ -20,9 +20,24 @@
 //   npm run assets:label -- "Island survival/tile-B-01.png"
 // writes a coordinate-labeled copy to the gitignored reports/assets/labeled/.
 
-/** One tile: a sheet path (relative to assets/tilesets/) plus its grid coordinate. */
-export function tile(sheet, row, col) {
-  return { sheet, row, col };
+/**
+ * One tile: a sheet path (relative to assets/tilesets/) plus its grid coordinate, and — for
+ * multi-tile art — its footprint in tiles.
+ *
+ * The footprint lives here rather than at the generator's `gidRect(entry, h, w)` call site because
+ * that duplication is what shipped the cut-off art in Phase 52: the palette recorded the size in a
+ * JSDoc comment, the generator repeated it as literals, and nothing checked either against the
+ * pixels. `farm/6.png`'s birch was declared 3x2 while the apple tree's crown started inside that
+ * rect, so the birch stamp painted a slice of apple tree beside it. Stated once, next to the
+ * coordinate, and verified against the art by tests/unit/tile-footprints.test.js.
+ *
+ * @param {number} [footprint.h] rows tall, default 1
+ * @param {number} [footprint.w] columns wide, default 1
+ */
+export function tile(sheet, row, col, footprint) {
+  const h = footprint?.h ?? 1;
+  const w = footprint?.w ?? 1;
+  return h === 1 && w === 1 ? { sheet, row, col } : { sheet, row, col, h, w };
 }
 
 // The three Auto-tile-A4 sheets are byte-identical across 13 pack folders (verified by content
@@ -115,14 +130,11 @@ export const CANONICAL = {
   /** Loose gravel. [labeled] */
   "path.gravel": tile("19th Centruy European Dock/tile-B-06.png", 12, 13),
 
-  // ---------------------------------------------------------------------------------------
-  // CULTIVATION
-  // ---------------------------------------------------------------------------------------
-
-  /** Tilled soil with crop rows — Riverbend's field patch. [live: riverbend-field ground] */
-  "crop.rows": tile("farm/3.png", 4, 6),
-  /** Sparse crop accent stamped over the field. [live: riverbend-field structures] */
-  "crop.accent": tile("farm/3.png", 5, 7),
+  // Cultivation used to be listed here as two `farm/3.png` entries tagged
+  // `[live: riverbend-field]`. Both claims were stale: Phase 52 dropped farm/3 from the map, and
+  // Phase 53 rebuilt Riverbend's fields from `farm/6`'s authored 2x2 planted blocks, which are
+  // declared in riverbend-field.palette.js rather than here — they are one map's crop rotation,
+  // not a cross-map canonical material.
 
   // ---------------------------------------------------------------------------------------
   // STONE, PAVING & MASONRY

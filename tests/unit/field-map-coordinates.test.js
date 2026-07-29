@@ -1,13 +1,16 @@
 // Cross-checks every hand-written field coordinate in main.js against the generated .tmj.
 //
-// Why this exists: a field map's *art* lives in a .tmj produced by scripts/generate-*-tmj.js,
-// while its *collision, NPC, patrol and quest-point coordinates* are hand-written constants in
-// main.js. Nothing mechanically ties the two together — the sync is a human promise, restated in
-// a comment in each generator ("kept in sync manually"). That promise is exactly what breaks
-// when a map is resized, and the failure mode is silent: an NPC standing in the sea, a quest
-// marker inside a wall, a collision rect guarding empty grass.
+// Why this exists: a field map's *art* lives in a .tmj produced by scripts/generate-*-tmj.js, and
+// as of Phase 53 so does its collision — each generator writes a `<map>.blocks.js` alongside the
+// .tmj from the same stamps, so those two can no longer drift. What is still hand-written is the
+// other half: NPC positions, patrol routes and quest/source points. Those are placed around the
+// buildings by eye, and the failure mode when a map is rebuilt is silent — an NPC standing in the
+// sea, a quest marker inside a wall, a source the player cannot reach because a wider building
+// footprint now covers the ground they used to stand on.
 //
-// These assertions turn that silent drift into a failing test.
+// These assertions turn that silent drift into a failing test. The collision-versus-art checks at
+// the bottom are kept as well: generation makes them pass by construction, which is exactly what
+// makes them cheap insurance against a change to the generator itself.
 
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";

@@ -1,9 +1,17 @@
 // Palette for caribbean-field.tmj (Unit 1 / case-001, "The Atlantic Crossroads").
 // Setting: a Caribbean island, 1492. Consumed by scripts/generate-caribbean-tmj.js.
 //
-// Every coordinate here is verified by the fact that the shipping map renders correctly with it
-// today — these were lifted from that generator's own constants and cross-checked against a GID
-// audit of the committed .tmj. See docs/decision-log/0029-caribbean-tiled-rebuild.md.
+// Every footprint here is measured, not declared: `npm run assets:measure -- "<sheet>" <row> <col>`
+// reports what the pixels actually occupy, and tests/unit/map-tile-integrity.test.js fails the
+// build if a stamped object's art runs past the cells the map gave it.
+//
+// Phase 53 rewrote the terrain half of this file. The sheet authors ground as 96x96 blocks — four
+// quadrants that only read as continuous texture in their authored arrangement — and the previous
+// revision took single quadrants out of those blocks and used them as scattered accents. That is
+// what put hard tan squares of *sand* in the middle of green grass ("grass.tropical.tuft" is a
+// sand tile), sliced driftwood logs in half, and dropped a quarter of a coral cluster into open
+// water as a visibly different square of blue. Terrain is now always a whole block, tiled by
+// parity, and every piece of scatter is a transparent prop on the structures layer instead.
 
 import { CANONICAL, tile } from "../canonical-palette.js";
 
@@ -27,89 +35,111 @@ export default {
   ],
 
   tiles: {
-    // --- terrain, straight from the canonical palette ---
-    sand: CANONICAL["sand.tropical"],
-    sandDriftwood: CANONICAL["sand.tropical.driftwood"],
-    sandShells: CANONICAL["sand.tropical.shells"],
-    grassA: CANONICAL["grass.tropical"],
-    grassB: CANONICAL["grass.tropical.alt"],
-    grassTuft: CANONICAL["grass.tropical.tuft"],
-    waterShallow: CANONICAL["water.tropical.shallow"],
-    waterDeep: CANONICAL["water.tropical.deep"],
+    // --- terrain, as whole authored 2x2 blocks -------------------------------------------------
+    // The canonical entries name each block's top-left quadrant; the `{ h: 2, w: 2 }` footprint is
+    // what tells MapBuilder.groundBlock() to tile all four in their authored arrangement.
+    sand: { ...CANONICAL["sand.tropical"], h: 2, w: 2 },
+    grass: { ...CANONICAL["grass.tropical"], h: 2, w: 2 },
+    waterShallow: { ...CANONICAL["water.tropical.shallow"], h: 2, w: 2 },
+    waterDeep: { ...CANONICAL["water.tropical.deep"], h: 2, w: 2 },
     pathLeft: CANONICAL["path.tropical.left"],
     pathRight: CANONICAL["path.tropical.right"],
 
-    // --- setting-specific, not canonical anywhere else ---
-    /** Full-bleed underwater coral cluster. Open water only — it has no shoreline edge. */
-    coralPatch: tile("Island survival/tile-B-01.png", 4, 8),
+    // --- decor props: transparent, stamped on structures, never on the ground layer ------------
+    // These replace the terrain quadrants the previous revision used as accents. Each one is a
+    // cut-out object with alpha around it, so it sits *on* the sand or grass rather than replacing
+    // a patch of it with a different material.
+    /** Driftwood log pair, washed up on the beach. */
+    driftwood: tile("Island survival/tile-B-01.png", 13, 4, { w: 2 }),
+    /** Conch shell. */
+    shellConch: tile("Island survival/tile-B-01.png", 13, 10),
+    /** Scallop shell. */
+    shellScallop: tile("Island survival/tile-B-01.png", 13, 11),
+    /** Branching coral head, for the shallow reef band. Transparent, so the turquoise reads through. */
+    coralBranch: tile("Island survival/tile-B-01.png", 12, 9),
+    /** Soft coral / anemone. */
+    coralSoft: tile("Island survival/tile-B-01.png", 13, 8),
+    /** Red sea fan. */
+    coralFan: tile("Island survival/tile-B-01.png", 13, 9),
+    /** Floating seaweed frond. */
+    seaweed: tile("Island survival/tile-B-01.png", 12, 12),
+    /** Boulder pile, 2x2 — the island's one piece of large natural cover. */
+    boulderPile: tile("Island survival/tile-B-01.png", 14, 4, { h: 2, w: 2 }),
 
-    // Single-cell props.
-    campfire: tile("Island survival/tile-B-01.png", 13, 12),
-    canoe: tile("Island survival/tile-B-01.png", 13, 13),
-    crateA: tile("Island survival/tile-B-01.png", 15, 13),
-    crateB: tile("Island survival/tile-B-01.png", 15, 14),
-    tent: tile("Island survival/tile-B-01.png", 14, 11),
-
-    // Palms — top-left of a 1-wide x 2-tall crown-then-trunk stamp.
-    palmA: tile("Island survival/tile-B-01.png", 12, 0),
-    palmB: tile("Island survival/tile-B-01.png", 12, 1),
-    palmC: tile("Island survival/tile-B-01.png", 14, 0),
-
-    // Bohío huts — top-left of a 2x2 stamp, roof row over walled base. [labeled]
-    hutOpenDoor: tile("Island survival/tile-B-02.png", 0, 0),
-    hutClosedDoorRound: tile("Island survival/tile-B-02.png", 2, 12),
-    hutClosedDoorSquare: tile("Island survival/tile-B-02.png", 0, 2),
-    /** Fourth bohío, door plus side window. [labeled] */
-    hutDoorWindow: tile("Island survival/tile-B-02.png", 2, 0),
-    /** Larger conical thatched house — reads as the village's principal dwelling. [labeled] */
-    hutLarge: tile("Island survival/tile-B-02.png", 4, 0),
-    /** Open-sided thatched work canopy on posts, no walls. [labeled] */
-    workCanopy: tile("Island survival/tile-B-02.png", 4, 4),
-    /** Timber drying/storage rack, 2 tall x 2 wide. [labeled] */
-    dryingRack: tile("Island survival/tile-B-02.png", 10, 2),
-
-    // Garden — full-bleed leafy rows with fence posts baked in, used as a ground-layer patch
-    // for the village conuco rather than as a structures stamp. [labeled]
-    gardenRowTop: tile("Island survival/tile-B-02.png", 14, 4),
-    gardenRowBottom: tile("Island survival/tile-B-02.png", 15, 4),
-
-    /** Full-bleed jungle canopy. Drawn on the overlay layer so the player walks *under* it. */
-    jungleCanopy: tile("Island survival/tile-B-01.png", 8, 12),
-
-    // Small transparent-background scatter decor, 1x1. Purely visual — no collision rects, so
-    // the player walks over them; they exist to break up open grass at the new map size.
-    // [labeled]
+    // Small transparent scatter, 1x1. Purely visual — `decor` solidity, so the player walks over
+    // them and no collision rect is generated. This is the replacement for the sand-based
+    // "tall grass tuft" ground tile that used to be scattered across the island's grass.
     scatterBoulder: tile("Island survival/tile-B-01.png", 12, 6),
     scatterRock: tile("Island survival/tile-B-01.png", 13, 6),
     scatterPebble: tile("Island survival/tile-B-01.png", 14, 6),
     scatterFern: tile("Island survival/tile-B-01.png", 12, 7),
     scatterBush: tile("Island survival/tile-B-01.png", 13, 7),
     scatterShrub: tile("Island survival/tile-B-01.png", 14, 7),
-    scatterReed: tile("Island survival/tile-B-01.png", 15, 7),
+    scatterGrass: tile("Island survival/tile-B-01.png", 15, 6),
     scatterPlant: tile("Island survival/tile-B-01.png", 12, 8),
 
-    // Cartographer's chart table — 2 rows x 3 cols, a world map on wooden rollers. Replaces the
-    // CSS-drawn `.cartographer-table` div, whose absolute pixel offsets were tied to the old
-    // 40px tile size. [labeled]
-    chartTable: tile("Island survival/5.png", 8, 0),
-    /** Loose map scrolls, 2x2. [labeled] */
-    mapScrolls: tile("Island survival/5.png", 8, 3),
-    /** Ship's anchor, 2x2. [labeled] */
-    anchor: tile("Island survival/5.png", 6, 2),
-    /** Supply barrel. [labeled] */
-    barrel: tile("Island survival/5.png", 0, 6),
-    /** Lidded shipping crate. [labeled] */
-    seaCrate: tile("Island survival/5.png", 0, 8),
+    // --- single-cell props ---------------------------------------------------------------------
+    campfire: tile("Island survival/tile-B-01.png", 13, 12),
+    /** Dugout canoe. Two cells wide — drawn 1x1 until Phase 53, which cut off its stern. */
+    canoe: tile("Island survival/tile-B-01.png", 13, 13, { w: 2 }),
+    crateA: tile("Island survival/tile-B-01.png", 15, 13),
+    crateB: tile("Island survival/tile-B-01.png", 15, 14),
+    tent: tile("Island survival/tile-B-01.png", 14, 11),
+    /**
+     * Barrel and lidded crate for the Spanish landing stores. These come from tile-B-01's
+     * transparent object band, not from `5.png` — `5.png`'s barrels are two tiles tall and were
+     * stamped as one, which is why the shipped map showed a barrel sliced off at the waist.
+     */
+    barrel: tile("Island survival/tile-B-01.png", 15, 11),
+    barrelAlt: tile("Island survival/tile-B-01.png", 15, 12),
+    seaCrate: tile("Island survival/tile-B-01.png", 15, 13),
 
-    // The Spanish flotilla, anchored offshore — replaces the CSS-drawn `.spanish-ship` div.
-    // Three-masted square-rigged hulls, period-correct for 1492. [labeled]
-    /** Flagship: 2 rows x 3 cols, masts on the upper row. */
-    shipFlagship: tile("Medieval harbor/tile-B-04.png", 0, 13),
-    /** Caravel: 2 rows x 2 cols. */
-    shipCaravelA: tile("Medieval harbor/tile-B-04.png", 0, 4),
+    // Palms — crown over trunk. The trunk row carries the collision rect; the crown is lifted to
+    // the overlay layer by `base` solidity, so the player walks behind it.
+    palmA: tile("Island survival/tile-B-01.png", 12, 0, { h: 2 }),
+    palmB: tile("Island survival/tile-B-01.png", 12, 1, { h: 2 }),
+    palmC: tile("Island survival/tile-B-01.png", 12, 2, { h: 2 }),
+    palmD: tile("Island survival/tile-B-01.png", 14, 0, { h: 2 }),
+
+    // --- structures ----------------------------------------------------------------------------
+    // Bohío huts — roof row over walled base, 2x2. [labeled]
+    hutOpenDoor: tile("Island survival/tile-B-02.png", 0, 0, { h: 2, w: 2 }),
+    hutClosedDoorRound: tile("Island survival/tile-B-02.png", 2, 12, { h: 2, w: 2 }),
+    hutClosedDoorSquare: tile("Island survival/tile-B-02.png", 0, 2, { h: 2, w: 2 }),
+    /** Fourth bohío, door plus side window. [labeled] */
+    hutDoorWindow: tile("Island survival/tile-B-02.png", 2, 0, { h: 2, w: 2 }),
+    /** Larger conical thatched house — reads as the village's principal dwelling. [labeled] */
+    hutLarge: tile("Island survival/tile-B-02.png", 4, 0, { h: 2, w: 2 }),
+    /** Open-sided thatched work canopy on posts, no walls. [labeled] */
+    workCanopy: tile("Island survival/tile-B-02.png", 4, 4, { h: 2, w: 2 }),
+    /** Timber drying/storage rack. [labeled] */
+    dryingRack: tile("Island survival/tile-B-02.png", 10, 2, { h: 2, w: 2 }),
+
+    // Conuco garden — a leafy planted row with bamboo posts baked in, 2 tall. The sheet runs this
+    // art continuously across cols 2-13, so it tiles horizontally: the map places the neighbouring
+    // cell, which is what keeps it from reading as a cut-off hedge.
+    gardenRow: tile("Island survival/tile-B-02.png", 14, 4, { h: 2 }),
+
+    // There is deliberately no "jungle canopy" entry any more. The old one was a *full-bleed*
+    // ground tile stamped onto the overlay layer, so walking into the grove hid the player
+    // completely behind an opaque green square rather than reading as tree cover. Walk-behind now
+    // comes from palms stamped with `base` solidity, whose crowns are transparent art.
+
+    // Cartographer's chart table — a world map on wooden rollers, the Waldseemüller puzzle's
+    // physical anchor. [labeled]
+    chartTable: tile("Island survival/5.png", 8, 0, { h: 2, w: 3 }),
+    /** Ship's anchor, beached. [labeled] */
+    anchor: tile("Island survival/5.png", 6, 2, { h: 2, w: 2 }),
+
+    // The Spanish flotilla, anchored offshore. Three-masted square-rigged hulls, period-correct
+    // for 1492. [labeled]
+    /** Flagship. Four cells wide — declared 3 until Phase 53, which cut off its bowsprit. */
+    shipFlagship: tile("Medieval harbor/tile-B-04.png", 0, 12, { h: 2, w: 4 }),
+    /** Caravel. */
+    shipCaravelA: tile("Medieval harbor/tile-B-04.png", 0, 4, { h: 2, w: 2 }),
     /** Second caravel, different livery. */
-    shipCaravelB: tile("Medieval harbor/tile-B-04.png", 2, 4),
-    /** Ship's boat drawn up on the sand, 2 rows x 1 col. */
-    shipsBoat: tile("Medieval harbor/tile-B-04.png", 4, 2),
+    shipCaravelB: tile("Medieval harbor/tile-B-04.png", 2, 4, { h: 2, w: 2 }),
+    /** Ship's boat drawn up on the sand. */
+    shipsBoat: tile("Medieval harbor/tile-B-04.png", 4, 2, { h: 2 }),
   },
 };

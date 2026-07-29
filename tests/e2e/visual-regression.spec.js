@@ -40,10 +40,10 @@ import { PROGRESS_KEY, seedProgress, loadSeededSave } from "./helpers/progress-s
 // runtime-only variable that resets to true on every full navigation — see
 // save-persistence.spec.js's own comment on this).
 async function setScreen(page, overrides) {
-  await page.evaluate(
-    ({ key, data }) => window.localStorage.setItem(key, JSON.stringify(data)),
-    { key: PROGRESS_KEY, data: overrides }
-  );
+  await page.evaluate(({ key, data }) => window.localStorage.setItem(key, JSON.stringify(data)), {
+    key: PROGRESS_KEY,
+    data: overrides,
+  });
   await page.reload();
   await page.getByRole("button", { name: "Student" }).click();
   await page.getByRole("button", { name: "Load Save" }).click();
@@ -175,6 +175,47 @@ test.describe("Gameplay visual-regression baselines", () => {
     await setScreen(page, { currentScreen: "map-jigsaw", activeCaseId: "case-001" });
     await expect(page.locator(".jigsaw-board")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("map-jigsaw"));
+  });
+
+  // Banked in Phase 53. The Caribbean was the only field map with a baseline, so the Riverbend and
+  // Philadelphia rebuilds — new derived building sheets, terrain drawn in authored blocks, crops
+  // moved off the ground layer — had nothing watching them. Every defect that pass fixed (a tree
+  // cut down the middle, a barrel sliced at the waist, a square of the wrong ground in the middle
+  // of a field) is a pixel difference on exactly these two screens.
+  test("field: Riverbend settlement (Unit 2)", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-004",
+      unlockedCases: ["case-001", "case-002", "case-003", "case-004"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "riverbendTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-riverbend"));
+  });
+
+  test("field: Philadelphia gathering ground (Unit 3)", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-007",
+      unlockedCases: [
+        "case-001",
+        "case-002",
+        "case-003",
+        "case-004",
+        "case-005",
+        "case-006",
+        "case-007",
+      ],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "commonCauseTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-common-cause"));
   });
 
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({

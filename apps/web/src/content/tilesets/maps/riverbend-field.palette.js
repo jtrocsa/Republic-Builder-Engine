@@ -1,19 +1,25 @@
 // Palette for riverbend-field.tmj (Unit 2 / case-004, "Riverbend Settlement").
 // Setting: a New England river settlement, ~1620s. Consumed by scripts/generate-riverbend-tmj.js.
 //
-// This map used to be the odd one out: hand-built in the Tiled desktop app as the original .tmj
-// proof of concept, with no generator, so this palette could only describe what the committed
-// file happened to draw. It now has a generator like every other live map, and this palette is
-// generative again.
+// Phase 53 rewrote this file around three rules that the previous revision broke, each of which
+// was visible in play:
 //
-// The rebuild also fixed two visible defects in the hand-authored version: transparent crop
-// tiles were stamped over cells with no ground tile underneath, so the field showed hard black
-// gaps; and pier decking from tile-B-04's rows 8-11 was tiled across the whole river, which is
-// why the water read as a floor of loose planks.
+//   1. Terrain is declared as its authored block, not as a tile. `farm/6` draws ground in 96x96
+//      (2x2) blocks whose quadrants only read as continuous texture in their authored
+//      arrangement; the generator tiles the block by parity. Four grass cells picked at random
+//      is a quilt, not a lawn.
+//   2. Anything stamped above the ground has to be a cut-out. The crop rows used to go on
+//      `structures` over tilled soil; they are full-bleed plots with their own soil painted in,
+//      so they belong on the ground. The pier decking and the moored rowboats are the same case —
+//      the pack paints its own water into them.
+//   3. Buildings and trees come from the derived, tile-aligned sheets. `farm/7` packs its
+//      clapboard housing tightly enough that the old `houseCream` rect caught three neighbours
+//      and `houseBlue` pointed at empty background — it drew nothing at all on the shipped map.
 //
 // Coordinates are [labeled] — read off `npm run assets:label` grid renders of each sheet.
 
-import { CANONICAL, tile } from "../canonical-palette.js";
+import { FarmBuildings, FarmTrees } from "../derived-objects.coords.js";
+import { tile } from "../canonical-palette.js";
 
 export default {
   id: "riverbend-field",
@@ -24,100 +30,112 @@ export default {
   // Ordered — firstgid is assigned in this order and must not be reshuffled.
   sheets: [
     { path: "Medieval Fishing Village/tile-B-04.png", name: "medieval-fishing-village-b04" },
-    { path: "Medieval Fantasy Town/1.png", name: "medieval-fantasy-town-1" },
-    // farm/6 (ground textures, crops, trees, fencing, well) and farm/7 (clapboard houses and
-    // barns) replace farm/3. They are the best American vernacular in the library and the whole
-    // reason this map no longer has to borrow generic fantasy-town silhouettes for its housing.
     { path: "farm/6.png", name: "farm-6" },
-    { path: "farm/7.png", name: "farm-7" },
+    { path: "derived/farm-trees.png", name: "derived-farm-trees" },
+    { path: "derived/farm-buildings.png", name: "derived-farm-buildings" },
   ],
 
   tiles: {
-    // --- ground ---
-    // Grass comes from farm/6 rather than CANONICAL grass.colonial (Medieval Fantasy Town/1):
-    // farm/6 ships a 2x2 variation block, so a large field of it doesn't show the one-tile
-    // repeat that was plainly visible across the old map.
-    grass: tile("farm/6.png", 6, 0),
-    grassB: tile("farm/6.png", 6, 1),
-    grassC: tile("farm/6.png", 7, 0),
-    grassD: tile("farm/6.png", 7, 1),
-    dirt: CANONICAL["path.colonial.dirt"],
-    dirtAlt: CANONICAL["path.colonial.dirt.alt"],
-    /** Tilled soil, full-bleed. */
-    tilled: tile("farm/6.png", 6, 2),
-    tilledAlt: tile("farm/6.png", 7, 3),
-    /** Planted rows, full-bleed — maize and cabbage plots. */
-    cropCorn: tile("farm/6.png", 8, 6),
-    cropCornAlt: tile("farm/6.png", 9, 7),
-    cropCabbage: tile("farm/6.png", 6, 8),
-    cropRoot: tile("farm/6.png", 6, 12),
+    // --- ground: authored terrain blocks -------------------------------------------------------
+    /** The settlement's lawn and commons. */
+    grass: tile("farm/6.png", 6, 0, { h: 2, w: 2 }),
+    // Ploughed furrows, and the only fully-opaque worked soil on the sheet. The bare-soil block
+    // at (8,2) looks like the obvious choice and is not: it is 9-18% see-through, because the
+    // pack draws it as clods sitting on top of this. Everything in `farm/6`'s planted rows is
+    // built the same way, which is why the crop plots go above the ground rather than on it.
+    // One tile, not a block: this row's next column over is dry straw, so a 2-wide block lays
+    // alternating brown and tan bands through every field. Repeating furrows is what ploughed
+    // ground looks like anyway.
+    soil: tile("farm/6.png", 7, 2),
 
-    // Water and shore, all full-bleed ground tiles. `shoreEdge` is the sand-meets-water band and
-    // must sit exactly one row inside the land mask's boundary or the coastline reads as a step.
-    water: tile("Medieval Fishing Village/tile-B-04.png", 15, 0),
-    waterAlt: tile("Medieval Fishing Village/tile-B-04.png", 15, 4),
-    shoreEdge: tile("Medieval Fishing Village/tile-B-04.png", 14, 0),
-    shoreSand: tile("Medieval Fishing Village/tile-B-04.png", 13, 0),
-    shoreCobble: tile("Medieval Fishing Village/tile-B-04.png", 12, 0),
+    // Crop plots. Full-bleed soil-and-planting blocks, so they are ground, not props. The old map
+    // laid them on `structures` over a separate soil tile and the transparent gaps between plants
+    // showed the page background through as hard black holes in every field.
+    plotCabbage: tile("farm/6.png", 6, 8, { h: 2, w: 2 }),
+    plotCarrot: tile("farm/6.png", 6, 10, { h: 2, w: 2 }),
+    plotPotato: tile("farm/6.png", 6, 12, { h: 2, w: 2 }),
+    plotWheat: tile("farm/6.png", 6, 14, { h: 2, w: 2 }),
+    plotRoot: tile("farm/6.png", 8, 4, { h: 2, w: 2 }),
+    plotMaize: tile("farm/6.png", 8, 6, { h: 2, w: 2 }),
+    plotPumpkin: tile("farm/6.png", 8, 10, { h: 2, w: 2 }),
 
-    // --- structures ---
-    // Dwellings: 2 cols x 2 rows each, top-left anchor. Clapboard in four liveries.
-    houseRed: tile("farm/7.png", 2, 2),
-    houseYellow: tile("farm/7.png", 2, 4),
-    houseBlue: tile("farm/7.png", 6, 6),
-    houseCream: tile("farm/7.png", 6, 2),
-    houseBrown: tile("farm/7.png", 4, 4),
-    /** Meetinghouse — the settlement's largest building, 4 rows x 4 cols. */
-    meetinghouse: tile("farm/7.png", 0, 12),
-    /** Barn, 4 rows x 3 cols. */
-    barn: tile("farm/7.png", 4, 8),
+    // River and shore. These are horizontal strips eight tiles long, not 2x2 blocks — the pack
+    // draws one continuous seascape across the row and it has to be tiled that way or the wave
+    // lines break every tile. `surf` is the sand-meets-water band and must sit exactly one row
+    // inside the land mask's boundary or the coastline reads as a step.
+    water: tile("Medieval Fishing Village/tile-B-04.png", 15, 0, { h: 1, w: 8 }),
+    surf: tile("Medieval Fishing Village/tile-B-04.png", 14, 0, { h: 1, w: 8 }),
+    shoreSand: tile("Medieval Fishing Village/tile-B-04.png", 13, 0, { h: 1, w: 8 }),
+    shoreCobble: tile("Medieval Fishing Village/tile-B-04.png", 12, 0, { h: 1, w: 8 }),
 
-    /** Stone well with a shingled roof, 2x2. */
-    well: tile("farm/6.png", 14, 0),
-    /** Timber storage shed, 2x2. */
-    shed: tile("farm/6.png", 14, 2),
-    /** Scarecrow, 2 rows x 1 col. */
-    scarecrow: tile("farm/6.png", 11, 4),
+    // Waterfront floor pieces — drawn onto the ground layer, over water. Every one of these has
+    // the pack's own river painted into it edge to edge.
+    /** East-west decking with pilings on the row below. */
+    pierDeck: tile("Medieval Fishing Village/tile-B-04.png", 8, 4, { h: 2, w: 4 }),
+    /** North-south walkway. Not interchangeable with the deck: stacking the deck tile downward
+     *  renders as a heap of loose planks rather than a walkway. */
+    pierWalk: tile("Medieval Fishing Village/tile-B-04.png", 8, 2, { h: 4, w: 2 }),
+    rowboatWhite: tile("Medieval Fishing Village/tile-B-04.png", 10, 0, { h: 1, w: 2 }),
+    rowboatRed: tile("Medieval Fishing Village/tile-B-04.png", 11, 0, { h: 1, w: 2 }),
+    /** The settlement's shallop, moored off the wharf. */
+    fishingBoat: tile("Medieval Fishing Village/tile-B-04.png", 10, 4, { h: 2, w: 3 }),
 
-    // Fencing — 1x1, laid in runs. Split-rail reads correctly for a 17th-century field boundary;
-    // the same sheet's chain-link (11,6-7) and its tractor/trailer row (15,13-15) are modern and
-    // must never appear on this map.
-    fenceRail: tile("farm/6.png", 10, 0),
-    fenceRailAlt: tile("farm/6.png", 10, 1),
-    fenceGate: tile("farm/6.png", 10, 6),
+    // --- structures: cut-out objects, footprints measured from the pixels ----------------------
+    // Dwellings and the meetinghouse, repacked onto the tile grid — see
+    // apps/web/src/content/tilesets/derived-objects.manifest.js for provenance.
+    houseRed: FarmBuildings.houseRed,
+    houseYellow: FarmBuildings.houseYellow,
+    houseBlue: FarmBuildings.houseBlue,
+    houseBrown: FarmBuildings.houseBrown,
+    houseCream: FarmBuildings.houseCream,
+    meetinghouse: FarmBuildings.meetinghouse,
+    barn: FarmBuildings.barn,
 
-    // Trees — transparent-background canopies, 3 rows x xn cols, trunk on the bottom row.
-    treeOak: tile("farm/6.png", 0, 0), // 3x3
-    treeAutumn: tile("farm/6.png", 0, 3), // 3x3
-    treePine: tile("farm/6.png", 0, 6), // 3x2
-    treeBirch: tile("farm/6.png", 0, 8), // 3x2
-    treeApple: tile("farm/6.png", 0, 10), // 3x2
-    /** Small bushes, 1x1. */
-    bushA: tile("farm/6.png", 5, 0),
-    bushB: tile("farm/6.png", 5, 1),
-    bushC: tile("farm/6.png", 5, 3),
+    /** Stone well with a shingled roof. */
+    well: tile("farm/6.png", 14, 0, { h: 2, w: 2 }),
+    /** Timber storage shed. */
+    shed: tile("farm/6.png", 14, 2, { h: 2, w: 2 }),
+    /** Cold frame for seedlings. */
+    coldFrame: tile("farm/6.png", 14, 4, { h: 2, w: 2 }),
+    /** Hen house. */
+    coop: tile("farm/6.png", 14, 11, { h: 2, w: 2 }),
 
-    // Waterfront. The pier is decking-with-pilings meant to be laid over water; drawing it as a
-    // ground fill is what broke the old map.
-    pierDeck: tile("Medieval Fishing Village/tile-B-04.png", 8, 4),
-    pierPost: tile("Medieval Fishing Village/tile-B-04.png", 9, 4),
-    pierHead: tile("Medieval Fishing Village/tile-B-04.png", 8, 2), // 4 rows x 2 cols, runs south
-    rowboatWhite: tile("Medieval Fishing Village/tile-B-04.png", 10, 0), // 1 row x 2 cols
-    rowboatRed: tile("Medieval Fishing Village/tile-B-04.png", 11, 0), // 1 row x 2 cols
-    /** Market stall with a cream awning, 2 rows x 2 cols. */
-    marketStall: tile("Medieval Fishing Village/tile-B-04.png", 8, 10),
+    // Fencing — two tiles per section, laid in runs. Split-rail reads correctly for a 17th-century
+    // field boundary; the same sheet's chain-link (11,6-7) and its tractor row (15,13-15) are
+    // modern and must never appear on this map.
+    fenceRail: tile("farm/6.png", 10, 0, { h: 1, w: 2 }),
+    fenceRailAlt: tile("farm/6.png", 10, 2, { h: 1, w: 2 }),
+    fenceGate: tile("farm/6.png", 10, 6, { h: 1, w: 2 }),
 
-    // Dockside props, 1x1.
+    // Trees, repacked. The tree line and the settlement's three shade trees both draw from here.
+    treeOak: FarmTrees.treeOak,
+    treeMaple: FarmTrees.treeMaple,
+    treePine: FarmTrees.treePine,
+    treeBirch: FarmTrees.treeBirch,
+    treeApple: FarmTrees.treeApple,
+    treeCherry: FarmTrees.treeCherry,
+    saplingApple: FarmTrees.saplingApple,
+    saplingBlossom: FarmTrees.saplingBlossom,
+    bushRose: FarmTrees.bushRose,
+    bushBerry: FarmTrees.bushBerry,
+    bushFlowering: FarmTrees.bushFlowering,
+
+    /** Market stalls on the wharf — cloth awnings, not shopfronts. */
+    marketStall: tile("Medieval Fishing Village/tile-B-04.png", 8, 10, { h: 2, w: 2 }),
+    fishStall: tile("Medieval Fishing Village/tile-B-04.png", 8, 8, { h: 2, w: 2 }),
+
+    // Dockside and farmyard clutter, one tile each.
     crate: tile("Medieval Fishing Village/tile-B-04.png", 9, 13),
     barrel: tile("Medieval Fishing Village/tile-B-04.png", 9, 14),
     barrelAlt: tile("Medieval Fishing Village/tile-B-04.png", 9, 15),
     netPile: tile("Medieval Fishing Village/tile-B-04.png", 9, 12),
     ropeCoil: tile("Medieval Fishing Village/tile-B-04.png", 6, 13),
+    lobsterPots: tile("Medieval Fishing Village/tile-B-04.png", 6, 12),
     anchorProp: tile("Medieval Fishing Village/tile-B-04.png", 6, 10),
     shoreRocks: tile("Medieval Fishing Village/tile-B-04.png", 6, 9),
-    /** Produce crates and hay, for the field and market edges. */
+    buoy: tile("Medieval Fishing Village/tile-B-04.png", 8, 12),
     produceCrate: tile("farm/6.png", 10, 14),
-    hayBale: tile("farm/6.png", 13, 13),
     grainSack: tile("farm/6.png", 10, 13),
+    hayBale: tile("farm/6.png", 13, 13),
   },
 };

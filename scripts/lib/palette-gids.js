@@ -126,8 +126,21 @@ export function resolvePalette(palette) {
   /**
    * A rectangular block of GIDs anchored at a palette entry — for multi-tile art (a building,
    * a hut, a wharf) that occupies `height` x `width` cells starting at that entry's coordinate.
+   *
+   * The size normally comes from the entry itself (`tile(sheet, row, col, { h, w })`), because a
+   * footprint stated in two places is a footprint that goes wrong: Phase 52 shipped trees cut down
+   * the middle precisely because the generator's literals and the palette's comment disagreed with
+   * the pixels. Passing height/width explicitly still works, and is checked against the entry so
+   * an override can't silently contradict it.
    */
-  function gidRect(entry, height, width) {
+  function gidRect(entry, height = entry?.h ?? 1, width = entry?.w ?? 1) {
+    if (entry?.h !== undefined && (height !== entry.h || width !== entry.w)) {
+      throw new Error(
+        `palette-gids: gidRect() was asked for ${height}x${width} but the palette entry at ` +
+          `(${entry.row},${entry.col}) on "${entry.sheet}" declares ${entry.h}x${entry.w}. ` +
+          `Fix the palette, not the call site — the palette is what the footprint test checks.`
+      );
+    }
     const rows = [];
     for (let r = 0; r < height; r += 1) {
       const row = [];
