@@ -122,7 +122,8 @@ Four confirmed placeholder-stub documents (verbatim "Recovered placeholder file 
 ## 12. Longer documents (consult only when you need the rationale)
 
 - `docs/architecture/CURRENT-REPOSITORY-AUDIT.md` — verified current-state findings.
-- `docs/architecture/art-and-map-style-guide.md` — living reference for canonical tileset-element dictionary (which pack/sheet supplies grass, trees, buildings, etc., per historical setting). Updated during planning passes. Pairs with `docs/decision-log/0031-art-style-unification.md` and `docs/decision-log/0032-common-cause-tiled-rebuild.md` (the latter closed the guide's one Gap Register entry — case-007's Common Cause field is now a real `.tmj`, not CSS-drawn).
+- `docs/architecture/art-and-map-style-guide.md` — the **rules** for map art (art-style family, standing content exclusions, per-setting assignments, gap register). No longer carries the tile-by-tile dictionary: that is now `apps/web/src/content/tilesets/canonical-palette.js` (one canonical tile per element, with coordinates) plus per-map palettes beside it, all enforced by `tests/unit/tile-palettes.test.js`. Pairs with decision log `0031`, `0032` and `0034`.
+- `docs/architecture/TILE-LIBRARY-CATALOG.md` — per-sheet inventory of all 250 tileset sheets across 28 packs: what is on each, `CANONICAL`/`SUPPORTING`/`BENCHED`/`UNUSABLE` verdict, and which APUSH periods it serves. Consult before proposing any new map's art. Regenerate coordinate references with `npm run assets:label`.
 - `docs/architecture/THIRD-PARTY-TOOLING-AUDIT.md` — dependency research and verdicts.
 - `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` — the long-term multi-subject-platform design.
 - `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — the binding near-term scope cut; when it disagrees with the proposal on what to build _now_, follow this document.

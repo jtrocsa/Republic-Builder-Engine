@@ -1,0 +1,227 @@
+// The canonical answer for every recurring visual element in Chronicle's maps.
+//
+// The problem this solves: before this file existed, "what tile is grass" was re-decided inside
+// each map's generator script as a local constant (see the SAND/GRASS_A/WATER_SHALLOW block that
+// used to head scripts/generate-caribbean-tmj.js), with a comment noting the coordinates had been
+// confirmed by eyeballing a grid-labeled crop in /tmp. That knowledge was unreusable and
+// unverifiable. Now each element has one name, one home, and one coordinate.
+//
+// Pairs with:
+//   docs/architecture/TILE-LIBRARY-CATALOG.md  — what is on each of the 250 sheets, and why a
+//                                                 pack is canonical, supporting, or benched
+//   docs/architecture/art-and-map-style-guide.md — the authoring rules
+//   ./maps/*.palette.js                          — per-map palettes, which extend this one
+//
+// Coordinates are (row, col), 0-indexed, within the sheet's own tile grid — NOT global GIDs.
+// Converting to GIDs is scripts/lib/palette-gids.js's job, because a GID only means anything
+// relative to one map's tileset ordering.
+//
+// To find or check a coordinate, never guess:
+//   npm run assets:label -- "Island survival/tile-B-01.png"
+// writes a coordinate-labeled copy to the gitignored reports/assets/labeled/.
+
+/** One tile: a sheet path (relative to assets/tilesets/) plus its grid coordinate. */
+export function tile(sheet, row, col) {
+  return { sheet, row, col };
+}
+
+// The three Auto-tile-A4 sheets are byte-identical across 13 pack folders (verified by content
+// hash — see the catalog). Referencing two different paths to the same bytes would make Vite
+// bundle the image twice, so exactly one path per sheet is canonical and lives here.
+export const SHARED_SHEETS = {
+  /** Floor / horizontal surfaces: wood, log, steel, tile, concrete, stone, plaster, brick. */
+  floors: "Medieval Tavern/Auto-tile-A4-Walls-1.png",
+  /** Vertical wall surfaces, set A. Usable rows are ~2, 5, 8, 11, 14; the rest is A4 padding. */
+  wallsA: "Medieval Tavern/Auto-tile-A4-walls-2.png",
+  /** Vertical wall surfaces, set B. Same row caveat. */
+  wallsB: "Medieval Tavern/Auto-tile-A4-walls-3.png",
+};
+
+// Verification status of every coordinate below, so a later reader knows what to trust:
+//
+//   [live]    Drawn by a shipping map today. Extracted from the .tmj by GID audit, so it is
+//             verified by the fact that the game renders it correctly right now.
+//   [labeled] Read off a grid-labeled render of the sheet via `npm run assets:label`.
+//
+// Nothing here is unverified. An element with no confirmed coordinate is listed in GAPS instead.
+
+export const CANONICAL = {
+  // ---------------------------------------------------------------------------------------
+  // WATER — five canonical answers, one per setting family. Never mix two families on one
+  // coastline: Island survival and Medieval harbor in particular render water at visibly
+  // different saturation and outline weight.
+  // ---------------------------------------------------------------------------------------
+
+  /** Caribbean/tropical, just offshore. Turquoise. [live: caribbean-field ground] */
+  "water.tropical.shallow": tile("Island survival/tile-B-01.png", 4, 0),
+  /** Caribbean/tropical, open water. Dark navy. [live: caribbean-field ground, 302 tiles] */
+  "water.tropical.deep": tile("Island survival/tile-B-01.png", 4, 6),
+  /** Temperate river/harbour water for colonial dock scenes. [live: riverbend-field ground] */
+  "water.harbor.temperate": tile("Medieval Fishing Village/tile-B-04.png", 10, 6),
+  /** Atlantic open ocean, deep blue. [labeled] */
+  "water.atlantic.deep": tile("19th Centruy European Dock/tile-B-06.png", 0, 0),
+  /** Atlantic inshore, lighter with visible seabed. [labeled] */
+  "water.atlantic.shallow": tile("19th Centruy European Dock/tile-B-06.png", 2, 0),
+
+  // ---------------------------------------------------------------------------------------
+  // SHORE & SAND
+  // ---------------------------------------------------------------------------------------
+
+  /** Tropical beach sand, plain and uniform. [live: caribbean-field ground] */
+  "sand.tropical": tile("Island survival/tile-B-01.png", 0, 0),
+  /** Same sand with an embedded driftwood log, for sparse coastal texture. [live] */
+  "sand.tropical.driftwood": tile("Island survival/tile-B-01.png", 0, 6),
+  /** Same sand with scattered shells. [live] */
+  "sand.tropical.shells": tile("Island survival/tile-B-01.png", 0, 8),
+  /** Atlantic sand/water shoreline transition. [labeled] */
+  "shore.atlantic.sand": tile("19th Centruy European Dock/tile-B-06.png", 0, 4),
+  /** Atlantic rocky shoreline with boulders. [labeled] */
+  "shore.atlantic.rocky": tile("19th Centruy European Dock/tile-B-06.png", 0, 12),
+  /** Temperate muddy/shingle river shore. [live: riverbend-field ground] */
+  "shore.temperate.mud": tile("Medieval Fishing Village/tile-B-04.png", 8, 1),
+  /** Temperate wet-sand shore. [live: riverbend-field ground] */
+  "shore.temperate.sand": tile("Medieval Fishing Village/tile-B-04.png", 9, 2),
+
+  // ---------------------------------------------------------------------------------------
+  // GRASS — one per setting. "Grass" is not one tile across the whole game; it is one tile
+  // per setting, which is the entire point of this file.
+  // ---------------------------------------------------------------------------------------
+
+  /** Tropical/jungle grass. [live: caribbean-field ground, 313 tiles — the dominant fill] */
+  "grass.tropical": tile("Island survival/tile-B-01.png", 8, 0),
+  /** Second tropical grass, for light non-repeating variation. [live: caribbean-field] */
+  "grass.tropical.alt": tile("Island survival/tile-B-01.png", 9, 0),
+  /** Dry tall-grass tuft on sand, reads as a Pokémon-style grass patch. [live: caribbean-field] */
+  "grass.tropical.tuft": tile("Island survival/tile-B-01.png", 11, 2),
+  /** Colonial temperate grass. [live: riverbend-field ground, 784 tiles — the dominant fill] */
+  "grass.colonial": tile("Medieval Fantasy Town/1.png", 12, 14),
+  /** Colonial grass as used outside the Philadelphia plaza. [live: common-cause-field ground] */
+  "grass.colonial.plaza": tile("Medieval Fantasy Town/2.png", 0, 6),
+
+  // ---------------------------------------------------------------------------------------
+  // DIRT & PATHS
+  // ---------------------------------------------------------------------------------------
+
+  /** Tropical dirt path, left half (grass edge on the left). [live: caribbean-field] */
+  "path.tropical.left": tile("Island survival/tile-B-01.png", 9, 4),
+  /** Tropical dirt path, right half (grass edge on the right). [live: caribbean-field] */
+  "path.tropical.right": tile("Island survival/tile-B-01.png", 9, 5),
+  /** Colonial dirt road. [live: riverbend-field ground] */
+  "path.colonial.dirt": tile("Medieval Fantasy Town/1.png", 10, 4),
+  /** Colonial dirt road variant. [live: riverbend-field ground] */
+  "path.colonial.dirt.alt": tile("Medieval Fantasy Town/1.png", 11, 4),
+  /** Packed sand/dirt lot, dockside. [labeled] */
+  "path.dock.dirt": tile("19th Centruy European Dock/tile-B-06.png", 12, 10),
+  /** Loose gravel. [labeled] */
+  "path.gravel": tile("19th Centruy European Dock/tile-B-06.png", 12, 13),
+
+  // ---------------------------------------------------------------------------------------
+  // CULTIVATION
+  // ---------------------------------------------------------------------------------------
+
+  /** Tilled soil with crop rows — Riverbend's field patch. [live: riverbend-field ground] */
+  "crop.rows": tile("farm/3.png", 4, 6),
+  /** Sparse crop accent stamped over the field. [live: riverbend-field structures] */
+  "crop.accent": tile("farm/3.png", 5, 7),
+
+  // ---------------------------------------------------------------------------------------
+  // STONE, PAVING & MASONRY
+  // ---------------------------------------------------------------------------------------
+
+  /** Colonial cobblestone plaza. [live: common-cause-field ground, 576 tiles] */
+  "stone.colonial.cobble": tile("Medieval Fantasy Town/2.png", 0, 0),
+  /** Colonial cobble variant. [live: common-cause-field ground] */
+  "stone.colonial.cobble.alt": tile("Medieval Fantasy Town/2.png", 1, 0),
+  /** 19th-century city street: red herringbone brick. [labeled] */
+  "stone.city.brick.red": tile("19th Century European City/tile-B-05.png", 0, 0),
+  /** 19th-century city street: grey running-bond brick. [labeled] */
+  "stone.city.brick.grey": tile("19th Century European City/tile-B-05.png", 0, 4),
+  /** 19th-century city street: cream flagstone. [labeled] */
+  "stone.city.flagstone": tile("19th Century European City/tile-B-05.png", 0, 8),
+  /** 19th-century city street: large pale stone slab. [labeled] */
+  "stone.city.slab": tile("19th Century European City/tile-B-05.png", 0, 10),
+  /** 19th-century city street: grey cobblestone. [labeled] */
+  "stone.city.cobble": tile("19th Century European City/tile-B-05.png", 0, 12),
+  /** Dockside rounded cobblestone. [labeled] */
+  "stone.dock.cobble": tile("19th Centruy European Dock/tile-B-06.png", 14, 0),
+  /** Dockside cut flagstone. [labeled] */
+  "stone.dock.flagstone": tile("19th Centruy European Dock/tile-B-06.png", 14, 4),
+  /** Stone quay / sea wall course. [labeled] */
+  "stone.quay.wall": tile("19th Centruy European Dock/tile-B-06.png", 4, 0),
+
+  // ---------------------------------------------------------------------------------------
+  // TIMBER DECKING
+  // ---------------------------------------------------------------------------------------
+
+  /** Wide plank dock decking. [labeled] */
+  "wood.dock.deck": tile("19th Centruy European Dock/tile-B-06.png", 4, 10),
+  /** Colonial wharf plank, as used at Riverbend. [live: riverbend-field structures] */
+  "wood.wharf.plank": tile("Medieval Fishing Village/tile-B-04.png", 4, 12),
+
+  // ---------------------------------------------------------------------------------------
+  // INTERIOR FLOORS
+  //
+  // Note: the Institute Archive Room's floor comes from Medieval Tavern tile-B-05, NOT
+  // tile-B-01. The style guide asserted tile-B-01 for years; a GID audit of archive-room.tmj
+  // disproved it (its whole ground layer sits in the firstgid:513 = tile-B-05 range).
+  // ---------------------------------------------------------------------------------------
+
+  /** Archive Room floor, grey flagstone. [live: archive-room + hallway ground] */
+  "floor.archive.stone": tile("Medieval Tavern/tile-B-05.png", 13, 0),
+  /** Archive Room floor, second flagstone cell of the same 2x2 block. [live] */
+  "floor.archive.stone.b": tile("Medieval Tavern/tile-B-05.png", 13, 1),
+  /** Archive Room floor accent. [live: archive-room + hallway ground] */
+  "floor.archive.stone.c": tile("Medieval Tavern/tile-B-05.png", 14, 2),
+  /** Archive Room floor accent. [live: archive-room + hallway ground] */
+  "floor.archive.stone.d": tile("Medieval Tavern/tile-B-05.png", 15, 4),
+  /** Archive Room secondary floor (warmer sandstone), used for the alcove. [live] */
+  "floor.archive.sandstone": tile("Medieval Tavern/tile-B-05.png", 12, 8),
+
+  // ---------------------------------------------------------------------------------------
+  // DOCK & MARITIME PROPS
+  // ---------------------------------------------------------------------------------------
+
+  /** Mooring bollard. [labeled] */
+  "prop.dock.bollard": tile("19th Centruy European Dock/tile-B-06.png", 8, 0),
+  /** Timber cargo crane. [labeled] */
+  "prop.dock.crane": tile("19th Centruy European Dock/tile-B-06.png", 8, 4),
+  /** Stone lighthouse, unlit. [labeled] */
+  "prop.dock.lighthouse": tile("19th Centruy European Dock/tile-B-06.png", 6, 4),
+  /** Shipping crate. [labeled] */
+  "prop.cargo.crate": tile("19th Centruy European Dock/tile-B-06.png", 10, 0),
+  /** Cargo barrel. [labeled] */
+  "prop.cargo.barrel": tile("19th Centruy European Dock/tile-B-06.png", 10, 4),
+  /** Bound commodity sack. [labeled] */
+  "prop.cargo.sack": tile("19th Centruy European Dock/tile-B-06.png", 10, 6),
+
+  // ---------------------------------------------------------------------------------------
+  // CITY STREET FURNITURE
+  // ---------------------------------------------------------------------------------------
+
+  /** Gas street lamp. [labeled] */
+  "prop.city.lamp": tile("19th Century European City/tile-B-05.png", 6, 0),
+  /** Ornate iron bench. [labeled] */
+  "prop.city.bench": tile("19th Century European City/tile-B-05.png", 8, 8),
+  /** Public fountain. [labeled] */
+  "prop.city.fountain": tile("19th Century European City/tile-B-05.png", 6, 15),
+  /** Stone bollard. [labeled] */
+  "prop.city.bollard": tile("19th Century European City/tile-B-05.png", 5, 8),
+};
+
+// Elements with no acceptable tile anywhere in the library. Recorded so a map author stops and
+// asks rather than forcing a bad fit, and so a future asset purchase has a shopping list.
+// See the Gap Register in art-and-map-style-guide.md for the reasoning behind each.
+export const GAPS = [
+  "architecture.indigenous.northAmerican", // longhouse, pueblo, plains lodge — nothing fits.
+  // Island survival's bohio huts are Caribbean/Taino-appropriate ONLY; do not reuse them as
+  // generic "Native American."
+  "military.civilWar.camp", // Union/Confederate tents, artillery, earthworks.
+  "architecture.plantation.greatHouse", // Greek Revival columned house. Fields and quarters are
+  // covered (farm + Wild West tile-B-08); the great house is not.
+  "streetscape.midCentury", // 1950s-specific. Highway Rest Area / Modern Park read contemporary.
+];
+
+/** Every distinct sheet path this palette references. Used by the palette integrity test. */
+export function sheetsReferencedBy(palette) {
+  return [...new Set(Object.values(palette).map((entry) => entry.sheet))].sort();
+}

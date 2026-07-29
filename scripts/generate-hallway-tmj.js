@@ -5,24 +5,25 @@
 // for visual continuity between the two Institute interiors — same 48px/16-column/no-margin
 // tile family, same firstgid layout, only the grid dimensions and layout differ.
 // Run with: node scripts/generate-hallway-tmj.js apps/web/src/content/maps/hallway.tmj
+//
+// Tile identity comes from apps/web/src/content/tilesets/maps/hallway.palette.js, which
+// deliberately declares the same three sheets in the same order as archive-room.palette.js.
 import { writeFileSync } from "node:fs";
+
+import palette from "../apps/web/src/content/tilesets/maps/hallway.palette.js";
+import { resolvePalette } from "./lib/palette-gids.js";
 
 const WIDTH = 6;
 const HEIGHT = 10;
 const TILE = 48;
 
-// tile-B-01.png: firstgid 1   (tables/benches/chairs)
-// tile-B-03.png: firstgid 257 (shelving/racks/lighting/decor)
-// tile-B-05.png: firstgid 513 (floor tiles/crates/barrels/stools)
-const B01 = 1;
-const B03 = 257;
-const B05 = 513;
-const gidB03 = (row, col) => B03 + row * 16 + col;
-const gidB05 = (row, col) => B05 + row * 16 + col;
+// firstgid assignment, sheet geometry and the tilesets[] array are all derived from the
+// palette's sheet order by resolvePalette() — see scripts/lib/palette-gids.js.
+const { tilesets, gid, gidRect } = resolvePalette(palette);
+const T = palette.tiles;
 
-// Same STONE_FLOOR gids as generate-archive-room-tmj.js, confirmed by the same labeled-overlay
-// inspection method (see docs/decision-log/0030-archive-room-tiled-interior.md).
-const STONE_FLOOR = [gidB05(13, 0), gidB05(13, 1), gidB05(14, 2), gidB05(15, 4)];
+// Same floor tiles as the Archive Room — both palettes point at the canonical entries.
+const STONE_FLOOR = T.stoneFloor.map(gid);
 
 // Ground layer: stone floor the full length of the corridor, deterministic low-key variety
 // (same formula as the Archive Room generator) rather than a real terrain mask.
@@ -44,19 +45,19 @@ for (let row = 0; row < HEIGHT; row += 1) {
 const structuresData = new Array(WIDTH * HEIGHT).fill(0);
 function stamp(anchorCol, anchorRow, block) {
   block.forEach((rowGids, r) => {
-    rowGids.forEach((gid, c) => {
-      if (!gid) return;
+    rowGids.forEach((tileGid, c) => {
+      if (!tileGid) return;
       const col = anchorCol + c;
       const row = anchorRow + r;
       if (col < 0 || col >= WIDTH || row < 0 || row >= HEIGHT) return;
-      structuresData[row * WIDTH + col] = gid;
+      structuresData[row * WIDTH + col] = tileGid;
     });
   });
 }
 
-const RECORD_SHELF_LEFT = [[gidB03(2, 8)], [gidB03(3, 8)]];
-const RECORD_RACK_RIGHT = [[gidB03(2, 10)], [gidB03(3, 10)]];
-const WALL_TORCH = gidB03(1, 9);
+const RECORD_SHELF_LEFT = gidRect(T.recordShelfLeft, 2, 1);
+const RECORD_RACK_RIGHT = gidRect(T.recordRackRight, 2, 1);
+const WALL_TORCH = gid(T.wallTorch);
 
 // Left edge: shelving at two points down the corridor. Right edge: wine-rack-style record racks,
 // offset a few rows so the two edges don't read as a mirrored repeat. A torch pair near the door
@@ -106,47 +107,7 @@ const tmj = {
   renderorder: "right-down",
   tiledversion: "1.12.2",
   tileheight: TILE,
-  tilesets: [
-    {
-      columns: 16,
-      firstgid: B01,
-      image: "../../assets/tilesets/Medieval Tavern/tile-B-01.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-tavern-b01",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: B03,
-      image: "../../assets/tilesets/Medieval Tavern/tile-B-03.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-tavern-b03",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: B05,
-      image: "../../assets/tilesets/Medieval Tavern/tile-B-05.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-tavern-b05",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-  ],
+  tilesets,
   tilewidth: TILE,
   type: "map",
   version: "1.10",

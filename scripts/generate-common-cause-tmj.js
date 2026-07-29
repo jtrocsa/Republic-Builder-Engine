@@ -17,7 +17,14 @@
 // apps/web/src/main.js (kept in sync manually), not derived from the .tmj.
 //
 // Run with: node scripts/generate-common-cause-tmj.js apps/web/src/content/maps/common-cause-field.tmj
+//
+// Which tile is which building comes from
+// apps/web/src/content/tilesets/maps/common-cause-field.palette.js — including the standing rule
+// that only Medieval Fantasy Town's UNLABELLED building silhouettes may be used here.
 import { writeFileSync } from "node:fs";
+
+import palette from "../apps/web/src/content/tilesets/maps/common-cause-field.palette.js";
+import { resolvePalette } from "./lib/palette-gids.js";
 
 const WIDTH = 40;
 const HEIGHT = 24;
@@ -29,36 +36,16 @@ function isCommonCauseLand(x, y) {
 }
 
 // --- tileset helpers ---
-// Each pack sheet below is a 768x768px, 16-column, 48px-tile grid (confirmed directly:
-// System.Drawing dimension check during authoring). firstgid values are assigned in the
-// same order the tilesets array lists them.
-const MFT1 = 1; // Medieval Fantasy Town/1.png — cottages, half-timber buildings, stairs/arch
-const MFT2 = 257; // Medieval Fantasy Town/2.png — ground fill, market stalls, well
-const MFT5 = 513; // Medieval Fantasy Town/5.png — guild-hall-shaped civic building, church, watchtower
-const MFV4 = 769; // Medieval Fishing Village/tile-B-04.png — dock/wharf
-const POLE = 1025; // Common Cause Philadelphia/liberty-pole.png — 1 col x 3 rows, PixelLab-generated
-const gidMFT1 = (row, col) => MFT1 + row * 16 + col;
-const gidMFT2 = (row, col) => MFT2 + row * 16 + col;
-const gidMFT5 = (row, col) => MFT5 + row * 16 + col;
-const gidMFV4 = (row, col) => MFV4 + row * 16 + col;
-const gidPole = (row) => POLE + row;
+// firstgid assignment, sheet geometry (including the liberty pole's 1-column grid, which the
+// old hardcoded `* 16` arithmetic could not have expressed) and the tilesets[] array are all
+// derived from the palette's sheet order by resolvePalette() — see scripts/lib/palette-gids.js.
+const { tilesets, gid, gidRect } = resolvePalette(palette);
+const T = palette.tiles;
 
-// Builds a row-major 2D GID block from a sheet's gid function, anchored at (r0, c0).
-function rect(gidFn, r0, c0, h, w) {
-  const block = [];
-  for (let r = 0; r < h; r += 1) {
-    const row = [];
-    for (let c = 0; c < w; c += 1) row.push(gidFn(r0 + r, c0 + c));
-    block.push(row);
-  }
-  return block;
-}
-
-// Ground fill (Medieval Fantasy Town/2.png): plain stone plaza inside the walkable
-// gathering ground, grass outside it — confirmed by grid-labeled inspection of the sheet.
-const GROUND_PLAZA_A = gidMFT2(0, 0);
-const GROUND_PLAZA_B = gidMFT2(1, 0); // near-identical variant, alternated for light texture
-const GROUND_EXTERIOR = gidMFT2(0, 6);
+// Ground fill: plain stone plaza inside the walkable gathering ground, grass outside it.
+const GROUND_PLAZA_A = gid(T.groundPlazaA);
+const GROUND_PLAZA_B = gid(T.groundPlazaB); // near-identical variant, for light texture
+const GROUND_EXTERIOR = gid(T.groundExterior);
 
 function groundTileAt(col, row) {
   const cx = col + 0.5;
@@ -78,51 +65,50 @@ for (let row = 0; row < HEIGHT; row += 1) {
 const structuresData = new Array(WIDTH * HEIGHT).fill(0);
 function stamp(anchorCol, anchorRow, block) {
   block.forEach((rowGids, r) => {
-    rowGids.forEach((gid, c) => {
-      if (!gid) return;
+    rowGids.forEach((tileGid, c) => {
+      if (!tileGid) return;
       const col = anchorCol + c;
       const row = anchorRow + r;
       if (col < 0 || col >= WIDTH || row < 0 || row >= HEIGHT) return;
-      structuresData[row * WIDTH + col] = gid;
+      structuresData[row * WIDTH + col] = tileGid;
     });
   });
 }
 
-// Half-timber building, unlabeled — print shop (rows 0-3, cols 4-7 of MFT1).
-const PRINT_SHOP = rect(gidMFT1, 0, 4, 4, 4);
+// Half-timber building, unlabeled — print shop.
+const PRINT_SHOP = gidRect(T.printShop, 4, 4);
 
-// Second thatched cottage, unlabeled — family residence (rows 4-7, cols 0-3 of MFT1).
-const FAMILY_RESIDENCE = rect(gidMFT1, 4, 0, 4, 4);
+// Second thatched cottage, unlabeled — family residence.
+const FAMILY_RESIDENCE = gidRect(T.familyResidence, 4, 4);
 
-// Stone stairs + double arch — statehouse steps (row 8, cols 8-11 of MFT1).
-const STATEHOUSE_STEPS = rect(gidMFT1, 8, 8, 1, 4);
+// Stone stairs + double arch — statehouse steps.
+const STATEHOUSE_STEPS = gidRect(T.statehouseSteps, 1, 4);
 
-// "Adventurer's Guild" civic building (rows 0-3, cols 8-11 of MFT5) — the baked-in sign
-// band (row 2) is swapped for that same sheet's plain stone wall (row 2, cols 0-3) so no
-// anachronistic fantasy text renders in a Revolutionary Philadelphia scene.
-const ASSEMBLY_HALL = rect(gidMFT5, 0, 8, 4, 4);
-ASSEMBLY_HALL[2] = [gidMFT5(2, 0), gidMFT5(2, 1), gidMFT5(2, 2), gidMFT5(2, 3)];
+// Civic building — the source sheet's baked-in "Adventurer's Guild" sign band (its row 2) is
+// swapped for that same sheet's plain stone wall so no anachronistic fantasy text renders in a
+// Revolutionary Philadelphia scene. See the palette's header for the standing rule.
+const ASSEMBLY_HALL = gidRect(T.assemblyHall, 4, 4);
+ASSEMBLY_HALL[2] = gidRect({ sheet: T.assemblyHall.sheet, row: 2, col: 0 }, 1, 4)[0];
 
-// Church with steeple, both variants side by side for a fuller footprint — chapel
-// (rows 8-10, cols 4-7 of MFT5).
-const CHAPEL = rect(gidMFT5, 8, 4, 3, 4);
+// Church with steeple, both variants side by side for a fuller footprint — chapel.
+const CHAPEL = gidRect(T.chapel, 3, 4);
 
-// Wooden lookout watchtower — frontier dispatch post (rows 8-10, cols 12-13 of MFT5).
-const FRONTIER_DISPATCH_POST = rect(gidMFT5, 8, 12, 3, 2);
+// Wooden lookout watchtower — frontier dispatch post.
+const FRONTIER_DISPATCH_POST = gidRect(T.frontierDispatchPost, 3, 2);
 
-// Two market stalls side by side — market stalls (rows 4-5, cols 0-3 of MFT2).
-const MARKET_STALLS = rect(gidMFT2, 4, 0, 2, 4);
+// Two market stalls side by side.
+const MARKET_STALLS = gidRect(T.marketStalls, 2, 4);
 
-// Well with peaked roof — town well (rows 6-7, cols 8-9 of MFT2).
-const TOWN_WELL = rect(gidMFT2, 6, 8, 2, 2);
+// Well with peaked roof.
+const TOWN_WELL = gidRect(T.townWell, 2, 2);
 
-// Dock planking (rows 8-9, cols 0-3 of MFV4) + a rowboat (row 10, cols 0-1) — wharf.
-const WHARF = rect(gidMFV4, 8, 0, 2, 4);
-WHARF.push([gidMFV4(10, 0), gidMFV4(10, 1), 0, 0]);
+// Dock planking plus a rowboat on the row below — wharf.
+const WHARF = gidRect(T.wharf, 2, 4);
+WHARF.push([...gidRect({ sheet: T.wharf.sheet, row: 10, col: 0 }, 1, 2)[0], 0, 0]);
 
-// Liberty pole (PixelLab-generated, single 1x3 column) — no existing pack has an
+// Liberty pole (PixelLab-generated, single 1-column x 3-row sheet) — no existing pack has an
 // equivalent; this is the one genuinely unique asset in this map.
-const LIBERTY_POLE = [[gidPole(0)], [gidPole(1)], [gidPole(2)]];
+const LIBERTY_POLE = gidRect(T.libertyPole, 3, 1);
 
 // Anchors below are each stamp's top-left cell, chosen to align with the matching
 // UNIT3_FIELD_BLOCKS rect in apps/web/src/main.js (kept in sync manually — see
@@ -178,73 +164,7 @@ const tmj = {
   renderorder: "right-down",
   tiledversion: "1.12.2",
   tileheight: TILE,
-  tilesets: [
-    {
-      columns: 16,
-      firstgid: MFT1,
-      image: "../../assets/tilesets/Medieval Fantasy Town/1.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-fantasy-town-1",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: MFT2,
-      image: "../../assets/tilesets/Medieval Fantasy Town/2.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-fantasy-town-2",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: MFT5,
-      image: "../../assets/tilesets/Medieval Fantasy Town/5.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-fantasy-town-5",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: MFV4,
-      image: "../../assets/tilesets/Medieval Fishing Village/tile-B-04.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-fishing-village-b04",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 1,
-      firstgid: POLE,
-      image: "../../assets/tilesets/Common Cause Philadelphia/liberty-pole.png",
-      imageheight: 144,
-      imagewidth: 48,
-      margin: 0,
-      name: "common-cause-philadelphia-liberty-pole",
-      spacing: 0,
-      tilecount: 3,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-  ],
+  tilesets,
   tilewidth: TILE,
   type: "map",
   version: "1.10",

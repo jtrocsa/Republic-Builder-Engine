@@ -7,27 +7,25 @@
 // uniform tile grid, and its blue-plastic/office-monitor furniture would clash with the
 // project's gold/bronze/parchment visual language (see CLAUDE.md's visual design section).
 // Run with: node scripts/generate-archive-room-tmj.js
+//
+// Which tile is floor or shelving is NOT decided here — it comes from
+// apps/web/src/content/tilesets/maps/archive-room.palette.js. This script owns layout only.
 import { writeFileSync } from "node:fs";
+
+import palette from "../apps/web/src/content/tilesets/maps/archive-room.palette.js";
+import { resolvePalette } from "./lib/palette-gids.js";
 
 const WIDTH = 10;
 const HEIGHT = 8;
 const TILE = 48;
 
-// tile-B-01.png: firstgid 1   (tables/benches/chairs)
-// tile-B-03.png: firstgid 257 (shelving/racks/lighting/decor)
-// tile-B-05.png: firstgid 513 (floor tiles/crates/barrels/stools)
-const B01 = 1;
-const B03 = 257;
-const B05 = 513;
-const gidB01 = (row, col) => B01 + row * 16 + col;
-const gidB03 = (row, col) => B03 + row * 16 + col;
-const gidB05 = (row, col) => B05 + row * 16 + col;
+// firstgid assignment, sheet geometry and the tilesets[] array are all derived from the
+// palette's sheet order by resolvePalette() — see scripts/lib/palette-gids.js.
+const { tilesets, gid, gidRect } = resolvePalette(palette);
+const T = palette.tiles;
 
-// Confirmed by direct grid-labeled inspection of the sheets (see the labeled-overlay crops
-// generated during authoring) — row,col are 0-indexed within each 16x16 sheet, matching the
-// same confirmation method noted in generate-caribbean-tmj.js.
-const STONE_FLOOR = [gidB05(13, 0), gidB05(13, 1), gidB05(14, 2), gidB05(15, 4)]; // slight variety
-const WOOD_FLOOR = [gidB05(12, 8), gidB05(12, 9), gidB05(13, 8), gidB05(14, 9)];
+const STONE_FLOOR = T.stoneFloor.map(gid); // slight variety
+const WOOD_FLOOR = T.woodFloor.map(gid);
 
 // Ground layer: stone floor everywhere, with a wood-floor "reading nook" patch under the
 // table (cols 0-5, rows 4-7) for visual zoning — the same low-key variety approach
@@ -50,33 +48,24 @@ for (let row = 0; row < HEIGHT; row += 1) {
 const structuresData = new Array(WIDTH * HEIGHT).fill(0);
 function stamp(anchorCol, anchorRow, block) {
   block.forEach((rowGids, r) => {
-    rowGids.forEach((gid, c) => {
-      if (!gid) return;
+    rowGids.forEach((tileGid, c) => {
+      if (!tileGid) return;
       const col = anchorCol + c;
       const row = anchorRow + r;
       if (col < 0 || col >= WIDTH || row < 0 || row >= HEIGHT) return;
-      structuresData[row * WIDTH + col] = gid;
+      structuresData[row * WIDTH + col] = tileGid;
     });
   });
 }
 
 // Archive record shelf (bottle/jar shelf, 2x2) — the Terminal's "shelving," left half.
-const RECORD_SHELF = [
-  [gidB03(2, 8), gidB03(2, 9)],
-  [gidB03(3, 8), gidB03(3, 9)],
-];
+const RECORD_SHELF = gidRect(T.recordShelf, 2, 2);
 // Diamond wine rack (2x2) — reads as an "archive record rack," right half.
-const RECORD_RACK = [
-  [gidB03(2, 10), gidB03(2, 11)],
-  [gidB03(3, 10), gidB03(3, 11)],
-];
-// Long reading table (4x2, plain dark wood, no tavern mugs).
-const READING_TABLE = [
-  [gidB01(4, 8), gidB01(4, 9), gidB01(4, 10), gidB01(4, 11)],
-  [gidB01(5, 8), gidB01(5, 9), gidB01(5, 10), gidB01(5, 11)],
-];
-const WALL_TORCH = gidB03(1, 9);
-const STOOL = gidB05(11, 8);
+const RECORD_RACK = gidRect(T.recordRack, 2, 2);
+// Long reading table (4 wide x 2 tall, plain dark wood, no tavern mugs).
+const READING_TABLE = gidRect(T.readingTable, 2, 4);
+const WALL_TORCH = gid(T.wallTorch);
+const STOOL = gid(T.stool);
 
 // Anchors below are each stamp's top-left cell; the shelf+rack pair sits directly behind
 // the Archive Terminal interaction point (ARCHIVE_ROOM_TARGETS.terminal, x5.0/y3.7 in
@@ -127,47 +116,7 @@ const tmj = {
   renderorder: "right-down",
   tiledversion: "1.12.2",
   tileheight: TILE,
-  tilesets: [
-    {
-      columns: 16,
-      firstgid: B01,
-      image: "../../assets/tilesets/Medieval Tavern/tile-B-01.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-tavern-b01",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: B03,
-      image: "../../assets/tilesets/Medieval Tavern/tile-B-03.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-tavern-b03",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-    {
-      columns: 16,
-      firstgid: B05,
-      image: "../../assets/tilesets/Medieval Tavern/tile-B-05.png",
-      imageheight: 768,
-      imagewidth: 768,
-      margin: 0,
-      name: "medieval-tavern-b05",
-      spacing: 0,
-      tilecount: 256,
-      tileheight: TILE,
-      tilewidth: TILE,
-    },
-  ],
+  tilesets,
   tilewidth: TILE,
   type: "map",
   version: "1.10",

@@ -86,7 +86,7 @@ Two safety nets validate the *data*, without ever making it load-bearing:
 
 ## Scope discipline
 
-Only `riverbend-field.tmj` is touched by this pilot. The other four maps already wired into `tiled-map-loader.js` — `caribbean-field.tmj`, `archive-room.tmj`, `hallway.tmj`, `common-cause-field.tmj` — are not converted, and `sandy-island-demo.tmj` (already orphaned, not referenced by `main.js`) is untouched. If the pilot succeeds — the parity test passes and the visual overlay confirms alignment — extending the same object-layer schema to additional maps is a natural follow-up, but is explicitly **not** scheduled as part of this plan; each additional map is its own future decision, not an automatic next step.
+Only `riverbend-field.tmj` is touched by this pilot. The other four maps already wired into `tiled-map-loader.js` — `caribbean-field.tmj`, `archive-room.tmj`, `hallway.tmj`, `common-cause-field.tmj` — are not converted. (This paragraph originally also named `sandy-island-demo.tmj` as an untouched orphan; it was deleted in decision log `0034` along with the `tiled-preview.html` that consumed it, so only five `.tmj` files now exist.) If the pilot succeeds — the parity test passes and the visual overlay confirms alignment — extending the same object-layer schema to additional maps is a natural follow-up, but is explicitly **not** scheduled as part of this plan; each additional map is its own future decision, not an automatic next step.
 
 ## What this workstream does not do
 

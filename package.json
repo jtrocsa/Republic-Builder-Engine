@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "assets:audit": "node scripts/assets/audit.js",
+    "assets:label": "node scripts/assets/label-tilesheet.js",
     "assets:optimize:waldseemuller": "node scripts/assets/optimize-waldseemuller.js"
   },
   "devDependencies": {
