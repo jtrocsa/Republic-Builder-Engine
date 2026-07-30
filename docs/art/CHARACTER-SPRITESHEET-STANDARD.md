@@ -28,6 +28,20 @@ document and the list below disagree, the list below is current.
   multi-frame art arrived first. See
   [`docs/decision-log/0043-one-cast-one-canvas-four-directions.md`](../decision-log/0043-one-cast-one-canvas-four-directions.md).
 
+**What Phase 61 then changed** (see
+[`0044`](../decision-log/0044-cast-scale-locomotion-and-grounding.md)) — this document's frame model
+is unchanged, but three numbers around it are:
+
+- **The cast renders at `--cast-h: 56px`, which is 1:1.** One source pixel per screen pixel, matching
+  the 48px tilesets. It shipped at 83px (a 1.48× upscale, body 67px), which was over twice the height
+  of every doorway in the game and resampled unevenly against crisp tile art.
+- **`--sprite-cycle` is now actually set.** It was declared in the keyframe and written by nothing, so
+  the whole cast animated at the 0.72s fallback whatever its speed. `walkCycleSeconds(tilesPerSecond)`
+  derives it from `STRIDE_TILES`, which is what stops the player gliding and the NPCs skating.
+- **`--cast-foot` comes from `FOOT_ANCHOR`, not from eye-tuning.** Each surface's value is the centre
+  of its own collision foot box. The hub's had drifted a full tile off its box, which is why the
+  Institute staff appeared to stand on the walls.
+
 Part of [`docs/architecture/FOCUSED-GAME-SYSTEM-MODERNIZATION-PLAN.md`](../architecture/FOCUSED-GAME-SYSTEM-MODERNIZATION-PLAN.md)'s Workstream 1. Line references below were verified against the repo as of 2026-07-23 and describe the pre-Phase-60 state.
 
 **Reuse policy:** [`docs/architecture/OPEN-SOURCE-REUSE-DECISIONS.md`](../architecture/OPEN-SOURCE-REUSE-DECISIONS.md) is binding for the reuse-vs-build decision below — see its §3 for the full sprite-animation-library research.

@@ -52,17 +52,25 @@ for (const [surface, screen, seed, playerId] of [
       await page.keyboard.down(key);
       await page.waitForTimeout(160);
       const first = await spriteState(page, playerId);
-      await page.waitForTimeout(120);
-      const second = await spriteState(page, playerId);
+
+      // Several samples across roughly one cycle, not two samples a fixed gap apart. Since Phase 61
+      // the player's cycle is derived from its speed and runs at 0.30s rather than a flat 0.72s, so
+      // a nominal 120ms gap that stretches to ~301ms under parallel-worker load lands on the *same*
+      // step of steps(8) and the old two-sample check failed for arithmetic rather than for a
+      // stalled animation. Counting distinct frames over a window cannot alias that way.
+      const frames = new Set([first.frameOffset]);
+      for (let sample = 0; sample < 6; sample += 1) {
+        await page.waitForTimeout(55);
+        frames.add((await spriteState(page, playerId)).frameOffset);
+      }
+
       await page.keyboard.up(key);
       await page.waitForTimeout(220);
       const stopped = await spriteState(page, playerId);
 
       expect(first.direction, `${key} selects the ${direction} strip`).toBe(direction);
       expect(first.walking).toBe(true);
-      expect(second.frameOffset, `${direction} walk cycle advances a frame`).not.toBe(
-        first.frameOffset
-      );
+      expect(frames.size, `${direction} walk cycle advances through frames`).toBeGreaterThan(1);
       expect(stopped.direction, `stopping keeps facing ${direction}`).toBe(direction);
       expect(stopped.walking).toBe(false);
       // Column 0 of every strip is a standing pose drawn for that direction, so an idle character

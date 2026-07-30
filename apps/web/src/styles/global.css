@@ -16,25 +16,32 @@
      Every animated person in the game is drawn from a 48x56 sprite canvas
      (engine/sprite-animation.js SPRITE_CANVAS) whose feet stand on row 49
      and whose standing body is 45 rows tall. --cast-h is the on-screen
-     height of that whole canvas; the body therefore reads at
-     83 * 45/56 = 67px, which is the height Director Hale has always
-     rendered at and the height the rest of the cast is normalized to. The
-     remaining 11 rows are headroom for spears, bows, baskets and walk-cycle
-     stride, so a prop can never squash the body that carries it.
+     height of that whole canvas. The remaining 11 rows are headroom for
+     spears, bows, baskets and walk-cycle stride, so a prop can never squash
+     the body that carries it.
 
-     Before this existed the player drew 24% taller than everyone standing
-     next to them — 83px against the Director's 67 — because four sprite
-     boxes had three different aspect ratios and `object-fit: contain`
-     silently picked a different binding edge for each.
+     56px, so one source pixel is exactly one screen pixel. Every tileset in
+     the game is 48px art rendered 1:1, and matching it is what makes the
+     cast look like it belongs to the world rather than composited over it:
+     no resampling, no half-doubled pixels, no shimmer on a moving sprite.
+
+     It is also the size the world's own art asks for. Measured out of the
+     shipped tilesets, doorways are 22-31px, one-story cottages 95-103px and
+     trees ~140px. The cast used to render at 83px — a body of 67px, over
+     twice the height of every door it walked through and half the height of
+     a mature oak. At 56px the body is 45px: still readable, and finally in
+     proportion to the buildings.
 
      --cast-foot is how far below a character's world anchor its feet are
-     drawn, and it differs per surface only because the hub adds a half-tile
-     bias in hubPointStyle() that the field does not. Both values are the
-     ones the NPCs already used; the player is what moves onto them. */
-  --cast-h: 83px;
+     drawn. It is a world-space offset, so it scales with --tile and NOT with
+     --cast-h, and its value per surface is that surface's collision foot-box
+     centre (engine/sprite-animation.js FOOT_ANCHOR) rather than a number
+     tuned by eye — see .hub-npc for what happened when it was the latter. */
+  --tile: 48px;
+  --cast-h: 56px;
   --cast-w: calc(var(--cast-h) * 48 / 56);
   --cast-ground-offset: calc(var(--cast-h) * 11 / 28);
-  --cast-foot: 26.5px;
+  --cast-foot: calc(var(--tile) * 0.58);
 
   /* Base channels — one alpha ramp instead of the ~157 hand-written
      rgba(239, 204, 122, …) literals scattered through this file. */
@@ -3468,15 +3475,26 @@ dd {
   pointer-events: none;
   will-change: left, top;
 }
-.case-field-player > span:not(.character-sprite) {
+/* The contact shadow every character stands on. Until Phase 61 only the player had one, which
+   is a large part of why the Institute staff read as pasted onto the room rather than standing in
+   it — a sprite with no shadow has nothing tying it to the floor. Sized off --cast-foot so it
+   tracks the feet, not the box. */
+.cast-shadow {
   position: absolute;
-  left: 32%;
-  right: 32%;
+  /* Wider than the character's own boots, and centred a pixel below the sole. Both matter: the
+     player's old shadow was 15px across and sat exactly on the foot line, so the sprite covered it
+     completely and it had never actually been visible in play. A contact shadow only reads if it
+     spills out past the silhouette. */
+  left: 22%;
+  right: 22%;
   bottom: calc(50% - var(--cast-foot) - 3px);
-  height: 6px;
-  background: rgba(var(--c-black-rgb), 0.28);
+  height: 4px;
+  background: rgba(var(--c-black-rgb), 0.42);
   border-radius: 50%;
-  filter: blur(2px);
+  /* Enough to soften the edge, not enough to turn it into a smudge climbing the character's
+     shins — at 2.5px the falloff reached eight rows up the boots and read as dirt. */
+  filter: blur(1.5px);
+  pointer-events: none;
 }
 
 /* ── The character sprite ────────────────────────────────────────────────────────────────────────
@@ -4026,9 +4044,10 @@ dd {
 .hub-player {
   position: absolute;
   z-index: 9;
-  /* See --cast-foot in :root — the hub's is larger than the field's purely because
-     hubPointStyle() already shifts the anchor half a tile down. */
-  --cast-foot: 33.5px;
+  /* The hub's anchor sits higher on the body than the field's, so its feet are only 0.19 tiles
+     below it — the centre of hubFootBoxFor()'s box, exactly as the field's 0.58 is the centre of
+     footBoxFor()'s. See .hub-npc below for the bug this replaced. */
+  --cast-foot: calc(var(--tile) * 0.19);
   width: var(--cast-w);
   height: var(--cast-h);
   transform: translate(-50%, -50%);
@@ -4037,24 +4056,21 @@ dd {
     top 170ms cubic-bezier(0.2, 0.78, 0.25, 1);
   pointer-events: none;
 }
-.hub-player > span:not(.character-sprite) {
-  position: absolute;
-  left: 32%;
-  right: 32%;
-  bottom: calc(50% - var(--cast-foot) - 3px);
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(var(--c-black-rgb), 0.28);
-  filter: blur(2px);
-}
+
 /* .hub-player.is-walking consolidated into the shared rule near .case-field-player above
    (Phase 45B) — this hub-walk 0.17s declaration was already fully superseded (see that rule's
    comment for the resolved-cascade reasoning); @keyframes hub-walk left for the Phase 45D
    dead-CSS sweep since another selector may still reference it. */
+/* This value was 33.5px until Phase 61, against a hubPointStyle() that already offset the anchor
+   half a tile right and half a tile down. The two compounded: the Institute drew every character
+   0.50 tiles right and 1.02 tiles below where collision put them, so at the east wall a sprite
+   overlapped 35px of masonry the game was correctly holding it clear of, and Prof. Park stood on
+   the south wall. It went unnoticed because the player was wrong by the same amount — everyone
+   looked consistent with each other and merely wrong about the room. */
 .hub-npc {
   position: absolute;
   z-index: 8;
-  --cast-foot: 33.5px;
+  --cast-foot: calc(var(--tile) * 0.19);
   width: var(--cast-w);
   height: var(--cast-h);
   transform: translate(-50%, -50%);
@@ -4064,7 +4080,7 @@ dd {
   cursor: pointer;
 }
 
-.hub-npc span:not(.character-sprite) {
+.hub-npc span:not(.character-sprite):not(.cast-shadow) {
   position: absolute;
   top: 98%;
   left: 50%;
@@ -4423,7 +4439,7 @@ dd {
   .institute-map {
     border-radius: 16px;
   }
-  .hub-npc span:not(.character-sprite),
+  .hub-npc span:not(.character-sprite):not(.cast-shadow),
   .hub-marker b {
     font-size: 0.46rem;
   }
@@ -4756,7 +4772,7 @@ dd {
 .field-npc--spanish i {
   background: linear-gradient(#e6d6b6 0 25%, #4f7f88 25% 68%, #5a3a28 68%);
 }
-.field-npc span:not(.character-sprite) {
+.field-npc span:not(.character-sprite):not(.cast-shadow) {
   position: absolute;
   left: 50%;
   top: 70px;
@@ -4775,7 +4791,7 @@ dd {
   z-index: 9;
 }
 /* .case-field-player (position/z-index/width/height/transform/transition/pointer-events),
-   .case-field-player > span:not(.character-sprite), and .case-field-player img were all consolidated into their
+   .case-field-player > span:not(.character-sprite):not(.cast-shadow), and .case-field-player img were all consolidated into their
    single canonical rule near the top of this file (Phase 45B). */
 
 /* Disable older island pieces when a living world is rendered. .sandbank/.grassland/
@@ -4796,16 +4812,11 @@ dd {
   .field-channel {
     max-width: 760px;
   }
-  /* Narrow viewports shrink the whole cast together by retuning the one token, so the player
-     and every NPC beside them stay the same height as each other. */
-  :root {
-    --cast-h: 63px;
-    --cast-foot: 20px;
-  }
-  .hub-player,
-  .hub-npc {
-    --cast-foot: 26px;
-  }
+  /* The cast is deliberately NOT resized here. It renders 1:1 with its 48x56 source against
+     tilesets that are themselves 1:1, and a narrow-viewport override would put it back on a
+     fractional scale — the shimmer this size exists to remove — while making characters smaller
+     than the doors and furniture around them, which do not shrink. The maps scroll on a narrow
+     screen; the people in them stay the size the world is drawn at. */
 }
 
 /* -------------------------------------------------------------------------
@@ -5043,7 +5054,7 @@ dd {
 .field-npc i {
   display: none !important;
 }
-.field-npc span:not(.character-sprite) {
+.field-npc span:not(.character-sprite):not(.cast-shadow) {
   top: 82px !important;
   background: rgba(6, 35, 48, 0.92) !important;
 }
@@ -5827,7 +5838,7 @@ dd {
   transform: translate(-50%, -53%) !important;
 }
 
-.field-npc span:not(.character-sprite) {
+.field-npc span:not(.character-sprite):not(.cast-shadow) {
   top: 74px !important;
   font-size: 8.5px !important;
   padding: 3px 6px !important;
@@ -6106,7 +6117,7 @@ dd {
     width: 42px !important;
     height: 60px !important;
   }
-  .field-npc span:not(.character-sprite) {
+  .field-npc span:not(.character-sprite):not(.cast-shadow) {
     top: 56px !important;
   }
   /* No narrow-viewport scale-down for .source-signal--world any more: at 30px it is already the
@@ -6559,7 +6570,7 @@ dd {
 .field-npc::after {
   display: none !important;
 }
-.field-npc.is-near span:not(.character-sprite) {
+.field-npc.is-near span:not(.character-sprite):not(.cast-shadow) {
   border-color: rgba(117, 235, 239, 0.75) !important;
   color: #e8ffff !important;
   box-shadow: 0 0 0 3px rgba(117, 235, 239, 0.12);
@@ -6756,7 +6767,7 @@ dd {
   transform: translate(-50%, -50%) !important;
   filter: brightness(1.08) !important;
 }
-.field-npc span:not(.character-sprite),
+.field-npc span:not(.character-sprite):not(.cast-shadow),
 /* `b` no longer exists on a source marker (Phase 56) — the kind word is not emitted. */
 .source-signal--world small {
   font-family:
@@ -6771,7 +6782,7 @@ dd {
   line-height: 1.1 !important;
   text-shadow: 0 1px 0 rgba(var(--c-black-rgb), 0.45) !important;
 }
-.field-npc span:not(.character-sprite) {
+.field-npc span:not(.character-sprite):not(.cast-shadow) {
   top: 64px !important;
   font-size: 11px !important;
   padding: 4px 7px !important;
@@ -6888,7 +6899,7 @@ html {
 }
 
 /* Keep the field labels readable and avoid text shimmer. */
-.field-npc span:not(.character-sprite),
+.field-npc span:not(.character-sprite):not(.cast-shadow),
 /* `b` no longer exists on a source marker (Phase 56) — the kind word is not emitted. */
 .source-signal--world small {
   backface-visibility: hidden;
@@ -6958,12 +6969,12 @@ html {
   position: relative !important;
   isolation: isolate !important;
 }
-.field-npc span:not(.character-sprite) {
+.field-npc span:not(.character-sprite):not(.cast-shadow) {
   font-size: 11.5px !important;
   line-height: 1 !important;
   transform: translateX(-50%) translateZ(0) !important;
 }
-.field-npc.is-near span:not(.character-sprite) {
+.field-npc.is-near span:not(.character-sprite):not(.cast-shadow) {
   color: #f6fffb !important;
   border-color: rgba(var(--c-gold-rgb), 0.62) !important;
   box-shadow: 0 6px 12px rgba(var(--c-black-rgb), 0.26) !important;
@@ -7320,7 +7331,7 @@ html {
   font: 900 16px/1 system-ui;
   cursor: pointer;
 }
-.field-npc.is-talking span:not(.character-sprite) {
+.field-npc.is-talking span:not(.character-sprite):not(.cast-shadow) {
   border-color: #f1cb74 !important;
   color: #fff2bf !important;
   box-shadow:

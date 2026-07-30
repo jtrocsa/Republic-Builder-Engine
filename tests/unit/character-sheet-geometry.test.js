@@ -12,13 +12,23 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
+import { footBoxFor } from "../../apps/web/src/engine/geometry.js";
 import {
+  CYCLE_BOUNDS,
+  FOOT_ANCHOR,
   SPRITE_CANVAS,
   SPRITE_DIRECTIONS,
   spriteDirection,
   spriteSheetStyle,
   walkCycleProfile,
+  walkCycleSeconds,
 } from "../../apps/web/src/engine/sprite-animation.js";
+
+// main.js reaches for `document` at module scope, so hubFootBoxFor() cannot be imported here.
+// Mirrored rather than skipped: the whole point of the FOOT_ANCHOR assertions is that the two
+// numbers agree, and a mirrored copy that drifts is caught by the hub coordinate tests, which do
+// import the real one.
+const hubFootBoxFor = (x, y) => ({ x1: x - 0.28, x2: x + 0.28, y1: y - 0.06, y2: y + 0.44 });
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ASSETS = path.join(REPO_ROOT, "apps/web/src/assets");
@@ -103,6 +113,60 @@ describe("sprite-animation profile", () => {
     expect(style).not.toContain('"');
     expect(style).toContain("--sprite-columns:9");
     expect(style).toContain("--sprite-walk-frames:8");
+  });
+
+  it("emits a cycle only when a speed is given", () => {
+    expect(spriteSheetStyle("/x.png", 9)).not.toContain("--sprite-cycle");
+    expect(spriteSheetStyle("/x.png", 9, 3.65)).toContain("--sprite-cycle:0.301s");
+  });
+});
+
+describe("walkCycleSeconds", () => {
+  it("makes the legs keep up with the ground", () => {
+    // Faster travel, shorter cycle. Inverse proportion is the whole contract — this is what the
+    // flat 0.72s could not do, and why the player glided while NPCs skated.
+    expect(walkCycleSeconds(3.65)).toBeLessThan(walkCycleSeconds(1.35));
+    expect(walkCycleSeconds(1.35)).toBeLessThan(walkCycleSeconds(0.6));
+  });
+
+  it("puts the game's two real speeds where they belong", () => {
+    // FIELD_SPEED 3.65 reads as a run, FIELD_NPC_SPEED 1.35 as a walk. The gap between them is
+    // the thing the player actually sees when they cross a settlement.
+    expect(walkCycleSeconds(3.65)).toBeCloseTo(0.301, 3);
+    expect(walkCycleSeconds(1.35)).toBeCloseTo(0.815, 3);
+  });
+
+  it("clamps rather than producing an absurd cycle at either extreme", () => {
+    expect(walkCycleSeconds(50)).toBe(CYCLE_BOUNDS.min);
+    expect(walkCycleSeconds(0.01)).toBe(CYCLE_BOUNDS.max);
+  });
+
+  it("survives a standing character without poisoning the animation shorthand", () => {
+    // Read while `.is-walking` is off, this still has to be a valid <time>.
+    for (const value of [0, -1, undefined, NaN, Infinity]) {
+      expect(walkCycleSeconds(value)).toBe(CYCLE_BOUNDS.max);
+    }
+  });
+});
+
+describe("FOOT_ANCHOR", () => {
+  // Where a character's feet are DRAWN has to be where the game tests that it can stand, or the
+  // sprite overlaps geometry that collision is correctly holding it clear of. Until Phase 61 the
+  // hub's anchor was 0.70 tiles against a foot box spanning -0.06 to 0.44 — not merely off-centre
+  // but entirely outside the box, which is how the Institute staff came to stand on the south wall.
+  //
+  // The bar is "inside the box, near its middle" rather than an exact midpoint, because the field
+  // box is deliberately asymmetric about its foot line: footBoxFor() puts 0.18 tiles above and 0.20
+  // below, giving a little extra depth downhill.
+  it.each([
+    ["field", footBoxFor, FOOT_ANCHOR.field],
+    ["hub", hubFootBoxFor, FOOT_ANCHOR.hub],
+  ])("draws %s feet inside the collision foot box", (_surface, boxFor, anchor) => {
+    const box = boxFor(10, 10);
+    expect(anchor).toBeGreaterThan(box.y1 - 10);
+    expect(anchor).toBeLessThan(box.y2 - 10);
+    const centre = (box.y1 + box.y2) / 2 - 10;
+    expect(Math.abs(anchor - centre)).toBeLessThanOrEqual(0.02);
   });
 });
 

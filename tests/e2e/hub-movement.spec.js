@@ -12,14 +12,16 @@ import { seedProgress, loadSeededSave, holdKey, walkToHubTarget } from "./helper
 // (field-movement-dialogue.spec.js), where the world is much larger than its viewport; here the
 // 1104x672 world barely exceeds its frame, so the transform is near-static by design.
 
-// hubPointStyle()'s inverse. HUB_GRID = { columns: 23, rows: 12, tile: 48 }, and
-// institutePositionStyle() passes a yBias of 0.54.
+// hubCharacterStyle()'s inverse. HUB_GRID = { columns: 23, rows: 12, tile: 48 }.
+//
+// A plain divide since Phase 61: a hub character is now positioned at its collision anchor exactly,
+// where this used to have to undo a half-tile x offset and a 0.54-tile y bias. Those offsets were
+// the bug — they put the drawn character a tile down and half a tile right of where the game
+// tested it — and this helper quietly encoded them, which is why the spec agreed with a render
+// that had the Institute staff standing on the south wall.
 const TILE = 48;
 function hubTileFromStyle(left, top) {
-  return {
-    x: Number.parseFloat(left) / TILE - 0.5,
-    y: Number.parseFloat(top) / TILE - 0.54,
-  };
+  return { x: Number.parseFloat(left) / TILE, y: Number.parseFloat(top) / TILE };
 }
 
 async function readInstitutePlayerTile(page) {

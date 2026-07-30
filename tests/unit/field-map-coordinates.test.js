@@ -209,24 +209,48 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     expect(trapped).toEqual([]);
   });
 
-  it("keeps every patrol waypoint walkable, so no NPC paces into the sea (edge case)", () => {
+  // Since Phase 61 a post is a home anchor and a radius, not four waypoints — see
+  // engine/npc-wander.js. That makes the old "every waypoint is walkable" assertion the wrong
+  // shape: an NPC's step is gated by isFieldNpcBlocked() at runtime, so a radius overlapping the
+  // sea costs it some pacing room rather than stranding it. What still has to hold is that the
+  // post itself is standable — an NPC whose home is inside a hut never gets a first step.
+  it("stands every NPC on walkable ground at its own post (edge case)", () => {
     const bad = [];
-    for (const [id, waypoints] of Object.entries(map.patrols)) {
-      waypoints.forEach((point, index) => {
-        if (!footIsOnLand(map, point.x, point.y)) bad.push(`${id}[${index}] off land`);
-        const block = blockingRect(map, point.x, point.y);
-        if (block) bad.push(`${id}[${index}] inside "${block.kind}"`);
-      });
+    for (const [id, post] of Object.entries(map.patrols)) {
+      if (!footIsOnLand(map, post.home.x, post.home.y)) bad.push(`${id} home off land`);
+      const block = blockingRect(map, post.home.x, post.home.y);
+      if (block) bad.push(`${id} home inside "${block.kind}"`);
     }
     expect(bad).toEqual([]);
   });
 
-  it("gives every NPC a patrol route that starts where the NPC stands (edge case)", () => {
+  // A radius the NPC can barely use is a placement mistake even though it cannot strand anyone:
+  // it reads in play as someone shuffling on the spot. Sample the disc and require that a real
+  // share of it is walkable, which is what actually distinguishes "works a tight corner" from
+  // "was placed against a wall by accident".
+  it("gives every post enough walkable room to wander in (edge case)", () => {
+    const cramped = [];
+    for (const [id, post] of Object.entries(map.patrols)) {
+      let open = 0;
+      const samples = 64;
+      for (let i = 0; i < samples; i += 1) {
+        const angle = (i / samples) * Math.PI * 2;
+        const distance = post.radius * (0.35 + (i % 3) * 0.325);
+        const x = post.home.x + Math.cos(angle) * distance;
+        const y = post.home.y + Math.sin(angle) * distance;
+        if (footIsOnLand(map, x, y) && !blockingRect(map, x, y)) open += 1;
+      }
+      if (open / samples < 0.3) cramped.push(`${id} ${Math.round((open / samples) * 100)}% open`);
+    }
+    expect(cramped).toEqual([]);
+  });
+
+  it("gives every NPC a post at the coordinates the NPC declares (edge case)", () => {
     const mismatched = map.npcs
       .filter((npc) => map.patrols[npc.id])
       .filter((npc) => {
-        const first = map.patrols[npc.id][0];
-        return first.x !== npc.x || first.y !== npc.y;
+        const { home } = map.patrols[npc.id];
+        return home.x !== npc.x || home.y !== npc.y;
       })
       .map((npc) => npc.id);
     expect(mismatched).toEqual([]);
@@ -379,18 +403,40 @@ describe("institute main hall coordinates", () => {
     expect(trapped).toEqual([]);
   });
 
-  it("keeps every patrol waypoint walkable, so no NPC judders in place (edge case)", () => {
-    // isHubNpcBlocked() refuses a step into geometry, so a waypoint inside a rect leaves the NPC
-    // pushing against furniture forever. The field maps have had this assertion since Phase 52; the
-    // Main Hall's three loops were re-derived by hand every time the room was re-laid.
+  it("stands every staff member on open floor at their own post (edge case)", () => {
+    // A post inside a rect means isHubNpcBlocked() refuses the very first step and the NPC never
+    // leaves the spot. The field maps have had the equivalent assertion since Phase 52; the Main
+    // Hall's three routes were re-derived by hand every time the room was re-laid.
     const bad = [];
-    for (const [id, waypoints] of Object.entries(HUB_NPC_PATROLS)) {
-      waypoints.forEach((point, index) => {
-        if (!hall.canStandAt(point.x, point.y))
-          bad.push(`${id}[${index}] at ${point.x},${point.y}`);
-      });
+    for (const [id, post] of Object.entries(HUB_NPC_PATROLS)) {
+      if (!hall.canStandAt(post.home.x, post.home.y))
+        bad.push(`${id} at ${post.home.x},${post.home.y}`);
     }
     expect(bad).toEqual([]);
+  });
+
+  // The hall is two narrow open bands between furniture, so a radius here uses much less of its
+  // disc than a field post does. A lower bar than the field's 30%, but still a bar: below it the
+  // staff member is pinned against a table rather than pacing an aisle.
+  it("gives every staff post usable floor to pace (edge case)", () => {
+    const cramped = [];
+    for (const [id, post] of Object.entries(HUB_NPC_PATROLS)) {
+      let open = 0;
+      const samples = 64;
+      for (let i = 0; i < samples; i += 1) {
+        const angle = (i / samples) * Math.PI * 2;
+        const distance = post.radius * (0.35 + (i % 3) * 0.325);
+        if (
+          hall.canStandAt(
+            post.home.x + Math.cos(angle) * distance,
+            post.home.y + Math.sin(angle) * distance
+          )
+        )
+          open += 1;
+      }
+      if (open / samples < 0.2) cramped.push(`${id} ${Math.round((open / samples) * 100)}% open`);
+    }
+    expect(cramped).toEqual([]);
   });
 });
 

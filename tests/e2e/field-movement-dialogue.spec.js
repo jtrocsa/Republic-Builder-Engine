@@ -7,8 +7,8 @@ import { seedProgress, loadSeededSave, holdKey, walkToNpc } from "./helpers/prog
 
 // FIELD_GRID = { columns: 56, rows: 36, tile: 48 } (main.js) — mirrors updateFieldPlayer()'s
 // own camera formula so the test can independently recompute the expected transform from the
-// player's current pixel position and assert the app's live value matches exactly (both are
-// Math.round'ed integers, so an exact match is the right bar, not a fuzzy tolerance).
+// player's current pixel position and check the app's live value against it. See
+// expectCameraTracksPosition() below for why that check allows exactly one pixel.
 const TILE = 48;
 const WORLD_WIDTH = 56 * TILE;
 const WORLD_HEIGHT = 36 * TILE;
@@ -45,6 +45,27 @@ function expectedCamera({ px, py, viewport }) {
   };
 }
 
+// One pixel of slack, per axis, and it is not a fudge — it is the most this test can actually
+// resolve. updateFieldPlayer() rounds the camera from `fieldMovement.x * tile` at full float
+// precision, but the only position the DOM exposes is fieldPositionStyle()'s `.toFixed(1)` of that
+// same product. When the true value sits within 0.05 of a .5 boundary the two Math.round() calls
+// legitimately disagree by one, and no amount of retrying changes that.
+//
+// The invariant is unharmed. What this guards against — a camera that accumulates, drifts, or gets
+// dragged around by scrollIntoView() or a focus jump, which is how several past regressions
+// presented — moves it by tens or hundreds of pixels, never by one.
+function expectCameraTracksPosition(state) {
+  const want = expectedCamera(state);
+  expect(
+    Math.abs(state.camera.x - want.x),
+    `camera x ${state.camera.x} vs ${want.x}`
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(state.camera.y - want.y),
+    `camera y ${state.camera.y} vs ${want.y}`
+  ).toBeLessThanOrEqual(1);
+}
+
 test.describe("Field movement, collision, and dialogue", () => {
   test("movement updates position, camera stays a pure function of it, and NPC dialogue is proximity-gated", async ({
     page,
@@ -60,7 +81,7 @@ test.describe("Field movement, collision, and dialogue", () => {
     // fieldMovement's module-level default is (28, 22) facing "down" — matches case-001's
     // declared spawn, so no extra positioning is needed for this case specifically.
     const initial = await readFieldState(page);
-    expect(initial.camera).toEqual(expectedCamera(initial));
+    expectCameraTracksPosition(initial);
 
     // Distant NPC interaction attempt: clicking a far-away NPC should show a "too far" notice,
     // not open dialogue — the canoe worker is 13.7 tiles from the (28, 22) spawn, well outside the
@@ -87,7 +108,7 @@ test.describe("Field movement, collision, and dialogue", () => {
     expect(afterWalk.px).toBeGreaterThan(initial.px);
     expect(afterWalk.py).toBeLessThan(initial.py);
     // Camera purity: recomputed fresh from the new position, not carried over/accumulated.
-    expect(afterWalk.camera).toEqual(expectedCamera(afterWalk));
+    expectCameraTracksPosition(afterWalk);
 
     await page.locator('[data-npc="taino-elder"]').click();
     const bubble = page.locator(".field-speech-bubble");
@@ -132,6 +153,6 @@ test.describe("Field movement, collision, and dialogue", () => {
     const afterCollision = await readFieldState(page);
     expect(afterCollision.py).toBeLessThan(beforeCollisionHold.py - 15);
     expect(afterCollision.py).toBeGreaterThan(3.0 * TILE);
-    expect(afterCollision.camera).toEqual(expectedCamera(afterCollision));
+    expectCameraTracksPosition(afterCollision);
   });
 });

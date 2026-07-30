@@ -207,7 +207,8 @@ import {
   buildDbqEvaluationRequest,
 } from "./engine/evaluator-requests.js";
 import { evaluateSubmission } from "./engine/evaluator-client.js";
-import { spriteDirection, spriteSheetStyle } from "./engine/sprite-animation.js";
+import { spriteDirection, spriteSheetStyle, walkCycleSeconds } from "./engine/sprite-animation.js";
+import { createWanderState, stepWander } from "./engine/npc-wander.js";
 
 const app = document.querySelector("#app");
 // Director intro scene reveal cards — lookup keys, not literal paths, so content stays
@@ -582,22 +583,27 @@ function sheetFor(key) {
 function chroniclerKey() {
   return progress.profile.appearance === "b" ? "chronicler-b" : "chronicler-a";
 }
+// `speed` is a character's ground speed in tiles/second, and it is what stops the legs sliding:
+// walkCycleSeconds() turns it into the duration of one full stride, so a walking NPC and a running
+// player can share one keyframe and both look like they are pushing the ground. Omit it for the
+// cutscene figures, which have no ground speed and keep the CSS fallback.
 /** Inline custom properties pointing one sprite element at one direction of one character. */
-function characterSpriteStyle(key, facing) {
+function characterSpriteStyle(key, facing, speed) {
   const sheet = sheetFor(key);
-  return spriteSheetStyle(sheet[spriteDirection(facing)], sheet.columns);
+  return spriteSheetStyle(sheet[spriteDirection(facing)], sheet.columns, speed);
 }
 /** The sprite element itself. Walking state is a class the movement loops toggle. */
-function characterSpriteMarkup(key, facing, { id = "", walking = false } = {}) {
-  return `<span class="character-sprite${walking ? " is-walking" : ""}"${id ? ` id="${id}"` : ""} style="${characterSpriteStyle(key, facing)}" aria-hidden="true"></span>`;
+function characterSpriteMarkup(key, facing, { id = "", walking = false, speed } = {}) {
+  return `<span class="character-sprite${walking ? " is-walking" : ""}"${id ? ` id="${id}"` : ""} style="${characterSpriteStyle(key, facing, speed)}" aria-hidden="true"></span>`;
 }
 /** Repoints an already-rendered sprite element at a different direction, in place. */
-function applyCharacterSprite(node, key, facing, walking) {
+function applyCharacterSprite(node, key, facing, walking, speed) {
   if (!node) return;
   const sheet = sheetFor(key);
   node.style.setProperty("--sprite-sheet", `url('${sheet[spriteDirection(facing)]}')`);
   node.style.setProperty("--sprite-columns", String(sheet.columns));
   node.style.setProperty("--sprite-walk-frames", String(sheet.columns - 1));
+  if (speed !== undefined) node.style.setProperty("--sprite-cycle", `${walkCycleSeconds(speed)}s`);
   node.classList.toggle("is-walking", Boolean(walking));
 }
 
@@ -694,66 +700,45 @@ const FIELD_NPCS = [
     text: "Ink can make a voyage last longer than memory. Still, I choose words for the court, and those choices matter.",
   },
 ];
+// Where each person works, and how far they drift from it. `home` is the NPC's post — the same
+// coordinate the NPC declares — and `radius` bounds a wander, not a route: see
+// engine/npc-wander.js for why 21 hand-authored four-waypoint rectangles became two numbers each.
+//
+// A radius does not have to be clear of obstacles the way a waypoint did. isFieldNpcBlocked()
+// gates every step, so an over-generous radius makes someone pace a smaller area than the number
+// suggests; it cannot put them inside the sea or a hut.
 const FIELD_NPC_PATROLS = {
-  "taino-elder": [
-    { x: 30.0, y: 13.5 },
-    { x: 29.2, y: 13.8 },
-    { x: 29.8, y: 14.6 },
-    { x: 30.6, y: 14.2 },
-  ],
-  // Paces the north edge of the conuco garden without stepping into it — the garden is a
-  // collision rect (20.0,12.0-24.0,14.0), so every waypoint stays clear of y=12.0.
-  "taino-gardener": [
-    { x: 22.0, y: 10.4 },
-    { x: 22.9, y: 10.3 },
-    { x: 23.2, y: 10.9 },
-    { x: 21.7, y: 10.9 },
-  ],
-  // Works the beach south of the village canoe; every waypoint stays clear of the canoe's
-  // collision rect, which ends at row 13.
-  "taino-fisher": [
-    { x: 39.0, y: 14.2 },
-    { x: 39.8, y: 14.1 },
-    { x: 40.0, y: 14.8 },
-    { x: 38.7, y: 14.9 },
-  ],
-  "spanish-sailor": [
-    { x: 45.5, y: 20.5 },
-    { x: 46.2, y: 20.5 },
-    { x: 46.3, y: 19.9 },
-    { x: 45.7, y: 19.6 },
-  ],
-  // Paces north of the cartographer's table. The table blocks its whole footprint as of Phase 53
-  // — a building-sized object the player cannot walk onto — so this route stays above row 16.4.
-  columbus: [
-    { x: 11.5, y: 15.4 },
-    { x: 12.2, y: 15.4 },
-    { x: 11.9, y: 16.1 },
-    { x: 11.1, y: 16.0 },
-  ],
-  "spanish-scribe": [
-    { x: 42.5, y: 22.5 },
-    { x: 43.1, y: 22.1 },
-    { x: 43.0, y: 22.9 },
-    { x: 42.3, y: 22.9 },
-  ],
+  "taino-elder": { home: { x: 30.0, y: 13.5 }, radius: 1.8 },
+  // The conuco is a collision rect (20.0,12.0-24.0,14.0) directly south of her. She works its
+  // north edge and the wander simply cannot enter it.
+  "taino-gardener": { home: { x: 22.0, y: 10.4 }, radius: 1.6 },
+  // The beach beside the village canoe, whose rect ends at row 13.
+  "taino-fisher": { home: { x: 39.0, y: 14.2 }, radius: 1.8 },
+  "spanish-sailor": { home: { x: 45.5, y: 20.5 }, radius: 1.6 },
+  // The open ground north of the cartographer's table, which blocks its whole footprint.
+  columbus: { home: { x: 11.5, y: 15.4 }, radius: 1.5 },
+  "spanish-scribe": { home: { x: 42.5, y: 22.5 }, radius: 1.5 },
 };
+// Base walking speed for a field NPC, in tiles per second, against the player's FIELD_SPEED of
+// 3.65. The gap is the point: the player travels at a run and the settlement walks, which is what
+// makes a village feel inhabited rather than paused. Before Phase 61 NPCs moved at 0.15-0.23
+// tiles/s — a twentieth of the player — while their legs cycled eleven times a second, and the
+// result was the sliding-on-ice look this replaced.
+const FIELD_NPC_SPEED = 1.35;
 function buildFieldNpcRuntime(npcs, patrols) {
   return Object.fromEntries(
     npcs.map((npc, index) => {
-      const path = patrols[npc.id] || [{ x: npc.x, y: npc.y }];
+      const post = patrols[npc.id] || { home: { x: npc.x, y: npc.y }, radius: 0 };
       return [
         npc.id,
-        {
-          path,
-          index: 0,
-          x: path[0].x,
-          y: path[0].y,
-          nextTick: 900 + index * 260,
-          speed: 0.012 + (index % 3) * 0.003,
-          walking: false,
-          facing: "down",
-        },
+        createWanderState({
+          home: post.home,
+          radius: post.radius,
+          // A few percent either side of the base, so a street of people never falls into step.
+          // Derived from the index rather than randomised so a reload looks the same as a reload.
+          speed: FIELD_NPC_SPEED * (0.92 + ((index * 7) % 5) * 0.04),
+          seed: npc.id,
+        }),
       ];
     })
   );
@@ -790,79 +775,50 @@ function isFieldNpcBlocked(id, x, y) {
     return rectsOverlap(foot, fieldNpcFootBoxAt(state.x, state.y));
   });
 }
-function updateFieldNpcs() {
+// NPC ticks run on their own interval rather than in the player's requestAnimationFrame loop,
+// because that loop only runs while a key is held — the settlement has to keep moving while the
+// player stands still reading a source. 33ms, not the 80ms this used to run at: NPCs now cover
+// real ground, and at 12.5 ticks a second they visibly stepped from position to position next to
+// a player interpolating at 60fps.
+const NPC_TICK_MS = 33;
+let lastFieldNpcTickAt = 0;
+function updateFieldNpcs(now = performance.now()) {
   if (progress.currentScreen !== "field") return;
+  const elapsed = lastFieldNpcTickAt ? now - lastFieldNpcTickAt : NPC_TICK_MS;
+  lastFieldNpcTickAt = now;
   ensureFieldNpcRuntime();
-  Object.entries(fieldNpcRuntime).forEach(([id, state], index) => {
-    if (progress.activeFieldNpc === id) {
-      state.walking = false;
-      const node = document.querySelector(`[data-npc="${id}"]`);
-      if (node) {
-        node.style.left = `${(state.x * FIELD_GRID.tile).toFixed(1)}px`;
-        node.style.top = `${(state.y * FIELD_GRID.tile).toFixed(1)}px`;
-        node.classList.toggle("is-walking-npc", false);
-        node.dataset.facing = state.facing;
-        const npc = activeFieldMap().npcs.find((item) => item.id === id);
-        if (npc) {
-          applyCharacterSprite(
-            node.querySelector(".character-sprite"),
-            npc.sprite,
-            state.facing,
-            false
-          );
-        }
-      }
-      return;
-    }
-    state.nextTick -= 80;
-    const targetIndex = (state.index + 1) % state.path.length;
-    const target = state.path[targetIndex];
-    const dx = target.x - state.x;
-    const dy = target.y - state.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance < 0.035) {
-      state.x = target.x;
-      state.y = target.y;
-      state.walking = false;
-      if (state.nextTick <= 0) {
-        state.index = targetIndex;
-        state.nextTick = 1050 + index * 190 + Math.random() * 900;
-      }
-    } else if (state.nextTick <= 0) {
-      const nextX = state.x + (dx / distance) * state.speed;
-      const nextY = state.y + (dy / distance) * state.speed;
-      if (!isFieldNpcBlocked(id, nextX, nextY)) {
-        state.x = nextX;
-        state.y = nextY;
-        state.walking = true;
-        state.facing =
-          Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "up" : "down";
-      } else {
-        state.walking = false;
-        state.index = targetIndex;
-        state.nextTick = 900 + index * 170 + Math.random() * 700;
-      }
-    }
-    const node = document.querySelector(`[data-npc="${id}"]`);
-    if (node) {
-      node.style.left = `${(state.x * FIELD_GRID.tile).toFixed(1)}px`;
-      node.style.top = `${(state.y * FIELD_GRID.tile).toFixed(1)}px`;
-      node.classList.toggle("is-walking-npc", state.walking);
-      node.dataset.facing = state.facing;
-      const npc = activeFieldMap().npcs.find((item) => item.id === id);
-      if (npc) {
-        applyCharacterSprite(
-          node.querySelector(".character-sprite"),
-          npc.sprite,
-          state.facing,
-          state.walking
-        );
-      }
+  // One query for the whole tick. Tripling the tick rate would otherwise have tripled a
+  // per-NPC querySelector, and the field maps carry nine of them.
+  const nodes = new Map(
+    [...document.querySelectorAll("[data-npc]")].map((node) => [node.dataset.npc, node])
+  );
+  const npcsById = new Map(activeFieldMap().npcs.map((npc) => [npc.id, npc]));
+  Object.entries(fieldNpcRuntime).forEach(([id, state]) => {
+    // Whoever the player is talking to stands still and keeps facing them. Their wander picks up
+    // from wherever they stopped once the conversation closes.
+    if (progress.activeFieldNpc === id) state.walking = false;
+    else stepWander(state, elapsed, (x, y) => isFieldNpcBlocked(id, x, y));
+
+    const node = nodes.get(id);
+    if (!node) return;
+    node.style.left = `${(state.x * FIELD_GRID.tile).toFixed(1)}px`;
+    node.style.top = `${(state.y * FIELD_GRID.tile).toFixed(1)}px`;
+    node.classList.toggle("is-walking-npc", state.walking);
+    node.dataset.facing = state.facing;
+    const npc = npcsById.get(id);
+    if (npc) {
+      applyCharacterSprite(
+        node.querySelector(".character-sprite"),
+        npc.sprite,
+        state.facing,
+        state.walking,
+        state.speed
+      );
     }
   });
   updateFieldPlayer();
 }
-if (app) setInterval(updateFieldNpcs, 80);
+if (app) setInterval(() => updateFieldNpcs(), NPC_TICK_MS);
 
 // Each record is anchored to the person or the object it actually belongs to — see the anchor notes
 // above sourceAnchorNpc(). The elder's and Columbus's own dialogue lines already point at their
@@ -1029,62 +985,21 @@ const UNIT2_FIELD_NPCS = [
   },
 ];
 const UNIT2_FIELD_NPC_PATROLS = {
-  "settlement-minister": [
-    { x: 26.0, y: 11.5 },
-    { x: 26.8, y: 11.3 },
-    { x: 27.0, y: 12.0 },
-    { x: 25.7, y: 12.1 },
-  ],
-  "indentured-servant": [
-    { x: 44.0, y: 16.0 },
-    { x: 44.9, y: 15.8 },
-    { x: 45.1, y: 16.6 },
-    { x: 43.7, y: 16.7 },
-  ],
-  "settlement-burgess": [
-    { x: 30.0, y: 10.5 },
-    { x: 30.9, y: 10.3 },
-    { x: 31.1, y: 11.0 },
-    { x: 29.8, y: 11.1 },
-  ],
-  "settlement-goodwife": [
-    { x: 31.5, y: 13.0 },
-    { x: 32.3, y: 12.8 },
-    { x: 32.5, y: 13.6 },
-    { x: 31.2, y: 13.7 },
-  ],
-  "river-fisher": [
-    { x: 19.0, y: 23.0 },
-    { x: 19.8, y: 22.7 },
-    { x: 20.1, y: 23.5 },
-    { x: 18.8, y: 23.6 },
-  ],
-  "wharf-clerk": [
-    { x: 21.0, y: 20.0 },
-    { x: 21.8, y: 19.8 },
-    { x: 22.0, y: 20.4 },
-    { x: 20.8, y: 20.5 },
-  ],
-  // Works the gap between the barn (which ends at column 40) and the farm stores (which begin at
-  // column 43 on row 20), so every waypoint clears both.
-  "settlement-carpenter": [
-    { x: 41.0, y: 19.0 },
-    { x: 41.7, y: 18.9 },
-    { x: 41.9, y: 19.5 },
-    { x: 40.9, y: 19.6 },
-  ],
-  "powhatan-man": [
-    { x: 10.5, y: 9.5 },
-    { x: 11.3, y: 9.4 },
-    { x: 11.5, y: 10.1 },
-    { x: 10.4, y: 10.2 },
-  ],
-  "powhatan-woman": [
-    { x: 12.0, y: 11.5 },
-    { x: 12.8, y: 11.4 },
-    { x: 13.0, y: 12.1 },
-    { x: 11.9, y: 12.2 },
-  ],
+  "settlement-minister": { home: { x: 26.0, y: 11.5 }, radius: 1.6 },
+  "indentured-servant": { home: { x: 44.0, y: 16.0 }, radius: 1.6 },
+  "settlement-burgess": { home: { x: 30.0, y: 10.5 }, radius: 1.6 },
+  "settlement-goodwife": { home: { x: 31.5, y: 13.0 }, radius: 1.5 },
+  "river-fisher": { home: { x: 19.0, y: 23.0 }, radius: 1.8 },
+  // The dock is a long thin place to work, so he ranges further along it than anyone else in the
+  // settlement does around their post.
+  "wharf-clerk": { home: { x: 21.0, y: 20.0 }, radius: 2.4 },
+  // Boxed in on purpose: the barn ends at column 40 and the farm stores begin at column 43 on
+  // row 20, so his post is a gap two and a half tiles wide.
+  "settlement-carpenter": { home: { x: 41.0, y: 19.0 }, radius: 1.2 },
+  // Open river shore with nothing built on it, which is the one thing the northwest quadrant has
+  // going for it — they can range properly rather than shuffling in a doorway.
+  "powhatan-man": { home: { x: 10.5, y: 9.5 }, radius: 2.4 },
+  "powhatan-woman": { home: { x: 12.0, y: 11.5 }, radius: 2.4 },
 };
 // All three anchored to the person who already talks about them: the minister says "read the charter
 // before you judge who benefits", the servant "seven years I owe for my passage", the clerk "ledgers
@@ -1190,42 +1105,12 @@ const UNIT3_FIELD_NPCS = [
   },
 ];
 const UNIT3_FIELD_NPC_PATROLS = {
-  "john-dickinson": [
-    { x: 16.0, y: 10.5 },
-    { x: 16.7, y: 10.3 },
-    { x: 17.0, y: 10.9 },
-    { x: 15.7, y: 11.0 },
-  ],
-  "town-crier": [
-    { x: 29.0, y: 13.5 },
-    { x: 29.8, y: 13.3 },
-    { x: 30.1, y: 14.1 },
-    { x: 28.8, y: 14.2 },
-  ],
-  "militia-recruiter": [
-    { x: 31.0, y: 10.0 },
-    { x: 31.7, y: 9.8 },
-    { x: 31.9, y: 10.5 },
-    { x: 30.7, y: 10.6 },
-  ],
-  "free-tradesman": [
-    { x: 29.0, y: 20.0 },
-    { x: 29.4, y: 19.7 },
-    { x: 29.3, y: 20.5 },
-    { x: 28.6, y: 20.4 },
-  ],
-  "loyalist-merchant": [
-    { x: 27.0, y: 26.0 },
-    { x: 27.6, y: 25.7 },
-    { x: 27.9, y: 26.4 },
-    { x: 26.6, y: 26.5 },
-  ],
-  farmwife: [
-    { x: 14.0, y: 23.0 },
-    { x: 14.7, y: 22.7 },
-    { x: 15.0, y: 23.4 },
-    { x: 13.6, y: 23.5 },
-  ],
+  "john-dickinson": { home: { x: 16.0, y: 10.5 }, radius: 1.6 },
+  "town-crier": { home: { x: 29.0, y: 13.5 }, radius: 1.6 },
+  "militia-recruiter": { home: { x: 31.0, y: 10.0 }, radius: 1.6 },
+  "free-tradesman": { home: { x: 29.0, y: 20.0 }, radius: 1.5 },
+  "loyalist-merchant": { home: { x: 27.0, y: 26.0 }, radius: 1.5 },
+  farmwife: { home: { x: 14.0, y: 23.0 }, radius: 1.6 },
 };
 // One person, six objects — and that split is a historical constraint, not a design preference.
 //
@@ -1348,7 +1233,7 @@ function activeFieldMap() {
 }
 const activeFieldCaseId = () => progress.activeCaseId || "case-001";
 
-// The Main Hall is a camera room, like the Archive Room: `tile` is what tells hubPointStyle() to
+// The Main Hall is a camera room, like the Archive Room: `tile` is what tells hubCharacterStyle() to
 // position in pixels and updateHubCamera() to scroll, rather than stretching a painted background to
 // fill its box. 23x12 at 48px is 1104x576 — deliberately shorter than the ~596px frame so the camera
 // never scrolls vertically and the north wall's pennants are never sliced by the top edge, while
@@ -1560,48 +1445,34 @@ function instituteRecallSpawn() {
   return [HUB_TARGETS.table.x, HUB_TARGETS.table.y + 0.6, "up"];
 }
 let hubDialogueId = null;
-// Small loops, each entirely on open floor of the room institute-hall.tmj paints — a patrol point
-// inside a collision rect makes isHubNpcBlocked() refuse the step and the NPC judders in place.
-// Deliberately staggered in shape as well as timing so the three don't read as marching in lockstep.
-// Both open bands run y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the south aisle) against the
-// generated blocks, so every waypoint below is inside one of those two strips — which is also what
-// tests/unit/field-map-coordinates.test.js asserts, waypoint by waypoint.
+// Each staff member's post in the Main Hall, and how far they drift from it — see
+// FIELD_NPC_PATROLS above and engine/npc-wander.js.
+//
+// The room gives them less to work with than the field maps do: only two bands of the hall are
+// open floor, y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the south aisle), so a radius of 1.2
+// spends part of its disc against furniture. That is fine — the sampler rejects those points and
+// tries again — and it is why the three of them read as pacing a corridor rather than milling
+// about a room, which is what an archive floor should look like anyway.
 export const HUB_NPC_PATROLS = {
   // Greeting the player in the open floor in front of the foyer entrance, west of the runner rug.
-  director: [
-    { x: 9.6, y: 8.6 },
-    { x: 10.4, y: 8.6 },
-    { x: 10.4, y: 9.2 },
-    { x: 9.6, y: 9.2 },
-  ],
+  director: { home: { x: 9.6, y: 8.6 }, radius: 1.2 },
   // Working the record stacks from the cross-aisle below them.
-  amani: [
-    { x: 7.6, y: 4.6 },
-    { x: 8.4, y: 4.6 },
-    { x: 8.4, y: 5.2 },
-    { x: 7.6, y: 5.2 },
-  ],
+  amani: { home: { x: 7.6, y: 4.6 }, radius: 1.2 },
   // In the south aisle short of the Navigation Table dais, clear of the player's approach to it.
-  julian: [
-    { x: 15.2, y: 8.9 },
-    { x: 15.9, y: 8.9 },
-    { x: 15.9, y: 9.4 },
-    { x: 15.2, y: 9.4 },
-  ],
+  julian: { home: { x: 15.2, y: 8.9 }, radius: 1.2 },
 };
+// A shade slower than the field's 1.35: this is an indoor walking pace on a stone floor between
+// furniture, not someone crossing a settlement.
+const HUB_NPC_SPEED = 1.15;
 const hubNpcRuntime = Object.fromEntries(
-  Object.entries(HUB_NPC_PATROLS).map(([id, path], index) => [
+  Object.entries(HUB_NPC_PATROLS).map(([id, post], index) => [
     id,
-    {
-      path,
-      index: 0,
-      x: path[0].x,
-      y: path[0].y,
-      nextTick: 950 + index * 420,
-      speed: 0.08,
-      walking: false,
-      facing: "down",
-    },
+    createWanderState({
+      home: post.home,
+      radius: post.radius,
+      speed: HUB_NPC_SPEED * (0.94 + index * 0.05),
+      seed: id,
+    }),
   ])
 );
 const hubHeldKeys = new Set();
@@ -1630,8 +1501,11 @@ function isHubNpcBlocked(id, x, y) {
     ([otherId, other]) => otherId !== id && rectsOverlap(foot, hubFootBoxFor(other.x, other.y))
   );
 }
-function updateInstituteNpcs() {
+let lastHubNpcTickAt = 0;
+function updateInstituteNpcs(now = performance.now()) {
   if (progress.currentScreen !== "institute") return;
+  const elapsed = lastHubNpcTickAt ? now - lastHubNpcTickAt : NPC_TICK_MS;
+  lastHubNpcTickAt = now;
   // Director/Amani/Julian only exist and patrol in the Main Hall; skip their
   // tick while the player is in the Archive Room, but still update the
   // player sprite/position below (that has to run in every room).
@@ -1639,67 +1513,36 @@ function updateInstituteNpcs() {
     updateInstitutePlayer();
     return;
   }
-  Object.entries(hubNpcRuntime).forEach(([id, state], index) => {
-    if (hubDialogueId === id || (id === "director" && isTutorialTourActive())) {
+  const nodes = new Map(
+    [...document.querySelectorAll("[data-hub-npc]")].map((node) => [node.dataset.hubNpc, node])
+  );
+  Object.entries(hubNpcRuntime).forEach(([id, state]) => {
+    // Standing still while being spoken to, and while walking the player through the tutorial
+    // tour — the Director cannot wander off mid-sentence.
+    if (hubDialogueId === id || (id === "director" && isTutorialTourActive()))
       state.walking = false;
-      const node = document.querySelector(`[data-hub-npc="${id}"]`);
-      if (node) {
-        // hubPointStyle(), matching instituteNpc()'s markup and updateInstitutePlayer(). This tick
-        // used to write percentages of HUB_GRID's column/row count directly, so when the Main Hall
-        // became a camera room the NPCs were re-positioned wrong on the very next frame after
-        // render — the markup was right and this overwrote it.
-        node.style.cssText = hubPointStyle(state.x, state.y, 0.51);
-        node.classList.toggle("is-walking-npc", false);
-        node.dataset.facing = state.facing;
-        applyCharacterSprite(node.querySelector(".character-sprite"), id, state.facing, false);
-      }
-      return;
-    }
-    state.nextTick -= 120;
-    const targetIndex = (state.index + 1) % state.path.length;
-    const target = state.path[targetIndex];
-    const dx = target.x - state.x;
-    const dy = target.y - state.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance < 0.045) {
-      state.x = target.x;
-      state.y = target.y;
-      state.walking = false;
-      if (state.nextTick <= 0) {
-        state.index = targetIndex;
-        state.nextTick = 1300 + index * 310 + Math.random() * 900;
-      }
-    } else if (state.nextTick <= 0) {
-      const nextX = state.x + (dx / distance) * Math.min(state.speed, distance);
-      const nextY = state.y + (dy / distance) * Math.min(state.speed, distance);
-      if (!isHubNpcBlocked(id, nextX, nextY)) {
-        state.x = nextX;
-        state.y = nextY;
-        state.walking = true;
-        state.facing =
-          Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "up" : "down";
-      } else {
-        state.walking = false;
-        state.index = targetIndex;
-        state.nextTick = 950 + index * 240 + Math.random() * 700;
-      }
-    }
-    const node = document.querySelector(`[data-hub-npc="${id}"]`);
-    if (node) {
-      node.style.cssText = hubPointStyle(state.x, state.y, 0.51);
-      node.classList.toggle("is-walking-npc", state.walking);
-      node.dataset.facing = state.facing;
-      applyCharacterSprite(
-        node.querySelector(".character-sprite"),
-        id,
-        state.facing,
-        state.walking
-      );
-    }
+    else stepWander(state, elapsed, (x, y) => isHubNpcBlocked(id, x, y));
+
+    const node = nodes.get(id);
+    if (!node) return;
+    // hubCharacterStyle(), matching instituteNpc()'s markup and updateInstitutePlayer(). This tick
+    // used to write percentages of HUB_GRID's column/row count directly, so when the Main Hall
+    // became a camera room the NPCs were re-positioned wrong on the very next frame after
+    // render — the markup was right and this overwrote it.
+    node.style.cssText = hubCharacterStyle(state.x, state.y);
+    node.classList.toggle("is-walking-npc", state.walking);
+    node.dataset.facing = state.facing;
+    applyCharacterSprite(
+      node.querySelector(".character-sprite"),
+      id,
+      state.facing,
+      state.walking,
+      state.speed
+    );
   });
   updateInstitutePlayer();
 }
-if (app) setInterval(updateInstituteNpcs, 120);
+if (app) setInterval(() => updateInstituteNpcs(), NPC_TICK_MS);
 
 export let progress = loadProgress();
 // Field dialogue is moment-to-moment UI, not save-state. Clear stale bubbles after reloads.
@@ -6603,22 +6446,31 @@ function unitOneBadgeCaseMarkup() {
   return `<div class="preservation-case" role="dialog" aria-modal="true" aria-labelledby="preservationCaseTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close preservation case">×</button><p class="kicker">Preservation Case</p><h2 id="preservationCaseTitle">Chronicle Badge Case</h2><p class="preservation-case__subtitle">Badges are preserved here after each field area is completed and transmitted through the Codex.</p>${sections}<button class="btn btn-outline preservation-case__mastery-link" data-action="open-mastery">Skill Mastery Record →</button><button class="btn btn-outline preservation-case__mastery-link" data-action="open-archive-rotation">The Archive Rotation →</button></article></div>`;
 }
 
-// Position of a point in the active hub room: pixels inside #hubWorld, which updateHubCamera() then
-// translates. Both hub rooms are camera rooms as of Phase 54 — the percentage branch that used to
-// live here existed only for the Main Hall while it was a stretched background PNG, and keeping it
-// would leave a trap where a new room that forgot to declare a `tile` silently laid itself out in
-// percentages against a box of a different shape.
-function hubPointStyle(x, y, yBias = 0.5) {
+// Where a character stands in the active hub room: pixels inside #hubWorld, which updateHubCamera()
+// then translates. Both hub rooms are camera rooms as of Phase 54 — the percentage branch that used
+// to live here existed only for the Main Hall while it was a stretched background PNG, and keeping
+// it would leave a trap where a new room that forgot to declare a `tile` silently laid itself out
+// in percentages against a box of a different shape.
+//
+// The anchor is (x, y) exactly — the same point hubFootBoxFor() tests collision against, with the
+// remaining offset down to the feet applied once in CSS as `--cast-foot`. It did not used to be.
+// Until Phase 61 this shifted the character half a tile right and roughly half a tile down, and
+// `--cast-foot: 33.5px` pushed it down another 0.7, so the Institute drew everyone 0.50 tiles right
+// and 1.02 tiles below where the game believed they were standing. Nobody noticed for a long time
+// because the error was identical for the player and all three staff — they looked consistent with
+// each other, and merely wrong about the room. What gave it away was Prof. Park appearing to stand
+// on the south wall while collision correctly held him a tile clear of it.
+function hubCharacterStyle(x, y) {
   const grid = activeHubGrid();
-  return `left:${((x + 0.5) * grid.tile).toFixed(1)}px;top:${((y + yBias) * grid.tile).toFixed(1)}px;`;
+  return `left:${(x * grid.tile).toFixed(1)}px;top:${(y * grid.tile).toFixed(1)}px;`;
 }
 function institutePositionStyle() {
-  return hubPointStyle(instituteMovement.x, instituteMovement.y, 0.54);
+  return hubCharacterStyle(instituteMovement.x, instituteMovement.y);
 }
 // An interactable object's marker covers the object's own painted tiles: tile column C spans pixels
 // [C*tile, (C+1)*tile), so a target's `marker` rect (taken straight from the generator stamp that
-// painted the thing) lands exactly on the art. Unlike hubPointStyle() this takes no half-tile
-// centring bias — the rect is positioned by its own edges, not by a centre point.
+// painted the thing) lands exactly on the art. Unlike hubCharacterStyle() this positions a rect by
+// its own edges rather than a single point, so it takes no half-tile centring bias either way.
 function hubMarkerStyle(marker) {
   const { tile } = activeHubGrid();
   return `left:${marker.col * tile}px;top:${marker.row * tile}px;width:${marker.w * tile}px;height:${marker.h * tile}px;`;
@@ -6675,7 +6527,13 @@ function updateInstitutePlayer() {
   if (!player || !sprite) return;
   player.style.cssText = institutePositionStyle();
   player.dataset.facing = instituteMovement.facing;
-  applyCharacterSprite(sprite, chroniclerKey(), instituteMovement.facing, instituteMovement.moving);
+  applyCharacterSprite(
+    sprite,
+    chroniclerKey(),
+    instituteMovement.facing,
+    instituteMovement.moving,
+    HUB_SPEED
+  );
   updateHubCamera();
   const nearby = nearestHubTarget();
   if (prompt) {
@@ -6825,10 +6683,10 @@ function instituteNpc(targetId, label) {
   const state = hubTargetState(targetId);
   const isNear = targetDistance(target, targetId) <= targetReach(targetId);
   const walking = Boolean(hubNpcRuntime[targetId]?.walking);
-  // hubPointStyle() rather than the percentage math this used to inline: the Main Hall became a
+  // hubCharacterStyle() rather than the percentage math this used to inline: the Main Hall became a
   // camera room in Phase 54, and a hardcoded percentage would have placed all three NPCs wrong the
   // moment HUB_GRID gained a `tile`.
-  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubPointStyle(state.x, state.y, 0.51)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}">${characterSpriteMarkup(targetId, state.facing || "down", { walking })}<span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
+  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubCharacterStyle(state.x, state.y)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><span class="cast-shadow"></span>${characterSpriteMarkup(targetId, state.facing || "down", { walking, speed: hubNpcRuntime[targetId]?.speed })}<span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
 }
 function instituteScreen() {
   return progress.currentHubRoom === "archive" ? archiveRoomScreen() : instituteMainRoomScreen();
@@ -6857,7 +6715,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -6888,7 +6746,7 @@ function archiveRoomScreen() {
   // changed the page height enough to toggle the scrollbar and slide the centred layout sideways.
   const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Archive status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Archive desk · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${filed}</b> / ${total} Archive Challenges filed</span><span><b>${evidenceSecured}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Written work</b><span>Approach the Archive Terminal at the north end of the room to compose this unit's Archive Challenges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidenceSecured}</b></button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
   const worldStyle = `width:${ARCHIVE_ROOM_GRID.columns * ARCHIVE_ROOM_GRID.tile}px;height:${ARCHIVE_ROOM_GRID.rows * ARCHIVE_ROOM_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Leave Archive", "Leave the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Leave Archive", "Leave the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
 }
 
 // Shared render/grade/completion-tracking core for one Archive Challenge
@@ -7422,7 +7280,13 @@ function updateFieldPlayer() {
   if (!player || !sprite) return;
   player.style.cssText = fieldPositionStyle();
   player.dataset.facing = fieldMovement.facing;
-  applyCharacterSprite(sprite, chroniclerKey(), fieldMovement.facing, fieldMovement.moving);
+  applyCharacterSprite(
+    sprite,
+    chroniclerKey(),
+    fieldMovement.facing,
+    fieldMovement.moving,
+    FIELD_SPEED
+  );
   if (world) {
     const viewport = world.parentElement.getBoundingClientRect();
     const worldWidth = FIELD_GRID.columns * FIELD_GRID.tile;
@@ -7757,7 +7621,7 @@ function fieldNpcButton(npc) {
       ? `<em class="npc-source-badge ${availability === "secured" ? "is-secured" : ""}" aria-hidden="true">${availability === "secured" ? "✓" : "✦"}</em>`
       : "";
   const label = carried ? `${npc.name} — carries a record` : `Talk with ${npc.name}`;
-  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}">${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking })}<span>${esc(npc.label)}</span>${badge}</button>`;
+  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}<span>${esc(npc.label)}</span>${badge}</button>`;
 }
 function fieldDialogueBubble() {
   const npc = activeFieldMap().npcs.find((item) => item.id === progress.activeFieldNpc);
@@ -7834,7 +7698,7 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
