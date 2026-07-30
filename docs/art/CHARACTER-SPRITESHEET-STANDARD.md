@@ -1,6 +1,34 @@
 # Character Spritesheet Standard
 
-**Status:** planning document, not yet implemented. Part of [`docs/architecture/FOCUSED-GAME-SYSTEM-MODERNIZATION-PLAN.md`](../architecture/FOCUSED-GAME-SYSTEM-MODERNIZATION-PLAN.md)'s Workstream 1. Line references verified against the repo as of 2026-07-23.
+**Status: implemented (Phase 60).** The renderer decision below — CSS `background-position` stepped
+by `steps()`, not a canvas and not a library — is what shipped, in
+[`apps/web/src/engine/sprite-animation.js`](../../apps/web/src/engine/sprite-animation.js) and the
+`.character-sprite` block in `global.css`. Several specifics changed during the build; where this
+document and the list below disagree, the list below is current.
+
+**What changed from this plan:**
+
+- **Frame size is 48×56, not a configurable 48×48 default.** One canonical canvas for the whole
+  cast, feet on row 49, standing body 45 rows, the rest headroom for props and stride. See
+  `SPRITE_CANVAS`.
+- **Four real directions, not three plus a mirror.** `down`/`up`/`left`/`right`, each with its own
+  art. PixelLab returns eight rotations and four walk cycles per character, so west costs nothing;
+  `scaleX(-1)` is gone from every sprite selector.
+- **Strip order is `[standing, walk0 … walkN-1]`, not `left-step / standing / right-step / standing`.**
+  Column 0 being a real standing pose is what makes "hold the last facing when you stop" fall out of
+  the layout. Column count travels with the character (7 for the Director, 9 for the rest, 3 for the
+  Unit 3 placeholders) rather than being fixed at 4.
+- **Frame maths is in percentages, not pixels.** `background-position-x: 100% * k / (columns - 1)`
+  lands on column k at any element size, which is what lets one class serve both the world sprites
+  and the viewport-relative figures in the onboarding hallway.
+- **Sheets are committed under `apps/web/src/assets/`, not generated into a gitignored folder.**
+  They are source art now, not build output; `tests/unit/character-sheet-geometry.test.js` checks
+  the committed PNGs.
+- **The 2-pose-composited "ship the controller now, defer the art" strategy was skipped** — the real
+  multi-frame art arrived first. See
+  [`docs/decision-log/0043-one-cast-one-canvas-four-directions.md`](../decision-log/0043-one-cast-one-canvas-four-directions.md).
+
+Part of [`docs/architecture/FOCUSED-GAME-SYSTEM-MODERNIZATION-PLAN.md`](../architecture/FOCUSED-GAME-SYSTEM-MODERNIZATION-PLAN.md)'s Workstream 1. Line references below were verified against the repo as of 2026-07-23 and describe the pre-Phase-60 state.
 
 **Reuse policy:** [`docs/architecture/OPEN-SOURCE-REUSE-DECISIONS.md`](../architecture/OPEN-SOURCE-REUSE-DECISIONS.md) is binding for the reuse-vs-build decision below — see its §3 for the full sprite-animation-library research.
 
@@ -28,7 +56,7 @@ One horizontal strip per character/appearance/direction, replacing that directio
 Examples: `chronicler-a-down.png`, `chronicler-a-side.png`, `chronicler-a-up.png`, `npc-columbus-down.png`, `npc-columbus-side.png`, `director-down.png`, `director-side.png`.
 
 - **Directions:** `down`, `up`, `side` (mirrored via CSS `transform: scaleX(-1)` for `left`, exactly as today's code already collapses `left`/`right` into one `side` asset — see `fieldSpriteUrl()`'s `direction` computation at `main.js:5127-5129`). This preserves the existing 3-asset-per-character convention rather than doubling to 4 directions of art.
-- **Frame size:** configurable, defaulting to **48×48px**. ⚠️ This is a *proposed* default, not a description of the repo. An earlier revision of this document claimed "every existing sprite in `chronicle-sprites/field/` and `institute/` is authored at this size" — that was never true, and no sprite in the repo is 48×48. The cast is currently spread across five native resolutions: player walk frames at 64×96, field NPCs at 96×144, and the three Institute NPCs at whatever their own alpha bounds happen to be (28×44, 33×57, 33×56 after `npm run assets:normalize-sprites`; before that they disagreed even between poses of the same character). Unifying them is the job of `docs/art/CHARACTER-CAST-SPEC.md`. The animation-profile data structure below takes `frameSize` as a parameter specifically so a character sheet at a different resolution isn't blocked by a hard-coded constant.
+- **Frame size:** configurable, defaulting to **48×48px**. ⚠️ This is a _proposed_ default, not a description of the repo. An earlier revision of this document claimed "every existing sprite in `chronicle-sprites/field/` and `institute/` is authored at this size" — that was never true, and no sprite in the repo is 48×48. The cast is currently spread across five native resolutions: player walk frames at 64×96, field NPCs at 96×144, and the three Institute NPCs at whatever their own alpha bounds happen to be (28×44, 33×57, 33×56 after `npm run assets:normalize-sprites`; before that they disagreed even between poses of the same character). Unifying them is the job of `docs/art/CHARACTER-CAST-SPEC.md`. The animation-profile data structure below takes `frameSize` as a parameter specifically so a character sheet at a different resolution isn't blocked by a hard-coded constant.
 - **Frame order in the strip, left to right:** `left-step`, `standing`, `right-step`, `standing` — 4 frames. This is the natural walk-cycle sequence the task calls for, and it means a single `frames: [0, 1, 2, 3]` array produces a correct loop with no special-casing (the strip already repeats the standing pose at both the loop seam and the midpoint, so playback wraps cleanly from frame 3 back to frame 0).
 - **File format:** PNG, indexed/palette color (matches existing art), no embedded animation metadata — frame layout is described by the JS profile below, not by the file itself. This keeps the art pipeline simple (any image editor or the `build-sprite-sheets.js` compositor described below can produce a valid sheet) and keeps frame timing/looping logic in code, where it's testable.
 
@@ -104,6 +132,7 @@ export function isMirrored(direction) {
 **Decision: keep this CSS-only for now, using `background-position` stepped by a `steps()` timing function against the new sprite-sheet image, applied via a small set of classes generated from `resolveAnimationClass()`.**
 
 Justification:
+
 - The existing DOM already uses this exact mechanism for the current bob/crossfade animations — `footstepBob` (`global.css:4445-4449`) and the NPC `npcIdleFrame`/`npcStepFrame` cadence (`global.css:6402-6417`) are both CSS `@keyframes` driving visual state on a timer. Spritesheet stepping is a direct, same-technique extension: instead of animating `transform: translate()` or `opacity`, the keyframes animate `background-position-x` in discrete steps.
 - A `<canvas>`-per-character approach would require a second per-frame JS render loop, duplicating responsibility with `runFieldMovementLoop`/`runHubMovementLoop` (`main.js:5232-5275`, `main.js:4658-4700`) — code CLAUDE.md explicitly protects under "Gameplay invariants (regression-prone areas)." It would also mean replacing every `.hub-player img` / `.case-field-player img` / `.npc-frame--idle` / `.npc-frame--step` CSS selector with new canvas-draw code, a much larger and riskier diff for the same visual outcome.
 - CSS stepping keeps the change additive and reversible: the new sprite-sheet `<img>` (or `background-image` div) can sit right next to the old per-state `<img>` during rollout, and rollback is deleting the new CSS/markup, not untangling a second render loop from the first.
@@ -123,11 +152,11 @@ Because `walkCycleProfile()`/`resolveAnimationClass()` describe animation state 
 
 ## Preservation requirements (already true today — must not regress)
 
-| Requirement | Current mechanism | Note |
-|---|---|---|
-| Nearest-neighbor rendering | `image-rendering: pixelated` at `global.css:4436-4439` | Carry forward onto the new sprite-sheet element/background-image |
-| Preserve last facing direction on stop | `fieldMovement.facing` (`main.js:531`) only changes when a movement key is held; `fieldSpriteUrl()` reads `facing` regardless of `moving` | The new controller must read the same `facing`/`moving` state and must not reset direction when movement stops |
-| Feet aligned identically across frames | Existing art is manually aligned per file today | The compositor (below) must not introduce vertical drift when assembling frames into a strip — verify visually before replacing any live sprite |
+| Requirement                            | Current mechanism                                                                                                                         | Note                                                                                                                                            |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nearest-neighbor rendering             | `image-rendering: pixelated` at `global.css:4436-4439`                                                                                    | Carry forward onto the new sprite-sheet element/background-image                                                                                |
+| Preserve last facing direction on stop | `fieldMovement.facing` (`main.js:531`) only changes when a movement key is held; `fieldSpriteUrl()` reads `facing` regardless of `moving` | The new controller must read the same `facing`/`moving` state and must not reset direction when movement stops                                  |
+| Feet aligned identically across frames | Existing art is manually aligned per file today                                                                                           | The compositor (below) must not introduce vertical drift when assembling frames into a strip — verify visually before replacing any live sprite |
 
 ## Configurable frame dimensions
 
@@ -135,16 +164,16 @@ Because `walkCycleProfile()`/`resolveAnimationClass()` describe animation state 
 
 ## Which existing functions and assets get wrapped or replaced
 
-| Existing | Fate |
-|---|---|
-| `fieldSpriteAssets` (`main.js:464-505`) | Kept as-is — becomes the **compositor input list**, not deleted. The 12 existing per-state PNGs are the source images the build script reads. |
-| `fieldNpcSprites` (`main.js:374-462`), `instituteNpcSprites` (`main.js:510-529`) | Same — kept as compositor input, not deleted. |
-| `fieldSpriteUrl()` (`main.js:5125-5131`) | Call site replaced by one `resolveAnimationClass()` call; the function itself can be deleted once the markup change lands and is verified in-browser. |
-| `updateFieldPlayer()` (`main.js:5171-5194`) | The single line `sprite.src = fieldSpriteUrl();` becomes a class/style update using `resolveAnimationClass()`; the rest of the function (camera, proximity, prompt logic) is untouched. |
-| `updateFieldNpcs()` NPC-frame lines (`main.js:748-749`, `792-793`) | The two-stacked-`<img>` idle/step crossfade markup collapses to one element with a sprite-sheet background and one class update. |
-| `updateInstituteNpcs()` (`main.js:1356-1420`), hub NPC sprite selection | Same shape of change, for the hub's 3 NPCs. |
-| CSS: `footstepBob`, `npcBodyWalk`, `npcPatrolBob`, `npcIdleFrame`, `npcStepFrame` (`global.css:4445-4449`, `6757-6765`, `6887+`, `6402-6417`) | Superseded by one or two generic, parametrized `steps()` background-position keyframe rules driven by the animation profile, rather than five separate hand-tuned blocks. |
-| CSS: `playerIdle` (`global.css:2846-2853`) / `.field-player` (`global.css:1256-1264`) | Deleted as already-dead code in the same pass — zero risk, confirmed unused by current markup. |
+| Existing                                                                                                                                      | Fate                                                                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fieldSpriteAssets` (`main.js:464-505`)                                                                                                       | Kept as-is — becomes the **compositor input list**, not deleted. The 12 existing per-state PNGs are the source images the build script reads.                                           |
+| `fieldNpcSprites` (`main.js:374-462`), `instituteNpcSprites` (`main.js:510-529`)                                                              | Same — kept as compositor input, not deleted.                                                                                                                                           |
+| `fieldSpriteUrl()` (`main.js:5125-5131`)                                                                                                      | Call site replaced by one `resolveAnimationClass()` call; the function itself can be deleted once the markup change lands and is verified in-browser.                                   |
+| `updateFieldPlayer()` (`main.js:5171-5194`)                                                                                                   | The single line `sprite.src = fieldSpriteUrl();` becomes a class/style update using `resolveAnimationClass()`; the rest of the function (camera, proximity, prompt logic) is untouched. |
+| `updateFieldNpcs()` NPC-frame lines (`main.js:748-749`, `792-793`)                                                                            | The two-stacked-`<img>` idle/step crossfade markup collapses to one element with a sprite-sheet background and one class update.                                                        |
+| `updateInstituteNpcs()` (`main.js:1356-1420`), hub NPC sprite selection                                                                       | Same shape of change, for the hub's 3 NPCs.                                                                                                                                             |
+| CSS: `footstepBob`, `npcBodyWalk`, `npcPatrolBob`, `npcIdleFrame`, `npcStepFrame` (`global.css:4445-4449`, `6757-6765`, `6887+`, `6402-6417`) | Superseded by one or two generic, parametrized `steps()` background-position keyframe rules driven by the animation profile, rather than five separate hand-tuned blocks.               |
+| CSS: `playerIdle` (`global.css:2846-2853`) / `.field-player` (`global.css:1256-1264`)                                                         | Deleted as already-dead code in the same pass — zero risk, confirmed unused by current markup.                                                                                          |
 
 ## Art generation strategy: ship the controller now, defer new art
 

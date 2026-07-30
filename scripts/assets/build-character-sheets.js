@@ -1,0 +1,506 @@
+// Builds Chronicle's character sprite sheets from the PixelLab cast.
+//
+//   node scripts/assets/build-character-sheets.js --fetch     download source frames into the cache
+//   node scripts/assets/build-character-sheets.js --measure   report per-character content bounds
+//   node scripts/assets/build-character-sheets.js             build the strips + portraits
+//
+// Output, per character, into apps/web/src/assets/:
+//   <stem>-down.png  <stem>-up.png  <stem>-left.png  <stem>-right.png    walk strips
+//   <stem>-portrait.png                                                  one south standing pose
+//
+// A strip is one horizontal row of equal-width columns: [stand, walk0 … walkN-1]. Column 0 is the
+// direction's static rotation, so a character that stops walking holds a real standing pose facing
+// the way it last travelled. Frame counts differ per character (Director Hale is 6, everyone else
+// 8), which is why the column count travels with the character rather than being a constant.
+//
+// ── Why this does not call scripts/assets/normalize-sprite-frames.js ─────────────────────────────
+// That script crops *each frame to its own* alpha bounding box before bottom-aligning it. For a
+// two-pose idle/step group that is the right fix (it is what stopped the Director's feet drifting
+// a pixel per step). For a walk cycle it is destructive: snapping every frame to a shared bottom
+// and centre removes exactly the sub-pixel body motion the animation consists of, and a frame with
+// a lifted foot would be pushed down onto the ground line.
+//
+// So this script measures the alpha bounds of every frame of a character *together*, takes the
+// union as one crop window, and extracts that identical rect from every frame. Relative motion
+// survives; the ground line is shared because the window is shared. Same goal, opposite mechanism,
+// and the right one for multi-frame art.
+import { Buffer } from "node:buffer";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import sharp from "sharp";
+
+import {
+  CHARACTERS,
+  COMPASS,
+  DIRECTIONS,
+  LEGACY_CHARACTERS,
+  frameUrl,
+  rotationUrl,
+} from "./character-manifest.js";
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const ASSETS = path.join(REPO_ROOT, "apps/web/src/assets");
+const LEGACY_DIR = path.join(ASSETS, "chronicle-sprites/field");
+const CACHE = path.join(REPO_ROOT, "reports/pixellab-cache");
+
+/**
+ * A frame's opaque pixels, as per-row and per-column counts plus the raw alpha box. Counts are
+ * what make it possible to tell a body apart from a prop: a torso is 8-20px wide on every row it
+ * occupies, a spear shaft or a raised bow is one to three.
+ */
+async function scan(buffer) {
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const rows = new Array(info.height).fill(0);
+  const xs = [];
+  let minX = info.width;
+  let minY = info.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (data[(y * info.width + x) * 4 + 3] === 0) continue;
+      rows[y] += 1;
+      xs.push(x);
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < 0) return null;
+  xs.sort((a, b) => a - b);
+  return {
+    rows,
+    box: { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 },
+    // The median is used rather than the mean because it is what makes prop-independent centring
+    // work: a spear adds a few dozen pixels off to one side, which drags a mean but barely moves a
+    // median through several hundred body pixels.
+    medianX: xs[Math.floor(xs.length / 2)],
+  };
+}
+
+/** Rows carrying at least `minWidth` opaque pixels — i.e. body rows, not prop rows. */
+const BODY_ROW_WIDTH = 4;
+function bodySpan(rows, minWidth = BODY_ROW_WIDTH) {
+  let top = -1;
+  let bottom = -1;
+  for (let y = 0; y < rows.length; y += 1) {
+    if (rows[y] < minWidth) continue;
+    if (top < 0) top = y;
+    bottom = y;
+  }
+  return top < 0 ? null : { top, bottom, height: bottom - top + 1 };
+}
+
+function unionBounds(boxes) {
+  const left = Math.min(...boxes.map((b) => b.left));
+  const top = Math.min(...boxes.map((b) => b.top));
+  const right = Math.max(...boxes.map((b) => b.left + b.width));
+  const bottom = Math.max(...boxes.map((b) => b.top + b.height));
+  return { left, top, width: right - left, height: bottom - top };
+}
+
+// ---- source frames -----------------------------------------------------------------------------
+
+function cachePath(character, compass, index) {
+  const name = index === null ? `${compass}-stand.png` : `${compass}-${index}.png`;
+  return path.join(CACHE, character.key, name);
+}
+
+async function download(url, target) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText} for ${url}`);
+  mkdirSync(path.dirname(target), { recursive: true });
+  writeFileSync(target, Buffer.from(await response.arrayBuffer()));
+}
+
+async function fetchAll() {
+  for (const character of CHARACTERS) {
+    for (const direction of DIRECTIONS) {
+      const compass = COMPASS[direction];
+      const stand = cachePath(character, compass, null);
+      if (!existsSync(stand)) await download(rotationUrl(character, compass), stand);
+      if (!character.walk[compass]) continue;
+      for (let n = 0; n < character.frames; n += 1) {
+        const target = cachePath(character, compass, n);
+        if (!existsSync(target)) await download(frameUrl(character, compass, n), target);
+      }
+    }
+    console.log(`fetched ${character.key}`);
+  }
+}
+
+/**
+ * Every source frame of one character, as { direction, column, buffer }. Column 0 is the standing
+ * rotation. A character with `mirrorWestFromEast` has no west walk animation in PixelLab, so its
+ * west moving columns are its east frames flipped — done here, in the asset, so that nothing
+ * mirrors at runtime and the rest of the cast stays honest four-direction art.
+ */
+async function sourceFrames(character) {
+  const frames = [];
+  for (const direction of DIRECTIONS) {
+    const compass = COMPASS[direction];
+    frames.push({
+      direction,
+      column: 0,
+      buffer: readFileSync(cachePath(character, compass, null)),
+    });
+    const mirrored = !character.walk[compass];
+    const from = mirrored ? "east" : compass;
+    for (let n = 0; n < character.frames; n += 1) {
+      let buffer = readFileSync(cachePath(character, from, n));
+      if (mirrored) buffer = await sharp(buffer).flop().png().toBuffer();
+      frames.push({ direction, column: n + 1, buffer });
+    }
+  }
+  return frames;
+}
+
+// ---- measurement -------------------------------------------------------------------------------
+
+/**
+ * Everything about one character's geometry, in source pixels:
+ *
+ *   window   the union of every frame's alpha box — the shared crop rect. Shared, so the frames
+ *            keep their relative motion; union, so no prop is ever clipped.
+ *   body     the height of the standing pose measured across body rows only. This, not the window,
+ *            is what gets normalized between characters, because the window is inflated by
+ *            whatever a character happens to be holding and by how far its limbs swing.
+ *   stance   per direction, the lowest body row and the median opaque column of that direction's
+ *            standing pose. Alignment is per direction rather than per character because PixelLab
+ *            draws each rotation independently: Columbus's north pose stands two source rows
+ *            higher than his south one, which would make him hop when he turned around. Since a
+ *            direction is its own strip file, aligning them separately costs nothing and is a
+ *            pure integer translation — no resampling.
+ *   body     the height of the standing pose measured across body rows only. This, not the window,
+ *            is what gets normalized between characters, because the window is inflated by
+ *            whatever a character happens to be holding and by how far its limbs swing.
+ */
+async function measure(character) {
+  const frames = await sourceFrames(character);
+  const boxes = [];
+  for (const frame of frames) {
+    const s = await scan(frame.buffer);
+    if (s) boxes.push(s.box);
+  }
+
+  let body = 0;
+  const stance = {};
+  for (const frame of frames.filter((f) => f.column === 0)) {
+    const s = await scan(frame.buffer);
+    const span = bodySpan(s.rows);
+    body = Math.max(body, span.height);
+    // The median rather than the box centre: a spear adds a few dozen pixels off to one side,
+    // which drags a mean or a bounding box but barely moves a median through a body's worth of
+    // pixels. That is what keeps a prop from deciding where the body sits.
+    stance[frame.direction] = { ground: span.bottom, centreX: s.medianX };
+  }
+
+  return { character, frames, window: unionBounds(boxes), body, stance };
+}
+
+/**
+ * How far a character's body height may differ from the cast target before it is rescaled.
+ *
+ * Fourteen of the fifteen land within 44-46px of each other — a 4.5% spread that reads as ordinary
+ * variation in adult height, and rescaling any of them by 0.96 would resample the art for no
+ * visible gain. Only the Powhatan woman is a real outlier at 40px, because PixelLab generated her
+ * on an 80px canvas while the rest of the cast got 88-96px. Correcting a generation-parameter
+ * accident is worth one resample; equalising natural height differences is not.
+ */
+const BODY_TOLERANCE = 0.06;
+const TARGET_BODY = 45;
+
+async function measureAll() {
+  const measured = [];
+  for (const character of CHARACTERS) measured.push(await measure(character));
+
+  for (const entry of measured) {
+    const ratio = TARGET_BODY / entry.body;
+    entry.scale = Math.abs(ratio - 1) <= BODY_TOLERANCE ? 1 : ratio;
+    entry.scaled = {
+      width: Math.max(1, Math.round(entry.window.width * entry.scale)),
+      height: Math.max(1, Math.round(entry.window.height * entry.scale)),
+    };
+    // Per direction: how far the crop window extends above that direction's ground line, and how
+    // far below it. The canvas is built from the largest of each across the whole cast, so every
+    // character's feet land on one row and no prop or stride overflows.
+    entry.place = {};
+    for (const direction of DIRECTIONS) {
+      const { ground, centreX } = entry.stance[direction];
+      entry.place[direction] = {
+        above: Math.round((ground - entry.window.top) * entry.scale),
+        below: Math.round((entry.window.top + entry.window.height - 1 - ground) * entry.scale),
+        offsetX: Math.round((centreX - entry.window.left) * entry.scale),
+      };
+    }
+  }
+  return measured;
+}
+
+/**
+ * One canvas for the entire cast: tall enough for the highest prop and the deepest walk-cycle dip,
+ * wide enough for the widest reach, with the ground line on one fixed row. Because it is shared,
+ * a body of N source pixels renders at the same on-screen height for every character, and CSS
+ * needs no per-character or per-map compensation.
+ */
+function canonicalCanvas(measured) {
+  const all = measured.flatMap((m) => DIRECTIONS.map((d) => ({ m, p: m.place[d] })));
+  const above = Math.max(...all.map(({ p }) => p.above));
+  const below = Math.max(...all.map(({ p }) => p.below));
+  const halfWidth = Math.max(...all.flatMap(({ m, p }) => [p.offsetX, m.scaled.width - p.offsetX]));
+  return {
+    width: halfWidth * 2,
+    height: above + below + 1,
+    ground: above,
+    body: TARGET_BODY,
+  };
+}
+
+/**
+ * Where one direction's frames sit on the shared canvas, as two placements: one for the walk cycle
+ * and one for the standing pose.
+ *
+ * Two, not one, because PixelLab generates a character's static rotations and its walk animation in
+ * separate passes and does not place the body identically in both. Columbus's west rotation stands
+ * three pixels lower in its source frame than any frame of his west walk cycle — align everything
+ * to the rotation and he rises three pixels the moment he starts walking; align everything to the
+ * cycle and he sinks three pixels the moment he stops.
+ *
+ * So the walk frames share one offset, taken from the most-planted frame in the cycle, which
+ * preserves every bit of the stride's relative motion. The standing frame then gets its own offset
+ * so that its feet land on that same line. Both are measured on the *scaled* bitmaps rather than
+ * predicted from source coordinates: predicting means rounding `sourceRow * scale`, which lands a
+ * pixel off about half the time for any non-integer scale.
+ */
+async function placements(standing, walking, canvas) {
+  const footprint = async (buffer) => {
+    const s = await scan(buffer);
+    return { centreX: s.medianX, bottom: bodySpan(s.rows).bottom };
+  };
+  const stand = await footprint(standing);
+  const cycle = await Promise.all(walking.map(footprint));
+  // The frame whose feet reach lowest is the one actually standing on the ground; the others are
+  // mid-stride and belong above it.
+  const plant = Math.max(...cycle.map((c) => c.bottom));
+  const centres = cycle.map((c) => c.centreX).sort((a, b) => a - b);
+  return {
+    walk: {
+      left: canvas.width / 2 - centres[Math.floor(centres.length / 2)],
+      top: canvas.ground - plant,
+    },
+    stand: { left: canvas.width / 2 - stand.centreX, top: canvas.ground - stand.bottom },
+  };
+}
+
+// ---- build -------------------------------------------------------------------------------------
+
+/** Crop one frame to the character's shared window, then nearest-neighbour scale it. */
+async function normalizeFrame(buffer, window, scaled) {
+  return sharp(buffer)
+    .ensureAlpha()
+    .extract(window)
+    .resize(scaled.width, scaled.height, { kernel: "nearest", fit: "fill" })
+    .png()
+    .toBuffer();
+}
+
+function blankCanvas(canvas) {
+  return sharp({
+    create: {
+      width: canvas.width,
+      height: canvas.height,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  });
+}
+
+async function buildCharacter(entry, canvas) {
+  const { character, frames, window, scaled } = entry;
+  const columns = character.frames + 1;
+  const written = [];
+
+  const wheres = {};
+  for (const direction of DIRECTIONS) {
+    const ours = frames.filter((f) => f.direction === direction);
+    const normalized = new Map();
+    for (const frame of ours) {
+      normalized.set(frame.column, await normalizeFrame(frame.buffer, window, scaled));
+    }
+    const where = await placements(
+      normalized.get(0),
+      [...normalized.entries()].filter(([c]) => c > 0).map(([, b]) => b),
+      canvas
+    );
+    wheres[direction] = where;
+    const strip = blankCanvas({ width: canvas.width * columns, height: canvas.height });
+    const composites = [];
+    for (const frame of ours) {
+      const at = frame.column === 0 ? where.stand : where.walk;
+      composites.push({
+        input: normalized.get(frame.column),
+        left: frame.column * canvas.width + at.left,
+        top: at.top,
+      });
+    }
+    const target = path.join(ASSETS, `${character.stem}-${direction}.png`);
+    mkdirSync(path.dirname(target), { recursive: true });
+    await strip.composite(composites).png({ palette: true, dither: 0 }).toFile(target);
+    written.push(target);
+  }
+
+  // The portrait is the same normalized south standing pose on the same canvas, kept as its own
+  // single-frame file because several surfaces draw a character as a still image rather than as an
+  // animated sprite: the onboarding Director scene, hub dialogue portraits, the hallway walk, the
+  // village-activity cutscene and the Chronicler selection cards. Those must not be handed a strip.
+  const stand = frames.find((f) => f.direction === "down" && f.column === 0);
+  const portrait = blankCanvas(canvas).composite([
+    { input: await normalizeFrame(stand.buffer, window, scaled), ...wheres.down.stand },
+  ]);
+  const portraitTarget = path.join(ASSETS, `${character.stem}-portrait.png`);
+  const scaleUp = character.portraitScale ?? 1;
+  const buffer = await portrait.png().toBuffer();
+  await (
+    scaleUp === 1
+      ? sharp(buffer)
+      : sharp(buffer).resize(canvas.width * scaleUp, canvas.height * scaleUp, {
+          kernel: "nearest",
+          fit: "fill",
+        })
+  )
+    .png({ palette: true, dither: 0 })
+    .toFile(portraitTarget);
+  written.push(portraitTarget);
+
+  return written;
+}
+
+/**
+ * Unit 3's six placeholder characters, rebuilt into the same strip format so the game has exactly
+ * one renderer. Their source art has only a down pose and a right-facing side pose, each with one
+ * step frame, and no north pose at all — so `up` reuses the down art and `left` is the flipped side
+ * art, which is precisely what the old renderer did with them. This changes nothing about how Unit
+ * 3 looks; it only stops six 1492 Caribbean and Spanish sprites from being handed to Philadelphia
+ * in 1767 once the real Unit 1 art lands on those keys.
+ */
+async function buildLegacy(canvas) {
+  const written = [];
+  for (const legacy of LEGACY_CHARACTERS) {
+    const read = (suffix) => readFileSync(path.join(LEGACY_DIR, `${legacy.source}${suffix}.png`));
+    const poses = {
+      down: [read(""), read(""), read("-step")],
+      up: [read(""), read(""), read("-step")],
+      right: [read("-side"), read("-side"), read("-side-step")],
+      left: [read("-side"), read("-side"), read("-side-step")],
+    };
+
+    const boxes = [];
+    let body = 0;
+    const stance = {};
+    for (const [direction, buffers] of Object.entries(poses)) {
+      for (const [column, buffer] of buffers.entries()) {
+        const s = await scan(buffer);
+        boxes.push(s.box);
+        if (column !== 0) continue;
+        const span = bodySpan(s.rows);
+        if (direction === "down") body = span.height;
+        stance[direction] = { ground: span.bottom, centreX: s.medianX };
+      }
+    }
+    const window = unionBounds(boxes);
+    const scale = canvas.body / body;
+    const scaled = {
+      width: Math.max(1, Math.round(window.width * scale)),
+      height: Math.max(1, Math.round(window.height * scale)),
+    };
+
+    const legacyWheres = {};
+    for (const direction of DIRECTIONS) {
+      const normalized = [];
+      for (const buffer of poses[direction]) {
+        let frame = await normalizeFrame(buffer, window, scaled);
+        if (direction === "left") frame = await sharp(frame).flop().png().toBuffer();
+        normalized.push(frame);
+      }
+      const where = await placements(normalized[0], normalized.slice(1), canvas);
+      legacyWheres[direction] = where;
+      const strip = blankCanvas({ width: canvas.width * 3, height: canvas.height });
+      const composites = [];
+      for (const [column, frame] of normalized.entries()) {
+        const at = column === 0 ? where.stand : where.walk;
+        composites.push({ input: frame, left: column * canvas.width + at.left, top: at.top });
+      }
+      const target = path.join(ASSETS, `chronicle-sprites/field/${legacy.key}-${direction}.png`);
+      await strip.composite(composites).png({ palette: true, dither: 0 }).toFile(target);
+      written.push(target);
+    }
+
+    const portraitTarget = path.join(ASSETS, `chronicle-sprites/field/${legacy.key}-portrait.png`);
+    await blankCanvas(canvas)
+      .composite([
+        { input: await normalizeFrame(poses.down[0], window, scaled), ...legacyWheres.down.stand },
+      ])
+      .png({ palette: true, dither: 0 })
+      .toFile(portraitTarget);
+    written.push(portraitTarget);
+  }
+  return written;
+}
+
+// ---- entry point ---------------------------------------------------------------------------------
+
+async function main() {
+  const args = process.argv.slice(2);
+
+  if (args.includes("--fetch")) {
+    await fetchAll();
+    return;
+  }
+
+  const measured = await measureAll();
+  const canvas = canonicalCanvas(measured);
+
+  if (args.includes("--measure")) {
+    console.log(
+      `canvas ${canvas.width}x${canvas.height}, ground row ${canvas.ground}, ` +
+        `body ${canvas.body}px\n`
+    );
+    console.log("key                       cols  window   body  scale   above (per direction)");
+    for (const entry of measured) {
+      const w = entry.window;
+      const above = DIRECTIONS.map((d) => entry.place[d].above).join(",");
+      console.log(
+        `${entry.character.key.padEnd(24)} ${String(entry.character.frames + 1).padStart(4)}` +
+          `  ${`${w.width}x${w.height}`.padEnd(8)} ${String(entry.body).padStart(4)}` +
+          `  ${entry.scale.toFixed(3)}  ${above}`
+      );
+    }
+    return;
+  }
+
+  console.log(`canvas ${canvas.width}x${canvas.height}, ground row ${canvas.ground}`);
+
+  let count = 0;
+  for (const entry of measured) {
+    const written = await buildCharacter(entry, canvas);
+    count += written.length;
+    console.log(
+      `${entry.character.key.padEnd(24)} scale ${entry.scale.toFixed(3)}  ${written.length} files`
+    );
+  }
+  const legacy = await buildLegacy(canvas);
+  count += legacy.length;
+  console.log(`legacy (unit 3)          ${legacy.length} files`);
+  console.log(`\nwrote ${count} files onto a shared ${canvas.width}x${canvas.height} canvas`);
+}
+
+main().catch((error) => {
+  console.error(error.message);
+  process.exit(1);
+});

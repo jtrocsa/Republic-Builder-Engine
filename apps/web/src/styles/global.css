@@ -12,6 +12,30 @@
    but the token was never declared.
    ============================================================ */
 :root {
+  /* ── Character cast scale ──────────────────────────────────────────────
+     Every animated person in the game is drawn from a 48x56 sprite canvas
+     (engine/sprite-animation.js SPRITE_CANVAS) whose feet stand on row 49
+     and whose standing body is 45 rows tall. --cast-h is the on-screen
+     height of that whole canvas; the body therefore reads at
+     83 * 45/56 = 67px, which is the height Director Hale has always
+     rendered at and the height the rest of the cast is normalized to. The
+     remaining 11 rows are headroom for spears, bows, baskets and walk-cycle
+     stride, so a prop can never squash the body that carries it.
+
+     Before this existed the player drew 24% taller than everyone standing
+     next to them — 83px against the Director's 67 — because four sprite
+     boxes had three different aspect ratios and `object-fit: contain`
+     silently picked a different binding edge for each.
+
+     --cast-foot is how far below a character's world anchor its feet are
+     drawn, and it differs per surface only because the hub adds a half-tile
+     bias in hubPointStyle() that the field does not. Both values are the
+     ones the NPCs already used; the player is what moves onto them. */
+  --cast-h: 83px;
+  --cast-w: calc(var(--cast-h) * 48 / 56);
+  --cast-ground-offset: calc(var(--cast-h) * 11 / 28);
+  --cast-foot: 26.5px;
+
   /* Base channels — one alpha ramp instead of the ~157 hand-written
      rgba(239, 204, 122, …) literals scattered through this file. */
   --c-gold-rgb: 239, 204, 122;
@@ -2536,9 +2560,37 @@ dd {
   min-height: 0;
   padding-bottom: 12px;
 }
+/* The two Chronicler cards. Identical in every dimension on purpose: the choice is between two
+   names, not between two kinds of person, and nothing in the layout may imply that one is the
+   default or the more prominent option. Selection is carried by the same btn-gold/btn-outline pair
+   the rest of the game uses, plus aria-pressed for anyone not seeing the colour. */
+.chronicler-choices {
+  gap: 14px;
+}
+.chronicler-choice {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+}
+.chronicler-choice img {
+  image-rendering: pixelated;
+}
+.chronicler-choice b {
+  font:
+    600 0.72rem/1 "DM Sans",
+    sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .director-scene__sprite {
-  width: 240px;
-  height: auto;
+  /* Was width: 240px against a tight 28x44 crop, i.e. a 377px body. Restoring that body height
+     needs a 469px element, because 11 of the canvas's 56 rows are prop headroom — and 469px
+     clipped the "Begin Orientation" button off the bottom of a 1366x768 Chromebook, this
+     project's named target viewport. So it takes the smaller of the two: the full height where
+     there is room for it, and a share of the viewport where there is not. */
+  width: auto;
+  height: min(calc(377px * 56 / 45), 52vh);
   image-rendering: pixelated;
   filter: drop-shadow(0 18px 24px rgba(var(--c-black-rgb), 0.45));
 }
@@ -3046,14 +3098,18 @@ dd {
 .hallway-sprite {
   position: absolute;
   width: 13%;
-  aspect-ratio: 1/1.3;
+  aspect-ratio: 48 / 56;
   transform: translate(-50%, -50%);
 }
-.hallway-sprite img {
+/* The onboarding corridor scales its two figures with the viewport rather than pinning them to
+   the world's pixel size, so the sprite fills the box here instead of using --cast-w/--cast-h.
+   The percentage frame maths in .character-sprite is what makes that work unchanged. */
+.hallway-sprite .character-sprite {
+  left: 0;
+  top: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
+  transform: none;
   filter: drop-shadow(0 6px 6px rgba(var(--c-black-rgb), 0.35));
 }
 /* Full-screen fade used for the hallway → Main Hall cut. Rendered by both introHallwayScreen()
@@ -3082,7 +3138,7 @@ dd {
     padding-bottom: 190px;
   }
   .director-scene__sprite {
-    width: 130px;
+    height: calc(204px * 56 / 45);
   }
   .director-scene__bar {
     left: 16px;
@@ -3405,39 +3461,78 @@ dd {
 .case-field-player {
   position: absolute;
   z-index: 80 !important;
-  width: 55px;
-  height: 83px;
-  aspect-ratio: 2 / 3;
+  width: var(--cast-w);
+  height: var(--cast-h);
   transform: translate(-50%, -50%);
   transition: none !important;
   pointer-events: none;
   will-change: left, top;
 }
-.case-field-player > span {
+.case-field-player > span:not(.character-sprite) {
   position: absolute;
-  left: 12%;
-  right: 12%;
-  bottom: 0;
-  height: 12%;
+  left: 32%;
+  right: 32%;
+  bottom: calc(50% - var(--cast-foot) - 3px);
+  height: 6px;
   background: rgba(var(--c-black-rgb), 0.28);
   border-radius: 50%;
   filter: blur(2px);
 }
-.case-field-player img {
+
+/* ── The character sprite ────────────────────────────────────────────────────────────────────────
+   One element, one background-image strip, for every animated person in the game: the player in
+   both hub rooms and all three field maps, all three Institute staff, and every field NPC.
+
+   What this replaced: three different mechanisms doing the same job badly. The player swapped an
+   <img> `src` between two poses every tick while a CSS keyframe bobbed the whole element; field
+   NPCs stacked *two* <img> elements and crossfaded their opacity on a timer, with a per-character
+   selector list that had to name all six sprite keys; hub NPCs did the src swap with no second
+   frame at all, so walking north or south only bobbed. On top of that, `left` was `scaleX(-1)` of
+   the right-facing art and `up` was the *south* sprite dimmed 8% by a filter — which had itself
+   been dead since a later `filter: none !important` overrode it.
+
+   Now every character has real art for all four directions, and this steps through it. The frame
+   maths is in percentages rather than pixels on purpose: with the strip sized to
+   `columns * 100%`, a `background-position-x` of `100% * k / (columns - 1)` lands exactly on
+   column k whatever size the element is. That is what lets the same class serve the 48x55 world
+   sprites and the viewport-relative ones in the onboarding hallway without a second rule.
+
+   Column 0 is a standing pose drawn for that direction, and the walk cycle covers columns 1..N.
+   So "stop walking" is just "remove the animation", and the character is left facing the way it
+   last travelled — the behaviour CLAUDE.md's gameplay invariants require, falling out of the frame
+   layout rather than being maintained by hand. */
+.character-sprite {
   position: absolute;
-  inset: 0;
-  width: 55px;
-  height: 83px;
-  object-fit: contain;
+  left: 50%;
+  top: 50%;
+  width: var(--cast-w);
+  height: var(--cast-h);
+  /* Centred on the parent's anchor point, then nudged so the canvas's ground row lands
+     `--cast-foot` below that anchor. Sizing the sprite here rather than inheriting the parent's
+     box is what keeps every character the same on-screen height even though the buttons around
+     them are different sizes for hit-area reasons. */
+  transform: translate(-50%, calc(-50% + var(--cast-foot) - var(--cast-ground-offset)));
+  background-image: var(--sprite-sheet);
+  background-size: calc(var(--sprite-columns, 1) * 100%) 100%;
+  background-repeat: no-repeat;
+  background-position: 0 0;
   image-rendering: pixelated;
-  filter: drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.25));
 }
-.case-field-player[data-facing="left"] img {
-  transform: scaleX(-1);
+.character-sprite.is-walking {
+  animation: characterWalk var(--sprite-cycle, 0.72s) steps(var(--sprite-walk-frames, 1)) infinite;
 }
-.case-field-player.is-walking,
-.hub-player.is-walking {
-  animation: fieldFootsteps 0.28s steps(2) infinite !important;
+@keyframes characterWalk {
+  from {
+    background-position-x: calc(100% / var(--sprite-walk-frames));
+  }
+  to {
+    background-position-x: calc(100% + 100% / var(--sprite-walk-frames));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .character-sprite.is-walking {
+    animation: none;
+  }
 }
 /* .field-mentor--png removed (Phase 45D dead-CSS sweep, same zero-reference finding as
    .field-mentor/.field-player above). @keyframes caseWalk also removed — it became fully
@@ -3897,12 +3992,8 @@ dd {
 /* Inside a camera room the player is a fixed pixel size, matching the field, instead of a
    percentage of a box that stretches. */
 .hub-world .hub-player {
-  width: 55px;
-  height: 83px;
-}
-.hub-world .hub-player img {
-  width: 55px;
-  height: 83px;
+  width: var(--cast-w);
+  height: var(--cast-h);
 }
 /* Same reason for the hub NPCs: a later `.hub-npc { width: 7.1% !important }` sizes them as a
    fraction of their container, which was the stretched map box before Phase 54 and is now the
@@ -3910,8 +4001,9 @@ dd {
    pixels here, matched to the player, so all four sprites in a room are the same scale.
    `!important` only because that later percentage rule carries it too. */
 .hub-world .hub-npc {
-  width: 55px !important;
-  aspect-ratio: 1/1.22;
+  width: var(--cast-w) !important;
+  height: var(--cast-h);
+  aspect-ratio: auto;
 }
 .institute-map::after {
   content: "";
@@ -3934,35 +4026,26 @@ dd {
 .hub-player {
   position: absolute;
   z-index: 9;
-  width: 7.5%;
-  aspect-ratio: 1/1.25;
+  /* See --cast-foot in :root — the hub's is larger than the field's purely because
+     hubPointStyle() already shifts the anchor half a tile down. */
+  --cast-foot: 33.5px;
+  width: var(--cast-w);
+  height: var(--cast-h);
   transform: translate(-50%, -50%);
   transition:
     left 170ms cubic-bezier(0.2, 0.78, 0.25, 1),
     top 170ms cubic-bezier(0.2, 0.78, 0.25, 1);
   pointer-events: none;
 }
-.hub-player > span {
+.hub-player > span:not(.character-sprite) {
   position: absolute;
-  left: 15%;
-  right: 15%;
-  bottom: 2%;
-  height: 13%;
+  left: 32%;
+  right: 32%;
+  bottom: calc(50% - var(--cast-foot) - 3px);
+  height: 6px;
   border-radius: 50%;
   background: rgba(var(--c-black-rgb), 0.28);
   filter: blur(2px);
-}
-.hub-player img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.3));
-}
-.hub-player[data-facing="left"] img {
-  transform: scaleX(-1);
 }
 /* .hub-player.is-walking consolidated into the shared rule near .case-field-player above
    (Phase 45B) — this hub-walk 0.17s declaration was already fully superseded (see that rule's
@@ -3971,23 +4054,17 @@ dd {
 .hub-npc {
   position: absolute;
   z-index: 8;
-  width: 8%;
-  aspect-ratio: 1/1.22;
+  --cast-foot: 33.5px;
+  width: var(--cast-w);
+  height: var(--cast-h);
   transform: translate(-50%, -50%);
   border: 0;
   background: none;
   padding: 0;
   cursor: pointer;
 }
-.hub-npc img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.25));
-}
-.hub-npc span {
+
+.hub-npc span:not(.character-sprite) {
   position: absolute;
   top: 98%;
   left: 50%;
@@ -4200,8 +4277,8 @@ dd {
     rgba(3, 31, 44, 0.72);
 }
 .hub-dialogue__portrait img {
-  width: 82px;
-  height: 112px;
+  width: auto;
+  height: calc(112px * 56 / 45);
   object-fit: contain;
   image-rendering: pixelated;
   filter: drop-shadow(0 8px 9px rgba(var(--c-black-rgb), 0.28));
@@ -4258,8 +4335,8 @@ dd {
    edge and read as clipped even though nothing is technically cropped. Rendering it smaller
    inside the same box gives real breathing room. */
 .hub-dialogue--tour .hub-dialogue__portrait img {
-  width: 68px;
-  height: 90px;
+  width: auto;
+  height: calc(90px * 56 / 45);
 }
 /* .field-arrival-marker removed (Phase 45D dead-CSS sweep) — zero references anywhere in
    main.js; @keyframes hub-spark stays, still used elsewhere (global.css:3805). */
@@ -4346,7 +4423,7 @@ dd {
   .institute-map {
     border-radius: 16px;
   }
-  .hub-npc span,
+  .hub-npc span:not(.character-sprite),
   .hub-marker b {
     font-size: 0.46rem;
   }
@@ -4389,15 +4466,7 @@ dd {
    ------------------------------------------------------------------------- */
 /* The `.hub-table` medallion layer that lived here (a 38px gold-rimmed circle over an erased rect)
    is gone with the class — see `.hub-marker` above for the one treatment all hub objects share. */
-.hub-player,
-.case-field-player {
-  aspect-ratio: 2/3;
-}
-.hub-player img,
-.case-field-player img {
-  object-fit: contain;
-  image-rendering: pixelated;
-}
+
 /* This footstepBob 0.19s pairing was already fully superseded by the time it shipped (see the
    consolidated .case-field-player.is-walking/.hub-player.is-walking rule's comment, Phase 45B);
    @keyframes footstepBob left for the Phase 45D dead-CSS sweep. */
@@ -4687,7 +4756,7 @@ dd {
 .field-npc--spanish i {
   background: linear-gradient(#e6d6b6 0 25%, #4f7f88 25% 68%, #5a3a28 68%);
 }
-.field-npc span {
+.field-npc span:not(.character-sprite) {
   position: absolute;
   left: 50%;
   top: 70px;
@@ -4706,11 +4775,9 @@ dd {
   z-index: 9;
 }
 /* .case-field-player (position/z-index/width/height/transform/transition/pointer-events),
-   .case-field-player > span, and .case-field-player img were all consolidated into their
+   .case-field-player > span:not(.character-sprite), and .case-field-player img were all consolidated into their
    single canonical rule near the top of this file (Phase 45B). */
-.case-field-player[data-facing="left"] img {
-  transform: scaleX(-1);
-}
+
 /* Disable older island pieces when a living world is rendered. .sandbank/.grassland/
    .field-mentor removed from this list (Phase 45D dead-CSS sweep) along with their own base
    rules further up this file — confirmed zero references anywhere in main.js; .shoreline and
@@ -4729,13 +4796,15 @@ dd {
   .field-channel {
     max-width: 760px;
   }
-  .case-field-player {
-    width: 42px;
-    height: 63px;
+  /* Narrow viewports shrink the whole cast together by retuning the one token, so the player
+     and every NPC beside them stay the same height as each other. */
+  :root {
+    --cast-h: 63px;
+    --cast-foot: 20px;
   }
-  .case-field-player img {
-    width: 42px;
-    height: 63px;
+  .hub-player,
+  .hub-npc {
+    --cast-foot: 26px;
   }
 }
 
@@ -4970,18 +5039,11 @@ dd {
 }
 /* .field-npc's width/height/transition here were superseded by a later hotfix — consolidated
    into the single .field-npc rule near the top of this file (Phase 45B). */
-.field-npc img {
-  display: block;
-  width: 74px;
-  height: 106px;
-  object-fit: contain;
-  filter: drop-shadow(0 6px 4px rgba(var(--c-black-rgb), 0.28));
-  image-rendering: pixelated;
-}
+
 .field-npc i {
   display: none !important;
 }
-.field-npc span {
+.field-npc span:not(.character-sprite) {
   top: 82px !important;
   background: rgba(6, 35, 48, 0.92) !important;
 }
@@ -5019,15 +5081,6 @@ dd {
    .case-field-player rule and the single .case-field-player.is-walking/.hub-player.is-walking
    rule near the top of this file (Phase 45B). @keyframes fieldFootsteps itself is still live —
    the consolidated is-walking rule's final resolved value references it. */
-@keyframes fieldFootsteps {
-  0%,
-  100% {
-    transform: translate(-50%, -50%);
-  }
-  50% {
-    transform: translate(-50%, -53%);
-  }
-}
 @keyframes recallPulse {
   0%,
   100% {
@@ -5773,12 +5826,8 @@ dd {
   filter: brightness(1.08);
   transform: translate(-50%, -53%) !important;
 }
-.field-npc img {
-  width: 55px !important;
-  height: 79px !important;
-  object-fit: contain !important;
-}
-.field-npc span {
+
+.field-npc span:not(.character-sprite) {
   top: 74px !important;
   font-size: 8.5px !important;
   padding: 3px 6px !important;
@@ -6057,11 +6106,7 @@ dd {
     width: 42px !important;
     height: 60px !important;
   }
-  .field-npc img {
-    width: 42px !important;
-    height: 60px !important;
-  }
-  .field-npc span {
+  .field-npc span:not(.character-sprite) {
     top: 56px !important;
   }
   /* No narrow-viewport scale-down for .source-signal--world any more: at 30px it is already the
@@ -6163,8 +6208,8 @@ dd {
 }
 .scene-person {
   position: absolute;
-  width: 58px;
-  height: 86px;
+  width: auto;
+  height: calc(86px * 56 / 45);
   object-fit: contain;
   filter: drop-shadow(0 9px 5px rgba(var(--c-black-rgb), 0.28));
   z-index: 3;
@@ -6172,8 +6217,7 @@ dd {
 .scene-person--elder {
   left: 48%;
   top: 28%;
-  width: 70px;
-  height: 100px;
+  height: calc(100px * 56 / 45);
 }
 .scene-person--left {
   left: 33%;
@@ -6456,10 +6500,7 @@ dd {
   color: #cfe2df;
   font-size: 0.78rem;
 }
-/* Avoid the waltz/floating look: patrol NPCs keep their body anchored and only show small foot movement. */
-.field-npc img {
-  animation: none !important;
-}
+
 .field-npc::before,
 .field-npc::after {
   content: "";
@@ -6514,60 +6555,11 @@ dd {
    and which the consolidated rule keeps. */
 /* .field-npc's overflow: visible !important is now in the single consolidated .field-npc rule
    near the top of this file (Phase 45B). */
-.field-npc .npc-frame {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translateX(-50%);
-  width: 46px !important;
-  height: 66px !important;
-  object-fit: contain !important;
-  filter: drop-shadow(0 5px 3px rgba(var(--c-black-rgb), 0.28));
-}
-.field-npc .npc-frame--step {
-  opacity: 0;
-}
-.field-npc--taino-gardener .npc-frame--idle,
-.field-npc--taino-fisher .npc-frame--idle,
-.field-npc--spanish-sailor .npc-frame--idle,
-.field-npc--taino-elder .npc-frame--idle,
-.field-npc--spanish-scribe .npc-frame--idle,
-.field-npc--columbus .npc-frame--idle {
-  animation: npcIdleFrame 0.7s steps(1, end) infinite;
-}
-.field-npc--taino-gardener .npc-frame--step,
-.field-npc--taino-fisher .npc-frame--step,
-.field-npc--spanish-sailor .npc-frame--step,
-.field-npc--taino-elder .npc-frame--step,
-.field-npc--spanish-scribe .npc-frame--step,
-.field-npc--columbus .npc-frame--step {
-  animation: npcStepFrame 0.7s steps(1, end) infinite;
-}
 .field-npc::before,
 .field-npc::after {
   display: none !important;
 }
-@keyframes npcIdleFrame {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-@keyframes npcStepFrame {
-  0%,
-  49% {
-    opacity: 0;
-  }
-  50%,
-  100% {
-    opacity: 1;
-  }
-}
-.field-npc.is-near span {
+.field-npc.is-near span:not(.character-sprite) {
   border-color: rgba(117, 235, 239, 0.75) !important;
   color: #e8ffff !important;
   box-shadow: 0 0 0 3px rgba(117, 235, 239, 0.12);
@@ -6764,7 +6756,7 @@ dd {
   transform: translate(-50%, -50%) !important;
   filter: brightness(1.08) !important;
 }
-.field-npc span,
+.field-npc span:not(.character-sprite),
 /* `b` no longer exists on a source marker (Phase 56) — the kind word is not emitted. */
 .source-signal--world small {
   font-family:
@@ -6779,7 +6771,7 @@ dd {
   line-height: 1.1 !important;
   text-shadow: 0 1px 0 rgba(var(--c-black-rgb), 0.45) !important;
 }
-.field-npc span {
+.field-npc span:not(.character-sprite) {
   top: 64px !important;
   font-size: 11px !important;
   padding: 4px 7px !important;
@@ -6797,30 +6789,6 @@ dd {
    NPC dialogue is .field-speech-bubble (confirmed live, 3 real call sites), not this class. */
 /* The `.field-npc em { display: none }` that hid the retired in-button speech bubble is gone with it
    — see the note where that bubble's styling was removed. */
-/* Nearest-neighbour, matching .case-field-player. These NPCs were previously forced to
-   image-rendering: auto, so every NPC rendered bilinear-blurred while the player next to them
-   rendered crisp — a sharpness split that had nothing to do with the art itself. */
-.field-npc .npc-frame {
-  image-rendering: pixelated !important;
-}
-.field-npc.is-walking-npc .npc-frame--idle {
-  animation: npcIdleFrame 0.48s steps(1, end) infinite !important;
-}
-.field-npc.is-walking-npc .npc-frame--step {
-  animation: npcStepFrame 0.48s steps(1, end) infinite !important;
-}
-.field-npc.is-walking-npc {
-  animation: npcBodyWalk 0.48s steps(2, end) infinite !important;
-}
-@keyframes npcBodyWalk {
-  0%,
-  100% {
-    margin-top: 0;
-  }
-  50% {
-    margin-top: -2px;
-  }
-}
 
 /* Keep the map pieces upright and remove impossible holes from the center of the puzzle. */
 .activity-shell--wide {
@@ -6919,40 +6887,8 @@ html {
   outline: none !important;
 }
 
-/* NPCs now actually patrol; only animate feet while each individual NPC is moving. */
-.field-npc:not(.is-walking-npc) .npc-frame--idle {
-  animation: none !important;
-  opacity: 1 !important;
-}
-.field-npc:not(.is-walking-npc) .npc-frame--step {
-  animation: none !important;
-  opacity: 0 !important;
-}
-.field-npc:not(.is-walking-npc) {
-  animation: none !important;
-}
-.field-npc.is-walking-npc {
-  animation: npcPatrolBob 0.42s steps(2, end) infinite !important;
-}
-.field-npc[data-facing="left"] .npc-frame,
-.field-npc[data-facing="right"] .npc-frame {
-  transform: translateX(-50%) scaleX(0.95) !important;
-}
-.field-npc[data-facing="left"] .npc-frame {
-  transform: translateX(-50%) scaleX(-0.95) !important;
-}
-@keyframes npcPatrolBob {
-  0%,
-  100% {
-    margin-top: 0;
-  }
-  50% {
-    margin-top: -1px;
-  }
-}
-
 /* Keep the field labels readable and avoid text shimmer. */
-.field-npc span,
+.field-npc span:not(.character-sprite),
 /* `b` no longer exists on a source marker (Phase 56) — the kind word is not emitted. */
 .source-signal--world small {
   backface-visibility: hidden;
@@ -7022,12 +6958,12 @@ html {
   position: relative !important;
   isolation: isolate !important;
 }
-.field-npc span {
+.field-npc span:not(.character-sprite) {
   font-size: 11.5px !important;
   line-height: 1 !important;
   transform: translateX(-50%) translateZ(0) !important;
 }
-.field-npc.is-near span {
+.field-npc.is-near span:not(.character-sprite) {
   color: #f6fffb !important;
   border-color: rgba(var(--c-gold-rgb), 0.62) !important;
   box-shadow: 0 6px 12px rgba(var(--c-black-rgb), 0.26) !important;
@@ -7384,7 +7320,7 @@ html {
   font: 900 16px/1 system-ui;
   cursor: pointer;
 }
-.field-npc.is-talking span {
+.field-npc.is-talking span:not(.character-sprite) {
   border-color: #f1cb74 !important;
   color: #fff2bf !important;
   box-shadow:
@@ -7432,29 +7368,6 @@ html {
   transition:
     left 0.12s linear,
     top 0.12s linear;
-}
-.hub-npc img {
-  transform-origin: 50% 90%;
-  /* See the .field-npc .npc-frame note above — same fix, hub side. */
-  image-rendering: pixelated !important;
-}
-.hub-npc.is-walking-npc img {
-  animation: hubNpcWalk 0.48s steps(2, end) infinite;
-}
-.hub-npc[data-facing="left"] img {
-  transform: scaleX(-1);
-}
-.hub-npc[data-facing="right"] img {
-  transform: scaleX(1);
-}
-@keyframes hubNpcWalk {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -2px;
-  }
 }
 .hub-npc.is-walking-npc::after {
   content: "";
@@ -7589,29 +7502,6 @@ body {
   outline-offset: 4px !important;
 }
 
-/* NPCs can now show left/right facing instead of always appearing front-facing while sliding. */
-.field-npc[data-facing="left"] .npc-frame {
-  transform: translateX(-50%) scaleX(-1) !important;
-}
-.field-npc[data-facing="right"] .npc-frame {
-  transform: translateX(-50%) scaleX(1) !important;
-}
-.field-npc[data-facing="up"] .npc-frame {
-  filter: drop-shadow(0 5px 3px rgba(var(--c-black-rgb), 0.28)) brightness(0.92) saturate(0.95) !important;
-}
-.field-npc[data-facing="down"] .npc-frame {
-  filter: drop-shadow(0 5px 3px rgba(var(--c-black-rgb), 0.28)) brightness(1) !important;
-}
-.hub-npc[data-facing="left"] img {
-  transform: scaleX(-1) !important;
-}
-.hub-npc[data-facing="right"] img {
-  transform: scaleX(1) !important;
-}
-.hub-npc[data-facing="up"] img {
-  filter: brightness(0.92) saturate(0.95) !important;
-}
-
 /* Collision-safe placements need less visual crowding. */
 .cartographer-table {
   left: 300px !important;
@@ -7712,21 +7602,7 @@ button:hover,
 }
 /* (`.hub-table`'s fixed 134x58 hit rect used to be pinned here. A marker is sized from its object's
    own footprint now — main.js hubMarkerStyle() — so there is nothing left to pin.) */
-.hub-npc {
-  width: 7.1% !important;
-}
-.hub-npc img {
-  image-rendering: auto !important;
-}
-.hub-npc[data-facing="left"] img {
-  transform: scaleX(-1) !important;
-}
-.hub-npc[data-facing="right"] img {
-  transform: scaleX(1) !important;
-}
-.hub-npc[data-facing="up"] img {
-  filter: brightness(0.94) saturate(0.96) drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.25)) !important;
-}
+
 /* The second retired `.hub-trophy { top: <pct> }` override sat here, and the label-size !important
    that outlived it went with the class in Phase 59 — see `.hub-marker` for the one that replaced
    all of them. */
@@ -7894,12 +7770,8 @@ button:hover,
 
 /* Sprite crispness pass (Unit 2 milestone): character sprites render as pixel art.
    Filters (blur/drop-shadow) smear pixels when the sprite is scaled — ground shadows
-   stay on the separate span elements, not the sprite imgs. */
-.case-field-player img,
-.field-npc img.npc-frame,
-.hub-player img,
-.hub-npc img {
-  image-rendering: pixelated !important;
+   stay on the separate span elements, not the sprite itself. */
+.character-sprite {
   filter: none !important;
 }
 @keyframes islandWaterDrift {

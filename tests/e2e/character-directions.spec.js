@@ -1,0 +1,177 @@
+import { expect, test } from "@playwright/test";
+
+import { loadSeededSave, seedProgress, walkToNpc } from "./helpers/progress-seed.js";
+
+// Banks the checks that no unit test can make, because they are about what the browser actually
+// computes: that pressing a direction selects that direction's strip, that the CSS keyframe really
+// steps through the frames, and that letting go leaves the character standing the way it walked.
+//
+// Before the PixelLab cast landed these could not have passed. `up` resolved to the *south* sprite
+// (dimmed 8% by a filter that a later `filter: none !important` had already killed), `left` was the
+// east art mirrored, and "animation" was two poses crossfading on a timer.
+
+test.use({ viewport: { width: 1366, height: 768 } });
+
+/** Reads the sprite element's live animation state out of the DOM. */
+function spriteState(page, id) {
+  return page.locator(`#${id}`).evaluate((el) => ({
+    direction: (el.style.getPropertyValue("--sprite-sheet").match(/-(down|up|left|right)\.png/) || [
+      null,
+      null,
+    ])[1],
+    columns: el.style.getPropertyValue("--sprite-columns"),
+    frameOffset: window.getComputedStyle(el).backgroundPositionX,
+    walking: el.classList.contains("is-walking"),
+  }));
+}
+
+const KEYS = [
+  ["ArrowUp", "up"],
+  ["ArrowDown", "down"],
+  ["ArrowLeft", "left"],
+  ["ArrowRight", "right"],
+];
+
+for (const [surface, screen, seed, playerId] of [
+  [
+    "field",
+    "field",
+    { activeCaseId: "case-001", unlockedCaseIds: ["case-001"] },
+    "caseFieldPlayerSprite",
+  ],
+  ["institute", "institute", { unlockedCaseIds: ["case-001"] }, "institutePlayerSprite"],
+]) {
+  test(`${surface}: each direction plays its own walk cycle and holds the last facing`, async ({
+    page,
+  }) => {
+    await seedProgress(page, { currentScreen: screen, ...seed });
+    await loadSeededSave(page);
+    await expect(page.locator(`#${playerId}`)).toBeVisible();
+
+    for (const [key, direction] of KEYS) {
+      await page.keyboard.down(key);
+      await page.waitForTimeout(160);
+      const first = await spriteState(page, playerId);
+      await page.waitForTimeout(120);
+      const second = await spriteState(page, playerId);
+      await page.keyboard.up(key);
+      await page.waitForTimeout(220);
+      const stopped = await spriteState(page, playerId);
+
+      expect(first.direction, `${key} selects the ${direction} strip`).toBe(direction);
+      expect(first.walking).toBe(true);
+      expect(second.frameOffset, `${direction} walk cycle advances a frame`).not.toBe(
+        first.frameOffset
+      );
+      expect(stopped.direction, `stopping keeps facing ${direction}`).toBe(direction);
+      expect(stopped.walking).toBe(false);
+      // Column 0 of every strip is a standing pose drawn for that direction, so an idle character
+      // is never showing an arbitrary mid-stride frame.
+      expect(stopped.frameOffset, "idle shows the standing column").toBe("0px");
+    }
+  });
+}
+
+// A missing key would silently fall back to the Director, which is exactly the kind of bug that
+// reads as "why is the Taíno gardener wearing a fedora".
+// One test per map rather than one loop: seedProgress() deliberately only writes into an empty
+// localStorage key, so re-seeding inside a single test would keep the first map's save.
+const SHEETS_BY_CASE = {
+  "case-001": {
+    "taino-elder": "npc-caribbean-woman",
+    "taino-gardener": "npc-caribbean-woman",
+    "taino-fisher": "npc-caribbean-man",
+    "spanish-sailor": "npc-spanish-sailor",
+    columbus: "npc-columbus",
+    "spanish-scribe": "npc-spanish-sailor",
+  },
+  "case-004": {
+    "settlement-minister": "npc-jamestown-gentleman",
+    "indentured-servant": "npc-jamestown-laborer",
+    "settlement-burgess": "npc-jamestown-gentleman",
+    "settlement-goodwife": "npc-jamestown-settler-woman",
+    "river-fisher": "npc-jamestown-laborer",
+    "wharf-clerk": "npc-jamestown-gentleman",
+    "settlement-carpenter": "npc-jamestown-carpenter",
+    "powhatan-man": "npc-powhatan-man",
+    "powhatan-woman": "npc-powhatan-woman",
+  },
+  // Unit 3 is deliberately frozen on its placeholder art: no Revolutionary-era characters exist,
+  // and inheriting Unit 1's would put Christopher Columbus on a Philadelphia street in 1767.
+  "case-007": {
+    "john-dickinson": "legacy-scribe",
+    "town-crier": "legacy-columbus",
+    "militia-recruiter": "legacy-sailor",
+    "free-tradesman": "legacy-elder",
+    "loyalist-merchant": "legacy-fisher",
+    farmwife: "legacy-gardener",
+  },
+};
+
+for (const [caseId, sheets] of Object.entries(SHEETS_BY_CASE)) {
+  test(`${caseId}: every field NPC resolves a real sprite sheet`, async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: caseId,
+      unlockedCaseIds: ["case-001", caseId],
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    const actual = await page.evaluate(() =>
+      Object.fromEntries(
+        [...document.querySelectorAll("[data-npc]")].map((node) => [
+          node.dataset.npc,
+          (node
+            .querySelector(".character-sprite")
+            .style.getPropertyValue("--sprite-sheet")
+            .match(
+              /(npc-[a-z-]+|legacy-[a-z]+|chronicler-[ab]|director-[a-z-]+)-(?:down|up|left|right)\.png/
+            ) || [null, "MISSING"])[1],
+        ])
+      )
+    );
+    expect(actual, `${caseId} sprite assignments`).toEqual(sheets);
+  });
+}
+
+// walkToNpc only returns true once the game's own proximity check fires, so these are real pathing
+// assertions: the carpenter's barn corner and the Powhatan pair's river landing are walkable to,
+// not stranded behind collision or standing inside a building.
+//
+// One test per NPC, each walking from the spawn. Chaining all three in a single test made the
+// carpenter-to-Powhatan leg a 30-tile traverse across the whole settlement, which runs out of the
+// walker's step budget — a flake about the test's stamina, not about the map.
+//
+// Serial, because these are the three most walking-heavy tests in the suite and running them
+// alongside each other tripled peak concurrency. The field-movement spec still measures one hold
+// in milliseconds rather than in distance, so it covers less ground on a CPU-starved worker and
+// starts failing on a load its own comments predicted. Keeping these three in single file costs a
+// few seconds and leaves that spec the headroom it was written against.
+test.describe.configure({ mode: "serial" });
+for (const [id, line] of [
+  ["settlement-carpenter", "Every board in that barn"],
+  ["powhatan-man", "Tsenacommacah"],
+  ["powhatan-woman", "grew in our fields"],
+]) {
+  test(`${id} is reachable on foot and talks`, async ({ page }) => {
+    // The Powhatan landing sits eighteen tiles from the settlement spawn, right across the map,
+    // which is more ground than walkToNpc's default 44-step budget covers. Longer walk, longer
+    // budget — and a test timeout that can accommodate it rather than one that truncates the walk
+    // and reports the map as unreachable.
+    test.setTimeout(60_000);
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-004",
+      unlockedCaseIds: ["case-001", "case-004"],
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    expect(await walkToNpc(page, id, { steps: 90, burstMs: 400 }), `${id} is reachable`).toBe(true);
+    await page.keyboard.press("e");
+    const bubble = page.locator(".field-speech-bubble");
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toContainText(line);
+  });
+}

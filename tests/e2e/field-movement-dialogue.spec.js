@@ -63,9 +63,16 @@ test.describe("Field movement, collision, and dialogue", () => {
     expect(initial.camera).toEqual(expectedCamera(initial));
 
     // Distant NPC interaction attempt: clicking a far-away NPC should show a "too far" notice,
-    // not open dialogue — taino-fisher (37.5, 17.5) is well outside the 1.45-tile reach from
-    // the (28, 22) spawn.
-    await page.locator('[data-npc="taino-fisher"]').click();
+    // not open dialogue — the canoe worker is 13.7 tiles from the (28, 22) spawn, well outside the
+    // 1.45-tile reach.
+    //
+    // dispatchEvent, not click(), for the same reason the elder's bubble uses it further down: he
+    // moved to the north-lobe shore at (39.0, 14.2) to stand beside the village canoe he talks
+    // about, which puts him outside the camera's view of the spawn. A real click would land on the
+    // world clip instead of the button — even forced, since that only skips the actionability
+    // check and still aims at the coordinates. Dispatching delivers the event to the NPC, so the
+    // thing under test — the game's own proximity gate rejecting it — is exercised as before.
+    await page.locator('[data-npc="taino-fisher"]').dispatchEvent("click");
     await expect(page.locator("#fieldNotice")).toContainText("Move closer");
     await expect(page.locator(".field-speech-bubble")).toHaveCount(0);
 
@@ -108,7 +115,20 @@ test.describe("Field movement, collision, and dialogue", () => {
     // that step went wide of it, the north lobe's own land mask. The assertion is deliberately about
     // the *class* of outcome rather than one named rect: this used to name "garden (x1:17.6, y1:5.1,
     // x2:22.8, y2:7.8)", coordinates from two map rebuilds ago that no longer exist anywhere.
-    await holdKey(page, "ArrowUp", 8000);
+    //
+    // Held in short bursts until the player stops moving, rather than for one flat 8000ms. Movement
+    // advances per animation frame, so a fixed duration covers a different distance depending on
+    // how loaded the machine is — the same reason this file replaced its timed walks with
+    // walkToNpc(), left unfinished here. Under enough parallel workers the flat hold simply did not
+    // reach the collision it was asserting about, and the test failed for want of CPU rather than
+    // for want of a wall.
+    let previousPy = beforeCollisionHold.py;
+    for (let burst = 0; burst < 20; burst += 1) {
+      await holdKey(page, "ArrowUp", 500);
+      const { py } = await readFieldState(page);
+      if (py === previousPy) break;
+      previousPy = py;
+    }
     const afterCollision = await readFieldState(page);
     expect(afterCollision.py).toBeLessThan(beforeCollisionHold.py - 15);
     expect(afterCollision.py).toBeGreaterThan(3.0 * TILE);

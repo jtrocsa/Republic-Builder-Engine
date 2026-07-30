@@ -207,12 +207,9 @@ import {
   buildDbqEvaluationRequest,
 } from "./engine/evaluator-requests.js";
 import { evaluateSubmission } from "./engine/evaluator-client.js";
+import { spriteDirection, spriteSheetStyle } from "./engine/sprite-animation.js";
 
 const app = document.querySelector("#app");
-const chroniclerPreviewA = new URL("./assets/chronicle-sprites/chronicler-a.png", import.meta.url)
-  .href;
-const chroniclerPreviewB = new URL("./assets/chronicle-sprites/chronicler-b.png", import.meta.url)
-  .href;
 // Director intro scene reveal cards — lookup keys, not literal paths, so content stays
 // data-only (see docs/architecture/art-and-map-style-guide.md's "src is a lookup key"
 // convention already established for tileset packs, reused here for reveal images).
@@ -503,162 +500,106 @@ const recallBeaconBlue = new URL(
   "./assets/chronicle-sprites/field/recall-beacon-blue.png",
   import.meta.url
 ).href;
-const fieldNpcSprites = {
-  "taino-elder": new URL("./assets/chronicle-sprites/field/npc-taino-elder.png", import.meta.url)
-    .href,
-  "taino-gardener": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-gardener.png",
-    import.meta.url
-  ).href,
-  "taino-fisher": new URL("./assets/chronicle-sprites/field/npc-taino-fisher.png", import.meta.url)
-    .href,
-  "spanish-sailor": new URL(
-    "./assets/chronicle-sprites/field/npc-spanish-sailor.png",
-    import.meta.url
-  ).href,
-  columbus: new URL("./assets/chronicle-sprites/field/npc-columbus.png", import.meta.url).href,
-  "spanish-scribe": new URL("./assets/chronicle-sprites/field/npc-scribe.png", import.meta.url)
-    .href,
-  "taino-elder-step": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-elder-step.png",
-    import.meta.url
-  ).href,
-  "taino-gardener-step": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-gardener-step.png",
-    import.meta.url
-  ).href,
-  "taino-fisher-step": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-fisher-step.png",
-    import.meta.url
-  ).href,
-  "spanish-sailor-step": new URL(
-    "./assets/chronicle-sprites/field/npc-spanish-sailor-step.png",
-    import.meta.url
-  ).href,
-  "columbus-step": new URL(
-    "./assets/chronicle-sprites/field/npc-columbus-step.png",
-    import.meta.url
-  ).href,
-  "spanish-scribe-step": new URL(
-    "./assets/chronicle-sprites/field/npc-scribe-step.png",
-    import.meta.url
-  ).href,
-  "taino-elder-side": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-elder-side.png",
-    import.meta.url
-  ).href,
-  "taino-gardener-side": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-gardener-side.png",
-    import.meta.url
-  ).href,
-  "taino-fisher-side": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-fisher-side.png",
-    import.meta.url
-  ).href,
-  "spanish-sailor-side": new URL(
-    "./assets/chronicle-sprites/field/npc-spanish-sailor-side.png",
-    import.meta.url
-  ).href,
-  "columbus-side": new URL(
-    "./assets/chronicle-sprites/field/npc-columbus-side.png",
-    import.meta.url
-  ).href,
-  "spanish-scribe-side": new URL(
-    "./assets/chronicle-sprites/field/npc-scribe-side.png",
-    import.meta.url
-  ).href,
-  "taino-elder-side-step": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-elder-side-step.png",
-    import.meta.url
-  ).href,
-  "taino-gardener-side-step": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-gardener-side-step.png",
-    import.meta.url
-  ).href,
-  "taino-fisher-side-step": new URL(
-    "./assets/chronicle-sprites/field/npc-taino-fisher-side-step.png",
-    import.meta.url
-  ).href,
-  "spanish-sailor-side-step": new URL(
-    "./assets/chronicle-sprites/field/npc-spanish-sailor-side-step.png",
-    import.meta.url
-  ).href,
-  "columbus-side-step": new URL(
-    "./assets/chronicle-sprites/field/npc-columbus-side-step.png",
-    import.meta.url
-  ).href,
-  "spanish-scribe-side-step": new URL(
-    "./assets/chronicle-sprites/field/npc-scribe-side-step.png",
-    import.meta.url
-  ).href,
+// ---- Character sprite sheets --------------------------------------------------------------------
+//
+// One registry for every animated person in the game: the player's two Chroniclers, the three
+// Institute staff, and every field NPC across all three units. It replaced three separate maps
+// (`fieldNpcSprites`, `fieldSpriteAssets`, `instituteNpcSprites`) that between them held 45 loose
+// PNG paths in three different shapes, resolved by three near-identical functions.
+//
+// Each entry is four horizontal walk strips plus one still portrait. A strip's columns are
+// [standing, walk0 … walkN-1] on the canonical 48x55 canvas — see engine/sprite-animation.js for
+// the geometry and scripts/assets/build-character-sheets.js for how PixelLab's exports are
+// normalized onto it. `columns` differs per character because PixelLab generated Director Hale
+// with a 6-frame walk template and the rest of the cast with an 8-frame one.
+//
+// Paths are globbed rather than written out as 105 literal `new URL(...)` calls, following the same
+// pattern the tileset resolvers above already use. Vite still statically resolves every file.
+const characterSheetFiles = {
+  ...import.meta.glob("./assets/institute/*-{down,up,left,right,portrait}.png", {
+    eager: true,
+    import: "default",
+  }),
+  ...import.meta.glob("./assets/chronicle-sprites/field/*-{down,up,left,right,portrait}.png", {
+    eager: true,
+    import: "default",
+  }),
 };
-
-const fieldSpriteAssets = {
-  a: {
-    down: {
-      idle: new URL("./assets/chronicle-sprites/field/chronicler-a-down-idle.png", import.meta.url)
-        .href,
-      step: new URL("./assets/chronicle-sprites/field/chronicler-a-down-step.png", import.meta.url)
-        .href,
-    },
-    up: {
-      idle: new URL("./assets/chronicle-sprites/field/chronicler-a-up-idle.png", import.meta.url)
-        .href,
-      step: new URL("./assets/chronicle-sprites/field/chronicler-a-up-step.png", import.meta.url)
-        .href,
-    },
-    side: {
-      idle: new URL("./assets/chronicle-sprites/field/chronicler-a-side-idle.png", import.meta.url)
-        .href,
-      step: new URL("./assets/chronicle-sprites/field/chronicler-a-side-step.png", import.meta.url)
-        .href,
-    },
-  },
-  b: {
-    down: {
-      idle: new URL("./assets/chronicle-sprites/field/chronicler-b-down-idle.png", import.meta.url)
-        .href,
-      step: new URL("./assets/chronicle-sprites/field/chronicler-b-down-step.png", import.meta.url)
-        .href,
-    },
-    up: {
-      idle: new URL("./assets/chronicle-sprites/field/chronicler-b-up-idle.png", import.meta.url)
-        .href,
-      step: new URL("./assets/chronicle-sprites/field/chronicler-b-up-step.png", import.meta.url)
-        .href,
-    },
-    side: {
-      idle: new URL("./assets/chronicle-sprites/field/chronicler-b-side-idle.png", import.meta.url)
-        .href,
-      step: new URL("./assets/chronicle-sprites/field/chronicler-b-side-step.png", import.meta.url)
-        .href,
-    },
-  },
+function characterSheet(stem, columns) {
+  const file = (suffix) => {
+    const url = characterSheetFiles[`./assets/${stem}-${suffix}.png`];
+    if (!url) throw new Error(`missing character sheet: ${stem}-${suffix}.png`);
+    return url;
+  };
+  return {
+    columns,
+    portrait: file("portrait"),
+    down: file("down"),
+    up: file("up"),
+    left: file("left"),
+    right: file("right"),
+  };
+}
+const FIELD = "chronicle-sprites/field";
+const CHARACTER_SHEETS = {
+  // Institute staff. Director Hale is the cast's style and scale reference — every other body is
+  // normalized to his height, and he must not be regenerated (docs/art/CHARACTER-CAST-SPEC.md).
+  director: characterSheet("institute/director-rowan-hale", 7),
+  amani: characterSheet("institute/researcher-amani-soto", 9),
+  julian: characterSheet("institute/professor-julian-park", 9),
+  // Player appearances.
+  "chronicler-a": characterSheet(`${FIELD}/chronicler-a`, 9),
+  "chronicler-b": characterSheet(`${FIELD}/chronicler-b`, 9),
+  // Unit 1 · Caribbean, 1492.
+  columbus: characterSheet(`${FIELD}/npc-columbus`, 9),
+  "spanish-sailor": characterSheet(`${FIELD}/npc-spanish-sailor`, 9),
+  "caribbean-man": characterSheet(`${FIELD}/npc-caribbean-man`, 9),
+  "caribbean-woman": characterSheet(`${FIELD}/npc-caribbean-woman`, 9),
+  // Unit 2 · Riverbend / Jamestown, 1607-1620.
+  "jamestown-laborer": characterSheet(`${FIELD}/npc-jamestown-laborer`, 9),
+  "jamestown-gentleman": characterSheet(`${FIELD}/npc-jamestown-gentleman`, 9),
+  "jamestown-carpenter": characterSheet(`${FIELD}/npc-jamestown-carpenter`, 9),
+  "jamestown-settler-woman": characterSheet(`${FIELD}/npc-jamestown-settler-woman`, 9),
+  "powhatan-man": characterSheet(`${FIELD}/npc-powhatan-man`, 9),
+  "powhatan-woman": characterSheet(`${FIELD}/npc-powhatan-woman`, 9),
+  // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six
+  // keep the placeholder art Unit 3 already used, rebuilt into the same strip format. Giving them
+  // their own keys is the point: without it, upgrading `columbus` to real 1492 art would silently
+  // redraw Philadelphia's town crier as Christopher Columbus. Three columns, no north pose — the
+  // placeholders never had one, and this reproduces exactly what Unit 3 renders today.
+  "legacy-scribe": characterSheet(`${FIELD}/legacy-scribe`, 3),
+  "legacy-columbus": characterSheet(`${FIELD}/legacy-columbus`, 3),
+  "legacy-sailor": characterSheet(`${FIELD}/legacy-sailor`, 3),
+  "legacy-elder": characterSheet(`${FIELD}/legacy-elder`, 3),
+  "legacy-fisher": characterSheet(`${FIELD}/legacy-fisher`, 3),
+  "legacy-gardener": characterSheet(`${FIELD}/legacy-gardener`, 3),
 };
-// `chronicle-institute-hub.png` used to be resolved here — a single hand-drawn top-down floor plan
-// stretched behind percentage-positioned buttons, and the one screen in the game not built from the
-// tile library. Phase 54 replaced it with institute-hall.tmj (see the resolver above) and deleted
-// the file; its only other consumer was a cropped `.hallway-door` background, now drawn in CSS.
-const instituteNpcSprites = {
-  director: new URL("./assets/institute/director-rowan-hale.png", import.meta.url).href,
-  amani: new URL("./assets/institute/researcher-amani-soto.png", import.meta.url).href,
-  julian: new URL("./assets/institute/professor-julian-park.png", import.meta.url).href,
-  "director-side": new URL("./assets/institute/director-rowan-hale-side.png", import.meta.url).href,
-  "amani-side": new URL("./assets/institute/researcher-amani-soto-side.png", import.meta.url).href,
-  "julian-side": new URL("./assets/institute/professor-julian-park-side.png", import.meta.url).href,
-  "director-side-step": new URL(
-    "./assets/institute/director-rowan-hale-side-step.png",
-    import.meta.url
-  ).href,
-  "amani-side-step": new URL(
-    "./assets/institute/researcher-amani-soto-side-step.png",
-    import.meta.url
-  ).href,
-  "julian-side-step": new URL(
-    "./assets/institute/professor-julian-park-side-step.png",
-    import.meta.url
-  ).href,
-};
+/** The sheet for a character key, falling back to the Director rather than throwing on a typo. */
+function sheetFor(key) {
+  return CHARACTER_SHEETS[key] || CHARACTER_SHEETS.director;
+}
+/** The player's character key, from the saved appearance choice. */
+function chroniclerKey() {
+  return progress.profile.appearance === "b" ? "chronicler-b" : "chronicler-a";
+}
+/** Inline custom properties pointing one sprite element at one direction of one character. */
+function characterSpriteStyle(key, facing) {
+  const sheet = sheetFor(key);
+  return spriteSheetStyle(sheet[spriteDirection(facing)], sheet.columns);
+}
+/** The sprite element itself. Walking state is a class the movement loops toggle. */
+function characterSpriteMarkup(key, facing, { id = "", walking = false } = {}) {
+  return `<span class="character-sprite${walking ? " is-walking" : ""}"${id ? ` id="${id}"` : ""} style="${characterSpriteStyle(key, facing)}" aria-hidden="true"></span>`;
+}
+/** Repoints an already-rendered sprite element at a different direction, in place. */
+function applyCharacterSprite(node, key, facing, walking) {
+  if (!node) return;
+  const sheet = sheetFor(key);
+  node.style.setProperty("--sprite-sheet", `url('${sheet[spriteDirection(facing)]}')`);
+  node.style.setProperty("--sprite-columns", String(sheet.columns));
+  node.style.setProperty("--sprite-walk-frames", String(sheet.columns - 1));
+  node.classList.toggle("is-walking", Boolean(walking));
+}
 
 let fieldMovement = { x: 28.0, y: 22.0, facing: "down", moving: false, step: false, queued: null };
 let fieldCamera = { x: 0, y: 0 };
@@ -691,7 +632,11 @@ const FIELD_NPCS = [
     group: "taino",
     name: "Taíno community elder",
     label: "Community elder",
-    sprite: "taino-elder",
+    // Two Caribbean characters exist for three Lucayan roles, so one sprite is shared. The
+    // gardener and the elder carry it rather than the elder and the canoe worker: they stand
+    // eight tiles apart in different contexts (the conuco's north edge, the village centre) and
+    // the man's fishing spear belongs with the canoes.
+    sprite: "caribbean-woman",
     text: "Our homes, gardens, and canoes do not appear by chance. Families work here each day, and elders listen before a choice is made for the village.",
   },
   {
@@ -701,17 +646,20 @@ const FIELD_NPCS = [
     group: "taino",
     name: "Taíno gardener",
     label: "Garden worker",
-    sprite: "taino-gardener",
+    sprite: "caribbean-woman",
     text: "This ground has been worked by many hands. Cassava and maize feed our families; the garden tells you we know this place well.",
   },
   {
     id: "taino-fisher",
-    x: 37.5,
-    y: 17.5,
+    // Moved to the north-lobe shore beside the village canoe at (39,12)-(41,13). He used to stand
+    // at (37.5,17.5) — five tiles from the nearest beach cell and four and a half south of the
+    // nearest canoe — while saying "The water is a road to us."
+    x: 39.0,
+    y: 14.2,
     group: "taino",
     name: "Taíno canoe worker",
     label: "Canoe worker",
-    sprite: "taino-fisher",
+    sprite: "caribbean-man",
     text: "The water is a road to us. A good canoe carries food, news, and neighbors farther than a stranger may understand at first glance.",
   },
   {
@@ -741,7 +689,8 @@ const FIELD_NPCS = [
     group: "spanish",
     name: "Spanish scribe",
     label: "Scribe",
-    sprite: "spanish-scribe",
+    // No scribe was generated; the common seaman is the only period-correct Castilian in the cast.
+    sprite: "spanish-sailor",
     text: "Ink can make a voyage last longer than memory. Still, I choose words for the court, and those choices matter.",
   },
 ];
@@ -760,11 +709,13 @@ const FIELD_NPC_PATROLS = {
     { x: 23.2, y: 10.9 },
     { x: 21.7, y: 10.9 },
   ],
+  // Works the beach south of the village canoe; every waypoint stays clear of the canoe's
+  // collision rect, which ends at row 13.
   "taino-fisher": [
-    { x: 37.5, y: 17.5 },
-    { x: 36.5, y: 17.4 },
-    { x: 36.1, y: 18.2 },
-    { x: 37.3, y: 18.3 },
+    { x: 39.0, y: 14.2 },
+    { x: 39.8, y: 14.1 },
+    { x: 40.0, y: 14.8 },
+    { x: 38.7, y: 14.9 },
   ],
   "spanish-sailor": [
     { x: 45.5, y: 20.5 },
@@ -823,24 +774,6 @@ let lastFieldMoveAt = 0;
 function fieldNpcState(npc) {
   return fieldNpcRuntime[npc.id] || { x: npc.x, y: npc.y, walking: false, facing: "down" };
 }
-function fieldNpcFrameUrls(npc, facing = "down") {
-  const side = facing === "left" || facing === "right";
-  const baseKey = side ? `${npc.sprite}-side` : npc.sprite;
-  const idle =
-    fieldNpcSprites[baseKey] || fieldNpcSprites[npc.sprite] || fieldNpcSprites["taino-elder"];
-  const step = fieldNpcSprites[`${baseKey}-step`] || fieldNpcSprites[`${npc.sprite}-step`] || idle;
-  return { idle, step };
-}
-function hubNpcSpriteUrl(id, facing = "down", walking = false) {
-  const side = facing === "left" || facing === "right";
-  if (side)
-    return (
-      instituteNpcSprites[`${id}-side${walking ? "-step" : ""}`] ||
-      instituteNpcSprites[`${id}-side`] ||
-      instituteNpcSprites[id]
-    );
-  return instituteNpcSprites[id];
-}
 function fieldNpcFootBoxAt(x, y) {
   return { x1: x - 0.36, x2: x + 0.36, y1: y + 0.2, y2: y + 0.88 };
 }
@@ -871,9 +804,12 @@ function updateFieldNpcs() {
         node.dataset.facing = state.facing;
         const npc = activeFieldMap().npcs.find((item) => item.id === id);
         if (npc) {
-          const frames = fieldNpcFrameUrls(npc, state.facing);
-          node.querySelector(".npc-frame--idle")?.setAttribute("src", frames.idle);
-          node.querySelector(".npc-frame--step")?.setAttribute("src", frames.step);
+          applyCharacterSprite(
+            node.querySelector(".character-sprite"),
+            npc.sprite,
+            state.facing,
+            false
+          );
         }
       }
       return;
@@ -915,9 +851,12 @@ function updateFieldNpcs() {
       node.dataset.facing = state.facing;
       const npc = activeFieldMap().npcs.find((item) => item.id === id);
       if (npc) {
-        const frames = fieldNpcFrameUrls(npc, state.facing);
-        node.querySelector(".npc-frame--idle")?.setAttribute("src", frames.idle);
-        node.querySelector(".npc-frame--step")?.setAttribute("src", frames.step);
+        applyCharacterSprite(
+          node.querySelector(".character-sprite"),
+          npc.sprite,
+          state.facing,
+          state.walking
+        );
       }
     }
   });
@@ -993,7 +932,7 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "Settlement minister",
     label: "Minister",
-    sprite: "spanish-scribe",
+    sprite: "jamestown-gentleman",
     text: "The meetinghouse holds this settlement's promises — read the charter before you judge who benefits from them.",
   },
   {
@@ -1003,7 +942,7 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "Indentured field servant",
     label: "Field servant",
-    sprite: "taino-gardener",
+    sprite: "jamestown-laborer",
     text: "Seven years I owe for my passage. The rows do not care whose name is on the contract.",
   },
   {
@@ -1013,7 +952,7 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "Elected burgess",
     label: "Burgess",
-    sprite: "columbus",
+    sprite: "jamestown-gentleman",
     text: "We meet, we vote, we send our grievances — self-government grows here because the ocean is wide.",
   },
   {
@@ -1023,7 +962,7 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "Goodwife of the settlement",
     label: "Goodwife",
-    sprite: "taino-elder",
+    sprite: "jamestown-settler-woman",
     text: "Count who does the washing, the brewing, the tending — the record books forget us, but the settlement would starve without us.",
   },
   {
@@ -1033,7 +972,7 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "River fisher",
     label: "Fisher",
-    sprite: "taino-fisher",
+    sprite: "jamestown-laborer",
     text: "The river feeds us and carries the hogsheads away. Everything here moves by water.",
   },
   {
@@ -1043,8 +982,50 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "Wharf clerk",
     label: "Clerk",
-    sprite: "spanish-sailor",
+    sprite: "jamestown-gentleman",
     text: "Every cask is entered twice — once for the company, once for the customs man. Ledgers remember what people forget.",
+  },
+  // Added with the PixelLab cast: a craftsman for the settlement, and two Powhatan people for the
+  // country the settlement was built in. The six above are all English, which left the map
+  // reading as though nobody lived here first.
+  {
+    id: "settlement-carpenter",
+    // The east corner of the barn, between it and the farmyard stores — the closest thing this
+    // map has to a worksite. Riverbend has no timber pile, sawpit, workbench or half-framed
+    // building anywhere in its tile palette; see the placement note in the decision log.
+    x: 41.0,
+    y: 19.0,
+    group: "settlement",
+    name: "Settlement carpenter",
+    label: "Carpenter",
+    sprite: "jamestown-carpenter",
+    text: "Every board in that barn I cut and set myself. The Company ships us gentlemen who will not dig and adventurers who will not saw — so the frame waits on the handful of us who can.",
+  },
+  {
+    // Placed on the open northwest shore, upriver of the English settlement and well clear of it,
+    // at a river landing of their own. The Riverbend map has no Indigenous community zone and one
+    // cannot currently be built: `architecture.indigenous.northAmerican` is a registered gap in
+    // canonical-palette.js, and reusing Island Survival's Taíno bohíos as generic "Native
+    // American" is explicitly forbidden there. So these two stand in open ground with no props of
+    // their own, which is a limitation of the tile library, not of the placement.
+    id: "powhatan-man",
+    x: 10.5,
+    y: 9.5,
+    group: "powhatan",
+    name: "Powhatan man of Tsenacommacah",
+    label: "Powhatan man",
+    sprite: "powhatan-man",
+    text: "Our canoes have carried corn and news between these towns since long before a ship found the mouth of this river. What the strangers call wilderness has a name — Tsenacommacah — and a paramount chief who governs it.",
+  },
+  {
+    id: "powhatan-woman",
+    x: 12.0,
+    y: 11.5,
+    group: "powhatan",
+    name: "Powhatan woman of Tsenacommacah",
+    label: "Powhatan woman",
+    sprite: "powhatan-woman",
+    text: "The corn the strangers ate through the winter grew in our fields. Women plant it, tend it, and decide what may be spared. Remember that when you are told the trade ran only one way.",
   },
 ];
 const UNIT2_FIELD_NPC_PATROLS = {
@@ -1084,6 +1065,26 @@ const UNIT2_FIELD_NPC_PATROLS = {
     { x: 22.0, y: 20.4 },
     { x: 20.8, y: 20.5 },
   ],
+  // Works the gap between the barn (which ends at column 40) and the farm stores (which begin at
+  // column 43 on row 20), so every waypoint clears both.
+  "settlement-carpenter": [
+    { x: 41.0, y: 19.0 },
+    { x: 41.7, y: 18.9 },
+    { x: 41.9, y: 19.5 },
+    { x: 40.9, y: 19.6 },
+  ],
+  "powhatan-man": [
+    { x: 10.5, y: 9.5 },
+    { x: 11.3, y: 9.4 },
+    { x: 11.5, y: 10.1 },
+    { x: 10.4, y: 10.2 },
+  ],
+  "powhatan-woman": [
+    { x: 12.0, y: 11.5 },
+    { x: 12.8, y: 11.4 },
+    { x: 13.0, y: 12.1 },
+    { x: 11.9, y: 12.2 },
+  ],
 };
 // All three anchored to the person who already talks about them: the minister says "read the charter
 // before you judge who benefits", the servant "seven years I owe for my passage", the clerk "ledgers
@@ -1118,8 +1119,11 @@ function isRiverbendLand(x, y) {
 // common-cause-field.blocks.js imported at the top of this file; the NPC and source coordinates
 // below are the hand-authored half, and the generator's building anchors are chosen around them.
 const UNIT3_FIELD_NPCS = [
-  // Placeholder roster: sprites reuse Unit 1 field art, same as Unit 2's roster above —
-  // no Revolutionary-era sprite sheets exist yet.
+  // Frozen placeholder roster. No Revolutionary-era characters exist in PixelLab, so rather than
+  // dress John Dickinson in Christopher Columbus's real 1492 doublet, these six keep the
+  // placeholder art they have always used — rebuilt onto the same sprite-strip canvas as the rest
+  // of the cast, under `legacy-*` keys of their own so Unit 1's art can be replaced without
+  // reaching them. Replacing this roster needs new art, not new code.
   // Named, because he was demonstrably here: Dickinson wrote the Farmer's Letters in Philadelphia and
   // they were set and printed in this city's newspapers from December 1767. Standing outside the print
   // shop's door, he carries `commoncause-dickinson-letter` — see UNIT3_FIELD_SOURCE_POINTS, and see
@@ -1131,7 +1135,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "John Dickinson",
     label: "John Dickinson",
-    sprite: "spanish-scribe",
+    sprite: "legacy-scribe",
     text: "I publish as a farmer because a farmer may be listened to where a lawyer is only argued with. Read the distinction carefully: Parliament may regulate our trade, and I say so plainly. What it may not do is lay a duty on us for the raising of revenue, without our consent.",
   },
   {
@@ -1141,7 +1145,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Town crier",
     label: "Town crier",
-    sprite: "columbus",
+    sprite: "legacy-columbus",
     text: "Hear ye — Parliament's duties still stand, and talk in every tavern turns to committees, boycotts, and what a colony owes its King. I only carry the news; deciding what to do with it is your affair.",
   },
   {
@@ -1151,7 +1155,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Militia recruiter",
     label: "Militia recruiter",
-    sprite: "spanish-sailor",
+    sprite: "legacy-sailor",
     text: "Muster on the green Tuesday next. A man who won't drill now may wish later he had — word from Virginia says even the House of Burgesses is arming its militia.",
   },
   {
@@ -1161,7 +1165,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Free Black tradesman",
     label: "Tradesman",
-    sprite: "taino-elder",
+    sprite: "legacy-elder",
     text: "I read the broadsides same as any freeman here. Strange, to hear talk of chains and slavery from men who'd never let it touch their own thinking on who else wears them.",
   },
   {
@@ -1171,7 +1175,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Loyalist merchant",
     label: "Merchant",
-    sprite: "taino-fisher",
+    sprite: "legacy-fisher",
     text: "My ledgers balance because the Crown's ships still call at this port. I'll not pretend disorder in the streets is good for trade, whatever cause it claims to serve.",
   },
   {
@@ -1181,7 +1185,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Farmwife",
     label: "Farmwife",
-    sprite: "taino-gardener",
+    sprite: "legacy-gardener",
     text: "My husband's away with the militia and the mending doesn't stop because Parliament's vexed us. Whatever new government they draft, I mean to see it remembers the women keeping the house together.",
   },
 ];
@@ -1647,7 +1651,7 @@ function updateInstituteNpcs() {
         node.style.cssText = hubPointStyle(state.x, state.y, 0.51);
         node.classList.toggle("is-walking-npc", false);
         node.dataset.facing = state.facing;
-        node.querySelector("img")?.setAttribute("src", hubNpcSpriteUrl(id, state.facing, false));
+        applyCharacterSprite(node.querySelector(".character-sprite"), id, state.facing, false);
       }
       return;
     }
@@ -1685,9 +1689,12 @@ function updateInstituteNpcs() {
       node.style.cssText = hubPointStyle(state.x, state.y, 0.51);
       node.classList.toggle("is-walking-npc", state.walking);
       node.dataset.facing = state.facing;
-      node
-        .querySelector("img")
-        ?.setAttribute("src", hubNpcSpriteUrl(id, state.facing, state.walking));
+      applyCharacterSprite(
+        node.querySelector(".character-sprite"),
+        id,
+        state.facing,
+        state.walking
+      );
     }
   });
   updateInstitutePlayer();
@@ -6230,7 +6237,7 @@ function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "", s
   const usingDefaultStage = !stageHtml;
   const stage =
     stageHtml ||
-    `<img class="director-scene__sprite" src="${instituteNpcSprites.director}" alt="Director Rowan Hale" draggable="false">`;
+    `<img class="director-scene__sprite" src="${CHARACTER_SHEETS.director.portrait}" alt="Director Rowan Hale" draggable="false">`;
   // The record readout is omitted whenever extraContent is present (intro-protocol only) since
   // that panel occupies the same top-left corner — see DIRECTOR_STAGE_DECOR_RECORD_READOUT.
   const stageDecor = usingDefaultStage
@@ -6280,7 +6287,7 @@ function introProtocolScreen() {
 // drives the transition into the Main Hall once it completes (see completeHallwayWalk()), so
 // buttonsHtml is intentionally empty.
 function introHallwayScreen() {
-  const stageHtml = `<div class="hallway-viewport"><div class="hallway-scaler" id="hallwayScaler"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="A corridor lined with archive record shelving and torches, leading to a door"></canvas><div class="hallway-door" aria-hidden="true"></div></div><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%"><img src="${fieldSpriteAssets[progress.profile.appearance === "b" ? "b" : "a"].up.idle}" alt=""></div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%"><img src="${instituteNpcSprites.director}" alt=""></div></div>`;
+  const stageHtml = `<div class="hallway-viewport"><div class="hallway-scaler" id="hallwayScaler"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="A corridor lined with archive record shelving and torches, leading to a door"></canvas><div class="hallway-door" aria-hidden="true"></div></div><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%">${characterSpriteMarkup(chroniclerKey(), "up")}</div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%">${characterSpriteMarkup("director", "up")}</div></div>`;
   return `${chrome()}<main class="director-stage">${directorSceneMarkup({
     eyebrow: "Chronicle Institute · Orientation",
     title: "Welcome to the Institute.",
@@ -6412,10 +6419,11 @@ function runHallwayWalk(now) {
   if (playerEl) {
     playerEl.style.left = "53%";
     playerEl.style.top = `${86 - t * 44}%`;
-    const img = playerEl.querySelector("img");
-    const appearance = progress.profile.appearance === "b" ? "b" : "a";
-    const frame = reduced || Math.floor(elapsed / 220) % 2 === 0 ? "idle" : "step";
-    if (img) img.src = fieldSpriteAssets[appearance].up[frame];
+    // Both figures walk north up the corridor for the whole scene, so the walk cycle just runs —
+    // this used to hand-flip between two frames on a 220ms timer, which the CSS animation now does
+    // across the full cycle. Reduced motion holds the standing frame instead.
+    playerEl.querySelector(".character-sprite")?.classList.toggle("is-walking", !reduced);
+    directorEl?.querySelector(".character-sprite")?.classList.toggle("is-walking", !reduced);
   }
   if (directorEl) {
     directorEl.style.left = "45%";
@@ -6517,7 +6525,7 @@ function startIntroTypewriter() {
 function identityScreen() {
   const c = CHRONICLE_IDENTITY_DEFAULTS.identity;
   const isA = progress.profile.appearance !== "b";
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(c.eyebrow)}</p><h1>${esc(c.title)}</h1><p>${esc(c.subtitle)}</p><p>${esc(c.appearanceLabel)}</p><div class="completion-actions"><button class="btn ${isA ? "btn-gold" : "btn-outline"}" data-action="set-appearance" data-value="a"><img src="${chroniclerPreviewA}" alt="Appearance one" height="64"></button><button class="btn ${!isA ? "btn-gold" : "btn-outline"}" data-action="set-appearance" data-value="b"><img src="${chroniclerPreviewB}" alt="Appearance two" height="64"></button></div><p>${esc(c.appearanceHelp)}</p><label>${esc(c.nameLabel)}<input data-profile="name" maxlength="14" value="${esc(progress.profile.name)}" placeholder="${esc(c.namePlaceholder)}"></label><p>${esc(c.nameHelp)}</p><p class="feedback" id="identityFeedback"></p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="intro-protocol">${esc(c.back)}</button><button class="btn btn-gold" data-action="confirm-identity">${esc(c.confirm)} →</button></div></section></main>`;
+  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(c.eyebrow)}</p><h1>${esc(c.title)}</h1><p>${esc(c.subtitle)}</p><p>${esc(c.appearanceLabel)}</p><div class="completion-actions chronicler-choices">${["a", "b"].map((key) => `<button class="btn chronicler-choice ${(key === "a") === isA ? "btn-gold" : "btn-outline"}" data-action="set-appearance" data-value="${key}" aria-pressed="${(key === "a") === isA}"><img src="${CHARACTER_SHEETS[`chronicler-${key}`].portrait}" alt="" height="84"><b>Chronicler ${key.toUpperCase()}</b></button>`).join("")}</div><p>${esc(c.appearanceHelp)}</p><label>${esc(c.nameLabel)}<input data-profile="name" maxlength="14" value="${esc(progress.profile.name)}" placeholder="${esc(c.namePlaceholder)}"></label><p>${esc(c.nameHelp)}</p><p class="feedback" id="identityFeedback"></p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="intro-protocol">${esc(c.back)}</button><button class="btn btn-gold" data-action="confirm-identity">${esc(c.confirm)} →</button></div></section></main>`;
 }
 
 function introRegistrationScreen() {
@@ -6646,14 +6654,6 @@ function updateHubCamera() {
   const camY = Math.round(Math.max(minY, Math.min(0, viewport.height / 2 - py)));
   world.style.transform = `translate(${camX}px, ${camY}px)`;
 }
-function instituteSpriteUrl() {
-  const appearance = progress.profile.appearance === "b" ? "b" : "a";
-  const direction =
-    instituteMovement.facing === "left" || instituteMovement.facing === "right"
-      ? "side"
-      : instituteMovement.facing;
-  return fieldSpriteAssets[appearance][direction][instituteMovement.moving ? "step" : "idle"];
-}
 function targetDistance(target, id = null) {
   const state = id ? hubTargetState(id) : target;
   return Math.hypot(instituteMovement.x - state.x, instituteMovement.y - state.y);
@@ -6675,8 +6675,7 @@ function updateInstitutePlayer() {
   if (!player || !sprite) return;
   player.style.cssText = institutePositionStyle();
   player.dataset.facing = instituteMovement.facing;
-  player.classList.toggle("is-walking", instituteMovement.moving);
-  sprite.src = instituteSpriteUrl();
+  applyCharacterSprite(sprite, chroniclerKey(), instituteMovement.facing, instituteMovement.moving);
   updateHubCamera();
   const nearby = nearestHubTarget();
   if (prompt) {
@@ -6821,16 +6820,15 @@ function interactWithHubTarget(id) {
   hubDialogueId = id;
   render();
 }
-function instituteNpc(targetId, sprite, label) {
+function instituteNpc(targetId, label) {
   const target = activeHubTargets()[targetId];
   const state = hubTargetState(targetId);
   const isNear = targetDistance(target, targetId) <= targetReach(targetId);
   const walking = Boolean(hubNpcRuntime[targetId]?.walking);
-  const spriteUrl = hubNpcSpriteUrl(targetId, state.facing || "down", walking) || sprite;
   // hubPointStyle() rather than the percentage math this used to inline: the Main Hall became a
   // camera room in Phase 54, and a hardcoded percentage would have placed all three NPCs wrong the
   // moment HUB_GRID gained a `tile`.
-  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubPointStyle(state.x, state.y, 0.51)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><img src="${spriteUrl}" alt=""><span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
+  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubPointStyle(state.x, state.y, 0.51)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}">${characterSpriteMarkup(targetId, state.facing || "down", { walking })}<span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
 }
 function instituteScreen() {
   return progress.currentHubRoom === "archive" ? archiveRoomScreen() : instituteMainRoomScreen();
@@ -6843,7 +6841,7 @@ function tourCalloutMarkup() {
   const stepId = currentTourStepId();
   const content = CHRONICLE_OPENING_DEFAULTS.tour[stepId];
   if (!content) return "";
-  return `<div class="hub-dialogue hub-dialogue--tour" role="dialog" aria-modal="true" aria-labelledby="tourCalloutTitle"><article><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites.director}" alt=""></div><div><p class="kicker">${esc(content.role)}</p><h2 id="tourCalloutTitle">${esc(content.name)}</h2><p>${esc(content.body)}</p><button class="btn btn-gold" data-action="tutorial-tour-next">${esc(content.cta)}</button></div></article></div>`;
+  return `<div class="hub-dialogue hub-dialogue--tour" role="dialog" aria-modal="true" aria-labelledby="tourCalloutTitle"><article><div class="hub-dialogue__portrait"><img src="${CHARACTER_SHEETS.director.portrait}" alt=""></div><div><p class="kicker">${esc(content.role)}</p><h2 id="tourCalloutTitle">${esc(content.name)}</h2><p>${esc(content.body)}</p><button class="btn btn-gold" data-action="tutorial-tour-next">${esc(content.cta)}</button></div></article></div>`;
 }
 function instituteMainRoomScreen() {
   const nearby = nearestHubTarget();
@@ -6859,7 +6857,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -6890,7 +6888,7 @@ function archiveRoomScreen() {
   // changed the page height enough to toggle the scrollbar and slide the centred layout sideways.
   const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Archive status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Archive desk · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${filed}</b> / ${total} Archive Challenges filed</span><span><b>${evidenceSecured}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Written work</b><span>Approach the Archive Terminal at the north end of the room to compose this unit's Archive Challenges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidenceSecured}</b></button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
   const worldStyle = `width:${ARCHIVE_ROOM_GRID.columns * ARCHIVE_ROOM_GRID.tile}px;height:${ARCHIVE_ROOM_GRID.rows * ARCHIVE_ROOM_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Leave Archive", "Leave the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Leave Archive", "Leave the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
 }
 
 // Shared render/grade/completion-tracking core for one Archive Challenge
@@ -7372,14 +7370,6 @@ function fieldWorldStyle() {
 function fieldPositionStyle() {
   return `left:${(fieldMovement.x * FIELD_GRID.tile).toFixed(1)}px;top:${(fieldMovement.y * FIELD_GRID.tile).toFixed(1)}px;`;
 }
-function fieldSpriteUrl() {
-  const appearance = progress.profile.appearance === "b" ? "b" : "a";
-  const direction =
-    fieldMovement.facing === "left" || fieldMovement.facing === "right"
-      ? "side"
-      : fieldMovement.facing;
-  return fieldSpriteAssets[appearance][direction][fieldMovement.moving ? "step" : "idle"];
-}
 export { ellipse, rectsOverlap, footBoxFor };
 // Five overlapping ellipses, not four: the extra lobes give the island an irregular coastline
 // (northwest cove, north village lobe, southeast point, south spit) instead of the smooth oval
@@ -7432,8 +7422,7 @@ function updateFieldPlayer() {
   if (!player || !sprite) return;
   player.style.cssText = fieldPositionStyle();
   player.dataset.facing = fieldMovement.facing;
-  player.classList.toggle("is-walking", fieldMovement.moving);
-  sprite.src = fieldSpriteUrl();
+  applyCharacterSprite(sprite, chroniclerKey(), fieldMovement.facing, fieldMovement.moving);
   if (world) {
     const viewport = world.parentElement.getBoundingClientRect();
     const worldWidth = FIELD_GRID.columns * FIELD_GRID.tile;
@@ -7758,7 +7747,6 @@ function fieldNpcButton(npc) {
   const near = isNearFieldNpc(npc);
   const state = fieldNpcState(npc);
   const walking = state.walking;
-  const frames = fieldNpcFrameUrls(npc, state.facing || "down");
   // The record badge: the same ✦/✓ the world markers use, hovering over the head of whoever is
   // carrying a record. This is the "go and find Patrick Henry" signal — you can see across the map
   // which people you still need to talk to.
@@ -7769,7 +7757,7 @@ function fieldNpcButton(npc) {
       ? `<em class="npc-source-badge ${availability === "secured" ? "is-secured" : ""}" aria-hidden="true">${availability === "secured" ? "✓" : "✦"}</em>`
       : "";
   const label = carried ? `${npc.name} — carries a record` : `Talk with ${npc.name}`;
-  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><img class="npc-frame npc-frame--idle" src="${frames.idle}" alt=""><img class="npc-frame npc-frame--step" src="${frames.step}" alt=""><span>${esc(npc.label)}</span>${badge}</button>`;
+  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}">${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking })}<span>${esc(npc.label)}</span>${badge}</button>`;
 }
 function fieldDialogueBubble() {
   const npc = activeFieldMap().npcs.find((item) => item.id === progress.activeFieldNpc);
@@ -7846,17 +7834,17 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
   const isElder = active.id === "elder";
   const isBohio = active.id === "bohio";
   const figures = isElder
-    ? `<img src="${fieldNpcSprites["taino-elder"]}" alt="" class="scene-person scene-person--elder"><img src="${fieldNpcSprites["taino-fisher"]}" alt="" class="scene-person scene-person--listener scene-person--left"><img src="${fieldNpcSprites["taino-gardener"]}" alt="" class="scene-person scene-person--listener scene-person--right">`
+    ? `<img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--elder"><img src="${sheetFor("caribbean-man").portrait}" alt="" class="scene-person scene-person--listener scene-person--left"><img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--listener scene-person--right">`
     : isBohio
-      ? `<div class="scene-bohio scene-bohio--large"><span></span></div><div class="scene-bohio scene-bohio--small"><span></span></div><img src="${fieldNpcSprites["taino-elder"]}" alt="" class="scene-person scene-person--family scene-person--one"><img src="${fieldNpcSprites["taino-fisher"]}" alt="" class="scene-person scene-person--family scene-person--two">`
-      : `<div class="scene-garden-rows"></div><div class="scene-canoe-close"></div><img src="${fieldNpcSprites["taino-gardener"]}" alt="" class="scene-person scene-person--worker"><img src="${fieldNpcSprites["taino-fisher"]}" alt="" class="scene-person scene-person--canoe">`;
+      ? `<div class="scene-bohio scene-bohio--large"><span></span></div><div class="scene-bohio scene-bohio--small"><span></span></div><img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--family scene-person--one"><img src="${sheetFor("caribbean-man").portrait}" alt="" class="scene-person scene-person--family scene-person--two">`
+      : `<div class="scene-garden-rows"></div><div class="scene-canoe-close"></div><img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--worker"><img src="${sheetFor("caribbean-man").portrait}" alt="" class="scene-person scene-person--canoe">`;
   return `<div class="village-scene village-scene--focused village-scene--${esc(active.id)}"><div class="scene-sunpatch"></div>${figures}<div class="scene-dialogue"><b>${esc(active.title)}</b><p>${esc(active.scene)}</p><span>${esc(active.note)}</span></div></div>`;
 }
 
@@ -7888,7 +7876,7 @@ function columbusActivityScreen() {
       : selected
         ? "Reconsider the speaker’s audience and purpose. A primary source is evidence, but it is not automatically neutral."
         : "";
-  return `${chrome()}<main class="shell activity-shell spanish-encounter-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Spanish Camp Source Encounter</h1><p>The dialogue below is dramatized and historically grounded. Use it to think about point of view before opening the actual letter excerpt.</p><div class="camp-dialogue quote-dialogue"><img src="${fieldNpcSprites.columbus}" alt=""><div><b>Christopher Columbus</b><p>“The sovereigns will want to know what this voyage can bring them: land, souls, trade, and another crossing.”</p></div></div><div class="camp-dialogue quote-dialogue"><img src="${fieldNpcSprites["spanish-scribe"]}" alt=""><div><b>Spanish scribe</b><p>“Then the account must persuade as well as record. We write for the court, not only for ourselves.”</p></div></div></section><section class="activity-board"><h2>POV checkpoint</h2><p>Which statement best explains how point of view should shape a Chronicler’s reading of Columbus’s 1493 letter?</p><div class="choice-stack"><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="audience" ${selected === "audience" ? "checked" : ""}> Columbus’s claims should be read alongside his audience and purpose because he was reporting to Spanish officials whose support mattered.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="neutral" ${selected === "neutral" ? "checked" : ""}> The letter should be treated as neutral because firsthand accounts do not contain assumptions or motives.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="taino" ${selected === "taino" ? "checked" : ""}> The letter mainly reveals the point of view of Taíno communities because it records their exact words.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="map" ${selected === "map" ? "checked" : ""}> The letter is best used as a map source because it shows later European geographic labeling.</label></div>${choiceText ? `<p class="activity-feedback ${selected === "audience" ? "success" : "error"}">${esc(choiceText)}</p>` : ""}${selected === "audience" ? `<button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open Columbus letter →</button>` : ""}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell spanish-encounter-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Spanish Camp Source Encounter</h1><p>The dialogue below is dramatized and historically grounded. Use it to think about point of view before opening the actual letter excerpt.</p><div class="camp-dialogue quote-dialogue"><img src="${sheetFor("columbus").portrait}" alt=""><div><b>Christopher Columbus</b><p>“The sovereigns will want to know what this voyage can bring them: land, souls, trade, and another crossing.”</p></div></div><div class="camp-dialogue quote-dialogue"><img src="${sheetFor("spanish-sailor").portrait}" alt=""><div><b>Spanish scribe</b><p>“Then the account must persuade as well as record. We write for the court, not only for ourselves.”</p></div></div></section><section class="activity-board"><h2>POV checkpoint</h2><p>Which statement best explains how point of view should shape a Chronicler’s reading of Columbus’s 1493 letter?</p><div class="choice-stack"><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="audience" ${selected === "audience" ? "checked" : ""}> Columbus’s claims should be read alongside his audience and purpose because he was reporting to Spanish officials whose support mattered.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="neutral" ${selected === "neutral" ? "checked" : ""}> The letter should be treated as neutral because firsthand accounts do not contain assumptions or motives.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="taino" ${selected === "taino" ? "checked" : ""}> The letter mainly reveals the point of view of Taíno communities because it records their exact words.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="map" ${selected === "map" ? "checked" : ""}> The letter is best used as a map source because it shows later European geographic labeling.</label></div>${choiceText ? `<p class="activity-feedback ${selected === "audience" ? "success" : "error"}">${esc(choiceText)}</p>` : ""}${selected === "audience" ? `<button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open Columbus letter →</button>` : ""}</section></main>`;
 }
 
 function mapJigsawScreen() {
