@@ -184,19 +184,22 @@ export const CANONICAL = {
   // disproved it (its whole ground layer sits in the firstgid:513 = tile-B-05 range).
   // ---------------------------------------------------------------------------------------
 
-  /** Archive Room floor, grey flagstone. [live: archive-room + hallway ground] */
+  /** Grey flagstone, top-left of a 2x2 block. Both Institute interiors' main floor.
+   *  [live: archive-room + institute-hall + hallway ground] */
   "floor.archive.stone": tile("Medieval Tavern/tile-B-05.png", 13, 0),
-  /** Archive Room floor, second flagstone cell of the same 2x2 block. [live] */
+  /** Second flagstone cell of the same 2x2 block. [live: hallway ground] */
   "floor.archive.stone.b": tile("Medieval Tavern/tile-B-05.png", 13, 1),
-  /** Archive Room floor accent. [live: archive-room + hallway ground] */
+  /** Flagstone accent. [live: hallway ground] */
   "floor.archive.stone.c": tile("Medieval Tavern/tile-B-05.png", 14, 2),
-  /** Archive Room floor accent. [live: archive-room + hallway ground] */
+  /** Flagstone accent. [live: hallway ground] */
   "floor.archive.stone.d": tile("Medieval Tavern/tile-B-05.png", 15, 4),
   /**
-   * Archive Room secondary floor, used for its alcove. The name says "sandstone" and the art is
-   * plank **wood** — a misnomer inherited from before this file existed, kept because
-   * archive-room.palette.js references the key and renaming it would churn a live map for nothing.
-   * The tan cut-stone floor the name implies is `floor.institute.sandstone` below. [live]
+   * The name says "sandstone" and the art is plank **wood** — a misnomer inherited from before this
+   * file existed. The tan cut-stone floor the name implies is `floor.institute.sandstone` below.
+   *
+   * **No live consumer.** It was kept solely because archive-room.palette.js referenced it; Phase 58
+   * rebuilt that room on `floor.institute.wood`, which is the same material one block lower and
+   * correctly named. Retained as a catalog entry, not as a tile to reach for.
    */
   "floor.archive.sandstone": tile("Medieval Tavern/tile-B-05.png", 12, 8),
   /** Warm plank flooring for Institute interiors — the Main Hall's foyer runner and table dais.
