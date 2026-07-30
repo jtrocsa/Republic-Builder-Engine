@@ -1317,15 +1317,15 @@ const activeFieldCaseId = () => progress.activeCaseId || "case-001";
 // never scrolls vertically and the north wall's pennants are never sliced by the top edge, while
 // still wider than it so the hall reads as a hall. See the size note in
 // scripts/generate-institute-hall-tmj.js.
-const HUB_GRID = { columns: 23, rows: 12, tile: 48 };
+export const HUB_GRID = { columns: 23, rows: 12, tile: 48 };
 // Generated from the same stamps that painted institute-hall.tmj. This replaced a hand-measured
 // rect array describing the retired `chronicle-institute-hub.png`.
-const HUB_BLOCK_RECTS = INSTITUTE_HALL_BLOCKS;
+export const HUB_BLOCK_RECTS = INSTITUTE_HALL_BLOCKS;
 // Every coordinate below is chosen against the furniture the generator stamps, and the generator's
 // header names them as load-bearing in the other direction too. Each target sits on the *face* of
 // the object it belongs to; the player stands roughly 0.6 tiles clear of it, which is inside
 // targetReach() and outside the object's collision rect.
-const HUB_TARGETS = {
+export const HUB_TARGETS = {
   director: {
     x: 9.5,
     y: 8.5,
@@ -1475,6 +1475,16 @@ let instituteMovement = { x: 11.5, y: 9, facing: "up", moving: false, step: fals
 // the room here so returning to the Institute never strands the player in a
 // sub-room at Main-Hall-relative coordinates. The two room-transition call
 // sites in interactWithHubTarget() explicitly set currentHubRoom afterward.
+/**
+ * Places the player in the Main Hall, defaulting to the foyer entrance in the south wall.
+ *
+ * Call this with no arguments unless you specifically mean somewhere else, and when you do mean
+ * somewhere else, derive it from a HUB_TARGETS coordinate. Six call sites used to pass the literals
+ * `(7, 9)` and `(16, 9)` — the painted Main Hall's spawn and its Navigation Table approach. The
+ * Phase 54 rebuild moved the furniture out from under both: `(7, 9)` now sits inside the
+ * "sealed record chest" rect, and this function does not validate, so the player would have arrived
+ * from the onboarding hallway (and from every Recall to Institute) unable to move in any direction.
+ */
 function safeInstituteSpawn(x = 11.5, y = 9, facing = "up") {
   hubHeldKeys.clear();
   stopHubMovementLoop();
@@ -6324,14 +6334,14 @@ function runHallwayWalk(now) {
 }
 
 // Fires once the walk reaches the door: fades to black, holds briefly, then cuts to the Main
-// Hall with the tour's first (unhighlighted) beat active. safeInstituteSpawn(7, 9, "up") is the
+// Hall with the tour's first (unhighlighted) beat active. safeInstituteSpawn() is the
 // same spawn point the old direct "Enter Institute" → institute jump used.
 function completeHallwayWalk() {
   document.getElementById("sceneFade")?.classList.add("is-active");
   const holdMs = prefersReducedMotion() ? 60 : 420;
   clearTimeout(hallwayFadeTimer);
   hallwayFadeTimer = setTimeout(() => {
-    safeInstituteSpawn(7, 9, "up");
+    safeInstituteSpawn();
     progress.currentScreen = "institute";
     progress.tutorial.step = "tour-intro";
     hallwayFadeToInstitute = true;
@@ -7463,6 +7473,53 @@ function fieldSourceSignal(source) {
   // class existed only to be queried and is gone.
   return `<button class="source-signal source-signal--world ${secured ? "is-secured" : ""} ${near ? "is-near" : ""}" style="${sourcePointStyle(source.id)}" data-action="${action}" data-source="${source.id}" data-origin="field" aria-label="${secured ? "Reopen" : "Examine"} ${esc(point.label)}"><i>${secured ? "✓" : "✦"}</i><small>${esc(point.label)}</small></button>`;
 }
+/**
+ * One row per record: what it is, where it is, and which of the three states it is in.
+ *
+ * Exported for tests/unit. Kept separate from the markup so the ordering and the state derivation can
+ * be asserted without a DOM — and so the tracker and the world markers read the same
+ * `sourceAvailability()` rather than each deciding what "locked" means.
+ */
+export function fieldObjectives(caseId, sources, points, npcNameFor, evidence = hasEvidence) {
+  return sources.map((source) => {
+    const point = points[source.id] || {};
+    const availability = sourceAvailability(caseId, source.id, evidence);
+    // What the player should go and look for. A record on a person is named by the person, because
+    // that is the thing they can actually spot across the map; a record on an object is named by the
+    // object. Neither is the source's own long historical title, which is what the Codex is for.
+    const where = point.anchor?.npc
+      ? npcNameFor(point.anchor.npc) || point.label
+      : point.anchor?.object || point.label || source.title;
+    return { id: source.id, label: point.label || source.title, where, availability };
+  });
+}
+function fieldObjectiveTracker() {
+  const caseId = activeFieldCaseId();
+  const map = activeFieldMap();
+  const rows = fieldObjectives(
+    caseId,
+    sourcesForCase(caseId),
+    map.sourcePoints,
+    (npcId) => map.npcs.find((npc) => npc.id === npcId)?.name
+  );
+  if (rows.length === 0) return "";
+  const secured = rows.filter((row) => row.availability === "secured").length;
+  const collapsed = progress.settings?.trackerCollapsed === true;
+  const glyph = { secured: "✓", available: "✦", locked: "·" };
+  const items = rows
+    .map((row) => {
+      const where = row.availability === "locked" ? "Not yet available" : row.where;
+      // The glyph carries the state visually and is hidden from assistive tech, so the state goes in
+      // the row's own accessible name instead — a screen reader announcing "✓" tells nobody anything.
+      return `<li class="field-tracker__row is-${row.availability}" aria-label="${esc(row.availability)} — ${esc(where)}"><i aria-hidden="true">${glyph[row.availability]}</i><span>${esc(where)}</span></li>`;
+    })
+    .join("");
+  // Absolutely positioned inside `.field-viewport` but OUTSIDE `.caribbean-world`, which is the
+  // element updateFieldPlayer() translates. Anything inside that div scrolls with the camera; this has
+  // to stay pinned to the frame. It also must never focus or scroll anything — see CLAUDE.md's camera
+  // invariant, which several past regressions came from violating.
+  return `<aside class="field-tracker ${collapsed ? "is-collapsed" : ""}" aria-label="Records to recover"><button class="field-tracker__toggle" data-action="field-tracker-toggle" aria-expanded="${!collapsed}"><i aria-hidden="true">${collapsed ? "▸" : "▾"}</i><b>Records to Recover</b><em>${secured}/${rows.length}</em></button><div class="field-tracker__body"><p class="field-tracker__key">✦ go here · ✓ secured · · locked</p><ul>${items}</ul></div></aside>`;
+}
 function fieldNpcButton(npc) {
   const active = progress.activeFieldNpc === npc.id;
   const near = isNearFieldNpc(npc);
@@ -7556,7 +7613,7 @@ function fieldScreen() {
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice || copy.defaultNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div></section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}"><span></span><img id="caseFieldPlayerSprite" src="${fieldSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -8470,7 +8527,7 @@ function handleChromeClick(target, action) {
     // than stranding it active on the real institute screen.
     if (exitPreviewIfActive()) return true;
     progress.activeFieldNpc = null;
-    safeInstituteSpawn(7, 9, "up");
+    safeInstituteSpawn();
     progress.currentScreen = "institute";
     save();
     render();
@@ -8551,7 +8608,7 @@ function handleOnboardingClick(target, action) {
     if (advanceIntroDialogue()) return true;
     const next = target.dataset.next;
     if (next === "intro-briefing") briefingStep = 0;
-    if (next === "institute") safeInstituteSpawn(7, 9, "up");
+    if (next === "institute") safeInstituteSpawn();
     if (next === "intro-hallway") {
       progress.tutorial.step = "hallway";
       hallwayWalkStartedAt = null;
@@ -8738,10 +8795,22 @@ function handleFieldClick(target, action) {
     }
     return true;
   }
+  if (action === "field-tracker-toggle") {
+    // Persisted, so a student who collapses it does not have to collapse it again on every screen
+    // change. Re-rendering the whole field screen is what every other field action does, and the
+    // camera is a pure function of position, so nothing moves as a result.
+    progress.settings = {
+      ...progress.settings,
+      trackerCollapsed: !progress.settings?.trackerCollapsed,
+    };
+    save();
+    render();
+    return true;
+  }
   if (action === "field-recall") {
     progress.activeFieldNpc = null;
     progress.hubNotice = "Temporal recall complete. You returned through the Archive room beacon.";
-    safeInstituteSpawn(16, 9, "left");
+    safeInstituteSpawn(HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6, "down");
     progress.currentScreen = "institute";
     save();
     render();
@@ -8992,7 +9061,7 @@ function handleReviewClick(target, action) {
     progress.activeCaseId = null;
     progress.hubNotice =
       "Field record received. The Archive has preserved your Codex transmission.";
-    safeInstituteSpawn(16, 9, "left");
+    safeInstituteSpawn(HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6, "down");
     progress.currentScreen = "return-warp";
     save();
     render();

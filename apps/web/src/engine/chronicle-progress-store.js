@@ -48,7 +48,9 @@ export const DEFAULT_PROGRESS = {
     streakDays: 0,
     lastCompletedDate: null,
   },
-  settings: { miniGamesEnabled: true },
+  // `trackerCollapsed`: whether the field's Records to Recover checklist is folded to its header.
+  // Persisted rather than ephemeral so collapsing it once holds across screen changes and sessions.
+  settings: { miniGamesEnabled: true, trackerCollapsed: false },
   miniGameScores: { stormNavigationBest: 0 },
   tutorial: { step: "not-started", completed: false, skipped: false },
   // Stamped on every save — the seam progress-repository.js's

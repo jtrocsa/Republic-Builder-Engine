@@ -23,6 +23,9 @@ import {
   ARCHIVE_ROOM_TARGETS,
   FIELD_GRID,
   FIELD_MAPS,
+  HUB_BLOCK_RECTS,
+  HUB_GRID,
+  HUB_TARGETS,
   footBoxFor,
   rectsOverlap,
 } from "../../apps/web/src/main.js";
@@ -221,6 +224,71 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
       })
       .map((block) => block.kind);
     expect(afloat).toEqual([]);
+  });
+});
+
+// The Institute Main Hall. Same treatment as the field maps: a generated .tmj, generated collision,
+// and hand-placed targets/spawns around the furniture.
+//
+// The last assertion here is the one that matters most, and it is here because Phase 54's rebuild
+// broke exactly it. Six call sites passed `safeInstituteSpawn(7, 9)` or `(16, 9)` — the *painted*
+// Main Hall's spawn and its Navigation Table approach. The rebuild moved the furniture out from
+// under both, putting (7,9) inside a "sealed record chest", and safeInstituteSpawn() does not
+// validate. So a player arriving from the onboarding hallway, or using any Recall to Institute,
+// would have landed unable to move in any direction — the same freeze the Archive Room's own
+// exit-door comment warns about, on a screen every session passes through.
+describe("institute main hall coordinates", () => {
+  const tmj = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, "apps/web/src/content/maps/institute-hall.tmj"), "utf8")
+  );
+
+  // Mirrors isHubBlocked()'s edge test.
+  const walkable = (x, y) =>
+    x >= 0.6 && y >= 0.8 && x <= HUB_GRID.columns - 1.2 && y <= HUB_GRID.rows - 1.2;
+  const clear = (x, y) =>
+    walkable(x, y) && !HUB_BLOCK_RECTS.some((b) => rectsOverlap(footBoxFor(x, y), b));
+
+  it("has a .tmj matching HUB_GRID (normal case)", () => {
+    expect(tmj.width).toBe(HUB_GRID.columns);
+    expect(tmj.height).toBe(HUB_GRID.rows);
+    expect(tmj.tilewidth).toBe(HUB_GRID.tile);
+  });
+
+  it("leaves somewhere walkable within reach of each interaction target (normal case)", () => {
+    const unreachable = Object.entries(HUB_TARGETS)
+      .filter(([id, target]) => {
+        const reach = id === "table" ? 1.65 : 1.1;
+        for (let dx = -reach; dx <= reach; dx += 0.2) {
+          for (let dy = -reach; dy <= reach; dy += 0.2) {
+            if (Math.hypot(dx, dy) > reach) continue;
+            if (clear(target.x + dx, target.y + dy)) return false;
+          }
+        }
+        return true;
+      })
+      .map(([id]) => id);
+    expect(unreachable).toEqual([]);
+  });
+
+  it("spawns the player clear of geometry at every entry point (edge case)", () => {
+    // safeInstituteSpawn()'s own default (the foyer entrance), and the two coordinates the other
+    // call sites derive from HUB_TARGETS: through the Archive Room door either way.
+    const entries = {
+      "foyer entrance (safeInstituteSpawn default)": [11.5, 9],
+      "leaving the Archive Room": [HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6],
+      "recall to the Institute": [HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6],
+    };
+    const blocked = Object.entries(entries)
+      .filter(([, [x, y]]) => !clear(x, y))
+      .map(([name]) => name);
+    expect(blocked).toEqual([]);
+  });
+
+  it("stands every NPC target clear of the furniture, so a patrol can start (edge case)", () => {
+    const trapped = ["director", "amani", "julian"].filter(
+      (id) => !clear(HUB_TARGETS[id].x, HUB_TARGETS[id].y)
+    );
+    expect(trapped).toEqual([]);
   });
 });
 
