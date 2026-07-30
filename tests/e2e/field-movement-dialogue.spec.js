@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, holdKey } from "./helpers/progress-seed.js";
+import { seedProgress, loadSeededSave, holdKey, walkToNpc } from "./helpers/progress-seed.js";
 
 // Scenario 4: field movement/collision + dialogue open/close (Case 1.01 Caribbean). This is
 // where the real "camera is a pure function of position" regression check belongs — the Main
@@ -69,15 +69,12 @@ test.describe("Field movement, collision, and dialogue", () => {
     await expect(page.locator("#fieldNotice")).toContainText("Move closer");
     await expect(page.locator(".field-speech-bubble")).toHaveCount(0);
 
-    // Walk toward taino-elder (30.0, 13.5): north up the village path, then a short step east.
-    // Held axes aren't normalized, so a diagonal hold covers the same distance on both axes and
-    // would overshoot east long before arriving north.
-    await page.keyboard.down("ArrowUp");
-    await page.waitForTimeout(2300);
-    await page.keyboard.up("ArrowUp");
-    await page.keyboard.down("ArrowRight");
-    await page.waitForTimeout(300);
-    await page.keyboard.up("ArrowRight");
+    // Walk to taino-elder (30.0, 13.5). walkToNpc() reads both positions each step and moves along
+    // the larger axis until the game's own `.is-near` class appears, rather than holding each arrow
+    // for a fixed time: movement advances per animation frame, so a timed hold covers a different
+    // distance under parallel-worker CPU load, and this walk was one of two in the suite that failed
+    // intermittently for exactly that reason.
+    expect(await walkToNpc(page, "taino-elder")).toBe(true);
 
     const afterWalk = await readFieldState(page);
     expect(afterWalk.px).toBeGreaterThan(initial.px);
@@ -93,16 +90,20 @@ test.describe("Field movement, collision, and dialogue", () => {
     await page.locator('[data-action="field-dialogue-close"]').click();
     await expect(bubble).toHaveCount(0);
 
-    // Collision: "garden" (FIELD_BLOCKS: x1:17.6, y1:5.1, x2:22.8, y2:7.8) sits directly above
-    // the player's current column (~x22) — holding ArrowUp long enough to cross it should stop
-    // the player at its lower edge rather than passing through to y < 5.1.
-    const beforeCollisionHold = afterWalk;
+    // Collision boundary. First step clear of the elder: isFieldBlocked() collides the player with
+    // NPCs as well as rects, and walkToNpc() deliberately parks the player right against her, so
+    // holding north from there pushes into her and moves nothing.
+    await holdKey(page, "ArrowLeft", 900);
+    const beforeCollisionHold = await readFieldState(page);
+
+    // Then hold north until something stops the player — the principal dwelling's footprint or, if
+    // that step went wide of it, the north lobe's own land mask. The assertion is deliberately about
+    // the *class* of outcome rather than one named rect: this used to name "garden (x1:17.6, y1:5.1,
+    // x2:22.8, y2:7.8)", coordinates from two map rebuilds ago that no longer exist anywhere.
     await holdKey(page, "ArrowUp", 8000);
     const afterCollision = await readFieldState(page);
-    // A generous "did move" margin (not tied tightly to exact frame timing, which varies under
-    // parallel test-worker CPU load) — the meaningful check is the boundary bound below.
     expect(afterCollision.py).toBeLessThan(beforeCollisionHold.py - 15);
-    expect(afterCollision.py).toBeGreaterThan(7.0 * TILE);
+    expect(afterCollision.py).toBeGreaterThan(3.0 * TILE);
     expect(afterCollision.camera).toEqual(expectedCamera(afterCollision));
   });
 });

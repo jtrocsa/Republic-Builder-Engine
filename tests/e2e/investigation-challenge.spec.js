@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-seed.js";
+import { seedProgress, loadSeededSave, readProgress, walkToNpc } from "./helpers/progress-seed.js";
 
 // Scenario 5: one Investigation Challenge, full walk -> proximity "E"/click interact ->
 // challenge renders -> answer -> "Source Unlocked" -> continue.
@@ -21,14 +21,20 @@ test.describe("Investigation Challenge", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    // The spawn (28, 22) is 11 tiles south of taino-context's field point (27, 11) — the map is
-    // 56x36 now, so the village is a real walk north rather than a few steps. Column 28 is the
-    // village dirt path and is clear of collision the whole way up.
-    await page.keyboard.down("ArrowUp");
-    await page.waitForTimeout(2900);
-    await page.keyboard.up("ArrowUp");
+    // `taino-context` is anchored to the community elder as of Phase 56, so it is reached by talking
+    // to her rather than by clicking a card on the grass: she speaks her line, and the bubble offers
+    // the record. Clicking the NPC is proximity-gated exactly like pressing E.
+    //
+    // The spawn (28,22) is a real walk south of the Taíno village. walkToNpc() approaches and then
+    // nudges until the game's own `.is-near` class appears, rather than timing the arrival — this
+    // walk was the suite's most frequent intermittent failure when it was a fixed 2900ms hold.
+    await walkToNpc(page, "taino-elder");
+    await expect(page.locator('[data-npc="taino-elder"]')).toHaveClass(/is-near/);
 
-    await page
+    await page.locator('[data-npc="taino-elder"]').click();
+    const bubble = page.locator(".field-speech-bubble");
+    await expect(bubble).toBeVisible();
+    await bubble
       .locator('[data-action="start-source-activity"][data-source="taino-context"]')
       .click();
 

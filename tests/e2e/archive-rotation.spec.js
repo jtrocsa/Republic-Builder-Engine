@@ -29,12 +29,16 @@ test.describe("The Archive Rotation", () => {
     await seedProgress(page, { currentScreen: "archive-rotation" });
     await loadSeededSave(page);
 
-    const quest = page.locator(".quest[data-quest-type='mcq'], .quest[data-quest-type='sequencing'], .quest[data-quest-type='hipp']").first();
+    const quest = page
+      .locator(
+        ".quest[data-quest-type='mcq'], .quest[data-quest-type='sequencing'], .quest[data-quest-type='hipp']"
+      )
+      .first();
     await expect(quest).toBeVisible();
 
     // Whatever item is first in the queue, answer it via whichever input it exposes.
     const mcqInput = quest.locator('input[type="radio"]').first();
-    const hippInput = quest.locator('input[data-hipp-option]').first();
+    const hippInput = quest.locator("input[data-hipp-option]").first();
     if (await mcqInput.count()) {
       await mcqInput.check();
     } else if (await hippInput.count()) {
@@ -77,7 +81,9 @@ test.describe("The Archive Rotation", () => {
     await loadSeededSave(page);
 
     await expect(page.locator(".quest-practice-summary").first()).toContainText("Item 1/1");
-    await page.locator('.quest[data-quest-id="case-001-mcq-taino-sourcing"] input[value="1"]').check();
+    await page
+      .locator('.quest[data-quest-id="case-001-mcq-taino-sourcing"] input[value="1"]')
+      .check();
     await page.getByRole("button", { name: "Finish rotation →" }).click();
 
     await expect(page.locator(".activity-copy")).toContainText("Today's rotation is complete");

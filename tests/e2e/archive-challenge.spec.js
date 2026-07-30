@@ -136,7 +136,9 @@ test.describe("Archive Challenge", () => {
     // Target order by position: claim, encomienda, slavery, hierarchy, resistance, exchange.
     const moveUp = (itemId) =>
       quest
-        .locator(`[data-action="sequence-move"][data-sequence-item="${itemId}"][data-direction="up"]`)
+        .locator(
+          `[data-action="sequence-move"][data-sequence-item="${itemId}"][data-direction="up"]`
+        )
         .click();
     await moveUp("claim");
     await moveUp("encomienda");
@@ -367,9 +369,7 @@ test.describe("Archive Challenge", () => {
     await expect(quest).toBeVisible();
 
     for (let index = 0; index < 3; index += 1) {
-      const field = quest.locator(
-        `[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="${index}"]`
-      );
+      const field = quest.locator(`[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="${index}"]`);
       await field.fill(`Draft response for part ${index}.`);
       // handleAppChange persists on the "change" event (fires on blur), same
       // as every other reflection/response textarea in this suite — fill()
@@ -407,9 +407,7 @@ test.describe("Archive Challenge", () => {
     await quest
       .locator(`[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="0"]`)
       .fill("Only part A answered.");
-    await quest
-      .locator(`[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="0"]`)
-      .blur();
+    await quest.locator(`[data-saq-quest="${SAQ_QUEST_ID}"][data-saq-index="0"]`).blur();
 
     await expect(quest.locator("..").locator(".activity-feedback.success")).toHaveCount(0);
     await expect(

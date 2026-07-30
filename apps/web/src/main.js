@@ -892,10 +892,26 @@ function updateFieldNpcs() {
 }
 if (app) setInterval(updateFieldNpcs, 80);
 
+// Each record is anchored to the person or the object it actually belongs to — see the anchor notes
+// above sourceAnchorNpc(). The elder's and Columbus's own dialogue lines already point at their
+// records ("elders listen before a choice is made", "I must write what will be useful to the
+// sovereigns"), so binding them is wiring, not new content.
 const FIELD_SOURCE_POINTS = {
-  "taino-context": { x: 27.0, y: 11.0, label: "Village investigation", kind: "Observe" },
-  "columbus-letter": { x: 12.6, y: 14.6, label: "Columbus account", kind: "Source" },
-  "waldseemuller-map": { x: 11.5, y: 17.2, label: "Cartographer table", kind: "Puzzle" },
+  "taino-context": {
+    anchor: { npc: "taino-elder" },
+    label: "Village observation",
+    kind: "Observe",
+  },
+  "columbus-letter": { anchor: { npc: "columbus" }, label: "Columbus's account", kind: "Source" },
+  // The chart table is real stamped tile art at (10,17)-(13,19) — a world map on wooden rollers —
+  // and this point sits on its front edge.
+  "waldseemuller-map": {
+    x: 11.5,
+    y: 17.2,
+    anchor: { object: "Cartographer's table" },
+    label: "Cartographer's table",
+    kind: "Puzzle",
+  },
 };
 const VILLAGE_OBSERVATIONS = [
   {
@@ -1036,10 +1052,21 @@ const UNIT2_FIELD_NPC_PATROLS = {
     { x: 20.8, y: 20.5 },
   ],
 };
+// All three anchored to the person who already talks about them: the minister says "read the charter
+// before you judge who benefits", the servant "seven years I owe for my passage", the clerk "ledgers
+// remember what people forget."
 const UNIT2_FIELD_SOURCE_POINTS = {
-  "riverbend-charter": { x: 26.0, y: 11.0, label: "Company charter", kind: "Source" },
-  "riverbend-letter": { x: 44.0, y: 15.5, label: "Servant's letter", kind: "Source" },
-  "riverbend-ledger": { x: 20.5, y: 22.0, label: "Wharf accounts", kind: "Source" },
+  "riverbend-charter": {
+    anchor: { npc: "settlement-minister" },
+    label: "Company charter",
+    kind: "Source",
+  },
+  "riverbend-letter": {
+    anchor: { npc: "indentured-servant" },
+    label: "Servant's letter",
+    kind: "Source",
+  },
+  "riverbend-ledger": { anchor: { npc: "wharf-clerk" }, label: "Wharf accounts", kind: "Source" },
 };
 // The river runs down the western edge and widens south-west into an estuary, so the shoreline
 // is a meandering diagonal. There is no far bank and no bridge: everything west of the river is
@@ -1060,15 +1087,19 @@ function isRiverbendLand(x, y) {
 const UNIT3_FIELD_NPCS = [
   // Placeholder roster: sprites reuse Unit 1 field art, same as Unit 2's roster above —
   // no Revolutionary-era sprite sheets exist yet.
+  // Named, because he was demonstrably here: Dickinson wrote the Farmer's Letters in Philadelphia and
+  // they were set and printed in this city's newspapers from December 1767. Standing outside the print
+  // shop's door, he carries `commoncause-dickinson-letter` — see UNIT3_FIELD_SOURCE_POINTS, and see
+  // the note there about which of this case's creators can honestly appear on a Philadelphia map.
   {
-    id: "printer-apprentice",
+    id: "john-dickinson",
     x: 16.0,
     y: 10.5,
     group: "commoncause",
-    name: "Printer's apprentice",
-    label: "Printer's apprentice",
+    name: "John Dickinson",
+    label: "John Dickinson",
     sprite: "spanish-scribe",
-    text: "Type must be set backward, letter by letter, until the words print true. Master Dickinson's letters go out under a farmer's name — safer for a press, and no less read for it.",
+    text: "I publish as a farmer because a farmer may be listened to where a lawyer is only argued with. Read the distinction carefully: Parliament may regulate our trade, and I say so plainly. What it may not do is lay a duty on us for the raising of revenue, without our consent.",
   },
   {
     id: "town-crier",
@@ -1122,7 +1153,7 @@ const UNIT3_FIELD_NPCS = [
   },
 ];
 const UNIT3_FIELD_NPC_PATROLS = {
-  "printer-apprentice": [
+  "john-dickinson": [
     { x: 16.0, y: 10.5 },
     { x: 16.7, y: 10.3 },
     { x: 17.0, y: 10.9 },
@@ -1159,19 +1190,67 @@ const UNIT3_FIELD_NPC_PATROLS = {
     { x: 13.6, y: 23.5 },
   ],
 };
+// One person, six objects — and that split is a historical constraint, not a design preference.
+//
+// A record can only be anchored to a person on a map where that person actually was. Dickinson wrote
+// and published the Farmer's Letters in Philadelphia, so he stands outside the print shop. The other
+// six creators were demonstrably elsewhere: Henry spoke in Richmond, Wheatley and Prince Hall were in
+// Boston, Abigail Adams wrote from Braintree, Dunmore proclaimed from Virginia, Pontiac spoke at a
+// council near Detroit. Putting them on this map would fake their presence, so their records sit on
+// the thing that carried them into Philadelphia instead — a printed broadside on a notice board, a
+// petition on the statehouse table, a dispatch on the wharf clerk's table, a letter received at a
+// correspondence desk. Which is how a Chronicler would actually have encountered them.
+//
+// Every `object` anchor's x/y sits on the front edge of a real stamped prop in
+// scripts/generate-common-cause-tmj.js. Move one and the other has to move with it.
 const UNIT3_FIELD_SOURCE_POINTS = {
-  "commoncause-pontiac-speech": { x: 7.5, y: 15.5, label: "Frontier dispatch", kind: "Source" },
-  "commoncause-dickinson-letter": {
-    x: 16.0,
-    y: 9.6,
-    label: "Print shop broadside",
+  "commoncause-pontiac-speech": {
+    x: 6.5,
+    y: 15.4,
+    anchor: { object: "Frontier dispatch post" },
+    label: "Frontier dispatch",
     kind: "Source",
   },
-  "commoncause-henry-speech": { x: 30.0, y: 7.0, label: "Assembly hall speech", kind: "Source" },
-  "commoncause-wheatley-poem": { x: 46.0, y: 9.8, label: "Chapel elegy", kind: "Source" },
-  "commoncause-dunmore-proclamation": { x: 33.0, y: 26.5, label: "Wharf dispatch", kind: "Source" },
-  "commoncause-hall-petition": { x: 27.0, y: 9.6, label: "Statehouse petition", kind: "Source" },
-  "commoncause-adams-letter": { x: 14.0, y: 25.0, label: "Home correspondence", kind: "Source" },
+  "commoncause-dickinson-letter": {
+    anchor: { npc: "john-dickinson" },
+    label: "Farmer's Letters",
+    kind: "Source",
+  },
+  "commoncause-henry-speech": {
+    x: 25.0,
+    y: 11.2,
+    anchor: { object: "Assembly hall notice board" },
+    label: "Assembly hall broadside",
+    kind: "Source",
+  },
+  "commoncause-wheatley-poem": {
+    x: 49.0,
+    y: 9.2,
+    anchor: { object: "Churchyard notice board" },
+    label: "Printed elegy",
+    kind: "Source",
+  },
+  "commoncause-dunmore-proclamation": {
+    x: 33.0,
+    y: 27.2,
+    anchor: { object: "Wharf dispatch table" },
+    label: "Wharf dispatch",
+    kind: "Source",
+  },
+  "commoncause-hall-petition": {
+    x: 36.0,
+    y: 10.2,
+    anchor: { object: "Statehouse petition table" },
+    label: "Petition for freedom",
+    kind: "Source",
+  },
+  "commoncause-adams-letter": {
+    x: 14.0,
+    y: 27.2,
+    anchor: { object: "Correspondence desk" },
+    label: "Private letter",
+    kind: "Source",
+  },
 };
 // A town on the north bank of the Delaware: a rectangle bounded on the south by the river, whose
 // waterline meanders slightly so the quay isn't a ruler-straight edge. The other three sides are
@@ -7133,9 +7212,15 @@ function updateFieldProximityUi() {
     const node = document.querySelector(`[data-npc="${npc.id}"]`);
     if (node) node.classList.toggle("is-near", isNearFieldNpc(npc));
   });
-  sourcesForCase(activeFieldCaseId()).forEach((source, index) => {
-    const node = document.querySelector(`.source-signal--world.signal-${index + 1}`);
-    if (node) node.classList.toggle("is-near", isNearFieldSource(source.id));
+  sourcesForCase(activeFieldCaseId()).forEach((source) => {
+    // Keyed by `data-source`, not the old `signal-N` positional class — a class that existed only to
+    // be queried, and that silently pointed at the wrong marker whenever a source was skipped.
+    const node = document.querySelector(`.source-signal--world[data-source="${source.id}"]`);
+    if (!node) return;
+    node.classList.toggle("is-near", isNearFieldSource(source.id));
+    // An object-anchored marker never moves, but nothing stops a future point from anchoring to
+    // something that does, and re-writing an unchanged style is free.
+    node.style.cssText = sourcePointStyle(source.id);
   });
 }
 function fieldHeldVector() {
@@ -7241,9 +7326,54 @@ function sourceEntryScreen(sourceId) {
   if (source?.investigationMode && !sourceInvestigationComplete(source)) return "investigation";
   return sourceActivityRoute(sourceId);
 }
+// ---- source anchors -----------------------------------------------------------------------------
+// A source point says where a record is, and — as of Phase 56 — *what it is attached to*. Before
+// that, every record was a floating card on the ground: a 42px box captioned "Source" sitting in the
+// middle of a plaza, with nothing in the world under it. Now a point declares one of two anchors:
+//
+//   { npc: "<npc id>" }         the record is held by a person you go and talk to. Its marker rides
+//                               on that NPC every frame, so it follows them around their patrol, and
+//                               there is no separate world button at all.
+//   { object: "<name>" }        the record sits on a real stamped prop — a notice board, a
+//                               cartographer's table, a petition table. Keeps explicit x/y, which
+//                               the map generator places that prop at.
+//
+// A point with no anchor still works and still renders a world marker; nothing forces the migration.
+
+/** The NPC carrying this source on the active map, or null. */
+function sourceAnchorNpc(sourceId) {
+  const anchorId = activeFieldMap().sourcePoints[sourceId]?.anchor?.npc;
+  if (!anchorId) return null;
+  return activeFieldMap().npcs.find((npc) => npc.id === anchorId) || null;
+}
+/** The source this NPC is carrying for the active case, or null. Inverse of sourceAnchorNpc(). */
+function npcAnchoredSource(npcId) {
+  const points = activeFieldMap().sourcePoints;
+  return (
+    sourcesForCase(activeFieldCaseId()).find(
+      (source) => points[source.id]?.anchor?.npc === npcId
+    ) || null
+  );
+}
+/**
+ * Where a source is, right now, in field grid units.
+ *
+ * For an NPC anchor this is read from the live patrol state rather than from the content file, which
+ * is the whole reason the anchor is an id and not a copied coordinate: the marker has to move with
+ * the person.
+ */
+function sourcePointPosition(sourceId) {
+  const point = activeFieldMap().sourcePoints[sourceId];
+  const npc = sourceAnchorNpc(sourceId);
+  if (npc) {
+    const state = fieldNpcState(npc);
+    return { x: state.x, y: state.y };
+  }
+  return { x: point?.x ?? 10, y: point?.y ?? 10 };
+}
 function sourcePointStyle(sourceId) {
-  const point = activeFieldMap().sourcePoints[sourceId] || { x: 10, y: 10 };
-  return `left:${(point.x * FIELD_GRID.tile).toFixed(1)}px;top:${(point.y * FIELD_GRID.tile).toFixed(1)}px`;
+  const { x, y } = sourcePointPosition(sourceId);
+  return `left:${(x * FIELD_GRID.tile).toFixed(1)}px;top:${(y * FIELD_GRID.tile).toFixed(1)}px`;
 }
 
 function fieldDistanceTo(x, y) {
@@ -7254,8 +7384,12 @@ function isNearFieldNpc(npc) {
   return fieldDistanceTo(state.x, state.y) <= 1.45;
 }
 function isNearFieldSource(sourceId) {
-  const point = activeFieldMap().sourcePoints[sourceId];
-  return point ? fieldDistanceTo(point.x, point.y) <= 1.55 : false;
+  if (!activeFieldMap().sourcePoints[sourceId]) return false;
+  const { x, y } = sourcePointPosition(sourceId);
+  // An NPC-anchored record uses the NPC's own reach, so "close enough to read the record" and "close
+  // enough to talk to the person holding it" can never disagree by a fraction of a tile.
+  const reach = sourceAnchorNpc(sourceId) ? 1.45 : 1.55;
+  return fieldDistanceTo(x, y) <= reach;
 }
 function nearestFieldInteraction() {
   const map = activeFieldMap();
@@ -7273,14 +7407,12 @@ function nearestFieldInteraction() {
   const sources = sourcesForCase(activeFieldCaseId())
     .map((source) => {
       const point = map.sourcePoints[source.id];
-      return point
-        ? {
-            type: "source",
-            id: source.id,
-            label: point.label,
-            distance: fieldDistanceTo(point.x, point.y),
-          }
-        : null;
+      // An NPC-anchored source is reached by talking to its NPC, which is already in the list above.
+      // Leaving it here too would make the prompt flicker between the person and the record they are
+      // holding as the patrol moves and the two distances trade places.
+      if (!point || point.anchor?.npc) return null;
+      const { x, y } = sourcePointPosition(source.id);
+      return { type: "source", id: source.id, label: point.label, distance: fieldDistanceTo(x, y) };
     })
     .filter(Boolean)
     .filter((item) => item.distance <= 1.55);
@@ -7293,20 +7425,43 @@ function fieldTooFarNotice(label) {
   const notice = document.getElementById("fieldNotice");
   if (notice) notice.textContent = progress.fieldNotice;
 }
-function fieldSourceSignal(source, index) {
-  const caseId = activeFieldCaseId();
-  const secured = hasEvidence(caseId, source.id);
-  if (caseId === "case-001") {
-    const villageComplete = hasEvidence("case-001", "taino-context");
-    if (source.id !== "taino-context" && !villageComplete) return "";
+/**
+ * Whether a record can be pursued yet: `"secured"`, `"available"`, or `"locked"`.
+ *
+ * The one gate that exists is Case 1.01's: nothing but the village observation is reachable until the
+ * village has been observed. That rule used to live inline inside `fieldSourceSignal()` as an early
+ * `return ""`, so it was the marker's private business — and Phase 56's objective tracker would have
+ * had to re-derive it and could then disagree with the world about what is locked. One function, two
+ * readers.
+ *
+ * Exported for tests/unit, per CLAUDE.md's export-in-place rule.
+ */
+export function sourceAvailability(caseId, sourceId, evidence = hasEvidence) {
+  if (evidence(caseId, sourceId)) return "secured";
+  if (caseId === "case-001" && sourceId !== "taino-context") {
+    return evidence("case-001", "taino-context") ? "available" : "locked";
   }
+  return "available";
+}
+function fieldSourceSignal(source) {
+  const caseId = activeFieldCaseId();
+  const availability = sourceAvailability(caseId, source.id);
+  if (availability === "locked") return "";
+  // An NPC-anchored record has no world marker of its own: the star rides on the NPC's own button
+  // (see fieldNpcButton), so the record and the person holding it are one thing to walk up to.
+  if (sourceAnchorNpc(source.id)) return "";
   const point = activeFieldMap().sourcePoints[source.id] || {
     label: source.title,
     kind: source.type,
   };
+  const secured = availability === "secured";
   const action = secured ? "open-source" : "start-source-activity";
   const near = isNearFieldSource(source.id);
-  return `<button class="source-signal source-signal--world ${secured ? "is-secured" : ""} ${near ? "is-near" : ""} signal-${index + 1}" style="${sourcePointStyle(source.id)}" data-action="${action}" data-source="${source.id}" data-origin="field"><i>${secured ? "✓" : "✦"}</i><b>${esc(point.kind)}</b><small>${esc(point.label)}</small></button>`;
+  // One glyph, and the label only when the player is close. This was a 42px captioned card that
+  // always read "Source" under a large box — legible, but it put a UI element on the grass instead of
+  // marking a thing in the world. `data-source` is the proximity-update handle; the old `signal-N`
+  // class existed only to be queried and is gone.
+  return `<button class="source-signal source-signal--world ${secured ? "is-secured" : ""} ${near ? "is-near" : ""}" style="${sourcePointStyle(source.id)}" data-action="${action}" data-source="${source.id}" data-origin="field" aria-label="${secured ? "Reopen" : "Examine"} ${esc(point.label)}"><i>${secured ? "✓" : "✦"}</i><small>${esc(point.label)}</small></button>`;
 }
 function fieldNpcButton(npc) {
   const active = progress.activeFieldNpc === npc.id;
@@ -7314,7 +7469,17 @@ function fieldNpcButton(npc) {
   const state = fieldNpcState(npc);
   const walking = state.walking;
   const frames = fieldNpcFrameUrls(npc, state.facing || "down");
-  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="Talk with ${esc(npc.name)}"><img class="npc-frame npc-frame--idle" src="${frames.idle}" alt=""><img class="npc-frame npc-frame--step" src="${frames.step}" alt=""><span>${esc(npc.label)}</span></button>`;
+  // The record badge: the same ✦/✓ the world markers use, hovering over the head of whoever is
+  // carrying a record. This is the "go and find Patrick Henry" signal — you can see across the map
+  // which people you still need to talk to.
+  const carried = npcAnchoredSource(npc.id);
+  const availability = carried ? sourceAvailability(activeFieldCaseId(), carried.id) : null;
+  const badge =
+    availability && availability !== "locked"
+      ? `<em class="npc-source-badge ${availability === "secured" ? "is-secured" : ""}" aria-hidden="true">${availability === "secured" ? "✓" : "✦"}</em>`
+      : "";
+  const label = carried ? `${npc.name} — carries a record` : `Talk with ${npc.name}`;
+  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><img class="npc-frame npc-frame--idle" src="${frames.idle}" alt=""><img class="npc-frame npc-frame--step" src="${frames.step}" alt=""><span>${esc(npc.label)}</span>${badge}</button>`;
 }
 function fieldDialogueBubble() {
   const npc = activeFieldMap().npcs.find((item) => item.id === progress.activeFieldNpc);
@@ -7328,7 +7493,18 @@ function fieldDialogueBubble() {
       : x > FIELD_GRID.columns * FIELD_GRID.tile - 300
         ? " field-speech-bubble--right-edge"
         : "";
-  return `<aside class="field-speech-bubble${edgeClass}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><b>${esc(npc.name)}</b><p>${esc(npc.text)}</p></aside>`;
+  // A record-carrying NPC speaks first and hands the record over second. Routing straight to the
+  // source on `E` would skip the line entirely; the two-step keeps the person a person.
+  const carried = npcAnchoredSource(npc.id);
+  const availability = carried ? sourceAvailability(activeFieldCaseId(), carried.id) : null;
+  const point = carried ? activeFieldMap().sourcePoints[carried.id] : null;
+  const record =
+    availability === "available"
+      ? `<button class="btn btn-gold field-speech-bubble__record" data-action="start-source-activity" data-source="${carried.id}" data-origin="field">Examine ${esc(point.label)} →</button>`
+      : availability === "secured"
+        ? `<button class="btn btn-outline field-speech-bubble__record" data-action="open-source" data-source="${carried.id}" data-origin="field">✓ ${esc(point.label)} — reopen</button>`
+        : "";
+  return `<aside class="field-speech-bubble${edgeClass}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><b>${esc(npc.name)}</b><p>${esc(npc.text)}</p>${record}</aside>`;
 }
 function recallBeacon() {
   const recall = activeFieldMap().recall;
@@ -8137,6 +8313,18 @@ function resetFieldPosition() {
     step: false,
     queued: null,
   };
+}
+// The field-side twin of the Archive Room boot guard further up this file, and the bug was live until
+// Phase 56. `fieldMovement`'s module-level default is Unit 1's spawn (28,22) — the only map whose
+// spawn that is — and resetFieldPosition() runs on Chronotravel, on recall and on case reset, but not
+// on boot. So a student who reloaded the page mid-investigation in Unit 2 or Unit 3 resumed at
+// Unit 1's coordinates on a different map, where nothing guarantees that cell is even walkable.
+//
+// It has to run *here* rather than beside the Archive Room guard: activeFieldMap() reaches
+// unitForCase(), which is a `const` arrow declared several hundred lines below that point, so calling
+// it up there is a temporal-dead-zone ReferenceError that takes the whole app down on boot.
+if (progress.currentScreen === "field" && progress.activeCaseId) {
+  resetFieldPosition();
 }
 
 function resetCaseOneDemo() {

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { PROGRESS_KEY, seedProgress, loadSeededSave } from "./helpers/progress-seed.js";
+import { PROGRESS_KEY, seedProgress, loadSeededSave, walkToNpc } from "./helpers/progress-seed.js";
 
 // Phase 45A: the visual-regression net that makes the rest of Phase 45 (and the CSS
 // consolidation/token work in 45B-45E, plus Phases 47-48's animation/hub-camera work) safe to
@@ -293,12 +293,15 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    // Same approach path as tests/e2e/investigation-challenge.spec.js.
-    await page.keyboard.down("ArrowUp");
-    await page.waitForTimeout(2900);
-    await page.keyboard.up("ArrowUp");
+    // Same approach as tests/e2e/investigation-challenge.spec.js: `taino-context` is carried by the
+    // community elder (Phase 56), so it is reached through her speech bubble rather than by clicking
+    // a card on the grass.
+    await walkToNpc(page, "taino-elder");
+    await page.locator('[data-npc="taino-elder"]').click();
     await page
-      .locator('[data-action="start-source-activity"][data-source="taino-context"]')
+      .locator(
+        '.field-speech-bubble [data-action="start-source-activity"][data-source="taino-context"]'
+      )
       .click();
 
     const quest = page.locator('[data-quest-id="case-001-investigation-mcq-taino-origins"]');

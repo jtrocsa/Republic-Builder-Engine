@@ -1729,18 +1729,9 @@ select {
     0 0 19px rgba(141, 215, 162, 0.42);
   animation: none;
 }
-.signal-1 {
-  left: 28%;
-  top: 55%;
-}
-.signal-2 {
-  left: 52%;
-  top: 70%;
-}
-.signal-3 {
-  left: 74%;
-  top: 54%;
-}
+/* `.signal-1/2/3` removed (Phase 56). Percentage positions for three source markers on the very
+   first CSS-drawn version of the field, long superseded by pixel positioning from the source point
+   itself; the classes stopped being emitted when the positional query handle became `data-source`. */
 .field-channel {
   padding: 23px;
   border: 1px solid var(--line);
@@ -4609,10 +4600,134 @@ dd {
   display: grid;
   place-items: center;
 }
+/* ---------------------------------------------------------------------------
+   .source-signal--world — the single consolidated rule (Phase 56)
+   ---------------------------------------------------------------------------
+   This selector had accumulated six chronologically-layered redeclarations from separate hotfix
+   milestones, each `!important`-ing over the last: 138px wide, then 126px, then 86x52, then 42x42
+   twice, with four different border radii and three different label positions. The resolved-final
+   state was a 42px rounded card permanently captioned "Source" — legible, but it read as a UI
+   element parked on the grass rather than as a mark on a thing in the world.
+
+   Consolidated here to one rule, same methodology as the `.field-npc` consolidation in Phase 45B:
+   the later sites keep a comment pointing at this block so a future reader can see the history
+   without the cascade fighting itself.
+
+   The design is now a small circular glyph — ✦ to recover, ✓ once secured — and nothing else until
+   the player is close, at which point the record's name appears beneath it. Multi-selector rules that
+   group this class with `.field-npc` (focus rings, cursor, touch-action, font smoothing) are
+   deliberately left where they are; they are shared behaviour, not this element's own styling. */
 .source-signal--world {
   position: absolute !important;
   transform: translate(-50%, -50%) !important;
-  min-width: 138px;
+  display: grid !important;
+  place-items: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 2px solid rgba(var(--c-gold-rgb), 0.92) !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 50% 38%, #1b5e70, #0a2f3f) !important;
+  color: #ffeaa7 !important;
+  box-shadow:
+    0 0 0 4px rgba(var(--c-gold-rgb), 0.14),
+    0 0 16px rgba(var(--c-gold-rgb), 0.5),
+    0 4px 8px rgba(var(--c-black-rgb), 0.3) !important;
+  overflow: visible !important;
+}
+.source-signal--world i {
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+  font-style: normal !important;
+  text-shadow: 0 0 6px rgba(var(--c-gold-rgb), 0.55) !important;
+}
+/* `b` (the kind word — "Source", "Observe", "Puzzle") is no longer emitted at all. What the player
+   needs is *which record*, and that is `small`. */
+.source-signal--world small {
+  display: none !important;
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  padding: 2px 7px !important;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.5) !important;
+  border-radius: 999px !important;
+  background: rgba(4, 31, 43, 0.94) !important;
+  color: #ffeaa7 !important;
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  max-width: none !important;
+}
+.source-signal--world.is-near small {
+  display: block !important;
+}
+.source-signal--world.is-secured {
+  border-color: rgba(158, 215, 167, 0.9) !important;
+  background: radial-gradient(circle at 50% 38%, #2f7f62, #123f33) !important;
+  color: #e9ffd9 !important;
+  box-shadow:
+    0 0 0 3px rgba(148, 214, 166, 0.14),
+    0 3px 7px rgba(var(--c-black-rgb), 0.28) !important;
+  animation: none !important;
+}
+.source-signal--world.is-secured small {
+  border-color: rgba(158, 215, 167, 0.55) !important;
+  color: #e9ffd9 !important;
+}
+/* An unsecured record still pulses; a secured one has stopped asking for attention. */
+.source-signal--world:not(.is-secured) {
+  animation: signalPulse 2s ease-in-out infinite !important;
+}
+
+/* The same glyph, riding above the head of an NPC who is carrying a record — the "go and find this
+   person" signal. Positioned against `.field-npc`, which is 55px wide and label-captioned below, so
+   the badge goes above and slightly right of the sprite's head. */
+.field-npc .npc-source-badge {
+  position: absolute;
+  left: 78%;
+  top: -6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  transform: translateX(-50%);
+  border: 2px solid rgba(var(--c-gold-rgb), 0.92);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #1b5e70, #0a2f3f);
+  color: #ffeaa7;
+  font:
+    800 11px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-style: normal;
+  box-shadow:
+    0 0 0 3px rgba(var(--c-gold-rgb), 0.13),
+    0 0 12px rgba(var(--c-gold-rgb), 0.45);
+  animation: signalPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+.field-npc .npc-source-badge.is-secured {
+  border-color: rgba(158, 215, 167, 0.9);
+  background: radial-gradient(circle at 50% 38%, #2f7f62, #123f33);
+  color: #e9ffd9;
+  box-shadow: 0 0 0 3px rgba(148, 214, 166, 0.13);
+  animation: none;
+}
+/* The record hand-off inside a speech bubble: the NPC says their line, then offers the record. */
+.field-speech-bubble__record {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 0.72rem;
+  padding: 7px 10px;
 }
 /* .field-npc's width/height/transition here were superseded by a later hotfix — consolidated
    into the single .field-npc rule near the top of this file (Phase 45B). */
@@ -5366,16 +5481,8 @@ dd {
    were both superseded by later hotfixes — consolidated into the single .case-field-player and
    .case-field-player.is-walking/.hub-player.is-walking rules near the top of this file
    (Phase 45B). */
-.source-signal--world {
-  min-width: 126px !important;
-  transform: translate(-50%, -50%) scale(0.92) !important;
-}
-.source-signal--world b {
-  font-size: 9px !important;
-}
-.source-signal--world small {
-  font-size: 11px !important;
-}
+/* .source-signal--world (min-width/transform) and its b/small font sizes here were superseded and are
+   now in the single consolidated .source-signal--world block near the top of this file (Phase 56). */
 .arrival-cove {
   opacity: 0.9;
 }
@@ -5648,9 +5755,8 @@ dd {
   .field-npc span {
     top: 56px !important;
   }
-  .source-signal--world {
-    transform: translate(-50%, -50%) scale(0.85) !important;
-  }
+  /* No narrow-viewport scale-down for .source-signal--world any more: at 30px it is already the
+     smallest thing on the map, and shrinking it further made the glyph unreadable. */
 }
 
 /* -------------------------------------------------------------------------
@@ -5666,58 +5772,15 @@ dd {
 .case-field--living .field-intro p {
   max-width: 32ch;
 }
-.source-signal--world {
-  min-width: 86px !important;
-  min-height: 52px !important;
-  padding: 7px 8px !important;
-  border-radius: 18px !important;
-}
-.source-signal--world i {
-  width: 24px !important;
-  height: 24px !important;
-  font-size: 0.85rem !important;
-}
-.source-signal--world b {
-  font-size: 8px !important;
-  letter-spacing: 0.06em !important;
-}
-.source-signal--world small {
-  font-size: 10px !important;
-  max-width: 80px !important;
-}
+/* .source-signal--world's 86x52 card and its i/b/small sizing here were superseded and are now in
+   the single consolidated .source-signal--world block near the top of this file (Phase 56). */
 /* .field-npc's z-index: 32 was superseded by the later z-index: 70 !important, now in the
    single consolidated .field-npc rule near the top of this file (Phase 45B). */
-.field-npc em {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 14px);
-  width: 230px;
-  transform: translateX(-50%);
-  padding: 10px 12px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.45);
-  border-radius: 13px;
-  background: rgba(4, 31, 43, 0.94);
-  color: #f4fbf8;
-  font-style: normal;
-  font-size: 11px;
-  line-height: 1.35;
-  text-align: left;
-  box-shadow: 0 14px 24px rgba(var(--c-black-rgb), 0.28);
-  pointer-events: none;
-  z-index: 80;
-}
-.field-npc em::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -7px;
-  width: 12px;
-  height: 12px;
-  transform: translateX(-50%) rotate(45deg);
-  background: rgba(4, 31, 43, 0.94);
-  border-right: 1px solid rgba(var(--c-gold-rgb), 0.45);
-  border-bottom: 1px solid rgba(var(--c-gold-rgb), 0.45);
-}
+/* `.field-npc em` and its `::after` tail removed (Phase 56). They styled a 230px speech bubble drawn
+   *inside* the NPC button, an approach superseded years ago by the separate `.field-speech-bubble`
+   aside — which is why a later milestone hid it with `display: none !important` rather than deleting
+   it. Nothing emitted an `<em>` inside an NPC button from then until now, and `<em>` is now the record
+   badge, so both the dead styling and its `display: none` had to go: the latter was hiding the badge. */
 .field-npc--taino-gardener img {
   animation: npcPatrolVertical 4.2s ease-in-out infinite;
 }
@@ -6182,54 +6245,10 @@ dd {
 }
 
 /* Milestone 3.4.6 — proximity interaction, smaller quest icons, animated NPC frames, polished puzzle sockets */
-.source-signal--world {
-  min-width: 42px !important;
-  width: 42px !important;
-  min-height: 42px !important;
-  height: 42px !important;
-  padding: 3px !important;
-  border-radius: 15px !important;
-  display: grid !important;
-  place-items: center !important;
-  gap: 0 !important;
-  box-shadow:
-    0 0 0 4px rgba(118, 230, 238, 0.12),
-    0 8px 14px rgba(var(--c-black-rgb), 0.24) !important;
-}
-.source-signal--world i {
-  width: 26px !important;
-  height: 26px !important;
-  font-size: 0.85rem !important;
-  margin: 0 !important;
-}
-.source-signal--world b {
-  position: absolute !important;
-  top: calc(100% + 5px) !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  font-size: 7px !important;
-  padding: 3px 5px !important;
-  border-radius: 999px !important;
-  background: rgba(6, 35, 48, 0.82) !important;
-  white-space: nowrap !important;
-}
-.source-signal--world small {
-  display: none !important;
-  position: absolute !important;
-  top: calc(100% + 22px) !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  font-size: 8px !important;
-  white-space: nowrap !important;
-  max-width: none !important;
-  color: #cffcff !important;
-}
-.source-signal--world.is-near small {
-  display: block !important;
-}
-.source-signal--world:not(.is-near) {
-  opacity: 0.9;
-}
+/* The 42x42 rounded card and its i/b/small placement here were the resolved-final look before
+   Phase 56 and are all now in the single consolidated .source-signal--world block near the top of
+   this file — including the `small` shows-only-when-near behaviour, which this milestone introduced
+   and which the consolidated rule keeps. */
 /* .field-npc's overflow: visible !important is now in the single consolidated .field-npc rule
    near the top of this file (Phase 45B). */
 .field-npc .npc-frame {
@@ -6483,7 +6502,7 @@ dd {
   filter: brightness(1.08) !important;
 }
 .field-npc span,
-.source-signal--world b,
+/* `b` no longer exists on a source marker (Phase 56) — the kind word is not emitted. */
 .source-signal--world small {
   font-family:
     system-ui,
@@ -6508,33 +6527,13 @@ dd {
   background: rgba(4, 31, 43, 0.96) !important;
   box-shadow: 0 6px 12px rgba(var(--c-black-rgb), 0.25) !important;
 }
-.source-signal--world {
-  width: 42px !important;
-  height: 42px !important;
-  min-width: 42px !important;
-  min-height: 42px !important;
-  border-radius: 14px !important;
-  transform: translate(-50%, -50%) !important;
-}
-.source-signal--world b {
-  font-size: 8.5px !important;
-  top: calc(100% + 4px) !important;
-  background: rgba(4, 31, 43, 0.96) !important;
-  color: #ffe7a8 !important;
-}
-.source-signal--world small {
-  font-size: 10px !important;
-  top: calc(100% + 22px) !important;
-  background: rgba(4, 31, 43, 0.92) !important;
-  padding: 2px 5px !important;
-  border-radius: 999px !important;
-}
+/* A second 42x42 redeclaration of .source-signal--world and its b/small styling; superseded, now in
+   the single consolidated block near the top of this file (Phase 56). */
 /* .field-dialogue-panel (base/b/p, and its remaining combined-selector occurrences below)
    removed (Phase 45D dead-CSS sweep) — zero references anywhere in main.js. The field's real
    NPC dialogue is .field-speech-bubble (confirmed live, 3 real call sites), not this class. */
-.field-npc em {
-  display: none !important;
-}
+/* The `.field-npc em { display: none }` that hid the retired in-button speech bubble is gone with it
+   — see the note where that bubble's styling was removed. */
 /* Nearest-neighbour, matching .case-field-player. These NPCs were previously forced to
    image-rendering: auto, so every NPC rendered bilinear-blurred while the player next to them
    rendered crisp — a sharpness split that had nothing to do with the art itself. */
@@ -6691,7 +6690,7 @@ html {
 
 /* Keep the field labels readable and avoid text shimmer. */
 .field-npc span,
-.source-signal--world b,
+/* `b` no longer exists on a source marker (Phase 56) — the kind word is not emitted. */
 .source-signal--world small {
   backface-visibility: hidden;
   transform-style: flat;
@@ -6779,9 +6778,8 @@ html {
   border-color: rgba(var(--c-gold-rgb), 0.62) !important;
   box-shadow: 0 6px 12px rgba(var(--c-black-rgb), 0.26) !important;
 }
-.source-signal--world small {
-  color: #e9ffff !important;
-}
+/* .source-signal--world small's colour here is now set (gold, to match the glyph) in the single
+   consolidated block near the top of this file (Phase 56). */
 /* One clean recall object: no extra blue cove ring. */
 .arrival-cove,
 .recall-cove {
@@ -6852,9 +6850,11 @@ html {
   color: #f8e8ba;
   white-space: nowrap;
 }
-.source-signal--world.signal-3 {
-  z-index: 13;
-}
+/* The `.signal-N` positional classes are gone (Phase 56). They existed only so
+   updateFieldProximityUi() could query a marker by index, which `data-source` does correctly — the
+   index silently pointed at the wrong marker whenever a source was gated out of the render. Their
+   only styling was a per-index z-index and a 0.92 scale on two of three, i.e. arbitrary leftover
+   tuning that made three identical markers three slightly different sizes. */
 
 /* Preservation Case is no longer a tiny floating status strip. It is an opened badge case UI.
    (.unit-badge-shelf's own display:none !important removed in the same Phase 45D sweep as its
@@ -7180,14 +7180,11 @@ html {
 }
 /* .case-field-player's z-index: 80 !important and .field-npc's z-index: 70 !important are both
    folded into their single consolidated rules (Phase 45B). */
+/* Above the world art and the NPCs (z-index 70), so a record marker is never hidden behind the
+   person or the building it is attached to. The per-index `.signal-2`/`.signal-3` variants that used
+   to sit here are gone — see the note where those classes were retired. */
 .source-signal--world {
-  z-index: 65 !important;
-}
-.source-signal--world.signal-2 {
-  z-index: 74 !important;
-}
-.source-signal--world.signal-3 {
-  z-index: 73 !important;
+  z-index: 75 !important;
 }
 .cartographer-table {
   left: 300px !important;
@@ -7426,12 +7423,7 @@ body {
   left: 300px !important;
   top: 434px !important;
 }
-.source-signal--world.signal-2 {
-  transform: translate(-50%, -50%) scale(0.92) !important;
-}
-.source-signal--world.signal-3 {
-  transform: translate(-50%, -50%) scale(0.92) !important;
-}
+/* The last two `.signal-N` scale overrides; retired with the classes themselves (Phase 56). */
 .recall-beacon {
   left: 410px !important;
   top: 545px !important;

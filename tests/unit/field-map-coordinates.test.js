@@ -139,8 +139,28 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     expect(mismatched).toEqual([]);
   });
 
-  it("puts every quest/source point on land and in bounds (normal case)", () => {
+  // Object-anchored points only. An NPC-anchored point (Phase 56) has no x/y at all: its position is
+  // read from the carrier's live patrol state every frame, and that carrier is already covered by the
+  // NPC and patrol-waypoint assertions above — checking it here would be checking the same
+  // coordinates twice while reading `undefined` as "off the map".
+  const placedPoints = () =>
+    Object.entries(map.sourcePoints).filter(([, point]) => !point.anchor?.npc);
+
+  it("gives every source an anchor: a carrier NPC that exists, or explicit coordinates (normal case)", () => {
+    // The failure this catches is a typo'd or renamed NPC id, which would strand a record nowhere:
+    // no world marker (the NPC badge replaces it) and no badge either (no such NPC to draw it on).
     const bad = Object.entries(map.sourcePoints)
+      .filter(([, point]) =>
+        point.anchor?.npc
+          ? !map.npcs.some((npc) => npc.id === point.anchor.npc)
+          : typeof point.x !== "number" || typeof point.y !== "number"
+      )
+      .map(([id]) => id);
+    expect(bad).toEqual([]);
+  });
+
+  it("puts every quest/source point on land and in bounds (normal case)", () => {
+    const bad = placedPoints()
       .filter(([, point]) => !inBounds(point.x, point.y) || !map.isLand(point.x, point.y))
       .map(([id]) => id);
     expect(bad).toEqual([]);
@@ -149,7 +169,7 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
   it("keeps every quest/source point reachable from adjacent walkable ground (edge case)", () => {
     // A marker can sit on a table the player cannot enter, but there must be somewhere within
     // the 1.55-tile interaction reach they can actually stand.
-    const unreachable = Object.entries(map.sourcePoints)
+    const unreachable = placedPoints()
       .filter(([, point]) => {
         for (let dx = -1.5; dx <= 1.5; dx += 0.5) {
           for (let dy = -1.5; dy <= 1.5; dy += 0.5) {

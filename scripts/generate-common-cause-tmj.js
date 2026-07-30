@@ -159,6 +159,21 @@ map.stamp(31, 17, T.bench, "decor", "bench");
 map.stamp(22, 17, T.bench, "decor", "bench");
 map.stamp(30, 13, T.signpost, "decor", "signpost");
 
+// --- source anchors: the object each record actually sits on --------------------------------------
+// Six of this case's seven records are anchored to an object rather than to a person, because six of
+// its seven creators were demonstrably not in Philadelphia — see the long note on
+// UNIT3_FIELD_SOURCE_POINTS in apps/web/src/main.js. Each of these props exists so that its record
+// has something real underneath it; before Phase 56 a source was a captioned card floating on the
+// paving with nothing beneath it at all.
+//
+// The `x/y` in UNIT3_FIELD_SOURCE_POINTS sits on the front edge of the matching stamp here. These two
+// lists move together or not at all.
+map.stamp(24, 9, T.noticeBoard, "solid", "assembly hall notice board");
+map.stamp(48, 7, T.noticeBoard, "solid", "churchyard notice board");
+map.stamp(35, 8, T.documentTable, "solid", "statehouse petition table");
+map.stamp(32, 25, T.documentTable, "solid", "wharf dispatch table");
+map.stamp(13, 25, T.documentTable, "solid", "correspondence desk");
+
 // Market: two rows of stalls along the square's south side.
 const STALLS = [
   [30, 19, T.stallButcher],

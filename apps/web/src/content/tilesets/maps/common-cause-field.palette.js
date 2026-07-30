@@ -118,6 +118,16 @@ export default {
     fountain: tile("Medieval Fantasy Town/2.png", 10, 10, { h: 2, w: 2 }),
     /** Public notice board — where the broadsides go up. */
     noticeBoard: tile("Medieval Fantasy Town/2.png", 6, 14, { h: 2, w: 2 }),
+    /**
+     * Trestle table strewn with open documents and loose sheets.
+     *
+     * Added in Phase 56 so the records that are *not* carried by a person still have something real
+     * under them. Before that, a source was a floating card on the grass — a captioned box in the
+     * middle of a plaza with nothing in the world beneath it. This map needs three: the statehouse
+     * petition table, the wharf clerk's dispatch table, and the correspondence desk in the housing.
+     * [measured]
+     */
+    documentTable: tile("Medieval Fantasy Town/2.png", 12, 10, { h: 2, w: 2 }),
     bench: tile("Medieval Fantasy Town/2.png", 11, 12, { h: 1, w: 2 }),
     signpost: tile("Medieval Fantasy Town/2.png", 8, 14, { h: 2, w: 1 }),
 
