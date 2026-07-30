@@ -41,7 +41,11 @@ describe("buildMcqContent", () => {
   });
 
   it("rejects fewer than 2 choices", () => {
-    const result = buildMcqContent({ prompt: "P", choices: [{ text: "only one", correct: true }], explanation: "E" });
+    const result = buildMcqContent({
+      prompt: "P",
+      choices: [{ text: "only one", correct: true }],
+      explanation: "E",
+    });
     expect(result.ok).toBe(false);
     expect(result.errors[0]).toMatch(/at least 2 choices/);
   });
@@ -117,7 +121,10 @@ describe("buildSequencingContent", () => {
   });
 
   it("rejects fewer than 2 items", () => {
-    const result = buildSequencingContent({ prompt: "P", items: [{ label: "only one", position: 0 }] });
+    const result = buildSequencingContent({
+      prompt: "P",
+      items: [{ label: "only one", position: 0 }],
+    });
     expect(result.ok).toBe(false);
   });
 
@@ -190,7 +197,10 @@ describe("buildEvidenceOrganizingContent", () => {
   it("rejects an unrecognized skill category", () => {
     const result = buildEvidenceOrganizingContent({
       ...validFields,
-      sources: [{ ...validFields.sources[0], skillCategory: "Not A Real Skill" }, validFields.sources[1]],
+      sources: [
+        { ...validFields.sources[0], skillCategory: "Not A Real Skill" },
+        validFields.sources[1],
+      ],
     });
     expect(result.ok).toBe(false);
     expect(result.errors.join(" ")).toMatch(/skillCategory/i);
@@ -199,7 +209,10 @@ describe("buildEvidenceOrganizingContent", () => {
   it("rejects a correctSlotId that doesn't match any authored slot", () => {
     const result = buildEvidenceOrganizingContent({
       ...validFields,
-      sources: [{ ...validFields.sources[0], correctSlotId: "nonexistent" }, validFields.sources[1]],
+      sources: [
+        { ...validFields.sources[0], correctSlotId: "nonexistent" },
+        validFields.sources[1],
+      ],
     });
     expect(result.ok).toBe(false);
     expect(result.errors.join(" ")).toMatch(/correctSlotId/i);
@@ -210,7 +223,9 @@ describe("buildEvidenceOrganizingContent", () => {
     const fields = evidenceOrganizingToFields(built.content);
     const rebuilt = buildEvidenceOrganizingContent(fields);
     expect(rebuilt.ok).toBe(true);
-    expect(rebuilt.content.sources.map((s) => s.label)).toEqual(built.content.sources.map((s) => s.label));
+    expect(rebuilt.content.sources.map((s) => s.label)).toEqual(
+      built.content.sources.map((s) => s.label)
+    );
   });
 });
 
@@ -223,8 +238,16 @@ describe("buildHippContent", () => {
         dimension: "Purpose",
         argument: "Why this matters",
         options: [
-          { text: "the correct, explanation-linked option", correct: true, identificationOnly: false },
-          { text: "names purpose but does not explain it", correct: false, identificationOnly: true },
+          {
+            text: "the correct, explanation-linked option",
+            correct: true,
+            identificationOnly: false,
+          },
+          {
+            text: "names purpose but does not explain it",
+            correct: false,
+            identificationOnly: true,
+          },
           { text: "an unrelated wrong option", correct: false, identificationOnly: false },
         ],
       },
@@ -308,7 +331,15 @@ describe("buildSourceContent", () => {
 
   it("fails validation when a required field is blank", () => {
     const result = buildSourceContent(
-      { type: "", title: "A Record", creator: "Someone", date: "1900", record: "R", excerpt: "E", prompt: "P" },
+      {
+        type: "",
+        title: "A Record",
+        creator: "Someone",
+        date: "1900",
+        record: "R",
+        excerpt: "E",
+        prompt: "P",
+      },
       wiring
     );
     expect(result.ok).toBe(false);
@@ -316,7 +347,15 @@ describe("buildSourceContent", () => {
 
   it("round-trips through sourceToFields", () => {
     const built = buildSourceContent(
-      { type: "T", title: "Title", creator: "C", date: "D", record: "R", excerpt: "E", prompt: "P" },
+      {
+        type: "T",
+        title: "Title",
+        creator: "C",
+        date: "D",
+        record: "R",
+        excerpt: "E",
+        prompt: "P",
+      },
       wiring
     );
     const fields = sourceToFields(built.content);

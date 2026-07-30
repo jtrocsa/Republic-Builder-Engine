@@ -9,7 +9,13 @@ import { CED_THEME_CODES } from "../ced-taxonomy.js";
 // update it by hand if a new case route is ever added in main.js. The
 // former per-case bespoke route names ("ledger"/"empire"/"triangle"/
 // "founding") are retired along with the screens they dispatched to.
-const CASE_ROUTES = ["field", "archive-challenges"];
+// "mission" replaced "archive-challenges" for every non-map case in Phase 58. The old value meant
+// "Chronotravel to this case lands on the shared Archive Challenges list", which rendered *every*
+// case's challenge in one list merely reordered to put the traveled-to case first — same title, same
+// list, same look for all six of them, and five of the six were the same quest type. The Archive
+// Room is now what its name says: the AP writing work (SAQ, DBQ), reached from the Archive Terminal.
+// A "mission" case is a mission of its own, framed by its own title, question and mechanic.
+const CASE_ROUTES = ["field", "mission"];
 
 const MapPositionSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -49,11 +55,7 @@ const CedAlignmentSchema = z.object({
   // widening it again later for no benefit.
   period: z.number().int().min(1).max(9, "case.ced.period must be 1-9"),
   keyConcepts: z
-    .array(
-      z
-        .string()
-        .regex(/^[1-9]\.[1-9]$/, 'case.ced.keyConcepts entries must look like "1.2"')
-    )
+    .array(z.string().regex(/^[1-9]\.[1-9]$/, 'case.ced.keyConcepts entries must look like "1.2"'))
     .min(1, "case.ced.keyConcepts must contain at least one entry"),
   themes: z
     .array(
@@ -81,17 +83,20 @@ export const CaseSchema = z.object({
   location: z.string().min(1, "case.location is required"),
   question: z.string().min(1, "case.question is required"),
   mechanic: z.string().min(1, "case.mechanic is required"),
-  // Every case requires a real route name — "field" for a ChronoTravel
-  // destination, "archive-challenges" for a case relocated entirely into the
-  // Institute Archive Room (its archiveChallenge below is the destination,
-  // not a field screen).
+  // Every case requires a real route name — "field" for a Chronotravel
+  // destination with a walkable map, "mission" for a case whose whole mechanic
+  // is its `archiveChallenge` quest below (main.js's missionScreen() renders
+  // that one quest and nothing else).
   route: z.enum(CASE_ROUTES, {
     message: `case.route must be one of: ${CASE_ROUTES.join(", ")}`,
   }),
   summary: z.string().min(1, "case.summary is required"),
-  // Present only for cases relocated into the Archive Room; null for
-  // ChronoTravel destination cases (route: "field") and for
-  // not-yet-migrated standalone cases.
+  // The quest a `route: "mission"` case *is*; null for Chronotravel
+  // destination cases (route: "field"), whose mechanic is the map itself.
+  // Still named `archiveChallenge` rather than renamed to `mission`: the key is
+  // read by the teacher content-selection pipeline, by progress.archiveChallenges
+  // completion records in every existing save, and by two migrations' column
+  // names, so renaming it is a data change disguised as a rename.
   archiveChallenge: ArchiveChallengeSchema.nullable().default(null),
   ced: CedAlignmentSchema,
 });

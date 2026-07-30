@@ -460,6 +460,38 @@ export const UNIT_01_ARCHIVE_EVIDENCE_QUESTS = [
   },
 ];
 
+// Unit 1's Archive Challenge as of Phase 58 — a real SAQ, replacing the
+// evidence-organizing claim-and-evidence builder above.
+//
+// The Archive Room is the unit's extended written work now; the four
+// teacher-swappable types (mcq, sequencing, evidence-organizing, hipp) belong to
+// the Nav Table missions, and a claim-sorting board is one of those four.
+// unit-01-archive-claim-and-evidence-builder is kept above, unreferenced by any
+// slot: a curated alternate has to be the same type as the slot it replaces (see
+// resolveQuestSlotWithType()), so it cannot be swapped into a mission today, but
+// it is real, cited content and the custom-content path
+// (custom_content_items.slot_kind, migration 0008) is not type-constrained.
+//
+// The stimulus is Columbus's 1493 letter, already a real, cited case-001 source
+// (CASE_001_SOURCES in unit-01-campaign.js) — the same already-covered-source
+// convention UNIT_03_ARCHIVE_SAQ_QUESTS uses for Dickinson's Letter II. Part C
+// deliberately reaches past 1493 to the Exchange itself, so the question spans
+// the unit rather than only its first case.
+export const UNIT_01_ARCHIVE_SAQ_QUESTS = [
+  {
+    id: "unit-01-archive-atlantic-world-saq",
+    stimulus:
+      "“The people of these islands are so guileless and generous with all they possess that no one would believe it without seeing it; whatever is asked of them, they never refuse… I have found gold in some rivers, and on the island they call Hispaniola there are mines of metal in great quantity. I am confident that, with a little more help from Your Highnesses, I shall bring back as much gold as is needed, and as much spice and cotton as their ships can carry, together with people to be converted to our holy faith.” — Christopher Columbus, letter to Rafael Sánchez, 1493",
+    prompts: [
+      "A. Identify one claim Columbus makes in this letter that was shaped by his need for continued royal support.",
+      "B. Explain one way that European expectations like the ones in this letter shaped Spanish colonization in the Caribbean in the period 1492–1550.",
+      "C. Explain one significant effect of the exchange of crops, animals, diseases, and people across the Atlantic that this letter does not anticipate.",
+    ],
+    rubric:
+      "SAQ practice rubric: 3 points total. Earn 1 point for each response that gives a historically defensible claim and supports it with accurate, relevant historical information.",
+  },
+];
+
 export const UNIT_01_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-001-hipp-columbus-letter",

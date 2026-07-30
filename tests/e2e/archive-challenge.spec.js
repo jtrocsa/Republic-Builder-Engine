@@ -1,17 +1,21 @@
 import { test, expect } from "@playwright/test";
 import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-seed.js";
 
-// Scenario 6: one Archive Challenge, Terminal -> challenge -> placement -> completion written
-// to progress.completedCases.
+// Scenario 6: the two groups Phase 58 split apart, each played end to end.
 //
-// Unlike Investigation Challenges, archiveChallengesScreen() has no ephemeral-state dependency
-// (it reads only progress.selectedUnitId/questResponses/completedCases/archiveChallenges) —
-// directly seedable via currentScreen: "archive-challenges".
+//   a non-map **mission**   Chronotravel -> missionScreen() -> that case's own quest -> completion
+//                           written to progress.completedCases. Seeded via
+//                           currentScreen: "mission" + activeCaseId.
+//   an **Archive Challenge** the unit's written work, reached from the Archive Terminal. Seeded via
+//                           currentScreen: "archive-challenges" + selectedUnitId.
 //
-// case-006 "Charter & Compact" is the cleanest target: it has route: "archive-challenges"
-// (no field screen — its entire mechanic is this Archive Challenge, reached by Chronotravel
-// or directly from the Archive Terminal), so it's single-path. Real content
-// (unit-02-quests.js): 6 sources map 2:1 onto 3 region slots.
+// Before the split all six non-map cases routed to the Archive Challenges list, which rendered every
+// case's quest in one list merely reordered — so these tests seeded "archive-challenges" and found
+// their quest among the others. They now assert the thing that was actually broken: the mission
+// screen shows *this* case's quest, and only that one.
+//
+// case-006 "Charter & Compact" is the cleanest target: real content (unit-02-quests.js), 6 sources
+// mapping 2:1 onto 3 region slots.
 const QUEST_ID = "case-006-archive-region-display";
 const CORRECT_PLACEMENTS = {
   "town-covenant": "new-england",
@@ -27,10 +31,15 @@ test.describe("Archive Challenge", () => {
     page,
   }) => {
     await seedProgress(page, {
-      currentScreen: "archive-challenges",
+      currentScreen: "mission",
       selectedUnitId: "unit-02",
+      activeCaseId: "case-006",
     });
     await loadSeededSave(page);
+
+    // The property the split exists for: this case's mission, framed as itself, showing one quest.
+    await expect(page.locator(".mission-shell h1")).toContainText("Charter & Compact");
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
 
     const quest = page.locator(`.quest[data-quest-id="${QUEST_ID}"]`);
     await expect(quest).toBeVisible();
@@ -54,45 +63,50 @@ test.describe("Archive Challenge", () => {
     expect(stored.completedCases).toContain("case-006");
   });
 
-  // case-005 "The Triangle Ledger" — migrated the same way as case-006 above (bespoke
-  // triangleScreen() deleted, this Archive Challenge is now its entire mechanic).
-  const TRIANGLE_QUEST_ID = "case-005-archive-triangle-cargo";
-  const TRIANGLE_CORRECT_PLACEMENTS = {
-    "cloth-tools": "outbound",
-    firearms: "outbound",
-    captives: "middle",
-    "shackles-record": "middle",
-    sugar: "homeward",
-    tobacco: "homeward",
-  };
+  // case-005 "The Triangle Ledger" — re-typed from evidence-organizing to sequencing in Phase 58,
+  // because five of the six non-map cases were the same sort and a triangular voyage is genuinely
+  // ordered. The retired sort is kept in unit-02-quests.js, unreferenced by any slot.
+  const TRIANGLE_QUEST_ID = "case-005-mission-triangle-circuit-order";
 
-  test("case-005: place all cargo via the select fallback, reflect, and complete", async ({
+  test("case-005: order the circuit's four legs via move buttons and complete", async ({
     page,
   }) => {
     await seedProgress(page, {
-      currentScreen: "archive-challenges",
+      currentScreen: "mission",
       selectedUnitId: "unit-02",
+      activeCaseId: "case-005",
     });
     await loadSeededSave(page);
+
+    await expect(page.locator(".mission-shell h1")).toContainText("Triangle Ledger");
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
 
     const quest = page.locator(`.quest[data-quest-id="${TRIANGLE_QUEST_ID}"]`);
     await expect(quest).toBeVisible();
 
-    for (const [sourceId, slotId] of Object.entries(TRIANGLE_CORRECT_PLACEMENTS)) {
-      await quest.locator(`[data-evidence-select="${sourceId}"]`).selectOption(slotId);
-    }
-
-    const reflection = quest.locator(`[data-evidence-reflection="${TRIANGLE_QUEST_ID}"]`);
-    await reflection.fill(
-      "The outbound leg's cloth and firearms were traded for the captives carried on the Middle Passage, whose forced labor then produced the sugar and tobacco shipped home."
-    );
-    await reflection.blur();
+    // Authored order is deliberately not the answer: coast-exchange(1), homeward-staples(3),
+    // outfit-and-clear(0), middle-passage(2). Three "up" moves put it right.
+    const moveUp = (itemId) =>
+      quest
+        .locator(
+          `[data-action="sequence-move"][data-sequence-item="${itemId}"][data-direction="up"]`
+        )
+        .click();
+    await moveUp("outfit-and-clear");
+    await moveUp("outfit-and-clear");
+    await moveUp("middle-passage");
 
     await expect(page.locator(".activity-feedback.success")).toContainText(
       "Archive Challenge complete"
     );
 
     const stored = await readProgress(page);
+    expect(stored.questResponses[TRIANGLE_QUEST_ID].order).toEqual([
+      "outfit-and-clear",
+      "coast-exchange",
+      "middle-passage",
+      "homeward-staples",
+    ]);
     expect(stored.archiveChallenges[TRIANGLE_QUEST_ID]?.status).toBe("complete");
     expect(stored.completedCases).toContain("case-005");
     expect(stored.unlocked).toContain("case-006");
@@ -123,11 +137,13 @@ test.describe("Archive Challenge", () => {
     page,
   }) => {
     await seedProgress(page, {
-      currentScreen: "archive-challenges",
+      currentScreen: "mission",
       selectedUnitId: "unit-01",
+      activeCaseId: "case-003",
     });
     await loadSeededSave(page);
 
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
     const quest = page.locator(`.quest[data-quest-id="${EMPIRE_QUEST_ID}"]`);
     await expect(quest).toBeVisible();
 
@@ -197,11 +213,13 @@ test.describe("Archive Challenge", () => {
     page,
   }) => {
     await seedProgress(page, {
-      currentScreen: "archive-challenges",
+      currentScreen: "mission",
       selectedUnitId: "unit-01",
+      activeCaseId: "case-002",
     });
     await loadSeededSave(page);
 
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
     const quest = page.locator(`.quest[data-quest-id="${EXCHANGE_QUEST_ID}"]`);
     await expect(quest).toBeVisible();
 
@@ -253,11 +271,13 @@ test.describe("Archive Challenge", () => {
     page,
   }) => {
     await seedProgress(page, {
-      currentScreen: "archive-challenges",
+      currentScreen: "mission",
       selectedUnitId: "unit-03",
+      activeCaseId: "case-008",
     });
     await loadSeededSave(page);
 
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
     const quest = page.locator(`.quest[data-quest-id="${FOUNDING_QUEST_ID}"]`);
     await expect(quest).toBeVisible();
 
@@ -292,41 +312,30 @@ test.describe("Archive Challenge", () => {
     await expect(marker).toHaveClass(/route-marker--locked/);
   });
 
-  // case-009 "Appeals to Liberty" (Phase 48D) — promoted from what used to be
-  // this unit's only archiveChallenges[] bonus entry into a real third
-  // mission with its own case-level framing. Same real quest content
-  // ("unit-03-archive-appeal-form-comparison": Prince Hall's 1777 petition
-  // vs. Abigail Adams's 1776 letter), now reached the same way as any other
-  // Archive Challenge case rather than only from the Archive Terminal's
-  // bonus section.
-  const APPEAL_QUEST_ID = "unit-03-archive-appeal-form-comparison";
-  const APPEAL_CORRECT_PLACEMENTS = {
-    "hall-petition-appeal-form": "public-petition",
-    "adams-letter-appeal-form": "private-appeal",
-  };
+  // case-009 "Appeals to Liberty" — re-typed from evidence-organizing to mcq in Phase 58, and
+  // re-keyed off the unit-level id it had borrowed since Phase 48D. Same two real records (Prince
+  // Hall's 1777 petition and Abigail Adams's 1776 letter), now asked as the comparison the case's
+  // own central question poses rather than as a sort by a label both attributions already state.
+  const APPEAL_QUEST_ID = "case-009-mission-appeal-form-comparison";
 
-  test("case-009: place both records via the select fallback, reflect, and complete", async ({
-    page,
-  }) => {
+  test("case-009: answer the appeal-form comparison and complete", async ({ page }) => {
     await seedProgress(page, {
-      currentScreen: "archive-challenges",
+      currentScreen: "mission",
       selectedUnitId: "unit-03",
       activeCaseId: "case-009",
     });
     await loadSeededSave(page);
 
+    await expect(page.locator(".mission-shell h1")).toContainText("Appeals to Liberty");
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
+
     const quest = page.locator(`.quest[data-quest-id="${APPEAL_QUEST_ID}"]`);
     await expect(quest).toBeVisible();
+    // Both records are on screen as the question's stimulus, not left to memory.
+    await expect(quest).toContainText("Prince Hall");
+    await expect(quest).toContainText("Remember the Ladies");
 
-    for (const [sourceId, slotId] of Object.entries(APPEAL_CORRECT_PLACEMENTS)) {
-      await quest.locator(`[data-evidence-select="${sourceId}"]`).selectOption(slotId);
-    }
-
-    const reflection = quest.locator(`[data-evidence-reflection="${APPEAL_QUEST_ID}"]`);
-    await reflection.fill(
-      "Hall's petition was a formal public appeal to a legislature, so it had to argue in the shared legal language of natural rights the assembly already used; Adams's letter was a private appeal to her husband, so it could speak more bluntly and personally, but had no formal standing to compel a response."
-    );
-    await reflection.blur();
+    await quest.locator('input[type="radio"][value="0"]').check();
 
     await expect(page.locator(".activity-feedback.success")).toContainText(
       "Archive Challenge complete"
@@ -335,6 +344,44 @@ test.describe("Archive Challenge", () => {
     const stored = await readProgress(page);
     expect(stored.archiveChallenges[APPEAL_QUEST_ID]?.status).toBe("complete");
     expect(stored.completedCases).toContain("case-009");
+  });
+
+  test("a mission shows its own case's quest and no other case's (edge case)", async ({ page }) => {
+    // The reported defect, stated directly: before Phase 58 every non-map case routed to one shared
+    // list that rendered all of them, so travelling to case-002 and travelling to case-003 put the
+    // same six quests on screen under the same heading.
+    await seedProgress(page, {
+      currentScreen: "mission",
+      selectedUnitId: "unit-01",
+      activeCaseId: "case-002",
+    });
+    await loadSeededSave(page);
+
+    await expect(
+      page.locator('.quest[data-quest-id="case-002-archive-exchange-claims"]')
+    ).toBeVisible();
+    await expect(
+      page.locator('.quest[data-quest-id="case-003-archive-empire-system"]')
+    ).toHaveCount(0);
+    // And the unit's Archive Room work is not here either — that is the Terminal's screen.
+    await expect(
+      page.locator('.quest[data-quest-id="unit-01-archive-atlantic-world-saq"]')
+    ).toHaveCount(0);
+  });
+
+  test("the Archive Terminal shows the unit's written work and no mission quests (edge case)", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "archive-challenges",
+      selectedUnitId: "unit-01",
+    });
+    await loadSeededSave(page);
+
+    await expect(
+      page.locator('.quest[data-quest-id="unit-01-archive-atlantic-world-saq"]')
+    ).toBeVisible();
+    await expect(page.locator(".archive-challenges-shell .quest")).toHaveCount(1);
   });
 
   test("case-009 appears as a locked Navigation Table marker", async ({ page }) => {

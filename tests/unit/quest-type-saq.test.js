@@ -82,9 +82,9 @@ describe("renderSaqQuest", () => {
 
 describe("gradeSaqQuest", () => {
   it("is complete once every prompt has a non-empty response (normal case)", () => {
-    expect(
-      gradeSaqQuest(validQuest, { responses: { 0: "a", 1: "b", 2: "c" } })
-    ).toEqual({ complete: true });
+    expect(gradeSaqQuest(validQuest, { responses: { 0: "a", 1: "b", 2: "c" } })).toEqual({
+      complete: true,
+    });
   });
 
   it("is not complete when a part is missing or blank (boundary case)", () => {
@@ -113,9 +113,9 @@ describe("saqAnsweredAny", () => {
 
 describe("isSaqComplete", () => {
   it("matches gradeSaqQuest's complete field (normal case)", () => {
-    expect(isSaqComplete(gradeSaqQuest(validQuest, { responses: { 0: "a", 1: "b", 2: "c" } }))).toBe(
-      true
-    );
+    expect(
+      isSaqComplete(gradeSaqQuest(validQuest, { responses: { 0: "a", 1: "b", 2: "c" } }))
+    ).toBe(true);
     expect(isSaqComplete(gradeSaqQuest(validQuest, {}))).toBe(false);
   });
 });

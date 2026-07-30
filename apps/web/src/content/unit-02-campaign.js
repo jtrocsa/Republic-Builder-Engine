@@ -14,19 +14,19 @@ export const UNIT_02 = {
     "How distinct colonial societies took shape along the Atlantic seaboard — Chesapeake tobacco settlements built on headright land grants and bound labor, New England's covenanted farming and fishing towns, and the Middle Colonies' diverse grain-exporting ports — all bound together by a transatlantic economy in goods, cash crops, and enslaved people.",
   centralQuestion:
     "How did geography, labor systems, and the transatlantic economy produce distinct colonial societies in British North America between 1607 and 1754?",
-  // Unit-level bonus Archive Challenges (Phase C of the Investigation/Archive
-  // Challenge plan's catalog-expansion pass) — not tied to relocating any
-  // single case's activity screen; reachable from the Archive Terminal's
-  // archiveChallengesScreen(). Completing both, alongside every case, is
-  // required for unit completion (see main.js's unitReadyForReview()).
+  // The unit's Archive Challenge — its extended written work, reached from the
+  // Archive Terminal in the Archive Room. Completing it, alongside every case,
+  // is required for unit completion (see main.js's unitReadyForReview()).
+  //
+  // Phase 58 made this an SAQ. It was two "strongest evidence" multiple-choice
+  // questions, and mcq is one of the four types the Nav Table's missions use, so
+  // the Archive Room was rendering the same kind of work as a mission. A student
+  // who had already completed both retired questions is not asked to redo them —
+  // see RETIRED_ARCHIVE_CHALLENGE_IDS in main.js.
   archiveChallenges: [
     {
-      questType: "mcq",
-      questId: "unit-02-archive-strongest-evidence-coerced-labor",
-    },
-    {
-      questType: "mcq",
-      questId: "unit-02-archive-strongest-evidence-mercantile-policy",
+      questType: "saq",
+      questId: "unit-02-archive-colonial-crossroads-saq",
     },
   ],
   cases: [
@@ -61,17 +61,22 @@ export const UNIT_02 = {
       question:
         "What did each leg of the transatlantic trade actually carry, and who bore its human and economic costs?",
       mechanic: "Trade Route Plotter",
-      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
-      // to archiveChallengesScreen() rather than a bespoke field screen. The
-      // mission's mechanic is entirely its archiveChallenge quest below (see
-      // the now-deleted triangleScreen()/TRIANGLE_LEGS/TRIANGLE_CARGO note
-      // further down this file), matching the Case 1.06 precedent.
-      route: "archive-challenges",
+      // A non-map mission (Phase 48A, re-routed in Phase 58) — Chronotravel goes
+      // to missionScreen(), which renders this case's own archiveChallenge quest
+      // and nothing else.
+      route: "mission",
       summary:
-        "Reconstruct the triangular trade from six real shipping and testimony records — plot each cargo onto the leg of the circuit that carried it, then weigh what each record proves about the system binding Europe, Africa, and the Americas together.",
+        "Reconstruct the triangular trade from six real shipping and testimony records — put the circuit's legs in the order a single voyage sailed them, and weigh what each record proves about the system binding Europe, Africa, and the Americas together.",
+      // Sequencing, not evidence-organizing. Phase 58 gave each non-map case a
+      // quest type of its own — five of the six were evidence-organizing, so the
+      // "distinct mission per case" the Navigation Table promises was not what a
+      // student met. A triangular voyage is genuinely ordered: outbound goods to
+      // West Africa, captives across the Middle Passage, staples home to Europe.
+      // The displaced sort lives on as a curated alternate a teacher can swap
+      // back in — see content/quests/case-005-evidence-organizing-alternates.js.
       archiveChallenge: {
-        questType: "evidence-organizing",
-        questId: "case-005-archive-triangle-cargo",
+        questType: "sequencing",
+        questId: "case-005-mission-triangle-circuit-order",
       },
       // KC 2.2 — the transatlantic economic exchanges (mercantile trade)
       // this case's whole route-plotter mechanic reconstructs. Themes: WXT
@@ -90,10 +95,8 @@ export const UNIT_02 = {
       question:
         "What do a town covenant, a headright grant, an indenture, a liberty-of-conscience clause, a grain manifest, and a school law reveal about the different societies colonists built in British North America?",
       mechanic: "Region Builder",
-      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
-      // to archiveChallengesScreen() rather than a bespoke field screen (see
-      // archiveChallenge below).
-      route: "archive-challenges",
+      // A non-map mission — see case-005's note above.
+      route: "mission",
       summary:
         "Restore the Archive's damaged display of the colonial regions by returning each founding record — from a Puritan town covenant to a Quaker liberty-of-conscience clause — to the society it built, then defend one difference between two regions in your own words.",
       archiveChallenge: {

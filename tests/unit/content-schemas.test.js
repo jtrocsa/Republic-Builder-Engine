@@ -75,13 +75,13 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     expect(result.data.cases[0].archiveChallenge).toBeNull();
   });
 
-  it("accepts a case relocated to the Archive Room, with an archive-challenges route (normal case)", () => {
-    const relocated = {
+  it("accepts a non-map case whose whole mechanic is one quest (normal case)", () => {
+    const mission = {
       ...validUnit,
       cases: [
         {
           ...validCase,
-          route: "archive-challenges",
+          route: "mission",
           archiveChallenge: {
             questType: "evidence-organizing",
             questId: "unit-02-charter-compact",
@@ -89,13 +89,22 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
         },
       ],
     };
-    const result = UnitSchema.safeParse(relocated);
+    const result = UnitSchema.safeParse(mission);
     expect(result.success).toBe(true);
-    expect(result.data.cases[0].route).toBe("archive-challenges");
+    expect(result.data.cases[0].route).toBe("mission");
     expect(result.data.cases[0].archiveChallenge).toEqual({
       questType: "evidence-organizing",
       questId: "unit-02-charter-compact",
     });
+  });
+
+  it('rejects the retired "archive-challenges" route (edge case)', () => {
+    // Phase 58 split the two groups: a non-map case is its own mission
+    // (main.js's missionScreen()) and the Archive Room holds the unit's written
+    // work. A case still claiming the old route would render nothing, because
+    // render()'s switch has no branch that takes a case id.
+    const retired = { ...validUnit, cases: [{ ...validCase, route: "archive-challenges" }] };
+    expect(UnitSchema.safeParse(retired).success).toBe(false);
   });
 
   it("rejects a case with a null route (route is required, not nullable, as of Phase 48A)", () => {
@@ -115,7 +124,7 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
     expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
   });
 
-  it("rejects a ced.keyConcepts entry that isn't shaped like \"N.N\" (invalid/missing data)", () => {
+  it('rejects a ced.keyConcepts entry that isn\'t shaped like "N.N" (invalid/missing data)', () => {
     const broken = { ...validCase, ced: { ...validCase.ced, keyConcepts: ["one-two"] } };
     expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
   });
@@ -126,7 +135,10 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
   });
 
   it("rejects more than 3 ced.themes entries (boundary case)", () => {
-    const broken = { ...validCase, ced: { ...validCase.ced, themes: ["NAT", "WXT", "GEO", "MIG"] } };
+    const broken = {
+      ...validCase,
+      ced: { ...validCase.ced, themes: ["NAT", "WXT", "GEO", "MIG"] },
+    };
     expect(UnitSchema.safeParse({ ...validUnit, cases: [broken] }).success).toBe(false);
   });
 

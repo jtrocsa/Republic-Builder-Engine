@@ -451,6 +451,47 @@ export const UNIT_03_ARCHIVE_SAQ_QUESTS = [
   },
 ];
 
+// Case 1.09's mission quest as of Phase 58 — the Appeal Ledger, on the generic
+// mcq contract.
+//
+// Two things changed at once here. The quest this replaces
+// (unit-03-archive-appeal-form-comparison, kept above) was promoted out of
+// unit-03's archiveChallenges[] in Phase 48D and kept its unit-level id, so a
+// case's own mission was keyed "unit-03-archive-…"; this one is case-scoped. And
+// it is mcq rather than a fifth evidence-organizing sort, because five of the six
+// non-map cases were evidence-organizing and every mission therefore felt like
+// the same mission from a different door.
+//
+// The retired sort asked which *form* each record took — petition or private
+// letter — which the two attributions already announce. This asks the harder
+// comparative question the case's own central question poses: what each form let
+// its author say, and to whom. Both records are the same real, cited sources
+// (Prince Hall's 1777 petition and Abigail Adams's 1776 letter) that appear in
+// CASE_007_SOURCES and in UNIT_03_EVIDENCE_ORGANIZING_QUESTS.
+export const UNIT_03_ARCHIVE_MCQ_QUESTS = [
+  {
+    id: "case-009-mission-appeal-form-comparison",
+    relatedSource: {
+      label: "Two appeals, 1776–1777",
+      attribution: "Prince Hall et al. (January 13, 1777) and Abigail Adams (March 31, 1776)",
+      excerpt:
+        "Hall and seven other Black petitioners, to the Massachusetts Council and House of Representatives: “Your petitioners apprehend that they have in common with all other men a natural and unalienable right to that freedom which the great Parent of the universe hath bestowed equally on all mankind.” · Abigail Adams, to her husband John: “I desire you would Remember the Ladies… Remember all Men would be tyrants if they could… we are determined to foment a Rebellion, and will not hold ourselves bound by any Laws in which we have no voice, or Representation.”",
+    },
+    prompt:
+      "Both appeals invoke the Revolution's language of unalienable rights, but one is a formal petition to a legislature and the other a private letter between spouses. Which statement best explains how the form of each appeal shaped what its author could do with that language?",
+    choices: [
+      "Hall's petition had to argue on the legislature's own terms — entering the public record as a claim of right that a legislative body was obliged to receive and answer — while Adams could press her argument only as private influence on one man, with no body obliged to act on it at all.",
+      "Adams's letter was the more effective appeal because private correspondence between spouses carried more political weight in 1776 than a petition submitted to a state legislature.",
+      "The two appeals were essentially the same kind of document, since both were written by people the Revolution's rights language did not fully include.",
+      "Hall's petition was less risky than Adams's letter, because petitioning a legislature was a routine procedure with no consequences for the petitioners.",
+    ],
+    answer: 0,
+    explanation:
+      "Form determined what each appeal could do. A petition was a recognized legal instrument: Hall and his co-signers could enter their claim into the public record of a body that had a procedure for receiving it, which is precisely why they wrote in the language of natural right that the same legislature was then using against Britain. Adams had no such standing — a wife's letter to her husband could only try to persuade one delegate, which is why her own line is a warning rather than a demand, and why John Adams could and did answer it with a joke. The letter was not more powerful than the petition, the two documents are not the same kind of appeal, and petitioning was far from consequence-free for Black petitioners in 1777, whose claim the legislature declined to act on.",
+    skillCategory: "Comparison",
+  },
+];
+
 // Phase 49E: real Document-Based Question content ("The Chronicle
 // Dossier"), proving the new "dbq" quest type
 // (apps/web/src/quest-types/history/dbq-quest.js) end to end, the same way
@@ -498,8 +539,7 @@ export const UNIT_03_ARCHIVE_DBQ_QUESTS = [
       {
         id: "doc-wheatley",
         label: "Document 4",
-        attribution:
-          'Phillis Wheatley, "On the Death of Reverend Mr. George Whitefield, 1770"',
+        attribution: 'Phillis Wheatley, "On the Death of Reverend Mr. George Whitefield, 1770"',
         date: "1773 (composed 1770)",
         excerpt:
           "Take him, ye Africans, he longs for you; / Impartial Saviour is his title due; / Wash'd in the fountain of redeeming blood, / You shall be sons, and kings, and priests to God.",
@@ -507,8 +547,7 @@ export const UNIT_03_ARCHIVE_DBQ_QUESTS = [
       {
         id: "doc-dunmore",
         label: "Document 5",
-        attribution:
-          "John Murray, Earl of Dunmore, Royal Governor of Virginia, proclamation",
+        attribution: "John Murray, Earl of Dunmore, Royal Governor of Virginia, proclamation",
         date: "November 7, 1775",
         excerpt:
           "I do require every person capable of bearing arms, to resort to his Majesty's STANDARD… and I do hereby further declare all indentured servants, Negroes, or others, (appertaining to Rebels,) free that are able and willing to bear arms, they joining His Majesty's Troops as soon as may be, for the more speedily reducing this Colony to a proper sense of their duty, to His Majesty's crown and dignity.",

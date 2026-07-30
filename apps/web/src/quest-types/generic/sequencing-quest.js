@@ -156,8 +156,7 @@ export function gradeSequencingQuest(quest, state = {}) {
     return { answered, correct };
   }
   const reflectionOk =
-    typeof state.reflection === "string" &&
-    state.reflection.trim().length >= REFLECTION_MIN_LENGTH;
+    typeof state.reflection === "string" && state.reflection.trim().length >= REFLECTION_MIN_LENGTH;
   return { answered, correct, reflectionOk, complete: correct && reflectionOk };
 }
 

@@ -136,9 +136,7 @@ describe("runPilotOptimization", () => {
 
   it("writes the recommended candidate to the expected production-shaped path (normal case)", async () => {
     const result = await runPilotOptimization({ sourceFile, outputDir });
-    expect(result.productionOutputFile).toBe(
-      path.join(outputDir, "source-waldseemuller-1507.jpg")
-    );
+    expect(result.productionOutputFile).toBe(path.join(outputDir, "source-waldseemuller-1507.jpg"));
     expect(existsSync(result.productionOutputFile)).toBe(true);
   });
 

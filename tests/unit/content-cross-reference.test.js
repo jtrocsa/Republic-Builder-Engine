@@ -84,15 +84,17 @@ describe("checkCasePeriodMatchesUnit", () => {
 
   it("skips a unit whose period string doesn't contain a parseable number (boundary case)", () => {
     const units = [
-      { id: "unit-x", period: "Not a real period string", cases: [{ id: "case-x", ced: { period: 1 } }] },
+      {
+        id: "unit-x",
+        period: "Not a real period string",
+        cases: [{ id: "case-x", ced: { period: 1 } }],
+      },
     ];
     expect(checkCasePeriodMatchesUnit("test", units)).toEqual([]);
   });
 
   it("skips a case with no ced field at all (boundary case)", () => {
-    const units = [
-      { id: "unit-01", period: "Period 1 · 1491–1607", cases: [{ id: "case-001" }] },
-    ];
+    const units = [{ id: "unit-01", period: "Period 1 · 1491–1607", cases: [{ id: "case-001" }] }];
     expect(checkCasePeriodMatchesUnit("test", units)).toEqual([]);
   });
 });

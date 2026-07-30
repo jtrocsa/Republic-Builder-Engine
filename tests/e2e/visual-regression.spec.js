@@ -354,6 +354,29 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("source-reader-primary-prose"));
   });
 
+  test("a non-map mission, framed as itself", async ({ page }) => {
+    // Phase 58's split. All six non-map cases used to route to the Archive Challenges list below,
+    // which rendered every case's quest under one heading — so this screen did not exist and there
+    // was nothing to baseline. Two cases here, because the point is that they look like different
+    // missions: their titles, questions, mechanics and quest types all differ.
+    await seedProgress(page, {
+      currentScreen: "mission",
+      selectedUnitId: "unit-02",
+      activeCaseId: "case-005",
+    });
+    await loadSeededSave(page);
+    await expect(page.locator(".mission-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-triangle-ledger"));
+
+    await setScreen(page, {
+      currentScreen: "mission",
+      selectedUnitId: "unit-03",
+      activeCaseId: "case-009",
+    });
+    await expect(page.locator(".mission-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-appeal-ledger"));
+  });
+
   test("archive challenges, review, completion, codex, and reconstruction", async ({ page }) => {
     await seedProgress(page, { currentScreen: "archive-challenges", selectedUnitId: "unit-01" });
     await loadSeededSave(page);

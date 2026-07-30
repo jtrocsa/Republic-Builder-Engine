@@ -24,7 +24,9 @@ describe("sourceSelectorOptionLabel", () => {
 
   it("formats a visual source as title (image source), with no author/date — visual sources have neither", () => {
     const item = getVisualSourceById("u01-visual-tenochtitlan-maps");
-    expect(sourceSelectorOptionLabel("visual", item)).toBe("Aztec or Tenochtitlan maps (image source)");
+    expect(sourceSelectorOptionLabel("visual", item)).toBe(
+      "Aztec or Tenochtitlan maps (image source)"
+    );
   });
 });
 
@@ -49,9 +51,9 @@ describe("fieldHasCustomizedExcerpt", () => {
 
   it("is false when the current text still matches the picked source's stock excerpt", () => {
     const resolved = resolvePoolSourceFields("text:u01-columbus-first-voyage-letter");
-    expect(fieldHasCustomizedExcerpt("text:u01-columbus-first-voyage-letter", resolved.fullText)).toBe(
-      false
-    );
+    expect(
+      fieldHasCustomizedExcerpt("text:u01-columbus-first-voyage-letter", resolved.fullText)
+    ).toBe(false);
   });
 
   it("is true when the current text differs from the picked source's stock excerpt/fullText", () => {

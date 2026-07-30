@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { skillsForQuestSlots } from "../../apps/web/src/engine/ced-alignment.js";
 
-const SKILL_ORDER = ["Comparison", "Causation", "Continuity and Change", "Contextualization", "Sourcing"];
+const SKILL_ORDER = [
+  "Comparison",
+  "Causation",
+  "Continuity and Change",
+  "Contextualization",
+  "Sourcing",
+];
 
 describe("skillsForQuestSlots", () => {
   it("adds Sourcing for any hipp slot regardless of quest content (normal case)", () => {

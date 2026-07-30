@@ -436,6 +436,93 @@ export const UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS = [
   },
 ];
 
+// Case 1.05's mission quest as of Phase 58 — the Trade Route Plotter, on the
+// generic sequencing contract.
+//
+// Why this exists: five of the six non-map cases carried an evidence-organizing
+// quest, so "each mission is its own mission" was true of the routing and false
+// of the experience. A triangular voyage is genuinely ordered — a ship could not
+// carry captives before it had traded for them, or sugar before it had sold them
+// — so the circuit is the one thing in this case that a sort cannot express and
+// a sequence can.
+//
+// Every leg names the same real records case-005's retired sort used
+// (UNIT_02_ARCHIVE_CHALLENGE_QUESTS' case-005-archive-triangle-cargo, kept in
+// this file): Royal African Company outbound invoices, Bosman's 1705 Gold Coast
+// account, Equiano's 1789 Middle Passage narrative and the 1788 Brooks diagram,
+// and the Navigation Act of 1660 governing where the homeward cargo could land.
+export const UNIT_02_ARCHIVE_SEQUENCING_QUESTS = [
+  {
+    id: "case-005-mission-triangle-circuit-order",
+    prompt:
+      "The Archive's chart of the transatlantic circuit has come loose. Put the four legs back in the order a single voyage sailed them — each one made the next possible.",
+    // Deliberately NOT authored in already-correct order — see
+    // renderSequencingQuest()'s doc comment: the array's authored order is what
+    // renders before the player moves anything, so a sorted array hands them the
+    // answer. `position` is the answer key.
+    items: [
+      {
+        id: "coast-exchange",
+        label:
+          "On the West African coast those goods are exchanged for captives and gold, with Dutch, English, and other traders competing to supply arms for the same purpose (Willem Bosman, 1705)",
+        position: 1,
+      },
+      {
+        id: "homeward-staples",
+        label:
+          "In the Americas the captives are sold and the hold is refilled with the staples their labor produces — sugar, molasses, tobacco — which the Navigation Act of 1660 requires be landed in England (12 Cha. II c. 18)",
+        position: 3,
+      },
+      {
+        id: "outfit-and-clear",
+        label:
+          "A ship clears an English port carrying manufactured goods — Manchester and Kentish cloth, iron and copper bars, firearms and powder — advanced on credit against a voyage not yet made (Royal African Company invoices, c. 1730s)",
+        position: 0,
+      },
+      {
+        id: "middle-passage",
+        label:
+          "The captives are carried west across the Middle Passage, held in the measured compartments the ship's own owners calculated it could pack (Olaudah Equiano, 1789; the Brooks diagram, 1788)",
+        position: 2,
+      },
+    ],
+    explanation:
+      "The circuit is a chain of dependencies, not a loop of three unrelated cargoes. English manufactured goods were the trade's opening currency, because European traders had no other means of purchase African merchants would accept; those goods bought the captives; the captives' forced labor in the Americas produced the sugar and tobacco; and the Navigation Act determined that the wealth from that labor had to be realized in England, where it financed the next outbound cargo. Getting the order right is what makes the system visible as a system.",
+    skillCategory: "Causation",
+  },
+];
+
+// Unit 2's Archive Challenge as of Phase 58 — a real SAQ, replacing two mcq
+// "strongest evidence" questions.
+//
+// The Archive Room is the unit's extended written work now; the four
+// teacher-swappable types (mcq, sequencing, evidence-organizing, hipp) belong to
+// the Nav Table missions. Both retired mcq items are kept in
+// UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS above, unreferenced by any slot: a
+// curated alternate has to be the same type as the slot it replaces (see
+// resolveQuestSlotWithType()), so neither can be swapped into a mission today,
+// but the custom-content path (custom_content_items.slot_kind, migration 0008)
+// is not type-constrained and they are real, cited items worth keeping.
+//
+// The stimulus is Richard Frethorne's 1623 letter, already a real, cited case-004
+// source (CASE_004_SOURCES in unit-02-campaign.js) — the same
+// already-covered-source convention UNIT_03_ARCHIVE_SAQ_QUESTS uses for
+// Dickinson's Letter II.
+export const UNIT_02_ARCHIVE_SAQ_QUESTS = [
+  {
+    id: "unit-02-archive-colonial-crossroads-saq",
+    stimulus:
+      "“I your child am in a most heavy case by reason of the country, which causeth much sickness, as the scurvy and the bloody flux, and diverse other diseases… I have nothing at all — no, not a shirt to my back but two rags, nor no clothes but one poor suit… a mouthful of bread must serve four men a day… I humbly desire you to send me some cheese and butter and anything else you think fitting for me, for you cannot imagine the misery that I endure in this miserable kind of life.” — Richard Frethorne, letter to his father and mother, Virginia, March 20, 1623",
+    prompts: [
+      "A. Identify one specific condition of indentured servitude in the Chesapeake that Frethorne's letter describes.",
+      "B. Explain one reason why English colonists continued to recruit indentured servants to the Chesapeake in the period 1607–1660 despite conditions like the ones Frethorne describes.",
+      "C. Explain one way that the Chesapeake's labor system changed after 1660 in a manner that Frethorne's experience does not represent.",
+    ],
+    rubric:
+      "SAQ practice rubric: 3 points total. Earn 1 point for each response that gives a historically defensible claim and supports it with accurate, relevant historical information.",
+  },
+];
+
 export const UNIT_02_SOURCE_ANALYSIS_QUESTS = [
   {
     id: "case-004-hipp-frethorne-letter",

@@ -45,12 +45,7 @@ describe("computeAssignmentReport", () => {
       { taskType: "dbq", taskId: assignment.taskId, studentUserId: "s1", evaluationId: "e1" },
       { taskType: "saq", taskId: "some-other-quest", studentUserId: "s2", evaluationId: "e2" },
     ];
-    const report = computeAssignmentReport(
-      assignment,
-      roster,
-      submissions,
-      new Set(["e1", "e2"])
-    );
+    const report = computeAssignmentReport(assignment, roster, submissions, new Set(["e1", "e2"]));
     expect(report.submittedCount).toBe(0);
     expect(report.gradedCount).toBe(0);
   });

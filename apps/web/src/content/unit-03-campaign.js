@@ -97,14 +97,11 @@ export const UNIT_03 = {
       question:
         "What did a bankrupt confederation, a secret convention, a fierce war of pamphlets, and a promised bill of rights reveal about how much power a free people should entrust to a new national government — and how they would decide?",
       mechanic: "Ratification Ledger",
-      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
-      // to archiveChallengesScreen() rather than a bespoke field screen. The
-      // mission's mechanic is entirely its archiveChallenge quest below (see
-      // the now-deleted foundingScreen()/FOUNDING_RECORDS note further down
-      // this file), matching the Case 1.02/1.03/1.05/1.06 precedent. Shares
-      // case-007's exact map coordinates (Philadelphia) — the two-marker
-      // cluster declutterMarkerPositions() spreads apart.
-      route: "archive-challenges",
+      // A non-map mission (Phase 48A, re-routed in Phase 58) — Chronotravel goes
+      // to missionScreen(), which renders this case's own archiveChallenge quest
+      // and nothing else. Shares case-007's exact map coordinates (Philadelphia)
+      // — the two-marker cluster declutterMarkerPositions() spreads apart.
+      route: "mission",
       summary:
         "Build a ratification ledger weighing the Articles of Confederation's failures, the Constitutional Convention's compromises, and the Federalist–Anti-Federalist debate that produced the Bill of Rights.",
       archiveChallenge: {
@@ -134,16 +131,27 @@ export const UNIT_03 = {
       question:
         "What did a formal petition for freedom and a private letter between spouses reveal about how far the Revolution's promise of ‘unalienable rights’ could reach — and who had to fight to be heard at all?",
       mechanic: "Appeal Ledger",
-      // An Archive Challenge mission (Phase 48D) — promoted from this
-      // unit's former archiveChallenges[] bonus entry rather than freshly
-      // authored; same real quest content, now with genuine case-level
-      // framing so it reads as this unit's third mission.
-      route: "archive-challenges",
+      // A non-map mission (Phase 48D, re-routed in Phase 58) — Chronotravel goes
+      // to missionScreen().
+      route: "mission",
       summary:
-        "Sort a public petition for freedom and a private letter between spouses by the form of appeal each made, and weigh how each author's audience and standing shaped what could be said — and how it was likely received.",
+        "Compare a public petition for freedom with a private letter between spouses: what each form of appeal let its author say, who each was addressed to, and what that meant for how far the Revolution's promise of unalienable rights could reach.",
+      // Multiple choice, and case-scoped ids at last. Two changes, one pass:
+      //
+      // This quest was promoted out of unit-03's archiveChallenges[] in Phase 48D
+      // and kept its unit-level id, so a case's own mission was keyed
+      // "unit-03-archive-...". It now has ids that say what they belong to.
+      //
+      // And it is mcq rather than evidence-organizing, because five of the six
+      // non-map cases were evidence-organizing and every mission therefore felt
+      // like the same mission. What this case actually asks is a comparison of the
+      // *form* of two appeals — audience, purpose, what each form permitted its
+      // author to say — which is a question with defensible answers, not a sort.
+      // The displaced sort lives on as a curated alternate a teacher can swap back
+      // in: content/quests/case-009-evidence-organizing-alternates.js.
       archiveChallenge: {
-        questType: "evidence-organizing",
-        questId: "unit-03-archive-appeal-form-comparison",
+        questType: "mcq",
+        questId: "case-009-mission-appeal-form-comparison",
       },
       // KC 3.2 — the Revolution's republican rights language, and who could
       // actually claim it (Prince Hall's petition vs. Abigail Adams's

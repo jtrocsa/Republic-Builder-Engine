@@ -12,15 +12,20 @@ export const UNIT_01 = {
     "Investigate the societies, exchanges, and colonial systems that reshaped the Atlantic world after 1492.",
   centralQuestion:
     "How did contact among Europe, Africa, and the Americas reshape societies on both sides of the Atlantic?",
-  // Unit-level bonus Archive Challenge (Phase C of the Investigation/Archive
-  // Challenge plan's catalog-expansion pass) — not tied to relocating any
-  // single case's activity screen; reachable from the Archive Terminal's
-  // archiveChallengesScreen(). Completing it, alongside every case, is
-  // required for unit completion (see main.js's unitReadyForReview()).
+  // The unit's Archive Challenge — its extended written work, reached from the
+  // Archive Terminal in the Archive Room. Completing it, alongside every case,
+  // is required for unit completion (see main.js's unitReadyForReview()).
+  //
+  // Phase 58 made this an SAQ. It was an evidence-organizing claim board, which
+  // is one of the four types the Nav Table's missions use, so the Archive Room
+  // was rendering the same kind of work as a mission and the split between the
+  // two groups was only a matter of which door you came through. A student who
+  // had already completed the retired quest is not asked to redo it — see
+  // RETIRED_ARCHIVE_CHALLENGE_IDS in main.js.
   archiveChallenges: [
     {
-      questType: "evidence-organizing",
-      questId: "unit-01-archive-claim-and-evidence-builder",
+      questType: "saq",
+      questId: "unit-01-archive-atlantic-world-saq",
     },
   ],
   cases: [
@@ -53,12 +58,11 @@ export const UNIT_01 = {
       question:
         "How did the movement of crops, diseases, animals, and people transform the Atlantic world?",
       mechanic: "Atlantic Route Puzzle",
-      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
-      // to archiveChallengesScreen() rather than a bespoke field screen. The
-      // mission's mechanic is entirely its archiveChallenge quest below (see
-      // the now-deleted exchangeLedgerScreen()/EXCHANGE_RECORDS note further
-      // down this file), matching the Case 1.03/1.05/1.06 precedent.
-      route: "archive-challenges",
+      // A non-map mission (Phase 48A, re-routed in Phase 58) — Chronotravel goes
+      // to missionScreen(), which renders this case's own archiveChallenge quest
+      // and nothing else. Until Phase 58 the route was "archive-challenges" and
+      // all six non-map cases landed on one shared list of every case's quest.
+      route: "mission",
       summary:
         "Build a route ledger that distinguishes movement across the Atlantic from its historical consequences.",
       archiveChallenge: {
@@ -81,12 +85,8 @@ export const UNIT_01 = {
       question:
         "How did conquest and colonization create new systems of labor, power, and social hierarchy?",
       mechanic: "Colonial System Builder",
-      // An Archive Challenge mission (Phase 48A) — Chronotravel routes straight
-      // to archiveChallengesScreen() rather than a bespoke field screen. The
-      // mission's mechanic is entirely its archiveChallenge quest below (see
-      // the now-deleted empireScreen()/EMPIRE_EVIDENCE/EMPIRE_CONNECTIONS note
-      // further down this file), matching the Case 1.05/1.06 precedent.
-      route: "archive-challenges",
+      // A non-map mission — see case-002's note above.
+      route: "mission",
       summary:
         "Connect evidence about conquest, labor, forced migration, hierarchy, resistance, and cultural exchange.",
       archiveChallenge: {

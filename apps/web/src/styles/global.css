@@ -5050,6 +5050,35 @@ dd {
   line-height: 1.65;
   color: #d7eef1;
 }
+/* A non-map mission's own framing (Phase 58's missionScreen()). Its left column carries the case's
+   central question and where/when it is set, which is what a Chronotravel destination should tell
+   you and what the shared Archive Challenges list this replaced never could — one heading served
+   all six missions. */
+.mission-shell .mission-question {
+  margin: 0.6em 0 0.9em;
+  padding-left: 14px;
+  border-left: 3px solid var(--gold);
+  color: #f7e6bb;
+  font:
+    600 1.06rem/1.55 "Spectral",
+    serif;
+}
+.mission-shell .mission-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+.mission-shell .mission-meta span {
+  padding: 6px 11px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.28);
+  border-radius: 999px;
+  color: var(--gold-soft);
+  font:
+    700 0.68rem "Cinzel",
+    serif;
+  letter-spacing: 0.04em;
+}
 .activity-rule {
   margin-top: 20px;
   padding: 16px 18px;

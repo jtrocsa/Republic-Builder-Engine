@@ -36,6 +36,7 @@ export function loadChronicleContent() {
       investigationSequencingQuests: unit01Quests.UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
       archiveChallengeQuests: unit01Quests.UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
       archiveEvidenceQuests: unit01Quests.UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
+      archiveSaqQuests: unit01Quests.UNIT_01_ARCHIVE_SAQ_QUESTS,
       // Teacher Mode's curated swap pool (apps/web/src/repositories/
       // remote-content-selection-repository.js) — proof-of-pipeline seed for
       // Case 1.01 only, see docs/architecture for the plan this was built
@@ -58,6 +59,8 @@ export function loadChronicleContent() {
       archiveChallengeQuests: unit02Quests.UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
       investigationEvidenceQuests: unit02Quests.UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
       archiveStrongestEvidenceQuests: unit02Quests.UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
+      archiveSequencingQuests: unit02Quests.UNIT_02_ARCHIVE_SEQUENCING_QUESTS,
+      archiveSaqQuests: unit02Quests.UNIT_02_ARCHIVE_SAQ_QUESTS,
       evidenceOrganizingAlternates: CASE_006_EVIDENCE_ORGANIZING_ALTERNATES,
     },
     unit03: {
@@ -71,6 +74,7 @@ export function loadChronicleContent() {
       investigationQuests: unit03Quests.UNIT_03_INVESTIGATION_QUESTS,
       investigationMcqQuests: unit03Quests.UNIT_03_INVESTIGATION_MCQ_QUESTS,
       archiveChallengeQuests: unit03Quests.UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
+      archiveMcqQuests: unit03Quests.UNIT_03_ARCHIVE_MCQ_QUESTS,
       archiveSaqQuests: unit03Quests.UNIT_03_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit03Quests.UNIT_03_ARCHIVE_DBQ_QUESTS,
     },

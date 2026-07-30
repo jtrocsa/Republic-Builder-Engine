@@ -114,6 +114,13 @@ function main() {
       content.unit01.archiveEvidenceQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-01-quests.js: UNIT_01_ARCHIVE_SAQ_QUESTS",
+      SaqQuestListSchema,
+      content.unit01.archiveSaqQuests
+    )
+  );
 
   // Teacher Mode's curated swap pool — each entry wraps a full official-shape
   // source/quest object plus a `replacesXId` pointer, validated against the
@@ -251,6 +258,20 @@ function main() {
       content.unit02.archiveStrongestEvidenceQuests
     )
   );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_ARCHIVE_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit02.archiveSequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_ARCHIVE_SAQ_QUESTS",
+      SaqQuestListSchema,
+      content.unit02.archiveSaqQuests
+    )
+  );
 
   results.push(runSchema("unit-03-campaign.js: UNIT_03", UnitSchema, content.unit03.unit));
   results.push(
@@ -306,6 +327,13 @@ function main() {
       "unit-03-quests.js: UNIT_03_ARCHIVE_CHALLENGE_QUESTS",
       EvidenceOrganizingQuestListSchema,
       content.unit03.archiveChallengeQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-03-quests.js: UNIT_03_ARCHIVE_MCQ_QUESTS",
+      McqQuestListSchema,
+      content.unit03.archiveMcqQuests
     )
   );
   results.push(
@@ -391,6 +419,10 @@ function main() {
         source: "unit-02-quests.js:UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS",
         items: content.unit02.archiveStrongestEvidenceQuests,
       },
+      {
+        source: "unit-03-quests.js:UNIT_03_ARCHIVE_MCQ_QUESTS",
+        items: content.unit03.archiveMcqQuests,
+      },
     ],
     sequencing: [
       {
@@ -412,6 +444,10 @@ function main() {
       {
         source: "unit-01-quests.js:UNIT_01_ARCHIVE_CHALLENGE_QUESTS",
         items: content.unit01.archiveChallengeQuests,
+      },
+      {
+        source: "unit-02-quests.js:UNIT_02_ARCHIVE_SEQUENCING_QUESTS",
+        items: content.unit02.archiveSequencingQuests,
       },
     ],
     "evidence-organizing": [
@@ -463,6 +499,14 @@ function main() {
       },
     ],
     saq: [
+      {
+        source: "unit-01-quests.js:UNIT_01_ARCHIVE_SAQ_QUESTS",
+        items: content.unit01.archiveSaqQuests,
+      },
+      {
+        source: "unit-02-quests.js:UNIT_02_ARCHIVE_SAQ_QUESTS",
+        items: content.unit02.archiveSaqQuests,
+      },
       {
         source: "unit-03-quests.js:UNIT_03_ARCHIVE_SAQ_QUESTS",
         items: content.unit03.archiveSaqQuests,

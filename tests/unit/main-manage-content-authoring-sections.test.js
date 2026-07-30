@@ -92,7 +92,11 @@ describe("sectionForValidationError", () => {
     ["mcq", "prompt: String must contain at least 1 character(s)", "question"],
     ["mcq", "relatedSource.label: Required", "source"],
     ["sequencing", "items: add at least 2 items", "answers"],
-    ["sequencing", "items: each item must have a unique position from 1 to the number of items", "answers"],
+    [
+      "sequencing",
+      "items: each item must have a unique position from 1 to the number of items",
+      "answers",
+    ],
     ["sequencing", "prompt: Required", "question"],
     ["evidence-organizing", "prompt: Required", "question"],
     ["evidence-organizing", "sources: add at least 1 evidence record", "answers"],

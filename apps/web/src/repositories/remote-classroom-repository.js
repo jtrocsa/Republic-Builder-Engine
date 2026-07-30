@@ -86,7 +86,11 @@ export async function createClassroomsWithRoster(rows) {
       const { slots } = await provisionSlots(classroom.id, { count: row.studentCount });
       results.push({ ok: true, classroom, slots });
     } catch (err) {
-      results.push({ ok: false, name: row.name, error: err.message || "Could not create this classroom." });
+      results.push({
+        ok: false,
+        name: row.name,
+        error: err.message || "Could not create this classroom.",
+      });
     }
   }
   return results;

@@ -68,11 +68,7 @@ describe("selectDailyRotationQueue", () => {
   it("orders due items before fresh items (normal case)", () => {
     const keys = ["mcq::a", "mcq::b", "mcq::c"];
     const states = { "mcq::a": { box: 2, dueAt: NOW - 1000 } };
-    expect(selectDailyRotationQueue(keys, states, NOW, 8)).toEqual([
-      "mcq::a",
-      "mcq::b",
-      "mcq::c",
-    ]);
+    expect(selectDailyRotationQueue(keys, states, NOW, 8)).toEqual(["mcq::a", "mcq::b", "mcq::c"]);
   });
 
   it("sorts multiple due items by earliest dueAt first (normal case)", () => {

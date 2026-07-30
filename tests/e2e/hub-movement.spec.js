@@ -1,10 +1,5 @@
 import { test, expect } from "@playwright/test";
-import {
-  seedProgress,
-  loadSeededSave,
-  holdKey,
-  walkToHubTarget,
-} from "./helpers/progress-seed.js";
+import { seedProgress, loadSeededSave, holdKey, walkToHubTarget } from "./helpers/progress-seed.js";
 
 // Scenario 2: Main Hall movement + INSTITUTE_HALL_BLOCKS collision.
 //

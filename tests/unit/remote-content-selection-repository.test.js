@@ -58,7 +58,11 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
     resultsQueue = [
       {
         data: [
-          { slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" },
+          {
+            slot_kind: "source",
+            slot_content_id: "taino-context",
+            alt_content_id: "taino-context-alt-encyclopedia",
+          },
         ],
         error: null,
       },
@@ -118,7 +122,13 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
   it("clearResolutionCache resets back to official-only resolution", async () => {
     resultsQueue = [
       {
-        data: [{ slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" }],
+        data: [
+          {
+            slot_kind: "source",
+            slot_content_id: "taino-context",
+            alt_content_id: "taino-context-alt-encyclopedia",
+          },
+        ],
         error: null,
       },
     ];
@@ -142,7 +152,10 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
         ],
         error: null,
       },
-      { data: [{ id: "custom-item-1", content: { prompt: "A teacher-written prompt" } }], error: null },
+      {
+        data: [{ id: "custom-item-1", content: { prompt: "A teacher-written prompt" } }],
+        error: null,
+      },
     ];
     await loadSelectionsForResolution("classroom-1", "published");
 
@@ -156,7 +169,11 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
     resultsQueue = [
       {
         data: [
-          { slot_kind: "source", slot_content_id: "taino-context", alt_content_id: "taino-context-alt-encyclopedia" },
+          {
+            slot_kind: "source",
+            slot_content_id: "taino-context",
+            alt_content_id: "taino-context-alt-encyclopedia",
+          },
         ],
         error: null,
       },
@@ -170,14 +187,18 @@ describe("resolveSourceSlot / resolveQuestSlot", () => {
 describe("alternativesForSourceSlot / alternativesForQuestSlot", () => {
   it("lists curated alternatives for a known slot", () => {
     expect(alternativesForSourceSlot("taino-context").length).toBeGreaterThan(0);
-    expect(alternativesForQuestSlot("mcq", "case-001-mcq-taino-sourcing").length).toBeGreaterThan(0);
-    expect(alternativesForQuestSlot("sequencing", "case-001-sequencing-columbian-exchange").length).toBeGreaterThan(
+    expect(alternativesForQuestSlot("mcq", "case-001-mcq-taino-sourcing").length).toBeGreaterThan(
       0
     );
     expect(
+      alternativesForQuestSlot("sequencing", "case-001-sequencing-columbian-exchange").length
+    ).toBeGreaterThan(0);
+    expect(
       alternativesForQuestSlot("evidence-organizing", "case-001-evidence-record-sourcing").length
     ).toBeGreaterThan(0);
-    expect(alternativesForQuestSlot("hipp", "case-001-hipp-columbus-letter").length).toBeGreaterThan(0);
+    expect(
+      alternativesForQuestSlot("hipp", "case-001-hipp-columbus-letter").length
+    ).toBeGreaterThan(0);
   });
 
   it("returns an empty list for a slot with no curated alternatives", () => {

@@ -123,8 +123,20 @@ describe("buildDbqEvaluationRequest", () => {
     id: "sample-dossier",
     prompt: "Evaluate the extent to which a sample development changed a sample era.",
     documents: [
-      { id: "doc-1", label: "Document 1", attribution: "A sample creator", date: "1770", excerpt: "First excerpt." },
-      { id: "doc-2", label: "Document 2", attribution: "Another creator", date: "1775", excerpt: "Second excerpt." },
+      {
+        id: "doc-1",
+        label: "Document 1",
+        attribution: "A sample creator",
+        date: "1770",
+        excerpt: "First excerpt.",
+      },
+      {
+        id: "doc-2",
+        label: "Document 2",
+        attribution: "Another creator",
+        date: "1775",
+        excerpt: "Second excerpt.",
+      },
     ],
   };
 

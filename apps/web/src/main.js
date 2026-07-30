@@ -49,6 +49,7 @@ import {
   UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
   UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
   UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
+  UNIT_01_ARCHIVE_SAQ_QUESTS,
 } from "./content/quests/unit-01-quests.js";
 import {
   UNIT_02_MCQ_QUESTS,
@@ -58,6 +59,8 @@ import {
   UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
   UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
   UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
+  UNIT_02_ARCHIVE_SEQUENCING_QUESTS,
+  UNIT_02_ARCHIVE_SAQ_QUESTS,
 } from "./content/quests/unit-02-quests.js";
 import {
   UNIT_03_MCQ_QUESTS,
@@ -67,6 +70,7 @@ import {
   UNIT_03_INVESTIGATION_QUESTS,
   UNIT_03_INVESTIGATION_MCQ_QUESTS,
   UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
+  UNIT_03_ARCHIVE_MCQ_QUESTS,
   UNIT_03_ARCHIVE_SAQ_QUESTS,
   UNIT_03_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-03-quests.js";
@@ -1718,6 +1722,7 @@ const VALID_SCREENS = new Set([
   "review",
   "completion",
   "archive-challenges",
+  "mission",
   "investigation",
   "intro-welcome",
   "intro-briefing",
@@ -2225,21 +2230,28 @@ const PRACTICE_CHECK_QUESTS = {
     hipp: UNIT_03_SOURCE_ANALYSIS_QUESTS,
   },
 };
-// Archive Challenge quest content, resolved by (questType, questId) from
-// either a case's case.archiveChallenge pointer or a unit's
-// unit.archiveChallenges[] bonus entries (unit.schema.js), grouped by quest
-// type since a unit's Archive Challenges can mix types (case-003 uses
-// sequencing; case-005/case-006 and the unit-01/unit-03 bonus challenges use
-// evidence-organizing; the unit-02 bonus challenges use mcq).
+// Quest content for both kinds of authored challenge, resolved by
+// (questType, questId): a case's own `archiveChallenge` pointer — which
+// missionScreen() renders as that case's whole mission — and a unit's
+// `archiveChallenges[]`, which archiveChallengesScreen() renders in the Archive
+// Room. Grouped by quest type because both mix types freely.
+//
+// Phase 58 sorted which type belongs where. Missions use the four
+// teacher-swappable types (mcq, sequencing, evidence-organizing, hipp); the
+// Archive Room holds the AP writing work (saq, dbq) for all three units.
 const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
   "evidence-organizing": [
     ...UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
     ...UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
     ...UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
   ],
-  sequencing: UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
-  mcq: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
-  saq: UNIT_03_ARCHIVE_SAQ_QUESTS,
+  sequencing: [...UNIT_01_ARCHIVE_CHALLENGE_QUESTS, ...UNIT_02_ARCHIVE_SEQUENCING_QUESTS],
+  mcq: [...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS, ...UNIT_03_ARCHIVE_MCQ_QUESTS],
+  saq: [
+    ...UNIT_01_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_02_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_03_ARCHIVE_SAQ_QUESTS,
+  ],
   dbq: UNIT_03_ARCHIVE_DBQ_QUESTS,
 };
 // Returns {questType, quest} rather than just the content — a published
@@ -3154,11 +3166,13 @@ function caseKindLabel(kase) {
 }
 
 // The qualifier caseKindLabel() no longer carries — null for Map Missions,
-// which need none.
+// which need none. Before Phase 58 an Activity Mission read "Archive Challenge
+// only", which was accurate about where it was rendered (one shared list in the
+// Archive Room) and useless about what the mission is. Every one of them now has
+// its own screen, so the mechanic's name is both true and the more informative
+// thing for a teacher to see.
 function caseKindDetail(kase) {
-  if (kase.route === "field") return null;
-  if (kase.route === "archive-challenges") return "Archive Challenge only";
-  return kase.mechanic;
+  return kase.route === "field" ? null : kase.mechanic;
 }
 
 // Renaming is metadata, not editable mission content, so it's offered even
@@ -5104,7 +5118,10 @@ function enterContentPreview(caseId, { inline = false, resolution = "draft" } = 
         resetFieldPosition();
       } else {
         progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
-        progress.currentScreen = "archive-challenges";
+        // The case's own mission screen as of Phase 58, not the shared Archive Challenges list —
+        // a teacher previewing one mission should see that mission, which is the same thing the
+        // split gave students.
+        progress.currentScreen = "mission";
       }
       render();
     })
@@ -6886,54 +6903,79 @@ function archiveChallengeCard(kicker, questType, questId, opts) {
 function archiveChallengeAdditionCard(kicker, addition) {
   return archiveChallengeQuestCard(kicker, addition.slotKind, addition.content);
 }
-// Archive Challenges list for the active unit, reached from the Archive Terminal.
-// Follows the same live-graded renderQuest/gradeQuest pattern practiceCheckScreen()
-// already uses (no separate "submit" step — placement/reflection state is graded on
-// every render). Renders two kinds of cards: case-level challenges (relocating an
-// existing case's activity — completing one is real case progress) and unit-level
-// bonus challenges (unit.archiveChallenges[], not tied to any case — bonus content
-// that's still required for unit completion via unitArchiveChallengesComplete()).
+// One non-map mission: the active case's own quest, framed by that case's own title, central
+// question and mechanic name.
+//
+// This is what `route: "mission"` dispatches to, and it is the whole point of the Phase 58 split.
+// Before it, all six non-map cases carried `route: "archive-challenges"` and Chronotravel landed every
+// one of them on archiveChallengesScreen() below, which renders **every** case's challenge in a single
+// list merely reordered to put the traveled-to case first. Six missions, one screen, same heading and
+// same list each time — the reported "it opens the same quest no matter what" — and five of the six
+// happened to be the same quest type on top of that.
+//
+// Grading, completion, unlockNext(), skill outcomes and the teacher content-selection path are all
+// unchanged: this reuses archiveChallengeCard() exactly as the list did, so a mission is the same
+// quest it always was, shown on its own.
+function missionScreen() {
+  const kase = caseById(progress.activeCaseId) || caseById(progress.selectedCaseId);
+  if (!kase?.archiveChallenge) {
+    // A save resumed on "mission" with no active case, or pointed at a map case. Neither is
+    // reachable through the Navigation Table; recover rather than render an empty board.
+    progress.currentScreen = "archive";
+    save();
+    return archiveScreen();
+  }
+  const unit = unitForCase(kase.id) || UNIT_01;
+  const card = archiveChallengeCard(
+    // Not escaped here: archiveChallengeQuestCard() escapes the kicker itself.
+    `${resolvedCaseTitle(kase)} · ${kase.mechanic}`,
+    kase.archiveChallenge.questType,
+    kase.archiveChallenge.questId,
+    {
+      alreadyComplete: progress.completedCases.includes(kase.id),
+      onComplete: () => unlockNext(kase.id),
+    }
+  );
+  // Teacher-added extra questions for *this* case only. On the shared list these were pooled from
+  // every case in the unit, which is another way the same screen looked identical from six doors.
+  const additions = resolvedAdditionsForCase(kase.id)
+    .map((addition) =>
+      archiveChallengeAdditionCard(`${kase.shortTitle} · Added question`, addition)
+    )
+    .join("");
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell mission-shell"><section class="activity-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">${esc(unit.period)} · ${esc(kase.mechanic)}</p><h1>${esc(resolvedCaseTitle(kase))}</h1><p class="mission-question">${esc(kase.question)}</p><p>${esc(kase.summary)}</p><p class="mission-meta"><span>${esc(kase.location)}</span><span>${esc(kase.date)}</span></p></section><section class="activity-board quest-practice-board">${card}${additions}</section></main>${authorPanel()}`;
+}
+
+// Archive Challenges for the active unit, reached from the Archive Terminal in the Archive Room.
+//
+// As of Phase 58 this is the unit's **AP writing work** — SAQ and DBQ (`unit.archiveChallenges[]`) —
+// and nothing else. It used to also render every non-map case's own mission quest, because those
+// cases' route pointed here; they have missionScreen() above now. What is left is the group that
+// genuinely belongs in the Archive Room: extended written responses a Chronicler composes at a desk
+// from records already secured in the field, not a mission with a place and a date.
+//
+// Follows the same live-graded renderQuest/gradeQuest pattern practiceCheckScreen() already uses (no
+// separate "submit" step — response state is graded on every render).
 function archiveChallengesScreen() {
   const unit = unitById(progress.selectedUnitId) || UNIT_01;
-  // Chronotravel to an Archive Challenge mission (goToCase() -> travelScreen())
-  // lands here — the traveled-to case's card leads the list instead of
-  // sitting wherever its authored position falls, so the mission the student
-  // just selected is the first thing they see (Phase 48A). No-op reorder for
-  // any other entry point (e.g. direct from the Archive Terminal) where
-  // activeCaseId doesn't belong to this unit.
-  const orderedCases =
-    unitForCase(progress.activeCaseId)?.id === unit.id
-      ? [...unit.cases].sort((a, b) =>
-          a.id === progress.activeCaseId ? -1 : b.id === progress.activeCaseId ? 1 : 0
-        )
-      : unit.cases;
-  const caseCards = orderedCases
-    .filter((c) => c.archiveChallenge)
-    .map((c) =>
+  const cards = (unit.archiveChallenges || [])
+    .map((challenge) =>
       archiveChallengeCard(
-        `${c.shortTitle} · Archive Challenge`,
-        c.archiveChallenge.questType,
-        c.archiveChallenge.questId,
+        `${resolvedUnitTitle(unit)} · Archive Challenge`,
+        challenge.questType,
+        challenge.questId,
         {
-          alreadyComplete: progress.completedCases.includes(c.id),
-          onComplete: () => unlockNext(c.id),
+          // Shown as already restored, not re-asked, when this challenge's
+          // retired predecessor was completed on this save — see
+          // RETIRED_ARCHIVE_CHALLENGE_IDS.
+          alreadyComplete:
+            progress.archiveChallenges[challenge.questId]?.status !== "complete" &&
+            archiveChallengeSatisfied(challenge.questId, progress.archiveChallenges),
         }
       )
-    );
-  const bonusCards = (unit.archiveChallenges || []).map((challenge) =>
-    archiveChallengeCard(
-      `${resolvedUnitTitle(unit)} · Bonus Archive Challenge`,
-      challenge.questType,
-      challenge.questId
     )
-  );
-  const additionCards = unit.cases.flatMap((c) =>
-    resolvedAdditionsForCase(c.id).map((addition) =>
-      archiveChallengeAdditionCard(`${c.shortTitle} · Archive Challenge`, addition)
-    )
-  );
-  const cards = [...caseCards, ...bonusCards, ...additionCards].join("");
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell archive-challenges-shell"><section class="activity-copy"><button class="back-link" data-action="archive-room">← Return to Archive Terminal</button><p class="kicker">${esc(resolvedUnitTitle(unit))} · Institute Archive</p><h1>Archive Challenges</h1><p>Restore each unit's damaged record display using evidence secured in the field. Completing a unit's Archive Challenges preserves its case record and is required to fully archive the unit.</p></section><section class="activity-board quest-practice-board">${cards || '<p class="bank-empty">Archive Challenges for this unit are still being cataloged. Check back soon.</p>'}</section></main>${authorPanel()}`;
+    .join("");
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell archive-challenges-shell"><section class="activity-copy"><button class="back-link" data-action="archive-room">← Return to Archive Terminal</button><p class="kicker">${esc(resolvedUnitTitle(unit))} · Institute Archive</p><h1>Archive Challenges</h1><p>The unit's extended written work, composed here at the Archive from records you have already secured in the field. Completing a unit's Archive Challenges is required to fully archive it.</p></section><section class="activity-board quest-practice-board">${cards || '<p class="bank-empty">Archive Challenges for this unit are still being cataloged. Check back soon.</p>'}</section></main>${authorPanel()}`;
 }
 
 // Investigation Challenge gate for the source currently opened from the field (openSourceId),
@@ -7028,14 +7070,54 @@ function caseMarker(c, xy, viewport) {
   return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? 'aria-disabled="true"' : ""} aria-label="${esc(label)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
 }
 
-// Whether every unit-level Archive Challenge (unit.archiveChallenges[] — bonus
-// content not tied to relocating one case) is complete. Case-level Archive
-// Challenges (case.archiveChallenge) already gate unit completion for free
-// via isComplete(), since completing one writes to progress.completedCases
-// the same as any other case.
+// Quests a save may hold a completion for that no unit points at any more, and
+// the current challenge each one counts as having satisfied.
+//
+// Phase 58 replaced Unit 1's and Unit 2's unit-level Archive Challenges with real
+// SAQs (the Archive Room is the AP writing work now; the four teacher-swappable
+// types belong to the Nav Table's missions). unitArchiveChallengesComplete()
+// matches on questId, so without this a student who had finished the old ones
+// mid-unit would open the app to a re-locked Archive Review and no explanation.
+// Honouring the retired id is the right trade: they did the work that was in
+// front of them, and re-locking a completed unit to make a content change tidy is
+// the app breaking its promise, not the student's problem.
+//
+// A student who has *not* finished them simply does the new SAQ. Nothing here
+// grants credit for work never done.
+export const RETIRED_ARCHIVE_CHALLENGE_IDS = {
+  "unit-01-archive-claim-and-evidence-builder": "unit-01-archive-atlantic-world-saq",
+  "unit-02-archive-strongest-evidence-coerced-labor": "unit-02-archive-colonial-crossroads-saq",
+  "unit-02-archive-strongest-evidence-mercantile-policy": "unit-02-archive-colonial-crossroads-saq",
+  // Case 1.09's mission, re-typed from evidence-organizing to mcq and re-keyed
+  // off the unit-level id it had borrowed since Phase 48D. Case-level
+  // completions live in progress.completedCases, not here, so this entry only
+  // matters if a save recorded the challenge without the case — which
+  // archiveChallengeQuestCard() can do when a quest is completed outside its
+  // case's own unlock path.
+  "unit-03-archive-appeal-form-comparison": "case-009-mission-appeal-form-comparison",
+  "case-005-archive-triangle-cargo": "case-005-mission-triangle-circuit-order",
+};
+
+/**
+ * Has this challenge been completed, counting a retired predecessor as having
+ * satisfied it? Exported for tests/unit/retired-archive-challenges.test.js.
+ */
+export function archiveChallengeSatisfied(questId, archiveChallenges) {
+  if (archiveChallenges[questId]?.status === "complete") return true;
+  return Object.entries(RETIRED_ARCHIVE_CHALLENGE_IDS).some(
+    ([retiredId, replacementId]) =>
+      replacementId === questId && archiveChallenges[retiredId]?.status === "complete"
+  );
+}
+
+// Whether every unit-level Archive Challenge (unit.archiveChallenges[] — the
+// unit's own written work, not tied to any one case) is complete. Case-level
+// challenges (case.archiveChallenge, rendered by missionScreen()) already gate
+// unit completion for free via isComplete(), since completing one writes to
+// progress.completedCases the same as any other case.
 const unitArchiveChallengesComplete = (unit) =>
-  (unit.archiveChallenges || []).every(
-    (challenge) => progress.archiveChallenges[challenge.questId]?.status === "complete"
+  (unit.archiveChallenges || []).every((challenge) =>
+    archiveChallengeSatisfied(challenge.questId, progress.archiveChallenges)
   );
 
 const unitReadyForReview = (unit) =>
@@ -7064,8 +7146,10 @@ function archiveScreen() {
     selected.route === "field"
       ? `${countEvidence(selected.id)}/${sourcesForCase(selected.id).length || 3} evidence records secured`
       : selected.question;
+  // A non-map mission gets its own call to action — its mechanic's name — rather than the generic
+  // "Open Archive Challenge" all six of them shared while they all landed on one list.
   const chronotravelLabel =
-    selected.route === "field" ? "Initiate Chronotravel" : "Open Archive Challenge";
+    selected.route === "field" ? "Initiate Chronotravel" : `Open ${selected.mechanic}`;
   const lockedReasonMarkup = isUnlocked(selected.id)
     ? ""
     : `<p class="route-locked-reason">${esc(lockedReasonForCase(selected))}</p>`;
@@ -8268,6 +8352,9 @@ function render() {
         break;
       case "archive-challenges":
         html = archiveChallengesScreen();
+        break;
+      case "mission":
+        html = missionScreen();
         break;
       case "investigation":
         html = investigationScreen();
