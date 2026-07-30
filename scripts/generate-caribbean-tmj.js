@@ -215,9 +215,9 @@ map.stamp(23, 30, T.boulderPile, "solid", "boulders");
 // blocks the very track it painted.
 //
 // `isLand` is padded inward by 1.2 — the same inset the ground loop uses to decide where grass ends
-// and the beach ring begins. Without it a track would route out onto the sand and become invisible,
-// since the road material and the beach are the same tile. (Membership in the network is recorded
-// rather than read off the tile for the same reason: see note 1 in scripts/lib/paths.js.)
+// and the beach ring begins — so a track stays inland rather than running a dirt lane out across the
+// beach. Until Phase 58 the road material *was* the beach's own sand, and a track that strayed onto
+// the ring simply vanished into it.
 const spurs = connectAll(roads, { doors, isLand: (x, y) => isCaribbeanLand(x, y, -1.2) });
 
 // --- decor: transparent props, no collision ----------------------------------------------------
@@ -225,7 +225,7 @@ const spurs = connectAll(roads, { doors, isLand: (x, y) => isCaribbeanLand(x, y,
 // the ground layer. A prop sits on top of the sand or grass; a swapped ground tile replaces it,
 // which is why the old map showed tan squares in green grass and logs cut off at a tile edge.
 
-const SAND_GIDS = blockGids(map, T.sand);
+const ROAD_GIDS = blockGids(map, T[palette.road]);
 const BEACH_DEBRIS = [T.shellConch, T.shellScallop, T.scatterPebble];
 const REEF = [T.coralBranch, T.coralSoft, T.coralFan, T.seaweed];
 const SCRUB = [
@@ -248,9 +248,10 @@ for (let row = 0; row < HEIGHT; row += 1) {
     if (isCaribbeanLand(cx, cy, -1.6)) {
       // Keep scrub off the tracks. This was `col >= 27 && col <= 30` — a hardcoded band around the
       // one hand-written path, which no longer describes where the roads are now that they are
-      // generated. Testing the painted gid instead can't go stale. Safe in this branch only: the
-      // road material and the beach are the same tile, and the beach gets its own branch below.
-      if (SAND_GIDS.has(map.ground[map.index(col, row)])) continue;
+      // generated. Testing the painted gid instead can't go stale, and it now tests the *road*
+      // material rather than sand: those were the same tile until Phase 58, which meant this line
+      // also had to be read as "and don't put scrub on the beach".
+      if (ROAD_GIDS.has(map.ground[map.index(col, row)])) continue;
       if (hash01(col, row, 11) >= 0.075) continue;
       map.stamp(col, row, pick(SCRUB, col, row, 12), "decor", "scrub");
     } else if (isCaribbeanLand(cx, cy, 0)) {

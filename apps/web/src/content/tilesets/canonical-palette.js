@@ -127,9 +127,27 @@ export const CANONICAL = {
   // vertical, grass-flanked lane; it is the wrong answer for a network. [labeled]
   "path.tropical.left": tile("Island survival/tile-B-01.png", 9, 4),
   "path.tropical.right": tile("Island survival/tile-B-01.png", 9, 5),
-  /** Colonial dirt road. [live: riverbend-field ground] */
+  /**
+   * Packed earth, full-bleed — top-left quadrant of a 2x2 block. **The road material for every
+   * generated path network in the game**, tropical and temperate alike.
+   *
+   * Phase 55 generated all three networks but left each map painting them in whatever ground tile it
+   * already had: Caribbean's roads were `sand.tropical` (literal beach sand) and Riverbend's were the
+   * fishing pack's wet-sand shore strip. Both read exactly as reported — a patch of sand dropped on
+   * grass — because that is what they were. This is a brown, pebbled earth that tiles in any
+   * direction and sits darker and less saturated than either map's grass, so a lane reads as a lane
+   * against both. [live: caribbean-field + riverbend-field + common-cause-field ground]
+   */
+  "path.packed.earth": tile("Medieval Fantasy Town/2.png", 0, 4),
+  /**
+   * Colonial dirt road, and a variant.
+   *
+   * **No consumer.** Tagged `[live: riverbend-field ground]` for a long time and it was never true
+   * after Phase 52 — that map imports no canonical entries at all and does not name
+   * `Medieval Fantasy Town/1.png` among its sheets. Kept listed because the coordinates are verified;
+   * `path.packed.earth` above is the entry to reach for. [labeled]
+   */
   "path.colonial.dirt": tile("Medieval Fantasy Town/1.png", 10, 4),
-  /** Colonial dirt road variant. [live: riverbend-field ground] */
   "path.colonial.dirt.alt": tile("Medieval Fantasy Town/1.png", 11, 4),
   /** Packed sand/dirt lot, dockside. [labeled] */
   "path.dock.dirt": tile("19th Centruy European Dock/tile-B-06.png", 12, 10),

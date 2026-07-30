@@ -22,7 +22,12 @@ export default {
   map: "apps/web/src/content/maps/caribbean-field.tmj",
   // Which of `tiles` this map's roads are painted in. Read by the generator's RoadNetwork and by
   // tests/unit/map-path-network.test.js, so "what is a road here" is stated once.
-  road: "sand",
+  //
+  // Packed earth, not `sand`. Phase 55 generated the track network but painted it in the tile the map
+  // already had to hand, which on a tropical island was literal beach sand — so every track through
+  // the village read as a patch of beach dropped on the grass. A dirt track is also what these
+  // footpaths would actually have been.
+  road: "dirt",
 
   // Ordered — firstgid is assigned in this order and must not be reshuffled, or every GID in
   // the committed .tmj changes.
@@ -35,6 +40,11 @@ export default {
     // background hulls sit on Island survival water with no seam. It is also the only source of
     // period square-rigged sailing ships anywhere in the library.
     { path: "Medieval harbor/tile-B-04.png", name: "medieval-harbor-b04" },
+    // Ground only, and only one block of it: the packed earth the tracks are painted in. Island
+    // survival has no full-bleed dirt — its only dirt pair carries a baked-in grass edge down one
+    // side, which is the reason recorded below that this island's road could once run only
+    // north-south. Nothing else from this pack is drawn here.
+    { path: "Medieval Fantasy Town/2.png", name: "medieval-fantasy-town-2" },
   ],
 
   tiles: {
@@ -45,11 +55,14 @@ export default {
     grass: { ...CANONICAL["grass.tropical"], h: 2, w: 2 },
     waterShallow: { ...CANONICAL["water.tropical.shallow"], h: 2, w: 2 },
     waterDeep: { ...CANONICAL["water.tropical.deep"], h: 2, w: 2 },
+    /** Packed earth — every track on the island. See `road` above. */
+    dirt: { ...CANONICAL["path.packed.earth"], h: 2, w: 2 },
     // No `pathLeft`/`pathRight` any more. Those were `path.tropical.left`/`.right`, and each carries
     // a baked-in grass edge down one side — which is why this island's only road could ever be a
     // single north-south strip, and why the generator's own comment recorded that an east-west
-    // connector "has to be faked with plain sand." Phase 55 made the whole track network that sand,
-    // which tiles in any direction, so the router can run a lane to every hut. See
+    // connector "has to be faked with plain sand." Phase 55 made the whole track network full-bleed
+    // terrain tiled by parity, which runs in any direction, so the router can lay a lane to every
+    // hut; Phase 58 made that terrain dirt rather than the beach's own sand. See
     // docs/decision-log/0038-generated-path-network.md and scripts/lib/paths.js.
 
     // --- decor props: transparent, stamped on structures, never on the ground layer ------------

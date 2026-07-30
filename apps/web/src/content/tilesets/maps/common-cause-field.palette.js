@@ -63,8 +63,9 @@ export default {
     cobble: { ...CANONICAL["stone.colonial.cobble"], h: 2, w: 2 },
     /** Grass everywhere else inside the town bounds, and across the framing margin. */
     grass: { ...CANONICAL["grass.colonial.plaza"], h: 2, w: 2 },
-    /** Packed earth, for the lane down to the wharf. */
-    dirt: tile("Medieval Fantasy Town/2.png", 0, 4, { h: 2, w: 2 }),
+    /** Packed earth, for the lane down to the wharf. Same block the other two maps' roads use as of
+     *  Phase 58 — named through the canonical entry so all three stay one material. */
+    dirt: { ...CANONICAL["path.packed.earth"], h: 2, w: 2 },
 
     // The Delaware. Horizontal strips eight tiles long — the pack draws one continuous seascape
     // across the row, so tiling it any other way breaks the wave lines every tile.

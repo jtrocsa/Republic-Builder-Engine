@@ -19,7 +19,7 @@
 // Coordinates are [labeled] — read off `npm run assets:label` grid renders of each sheet.
 
 import { FarmBuildings, FarmTrees } from "../derived-objects.coords.js";
-import { tile } from "../canonical-palette.js";
+import { CANONICAL, tile } from "../canonical-palette.js";
 
 export default {
   id: "riverbend-field",
@@ -28,7 +28,12 @@ export default {
   map: "apps/web/src/content/maps/riverbend-field.tmj",
   // Which of `tiles` this map's roads are painted in. Read by the generator's RoadNetwork and by
   // tests/unit/map-path-network.test.js, so "what is a road here" is stated once.
-  road: "shoreSand",
+  //
+  // Packed earth, not `shoreSand`. Phase 55 generated the track network but painted it in the tile
+  // this map already had to hand, which was the fishing pack's wet-sand *shore strip* — so every
+  // track through the settlement read as a ribbon of riverbank laid across the commons. `shoreSand`
+  // keeps its real job below, painting the first land cell east of the water.
+  road: "dirt",
 
   // Ordered — firstgid is assigned in this order and must not be reshuffled.
   sheets: [
@@ -36,6 +41,11 @@ export default {
     { path: "farm/6.png", name: "farm-6" },
     { path: "derived/farm-trees.png", name: "derived-farm-trees" },
     { path: "derived/farm-buildings.png", name: "derived-farm-buildings" },
+    // Ground only, and only one block of it: the packed earth the roads are painted in. `farm/6`'s
+    // own bare-soil block is 9-18% see-through (the pack draws it as clods over another surface — see
+    // `soil` below) and its ploughed furrows read as a *field*, not a road. Nothing else from this
+    // pack is drawn here.
+    { path: "Medieval Fantasy Town/2.png", name: "medieval-fantasy-town-2" },
   ],
 
   tiles: {
@@ -50,6 +60,8 @@ export default {
     // alternating brown and tan bands through every field. Repeating furrows is what ploughed
     // ground looks like anyway.
     soil: tile("farm/6.png", 7, 2),
+    /** Packed earth — every road and door spur in the settlement. See `road` above. */
+    dirt: { ...CANONICAL["path.packed.earth"], h: 2, w: 2 },
 
     // Crop plots. Full-bleed soil-and-planting blocks, so they are ground, not props. The old map
     // laid them on `structures` over a separate soil tile and the transparent gaps between plants

@@ -271,6 +271,12 @@ const resolveRiverbendTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/derived/farm-buildings.png", {
     eager: true,
     import: "default",
+  }),
+  // One ground block: the packed earth the settlement's roads are painted in as of Phase 58. Same
+  // sheet Philadelphia already globs, so Vite bundles nothing new.
+  import.meta.glob("./assets/tilesets/Medieval Fantasy Town/2.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderRiverbendTiledMap() {
@@ -300,6 +306,12 @@ const resolveCaribbeanTilesetImage = createTilesetImageResolver(
     import: "default",
   }),
   import.meta.glob("./assets/tilesets/Medieval harbor/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // One ground block: the packed earth the island's tracks are painted in as of Phase 58. Island
+  // survival has no full-bleed dirt of its own — see the palette.
+  import.meta.glob("./assets/tilesets/Medieval Fantasy Town/2.png", {
     eager: true,
     import: "default",
   })
