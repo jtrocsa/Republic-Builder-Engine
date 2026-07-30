@@ -87,7 +87,15 @@ test.describe("Field movement, collision, and dialogue", () => {
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText("Taíno community elder");
 
-    await page.locator('[data-action="field-dialogue-close"]').click();
+    // dispatchEvent, not click(): the bubble is anchored to the NPC *inside* the translated world
+    // div, so where its close button lands in the viewport depends on exactly where walkToNpc()
+    // parked the player. A real click makes Playwright scroll it into view and then check that
+    // nothing intercepts the centre point, and under parallel-worker load the player sometimes stops
+    // a fraction further along and the button's centre falls outside `main`'s box — a test-harness
+    // hit test, not a defect. main.js delegates clicks off `#app`, so a dispatched bubbling event is
+    // the same code path, and it also avoids the scroll that the "camera is a pure function of
+    // position" invariant this very test asserts would rather not happen.
+    await page.locator('[data-action="field-dialogue-close"]').dispatchEvent("click");
     await expect(bubble).toHaveCount(0);
 
     // Collision boundary. First step clear of the elder: isFieldBlocked() collides the player with

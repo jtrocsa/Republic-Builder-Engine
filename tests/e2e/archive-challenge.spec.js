@@ -369,6 +369,31 @@ test.describe("Archive Challenge", () => {
     ).toHaveCount(0);
   });
 
+  test("Chronotravel from the Navigation Table lands on the case's own mission (normal case)", async ({
+    page,
+  }) => {
+    // The whole reported flow, end to end, and the one leg no other spec walks: pick a marker, read
+    // its call to action, travel, arrive. travelScreen()'s handoff is a pure passthrough
+    // (`currentScreen = case.route`), so this is also what proves `route: "mission"` is wired.
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-01",
+      selectedCaseId: "case-002",
+      unlocked: ["case-001", "case-002"],
+    });
+    await loadSeededSave(page);
+
+    // The button says the mission's own mechanic now, not "Open Archive Challenge" for all six.
+    const travel = page.locator('[data-action="travel"][data-case="case-002"]');
+    await expect(travel).toContainText("Open Atlantic Route Puzzle");
+    await travel.click();
+
+    // travelScreen() self-advances after 2500ms.
+    await expect(page.locator(".mission-shell")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".mission-shell h1")).toContainText("Exchange Ledger");
+    await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
+  });
+
   test("the Archive Terminal shows the unit's written work and no mission quests (edge case)", async ({
     page,
   }) => {

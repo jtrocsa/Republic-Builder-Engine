@@ -5,13 +5,13 @@ The rules for map art. Read this before touching any `.tmj`, palette, or tileset
 This guide states **rules and per-setting assignments**. It deliberately no longer carries the
 tile-by-tile dictionary it used to — that is now real, checkable code and data:
 
-| For | Read |
-| --- | --- |
-| The one canonical tile per element, with coordinates | [`apps/web/src/content/tilesets/canonical-palette.js`](../../apps/web/src/content/tilesets/canonical-palette.js) |
-| What is on each of the 250 sheets, and which packs are benched | [`TILE-LIBRARY-CATALOG.md`](TILE-LIBRARY-CATALOG.md) |
-| What a specific map uses | `apps/web/src/content/tilesets/maps/<map>.palette.js` |
-| Which packs a future map will use | [`maps/planned-maps.js`](../../apps/web/src/content/tilesets/maps/planned-maps.js) |
-| How to export a map from Tiled | [`tiled-map-import-checklist.md`](tiled-map-import-checklist.md) |
+| For                                                            | Read                                                                                                             |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| The one canonical tile per element, with coordinates           | [`apps/web/src/content/tilesets/canonical-palette.js`](../../apps/web/src/content/tilesets/canonical-palette.js) |
+| What is on each of the 250 sheets, and which packs are benched | [`TILE-LIBRARY-CATALOG.md`](TILE-LIBRARY-CATALOG.md)                                                             |
+| What a specific map uses                                       | `apps/web/src/content/tilesets/maps/<map>.palette.js`                                                            |
+| Which packs a future map will use                              | [`maps/planned-maps.js`](../../apps/web/src/content/tilesets/maps/planned-maps.js)                               |
+| How to export a map from Tiled                                 | [`tiled-map-import-checklist.md`](tiled-map-import-checklist.md)                                                 |
 
 Also pairs with decision log `0031` (art-style unification) and `0033` (this pass).
 
@@ -54,6 +54,7 @@ a benched pack.
   the player could walk onto roofs and render pasted on a facade. Nothing is derived from the
   `.tmj` even now: the rect comes from the stamp that also wrote the tiles, which is upstream of
   both.
+
 - **A stamp declares what it is; the rect follows.** `solid` blocks the whole footprint (buildings,
   carts, market stalls — anything you cannot enter). `base` blocks only the ground-contact row and
   lifts everything above it to the map's `overlay` layer, so the player walks behind the canopy
@@ -85,6 +86,30 @@ a benched pack.
 - **Shore props are derived from the coastline, not transcribed from it.** Every field map draws
   its shoreline from a curve, so a hand-picked coordinate that is beach today is open grass or
   open water after any rescale. Seed the prop and settle it with `MapBuilder.snapTo()`.
+- **An interior must be fully connected — no pocket of floor the player cannot reach** (Phase 58,
+  decision log `0040`). Both Institute rooms alternate their row bands: two full-width open corridors,
+  no solid stamps at all, joined by lanes at least two tiles wide. Two open corridors joined by two
+  lanes cannot produce a sealed pocket, which is the point — the property is a consequence of the
+  shape rather than something to re-verify by eye after every furniture move.
+
+  The Main Hall shipped without this. Its west end was sealed behind three furniture runs and the
+  Preservation Case sat 3.3 tiles from anywhere a player could stand, on a screen every session passes
+  through. The guard at the time asserted that each target had _a_ clear cell within reach —
+  clearance, which is local, and not the property a player experiences.
+  `tests/unit/field-map-coordinates.test.js` now flood-fills both rooms from their spawn and fails on
+  any open cell, target, spawn entry point or patrol waypoint outside the reachable component.
+
+  Two corollaries, each of which was a defect first:
+
+  - **`base` is unsafe against a wall.** It blocks only `[baseRow + 0.4, baseRow + 1]`, leaving the
+    cells above it open — fine in a corridor the player rounds, sealing in a two-tile nook where that
+    strip is the only way in. Use `solid` for a wall-side prop; the walk-behind it gives up was a dead
+    end nobody could see anyway.
+  - **A prop that sits _on_ another prop goes on `overlay`, not `structures`.** `structures` holds one
+    tile per cell, so stamping the second one replaces the first and shows floor around it. Use
+    `MapBuilder.overlayStamp()`, and only on a cell the player can never stand on (a `solid` object's
+    own footprint), since overlay art draws above them.
+
 - **Every building has a road to its door, and the road is routed, not authored** (Phase 55,
   decision log `0038`). A generator declares only a trunk — a high street, a quay, a village spine —
   on a `RoadNetwork`, then hands `connectAll()` the door cell of every building it stamped;
@@ -100,9 +125,16 @@ a benched pack.
   - **A road material must be full-bleed and tiled by parity.** `path.tropical.left`/`.right` carry a
     baked-in grass edge down one side, so a run using them can only ever go north–south. That is
     literally why the Caribbean had one vertical line. Use a full-bleed block via `groundBlock()`.
-  - **Network membership is recorded, never inferred from the tile.** Caribbean's tracks are the same
-    sand as its beach and Riverbend's are the same sand as its river shore, so "is the tile here the
-    road material?" connects waterfront buildings to the shoreline instead of to the village.
+  - **A road is packed earth — `path.packed.earth` — on every map, tropical or temperate** (Phase 58,
+    decision log `0041`). Phase 55 satisfied the full-bleed rule above by reaching for whatever ground
+    tile the map already had, which made Caribbean's tracks literal beach sand and Riverbend's the
+    fishing pack's wet-sand _shore strip_. Both read as a patch of sand dropped on grass, because they
+    were. Check a new road on an `assets:preview-map` render against that map's own grass before
+    committing it; do not assume a material reads as a road because it is not grass.
+  - **Network membership is recorded, never inferred from the tile.** This mattered acutely while
+    Caribbean's tracks were the same sand as its beach — "is the tile here the road material?"
+    connected waterfront buildings to the shoreline instead of to the village. It stays the rule now
+    that roads are a distinct material: a spur that crosses paving is still road.
   - **A softer material yields to a harder one at a seam.** Pass `harder` and let the spur join a
     paved cell without repainting it. Hand-tuned stop offsets do not survive a curved boundary —
     Philadelphia's dirt lane punched a brown rectangle into the quay at some columns and stopped
@@ -147,7 +179,7 @@ These are permanent, not per-map judgement calls:
 
 ## Per-setting palette assignments
 
-Same element, different era. This is what keeps "grass" meaning one specific tile *within* a
+Same element, different era. This is what keeps "grass" meaning one specific tile _within_ a
 setting while letting settings look distinct from each other. Live maps first; the forward slate
 for Periods 1–9 lives in `planned-maps.js`.
 
@@ -172,15 +204,26 @@ pack's planted blocks are transparent between the stems; laying them straight on
 shows the page background through every field. And **`soil` is the single furrow tile at (7,2),
 not the bare-soil block at (8,2)**, which looks like the obvious choice and is 9–18% see-through.
 
-### Institute Archive Room and hallway — present-day hub
+### The Institute — Main Hall, Archive Room, onboarding hallway
 
-Medieval Tavern `tile-B-05` (floor), `tile-B-03` (shelving, lighting), `tile-B-01` (reading
-table). Reusing tavern furniture for a present-day archive is **deliberate and documented**
-(decision log `0030`), not an unaddressed mismatch. Use only shelving/table/bench/stool/torch
-pieces — avoid overtly tavern-specific props (tankards, wine racks, drinking banners) that break
-the "archive record storage" reading.
+Medieval Tavern `tile-B-05` (floor, doors, benches, sample shelves, torches), `tile-B-03` (record
+shelving, cabinets, chests, pennants, greenery, rugs, hearth, writing desk), `tile-B-01` (long tables,
+round table, stools) and `Auto-tile-A4-walls-2` (wall surfaces — surface rows only, no autotiler
+needed). The Main Hall adds `Island survival/5` for three Institute artifacts nothing in the tavern
+family can stand in for (the compass-rose Navigation Table, the Preservation Case plinth, the founding
+stela) plus `derived/institute-artifacts` for the 1×1 compass on the table.
 
-Both maps declare the same three sheets in the same order so Vite bundles no extra image.
+Reusing tavern furniture for a present-day archive is **deliberate and documented** (decision log
+`0030`), not an unaddressed mismatch. Use only shelving/table/bench/stool/torch pieces — avoid overtly
+tavern-specific props (tankards, wine racks, drinking banners, and the round table at `tile-B-03`
+(10,6), which has a roast dinner painted on it) that break the "archive record storage" reading.
+
+**The two walkable rooms are one building, and that is a rule, not a coincidence** (Phase 58, decision
+log `0040`). Where they share a piece of furniture they name the identical sheet cell; both use the
+same wall and floor materials, the same four-band layout, generated collision and an overlay layer.
+Keep them in sync by hand rather than importing one palette into the other: they are two maps with two
+sheet orders, and a shared module would make a GID in one room depend on an edit in the other. All
+three maps declare the same sheets in the same order so Vite bundles no extra image.
 
 ### Common Cause, 1770s Philadelphia — `case-007`, `common-cause-field.tmj`
 
@@ -205,12 +248,12 @@ Elements with no acceptable tile anywhere in the library. Recorded so a map auth
 rather than forcing a bad fit. Mirrored in `canonical-palette.js`'s `GAPS` export, and the palette
 test fails if a planned map claims a gap that is not registered there.
 
-| Gap | Detail |
-| --- | --- |
+| Gap                                        | Detail                                                                                                                                                                                                                                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Indigenous North American architecture** | Longhouse, pueblo, plains lodge. Nothing fits. Island survival's bohío huts are Caribbean/Taíno-appropriate and correctly used for `case-001`; reusing them as generic "Native American" would flatten distinct cultures into one wrong image. Blocks `p1-indigenous-settlement`. |
-| **Civil War military camp** | Union/Confederate tents, artillery, earthworks. The WWI packs are the wrong war by fifty years; `army`/`modern military` by a century. Blocks `p5-civil-war-camp`. |
-| **Antebellum plantation great house** | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial. |
-| **Mid-century streetscape** | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged. |
+| **Civil War military camp**                | Union/Confederate tents, artillery, earthworks. The WWI packs are the wrong war by fifty years; `army`/`modern military` by a century. Blocks `p5-civil-war-camp`.                                                                                                                |
+| **Antebellum plantation great house**      | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                        |
+| **Mid-century streetscape**                | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged.                                                                                                                                                           |
 
 The **"modern institute interior"** gap this register used to carry is now **closed**, though not
 yet actioned. It was recorded when the only candidate was the off-grid `Modern Interiors` pack;
@@ -232,6 +275,6 @@ of this guide and is restated so it isn't silently reopened.
   protected invariant.
 - **Dialogue** (`.field-speech-bubble`, anchored above the speaking NPC, no world-transform reset)
   also stays exactly as it is. It is not a Pokémon-style full-width bottom text box, and that is
-  deliberate — any future "more Pokémon" restyle should work *within* the anchored-bubble mechanic
+  deliberate — any future "more Pokémon" restyle should work _within_ the anchored-bubble mechanic
   (border treatment, optional portrait chip) using the existing `--navy`/`--gold`/`--paper`
   tokens, not restructure how dialogue attaches to the world.

@@ -33,7 +33,7 @@ A test runner **is** configured: `npm run test` (Vitest, non-watch, CI-compatibl
 
 ### The app is currently one file
 
-The entire running game is implemented in **`apps/web/src/main.js`** (9,243 lines as of Phase 44, the Chronicle Design System / UI-polish-accessibility-performance pass over the teacher-facing screens — see `docs/architecture/UI-DESIGN-SYSTEM.md` and `docs/architecture/ARCHITECTURE-QUICKREF.md`'s Phase 44 entry; re-check the line count with a quick `wc -l` before citing it if much time has passed, don't trust a stale figure — this file has grown substantially phase over phase and old figures go stale fast). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, quest rendering/grading, the join/login/teacher-dashboard/grading/manage-content screens, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.). Procedural Web Audio (music + SFX) lives in `apps/web/src/engine/audio-engine.js`; real-accounts/classroom/submission/grading logic lives in `apps/web/src/repositories/` and `apps/web/src/engine/` (`auth-flows.js`, `evaluator-requests.js`, `evaluator-client.js`) — both imported by `main.js`.
+The entire running game is implemented in **`apps/web/src/main.js`** (10,168 lines as of Phase 58 — re-check the line count with a quick `wc -l` before citing it if much time has passed, don't trust a stale figure — this file has grown substantially phase over phase and old figures go stale fast). It owns: screen routing/state machine, field and hub movement/collision/NPC patrol logic, dialogue, the map-jigsaw puzzle, the exchange ledger, the Author Mode panel, quest rendering/grading, the join/login/teacher-dashboard/grading/manage-content screens, and all HTML rendering (via template-literal strings, not a framework — there is no React/Vue/etc.). Procedural Web Audio (music + SFX) lives in `apps/web/src/engine/audio-engine.js`; real-accounts/classroom/submission/grading logic lives in `apps/web/src/repositories/` and `apps/web/src/engine/` (`auth-flows.js`, `evaluator-requests.js`, `evaluator-client.js`) — both imported by `main.js`.
 
 An orphaned second implementation of the onboarding→field→case-player loop (`apps/web/src/features/*`, plus its two supporting dead stores `engine/content/author-content-store.js` / `engine/player/player-profile-store.js`) used to exist alongside `main.js` — six files total, never imported by it, containing two more dead Author Mode implementations on top of `main.js`'s own broken one. It was confirmed zero-risk (per `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and deleted in a dead-code-removal pass — see `docs/migrations/DEAD-CODE-REMOVAL.md`. Don't recreate it; when extending gameplay, edit `main.js` directly unless deliberately doing modularization work.
 
@@ -119,8 +119,9 @@ Use these consistently in code, copy, and UI strings — they're the game's fixe
 - **Chronotravel** — traveling to a historical setting (the `travel` screen / "Initiate Chronotravel").
 - **Preservation Case** — the badge-case UI opened from the Archive trophy shelf (`unitOneBadgeCaseMarkup()` in `main.js`), styled like a Pokémon badge case, not a debug panel.
 - **Navigation Table** — the physical Archive object the player walks to and interacts with to pick a case/route (`archive` screen, `HUB_TARGETS.table`).
-- **Recall to Archive** — the field control that returns the player to the Institute.
-- Unit 1 badge areas: **Caribbean**, **Atlantic**, **Hispaniola** — all three cases have real, fully-cited content and are playable via normal sequential progression (case-001 → case-002 → case-003), accessible after completing the prior case. Case-002 (Atlantic Exchange, `exchangeLedgerScreen()`) and case-003 (Hispaniola Empire, `empireScreen()`) are not placeholder content or locked behind missing implementation — they are reachable, fully playable, and real.
+- **Recall to Archive** — the field control that returns the player to the Institute. Since Phase 58 it lands the player beside the Navigation Table, not at the Archive Room door.
+- **Mission** vs. **Archive Challenge** — two distinct groups since Phase 58, and the distinction is load-bearing (decision log `0041`). A _mission_ is one case, reached by Chronotravel from the Navigation Table, rendered by `missionScreen()` as that case's own quest and nothing else; missions use the four teacher-swappable quest types (`mcq`, `sequencing`, `evidence-organizing`, `hipp`). An _Archive Challenge_ is a unit's extended written work (`saq`, `dbq`), reached from the Archive Terminal in the Archive Room and rendered by `archiveChallengesScreen()`. Don't put a swappable type in `unit.archiveChallenges[]` or an SAQ/DBQ in a case's slot — `tests/unit/retired-archive-challenges.test.js` fails on either.
+- Unit 1 badge areas: **Caribbean**, **Atlantic**, **Hispaniola** — all three cases have real, fully-cited content and are playable via normal sequential progression (case-001 → case-002 → case-003), accessible after completing the prior case. Case-002 (Atlantic Route Puzzle) and case-003 (Colonial System Builder) are non-map missions, not placeholder content — they are reachable, fully playable, and real.
 - Institute NPCs: Director Rowan Hale, Dr. Amani Soto ("archive researcher"), Professor Julian Park ("route historian") — referenced in code as `director`, `amani`, `julian`.
 
 ## Gameplay invariants (regression-prone areas)
@@ -152,7 +153,7 @@ These patterns recurred as bugs across many hotfix milestones (3.4.5 through 3.4
 
 ### Verification ladder (cheapest first — escalate only as needed)
 
-Run the cheapest check that actually exercises what you changed; stop once you've cleared the tier that matters for this change. Don't jump straight to a manual/MCP browser pass by default — it is the *most* expensive tier, not the default one.
+Run the cheapest check that actually exercises what you changed; stop once you've cleared the tier that matters for this change. Don't jump straight to a manual/MCP browser pass by default — it is the _most_ expensive tier, not the default one.
 
 1. **Targeted `vitest`**, scoped to the changed file/pattern: `npx vitest run tests/unit/<file>.test.js`, not a bare `npm run test`.
 2. **`npm run validate:content`** — only if content files changed (schemas, `unit-0N-campaign.js`, `content/quests/*`).
@@ -164,12 +165,12 @@ Run the cheapest check that actually exercises what you changed; stop once you'v
 
 Read only what the task needs — don't open `main.js` in full or re-derive the whole architecture history for a scoped change.
 
-| Task type | Read | Don't read |
-|---|---|---|
-| CSS-only / visual | The specific `global.css` region (grep the selector), `docs/architecture/UI-DESIGN-SYSTEM.md` if touching design tokens | `main.js` in full |
-| Content (units/quests/sources) | The specific `content/unit-0N-campaign.js` / `content/quests/*.js` file, its Zod schema in `apps/web/src/content/schemas/` | `ARCHITECTURE-QUICKREF.md`, `main.js` |
-| Gameplay logic (`main.js`) | Grep for the specific function/screen; read its immediate neighborhood | The whole 9,000+-line file top to bottom |
-| Architecture/process decisions | `docs/architecture/ARCHITECTURE-QUICKREF.md` (now ≤150 lines by design) | `docs/architecture/PHASE-HISTORY.md` — an archive, consult only for one named phase's specific rationale |
+| Task type                      | Read                                                                                                                       | Don't read                                                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| CSS-only / visual              | The specific `global.css` region (grep the selector), `docs/architecture/UI-DESIGN-SYSTEM.md` if touching design tokens    | `main.js` in full                                                                                        |
+| Content (units/quests/sources) | The specific `content/unit-0N-campaign.js` / `content/quests/*.js` file, its Zod schema in `apps/web/src/content/schemas/` | `ARCHITECTURE-QUICKREF.md`, `main.js`                                                                    |
+| Gameplay logic (`main.js`)     | Grep for the specific function/screen; read its immediate neighborhood                                                     | The whole 10,000+-line file top to bottom                                                                |
+| Architecture/process decisions | `docs/architecture/ARCHITECTURE-QUICKREF.md` (now ≤150 lines by design)                                                    | `docs/architecture/PHASE-HISTORY.md` — an archive, consult only for one named phase's specific rationale |
 
 **Subagent dispatch**: don't spawn one for a single-file edit, a targeted grep, or work already scoped by the user in the prompt — do it inline. Reserve subagents for genuinely open-ended or multi-area work; each one inherits this whole file plus the tool surface, so spawning several for what's really one small task multiplies cost for no benefit.
 
