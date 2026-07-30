@@ -54,4 +54,46 @@ test.describe("Archive Room", () => {
     );
     expect(stored.currentHubRoom).toBe("main");
   });
+
+  test("the Archive Room carries the same status column as the Main Hall", async ({ page }) => {
+    // Phase 59. Two things at once: the room whose whole purpose is filing written work had no
+    // readout of how much was filed, and its left column ran four lines against the Main Hall's
+    // fifteen — enough of a page-height difference to toggle the scrollbar and slide the centred
+    // layout sideways every time the player walked between the two rooms.
+    await seedProgress(page, {
+      currentScreen: "institute",
+      currentHubRoom: "archive",
+      selectedUnitId: "unit-01",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+
+    const panel = page.locator(".hub-sidepanel--left");
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText("Archive Challenges filed");
+    await expect(panel).toContainText("evidence records secured");
+
+    const archiveColumn = await page.locator(".hub-intro").boundingBox();
+    const archiveMap = await page.locator(".institute-map").boundingBox();
+    await page.evaluate(() => {
+      const raw = window.localStorage.getItem("republic-builder.chronicle.unit-01.v2");
+      const save = JSON.parse(raw);
+      save.currentHubRoom = "main";
+      window.localStorage.setItem("republic-builder.chronicle.unit-01.v2", JSON.stringify(save));
+    });
+    // Re-entered through the menu, not page.reload(): showMainMenu is a runtime-only variable, so a
+    // bare reload lands on the landing screen rather than the seeded save.
+    await loadSeededSave(page);
+    await expect(page.locator("#instituteMap")).toBeVisible();
+    const hallColumn = await page.locator(".hub-intro").boundingBox();
+    const hallMap = await page.locator(".institute-map").boundingBox();
+
+    // The reported symptom, asserted directly: the room changes, the furniture doesn't move.
+    expect(archiveMap.x).toBeCloseTo(hallMap.x, 1);
+    expect(archiveMap.width).toBeCloseTo(hallMap.width, 1);
+
+    // And the cause. Not pixel-identical — the two rooms say different things — but close enough
+    // that neither can add or remove a scrollbar the other doesn't have.
+    expect(Math.abs(archiveColumn.height - hallColumn.height)).toBeLessThan(120);
+  });
 });

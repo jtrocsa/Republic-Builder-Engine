@@ -1392,6 +1392,8 @@ export const HUB_TARGETS = {
     // directly below it, so the player stands at ~(4,4.1) — on the rug, 0.1 from this point.
     x: 4.0,
     y: 4.0,
+    // The plinth's own stamp — generate-institute-hall-tmj.js:166, `preservationPlinth` (w2 x h2).
+    marker: { col: 3, row: 2, w: 2, h: 2 },
     name: "Preservation Case",
     role: "Unit 1 badge display",
     dialogue: () => {
@@ -1407,6 +1409,8 @@ export const HUB_TARGETS = {
     // including the cell Recall to Institute now spawns into, at y + 0.6.
     x: 18.5,
     y: 8.0,
+    // The table's own stamp — generate-institute-hall-tmj.js:194, `navigationTable` (w3 x h2).
+    marker: { col: 17, row: 6, w: 3, h: 2 },
     name: "Chronicle Navigation Table",
     role: "Archive interface",
     dialogue: () =>
@@ -1419,6 +1423,10 @@ export const HUB_TARGETS = {
     // can stand is y=2.06 — 0.16 from this target, well inside reach.
     x: 11.5,
     y: 1.9,
+    // The two door leaves — generate-institute-hall-tmj.js:152 with DOOR_COLS = [11, 12], stamped
+    // at row 0 with the door tile's h2. `labelSide: "below"` because there is no row above row 0:
+    // a label above this marker would be clipped by the viewport's top edge.
+    marker: { col: 11, row: 0, w: 2, h: 2, labelSide: "below" },
     name: "Archive Room",
     role: "Institute Archive entrance",
     dialogue: () => "",
@@ -1452,6 +1460,9 @@ export const ARCHIVE_ROOM_TARGETS = {
     // stands at ~(10,4.1) after a straight walk north from the door.
     x: 10.0,
     y: 4.0,
+    // The desk's own stamp — generate-archive-room-tmj.js:133, `writingDesk` (w2 x h2) at
+    // DOOR_COLS[0] = 9.
+    marker: { col: 9, row: 2, w: 2, h: 2 },
     name: "Archive Terminal",
     role: "Archive Challenges interface",
     dialogue: () => "Archive Challenges for this unit are still being cataloged. Check back soon.",
@@ -1466,6 +1477,10 @@ export const ARCHIVE_ROOM_TARGETS = {
     // blocked; the traversal test in tests/unit/field-map-coordinates.test.js now asserts this cell.
     x: 10.0,
     y: 10.1,
+    // The two door leaves — generate-archive-room-tmj.js:115 with DOOR_COLS = [9, 10], stamped on
+    // the south wall's first row with the door tile's h2. Unlike the Main Hall's north door there
+    // is a walkable row above this one, so the label sits above like every other object's.
+    marker: { col: 9, row: 10, w: 2, h: 2 },
     name: "Institute Foyer",
     role: "Return to the Main Hall",
     dialogue: () => "",
@@ -2429,8 +2444,24 @@ function splitCaseTitle(kase) {
     : { prefix: "", name: kase.title };
 }
 function resolvedCaseTitle(kase) {
-  const { prefix, name } = splitCaseTitle(kase);
-  return prefix + resolveTeacherOverride(kase.id, "title", name);
+  return splitCaseTitle(kase).prefix + resolvedCaseName(kase);
+}
+// The mission's *name* on its own — "The Exchange Ledger", not "Case 1.02 — The Exchange Ledger",
+// and rename-aware like resolvedCaseTitle(). Phase 59: one mission has one name, and this is it.
+// Before, a single mission answered to four strings on one screen — its shortTitle on the map
+// marker ("Atlantic Routes"), its title in the route panel, and its mechanic in both the chip and
+// the primary button ("Open Atlantic Route Puzzle") — while the teacher's Manage Content wizard
+// called it a fifth thing. Student-facing names now all come from here or resolvedCaseTitle();
+// `mechanic` survives only as teacher-side help text (caseKindDetail()).
+function resolvedCaseName(kase) {
+  return resolveTeacherOverride(kase.id, "title", splitCaseTitle(kase).name);
+}
+// "Case 1.02" — the numbered half, with the trailing em dash trimmed. Empty for a case whose title
+// carries no number (units 2 and 3 drop the numbering), so every call site needs a fallback.
+function caseNumberLabel(kase) {
+  return splitCaseTitle(kase)
+    .prefix.replace(/\s*—\s*$/, "")
+    .trim();
 }
 
 // Per-classroom Navigation Table visibility (Phase 48C) — default visible,
@@ -3456,7 +3487,7 @@ ${body}
 function manageContentMissionCardMarkup(c) {
   const detail = caseKindDetail(c);
   return `<article class="manage-content-mission-card c-card c-card--interactive">
-<div class="manage-content-mission-head"><p class="kicker">${esc(c.shortTitle)}</p>${chip({ label: caseKindLabel(c), tone: "gold" })}</div>
+<div class="manage-content-mission-head"><p class="kicker">${esc(caseNumberLabel(c) || c.shortTitle)}</p>${chip({ label: caseKindLabel(c), tone: "gold" })}</div>
 <h3>${esc(resolvedCaseTitle(c))}</h3>
 ${detail ? `<p class="c-help">${esc(detail)}</p>` : ""}
 <p class="case-summary-note">${esc(c.summary)}</p>
@@ -4590,7 +4621,7 @@ function manageContentCaseScreen() {
   // "Back" buttons used to.
   if (activeCase.route === "field") {
     return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell c-app"><section>
-${pageHeaderMarkup({ eyebrow: activeCase.shortTitle, title: resolvedCaseTitle(activeCase) })}
+${pageHeaderMarkup({ eyebrow: caseNumberLabel(activeCase) || activeCase.shortTitle, title: resolvedCaseTitle(activeCase) })}
 ${missionRenameControlMarkup(activeCase)}
 <p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
 </section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
@@ -4617,9 +4648,7 @@ ${stepMarkup}
 // command bar above (see manageContentCommandBarMarkup()), so this only
 // carries the help icon and mission identity.
 function manageContentWizardHeaderMarkup(activeCase) {
-  const caseNumber = splitCaseTitle(activeCase)
-    .prefix.replace(/\s*—\s*$/, "")
-    .trim();
+  const caseNumber = caseNumberLabel(activeCase);
   return `<div class="manage-content-wizard-header-top">${helpIconMarkup(MANAGE_CONTENT_WIZARD_HELP_TEXT)}</div>
 ${pageHeaderMarkup({
   eyebrow: caseNumber || activeCase.shortTitle,
@@ -6578,6 +6607,26 @@ function hubPointStyle(x, y, yBias = 0.5) {
 function institutePositionStyle() {
   return hubPointStyle(instituteMovement.x, instituteMovement.y, 0.54);
 }
+// An interactable object's marker covers the object's own painted tiles: tile column C spans pixels
+// [C*tile, (C+1)*tile), so a target's `marker` rect (taken straight from the generator stamp that
+// painted the thing) lands exactly on the art. Unlike hubPointStyle() this takes no half-tile
+// centring bias — the rect is positioned by its own edges, not by a centre point.
+function hubMarkerStyle(marker) {
+  const { tile } = activeHubGrid();
+  return `left:${marker.col * tile}px;top:${marker.row * tile}px;width:${marker.w * tile}px;height:${marker.h * tile}px;`;
+}
+// Every interactable *object* in either hub room, in one shape (Phase 59). The Institute used to
+// carry three unrelated treatments for the same idea — a `✦` medallion for the Navigation Table, the
+// same class with a `▤` for the Archive Room door, and a separate teal `▣` pill with a `!` badge for
+// the Preservation Case — spread across ~14 layered !important CSS blocks. Now the object's own
+// footprint glows and a label pill names it from above; proximity is carried by the near-state
+// pulse and the "Press E · …" prompt, so no glyphs or badges are needed. NPCs keep their own
+// treatment (name below the sprite): a person is not a piece of furniture.
+function hubObjectMarker(targetId, label, ariaLabel) {
+  const target = activeHubTargets()[targetId];
+  const side = target.marker.labelSide === "below" ? "below" : "above";
+  return `<button class="hub-marker hub-marker--label-${side} ${isHubTargetNear(targetId) ? "is-near" : ""}" style="${hubMarkerStyle(target.marker)}" data-action="hub-interact" data-target="${targetId}" data-hub-target="${targetId}" aria-label="${esc(ariaLabel)}"><b>${esc(label)}</b></button>`;
+}
 // Mirrors updateFieldPlayer()'s camera exactly: a pure function of player position, recomputed
 // every tick from the live viewport size and clamped to the world's edges, integer-rounded so
 // text stays crisp. Nothing here may scroll the document or move toward a clicked element —
@@ -6639,13 +6688,11 @@ function updateInstitutePlayer() {
 function updateHubProximityUi() {
   const targets = activeHubTargets();
   Object.keys(targets).forEach((id) => {
-    const selector =
-      id === "trophy"
-        ? ".hub-trophy"
-        : id === "table"
-          ? ".hub-table"
-          : `[data-hub-npc="${id}"], [data-hub-target="${id}"]`;
-    const node = document.querySelector(selector);
+    // One selector for every kind of target, now that objects and NPCs both carry a data attribute
+    // naming themselves. This used to branch on `id === "trophy"` / `id === "table"` and query bare
+    // classes, which only picked the right node because of DOM order — the Archive Room door and the
+    // Navigation Table shared a class, so `.hub-table` silently meant "whichever came first".
+    const node = document.querySelector(`[data-hub-npc="${id}"], [data-hub-target="${id}"]`);
     if (node) node.classList.toggle("is-near", isHubTargetNear(id));
   });
 }
@@ -6812,17 +6859,38 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  const pos = (target) => hubPointStyle(target.x, target.y);
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}<button class="hub-trophy ${isHubTargetNear("trophy") ? "is-near" : ""}" style="${pos(HUB_TARGETS.trophy)}" data-action="hub-interact" data-target="trophy" data-hub-target="trophy" aria-label="Open Unit 1 preservation case"><span>▣</span><b>Preservation Case</b>${isHubTargetNear("trophy") ? "<i>!</i>" : ""}</button><button class="hub-table ${isHubTargetNear("table") ? "is-near" : ""}" style="${pos(HUB_TARGETS.table)}" data-action="hub-interact" data-target="table" data-hub-target="table" aria-label="Open Chronicle Navigation Table"><span>✦</span><b>Navigation Table</b></button><button class="hub-table hub-archive-door ${isHubTargetNear("archiveDoor") ? "is-near" : ""}" style="${pos(HUB_TARGETS.archiveDoor)}" data-action="hub-interact" data-target="archiveDoor" data-hub-target="archiveDoor" aria-label="Enter the Archive Room"><span>▤</span><b>Archive Room</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", instituteNpcSprites.director, "Director Hale")}${instituteNpc("amani", instituteNpcSprites.amani, "Dr. Soto")}${instituteNpc("julian", instituteNpcSprites.julian, "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${instituteNpcSprites[hubDialogueId]}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
+// How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
+// completed on this save (archiveChallengeSatisfied()) as filed, so an old save's status line agrees
+// with the cards archiveChallengesScreen() renders as already restored.
+function unitArchiveChallengeProgress(unit) {
+  const challenges = unit?.archiveChallenges || [];
+  const filed = challenges.filter(
+    (challenge) =>
+      progress.archiveChallenges[challenge.questId]?.status === "complete" ||
+      archiveChallengeSatisfied(challenge.questId, progress.archiveChallenges)
+  ).length;
+  return { filed, total: challenges.length };
+}
 function archiveRoomScreen() {
-  const targets = ARCHIVE_ROOM_TARGETS;
   const nearby = nearestHubTarget();
-  const near = (id) => targetDistance(targets[id], id) <= targetReach(id);
-  const pos = (target) => hubPointStyle(target.x, target.y);
+  const unit = unitById(progress.selectedUnitId) || UNIT_01;
+  const unitNumber = UNITS.findIndex((u) => u.id === unit.id) + 1;
+  const { filed, total } = unitArchiveChallengeProgress(unit);
+  const evidenceSecured = unit.cases.reduce((n, c) => n + countEvidence(c.id), 0);
+  const status = total
+    ? `${filed}/${total} Archive Challenges filed for this unit.`
+    : "Archive Challenges for this unit are still being cataloged.";
+  // The Archive Room gets the Main Hall's status panel, in the same markup so it inherits the same
+  // styling (Phase 59). Two reasons: the room had no status readout at all — the one room whose
+  // whole purpose is filing written work could not tell you how much of it you had filed — and its
+  // left column was four lines against the Main Hall's fifteen, so walking between the two rooms
+  // changed the page height enough to toggle the scrollbar and slide the centred layout sideways.
+  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Archive status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Archive desk · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${filed}</b> / ${total} Archive Challenges filed</span><span><b>${evidenceSecured}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Written work</b><span>Approach the Archive Terminal at the north end of the room to compose this unit's Archive Challenges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidenceSecured}</b></button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
   const worldStyle = `width:${ARCHIVE_ROOM_GRID.columns * ARCHIVE_ROOM_GRID.tile}px;height:${ARCHIVE_ROOM_GRID.rows * ARCHIVE_ROOM_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p></section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas><button class="hub-table ${near("terminal") ? "is-near" : ""}" style="${pos(targets.terminal)}" data-action="hub-interact" data-target="terminal" data-hub-target="terminal" aria-label="Open Archive Terminal"><span>▤</span><b>Archive Terminal</b></button><button class="hub-table ${near("exitDoor") ? "is-near" : ""}" style="${pos(targets.exitDoor)}" data-action="hub-interact" data-target="exitDoor" data-hub-target="exitDoor" aria-label="Leave the Archive Room"><span>⤴</span><b>Leave Archive</b></button><div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute · Archive Room</p><h1>Institute Archive</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Leave Archive", "Leave the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}"><span></span><img id="institutePlayerSprite" src="${instituteSpriteUrl()}" alt="${esc(progress.profile.name || "Chronicler")}"></div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
 }
 
 // Shared render/grade/completion-tracking core for one Archive Challenge
@@ -6928,7 +6996,7 @@ function missionScreen() {
   const unit = unitForCase(kase.id) || UNIT_01;
   const card = archiveChallengeCard(
     // Not escaped here: archiveChallengeQuestCard() escapes the kicker itself.
-    `${resolvedCaseTitle(kase)} · ${kase.mechanic}`,
+    resolvedCaseTitle(kase),
     kase.archiveChallenge.questType,
     kase.archiveChallenge.questId,
     {
@@ -6940,10 +7008,15 @@ function missionScreen() {
   // every case in the unit, which is another way the same screen looked identical from six doors.
   const additions = resolvedAdditionsForCase(kase.id)
     .map((addition) =>
-      archiveChallengeAdditionCard(`${kase.shortTitle} · Added question`, addition)
+      archiveChallengeAdditionCard(`${resolvedCaseName(kase)} · Added question`, addition)
     )
     .join("");
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell mission-shell"><section class="activity-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">${esc(unit.period)} · ${esc(kase.mechanic)}</p><h1>${esc(resolvedCaseTitle(kase))}</h1><p class="mission-question">${esc(kase.question)}</p><p>${esc(kase.summary)}</p><p class="mission-meta"><span>${esc(kase.location)}</span><span>${esc(kase.date)}</span></p></section><section class="activity-board quest-practice-board">${card}${additions}</section></main>${authorPanel()}`;
+  // Case number in the kicker, mission name in the h1 — the same eyebrow/title split the teacher's
+  // Manage Content wizard header uses, so both sides of the app frame a mission identically. It
+  // also stops `.activity-copy h1` from rendering "Case 1.02 — The Exchange Ledger" at ~55px in a
+  // ~350px column, which wrapped the heading across five lines.
+  const missionKicker = [caseNumberLabel(kase), unit.period].filter(Boolean).join(" · ");
+  return `${chrome()}<main class="shell activity-shell activity-shell--wide quest-practice-shell mission-shell"><section class="activity-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">${esc(missionKicker)}</p><h1>${esc(resolvedCaseName(kase))}</h1><p class="mission-question">${esc(kase.question)}</p><p>${esc(kase.summary)}</p><p class="mission-meta"><span>${esc(kase.location)}</span><span>${esc(kase.date)}</span></p></section><section class="activity-board quest-practice-board">${card}${additions}</section></main>${authorPanel()}`;
 }
 
 // Archive Challenges for the active unit, reached from the Archive Terminal in the Archive Room.
@@ -7022,9 +7095,18 @@ function xyToPercent(xy, viewport) {
 // bottom one unclickable. This nudges only such coincident markers apart in
 // pixel space, purely for map legibility; it never touches mapPosition itself,
 // so the underlying geography stays accurate.
+//
+// It also decides which side of its dot each marker's label hangs on. Since Phase 59 a marker is
+// labelled with its mission's name ("The Atlantic Crossroads", not "Caribbean"), and those labels
+// are wide enough that two markers far enough apart to be distinct dots — Caribbean and Hispaniola,
+// ~75 units — can still have overlapping labels. Markers are walked left to right and each one takes
+// the slot below its dot unless a label already sits there, in which case it goes above.
 function declutterMarkerPositions(cases, bounds, viewport) {
   const CLUSTER_RADIUS = 30;
   const SPREAD_RADIUS = 20;
+  // Roughly a label pill's own footprint in NAV_TABLE_VIEWPORT units.
+  const LABEL_GAP_X = 140;
+  const LABEL_GAP_Y = 80;
   const projected = cases.map((c) => ({
     id: c.id,
     ...projectPoint([c.mapPosition.lon, c.mapPosition.lat], bounds, viewport),
@@ -7051,6 +7133,16 @@ function declutterMarkerPositions(cases, bounds, viewport) {
       });
     });
   }
+  const below = [];
+  [...positions.entries()]
+    .sort(([, a], [, b]) => a.x - b.x)
+    .forEach(([id, xy]) => {
+      const taken = below.some(
+        (q) => Math.abs(q.x - xy.x) < LABEL_GAP_X && Math.abs(q.y - xy.y) < LABEL_GAP_Y
+      );
+      positions.set(id, { ...xy, labelSide: taken ? "above" : "below" });
+      if (!taken) below.push(xy);
+    });
   return positions;
 }
 
@@ -7067,7 +7159,11 @@ function caseMarker(c, xy, viewport) {
   // instead of doing nothing. aria-disabled (not disabled) keeps that
   // reachable for assistive tech while still announcing the locked state.
   const label = state === "locked" ? `${resolvedCaseTitle(c)} — locked` : resolvedCaseTitle(c);
-  return `<button class="route-marker route-marker--${state} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? 'aria-disabled="true"' : ""} aria-label="${esc(label)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(c.shortTitle)}</b></button>`;
+  // The marker's visible label is the mission's own name, not its shortTitle: the map already says
+  // where you are (MAP_VIEWS labels the ocean and the sea), so a second geographic word here only
+  // gave the mission a competing name — and shortTitle is not rename-aware, so a teacher who
+  // renamed a mission saw the old word on the map.
+  return `<button class="route-marker route-marker--${state} route-marker--label-${xy.labelSide === "above" ? "above" : "below"} ${progress.selectedCaseId === c.id ? "is-selected" : ""}" style="left:${left};top:${top}" data-action="select-case" data-case="${c.id}" ${state === "locked" ? 'aria-disabled="true"' : ""} aria-label="${esc(label)}"><span>${state === "complete" ? "✓" : "✦"}</span><b>${esc(resolvedCaseName(c))}</b></button>`;
 }
 
 // Quests a save may hold a completion for that no unit points at any more, and
@@ -7146,10 +7242,12 @@ function archiveScreen() {
     selected.route === "field"
       ? `${countEvidence(selected.id)}/${sourcesForCase(selected.id).length || 3} evidence records secured`
       : selected.question;
-  // A non-map mission gets its own call to action — its mechanic's name — rather than the generic
-  // "Open Archive Challenge" all six of them shared while they all landed on one list.
+  // A non-map mission's call to action is the mission's own name. It used to be the mission's
+  // `mechanic` ("Open Atlantic Route Puzzle") — better than the generic "Open Archive Challenge"
+  // all six shared while they landed on one list, but it made the button a third name for a mission
+  // whose heading right above it already said "Case 1.02 — The Exchange Ledger".
   const chronotravelLabel =
-    selected.route === "field" ? "Initiate Chronotravel" : `Open ${selected.mechanic}`;
+    selected.route === "field" ? "Initiate Chronotravel" : `Open ${resolvedCaseName(selected)}`;
   const lockedReasonMarkup = isUnlocked(selected.id)
     ? ""
     : `<p class="route-locked-reason">${esc(lockedReasonForCase(selected))}</p>`;
@@ -7170,7 +7268,7 @@ function archiveScreen() {
     markerPositions.get(selected.id) ||
     projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
   const { left: threadLeft, top: threadTop } = xyToPercent(threadXY, viewport);
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the map. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(selected.title)}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${esc(selected.mechanic)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="home">← Institute foyer</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Teacher-unlocked cases appear as markers on the map. Select a marker to inspect its route; the full details stay in the route panel so the map itself remains readable.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(resolvedCaseTitle(selected))}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
@@ -7264,7 +7362,7 @@ function miniGamesScreen() {
 
 function travelScreen() {
   const active = caseById(progress.activeCaseId);
-  return `${chrome()}<main class="chronotravel-screen chronotravel-screen--warp"><section class="return-warp-vortex chronotravel-vortex" aria-label="Chronotraveling to ${esc(active.shortTitle)}"><div class="return-warp-tunnel chronotravel-tunnel"><i></i><i></i><i></i><i></i><span>✦</span><b>${esc(active.shortTitle)}<small>${esc(active.date)}</small></b></div></section><section class="travel-copy"><p class="kicker">Chronotravel sequence</p><h1>Route in motion.</h1><p>The Archive is following the selected point through the recall tunnel. The signal will resolve into its historical setting; the Codex will remain synchronized with this case.</p><div class="travel-progress"><span></span></div><p class="travel-status">Do not alter the moment. Follow the evidence.</p><button class="btn btn-outline" data-action="skip-travel">Skip transition</button></section></main>`;
+  return `${chrome()}<main class="chronotravel-screen chronotravel-screen--warp"><section class="return-warp-vortex chronotravel-vortex" aria-label="Chronotraveling to ${esc(resolvedCaseName(active))}"><div class="return-warp-tunnel chronotravel-tunnel"><i></i><i></i><i></i><i></i><span>✦</span><b>${esc(resolvedCaseName(active))}<small>${esc(active.date)}</small></b></div></section><section class="travel-copy"><p class="kicker">Chronotravel sequence</p><h1>Route in motion.</h1><p>The Archive is following the selected point through the recall tunnel. The signal will resolve into its historical setting; the Codex will remain synchronized with this case.</p><div class="travel-progress"><span></span></div><p class="travel-status">Do not alter the moment. Follow the evidence.</p><button class="btn btn-outline" data-action="skip-travel">Skip transition</button></section></main>`;
 }
 
 function fieldWorldStyle() {
@@ -8470,7 +8568,7 @@ function lockedReasonForCase(kase) {
   const index = unit ? unit.cases.findIndex((c) => c.id === kase.id) : -1;
   const prior = index > 0 ? unit.cases[index - 1] : null;
   return prior
-    ? `Complete ${prior.shortTitle} to unlock this mission.`
+    ? `Complete ${resolvedCaseName(prior)} to unlock this mission.`
     : "Your teacher hasn't opened this unit yet.";
 }
 

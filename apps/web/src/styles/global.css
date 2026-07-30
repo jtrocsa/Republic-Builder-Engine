@@ -157,6 +157,13 @@ body,
   min-height: 100%;
   margin: 0;
 }
+/* Reserve the scrollbar's width whether or not a screen needs one. Screens differ in height, and
+   without this the scrollbar appearing/disappearing between two of them re-centres every
+   `margin: 0 auto` shell by ~7px — read as the whole page "shifting" when walking from the
+   Institute's Main Hall into the Archive Room and back. */
+html {
+  scrollbar-gutter: stable;
+}
 body {
   font-family: "DM Sans", system-ui, sans-serif;
   color: var(--ink);
@@ -987,7 +994,18 @@ select {
     700 0.61rem "Cinzel",
     serif;
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  /* Wraps rather than running off the map: as of Phase 59 a marker is labelled with the mission's
+     own name ("The Atlantic Crossroads"), roughly twice the width of the shortTitle it replaced,
+     and the Caribbean/Hispaniola markers sit ~65px apart. */
+  max-width: 13ch;
+  line-height: 1.15;
+  text-align: center;
+}
+/* Which side the pill hangs on is decided per marker in declutterMarkerPositions() — see its
+   comment for why two dots far enough apart to read as distinct can still collide once labelled. */
+.route-marker--label-above b {
+  top: auto;
+  bottom: calc(100% + 8px);
 }
 .route-marker--complete {
   border-color: #9bddaa;
@@ -1004,6 +1022,9 @@ select {
   box-shadow: none;
 }
 .route-marker.is-selected {
+  /* Above its neighbours: two wrapped mission-name labels on adjacent markers can overlap, and the
+     selected route's label is the one that has to stay readable. */
+  z-index: 6;
   transform: translate(-50%, -50%) scale(1.18);
   animation: markerPulse 1.7s ease-in-out infinite;
 }
@@ -3785,6 +3806,10 @@ dd {
    ------------------------------------------------------------------------- */
 .hub-shell {
   width: min(1500px, calc(100% - 54px));
+  /* The floor `.shell` has always had, which the hub shells never got: without it a short hub room
+     lays out shorter than the viewport while a tall one doesn't, and the two rooms disagree about
+     where the page ends. */
+  min-height: calc(100vh - 58px);
   margin: 0 auto;
   padding: 40px 0 44px;
   display: grid;
@@ -3996,50 +4021,62 @@ dd {
   box-shadow: 0 0 18px rgba(var(--c-gold-rgb), 0.35);
   animation: hub-spark 1.35s ease-in-out infinite;
 }
-.hub-table {
+/* Every interactable object in either hub room — Navigation Table, Preservation Case, Archive Room
+   door, Archive Terminal, Leave Archive (Phase 59). The marker is a transparent rect laid over the
+   object's own painted tiles (main.js hubMarkerStyle(), sized from the generator stamp), so what
+   glows is the thing itself; the pill above it names the thing. Deliberately one authored block with
+   no !important: this replaced ~14 layered blocks that had accumulated into three unrelated looks
+   for the same idea (a `✦` medallion, a `▤` medallion, and a separate teal `▣` pill). Keep it that
+   way — restyle here, don't append an override further down the file. */
+.hub-marker {
   position: absolute;
-  z-index: 7;
-  width: 20%;
-  aspect-ratio: 1.8/1;
-  transform: translate(-50%, -50%);
-  border: 2px solid rgba(237, 199, 106, 0.72);
-  border-radius: 16px;
-  color: #172d37;
-  background: rgba(229, 204, 143, 0.18);
-  box-shadow: 0 0 0 0 rgba(var(--c-gold-rgb), 0);
+  z-index: 22;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--c-gold-rgb), 0.42),
+    inset 0 0 18px rgba(var(--c-gold-rgb), 0.16),
+    0 0 18px rgba(var(--c-gold-rgb), 0.16);
   cursor: pointer;
   transition: 0.18s ease;
 }
-.hub-table span {
+.hub-marker b {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -57%);
-  color: #f4d47d;
-  font-size: 1.45rem;
-  text-shadow: 0 0 12px rgba(245, 206, 115, 0.8);
-}
-.hub-table b {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translate(-50%, 5px);
+  transform: translateX(-50%);
   white-space: nowrap;
-  padding: 4px 6px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.4);
+  padding: 4px 7px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.42);
   border-radius: 7px;
   color: #ead08b;
-  background: rgba(6, 35, 48, 0.89);
+  background: rgba(6, 35, 48, 0.9);
   font:
-    700 0.53rem "Cinzel",
+    700 0.58rem "Cinzel",
     serif;
   letter-spacing: 0.04em;
 }
-.hub-table.is-near {
+.hub-marker--label-above b {
+  bottom: 100%;
+  margin-bottom: 6px;
+}
+/* Only for a marker with no room above it — the Main Hall's north doorway sits on row 0, where a
+   label above would be clipped by the viewport's top edge. */
+.hub-marker--label-below b {
+  top: 100%;
+  margin-top: 6px;
+}
+.hub-marker.is-near {
   box-shadow:
-    0 0 0 10px rgba(var(--c-gold-rgb), 0.13),
-    0 0 30px rgba(var(--c-gold-rgb), 0.42);
-  animation: hub-table-pulse 1.6s ease-in-out infinite;
+    inset 0 0 0 2px rgba(var(--c-gold-rgb), 0.68),
+    0 0 0 6px rgba(var(--c-gold-rgb), 0.12),
+    0 0 26px rgba(var(--c-gold-rgb), 0.4);
+  animation: hub-marker-pulse 1.6s ease-in-out infinite;
+}
+.hub-marker.is-near b {
+  border-color: rgba(var(--c-gold-rgb), 0.72);
+  color: #f7e3ae;
 }
 .hub-interact-prompt {
   position: absolute;
@@ -4252,11 +4289,15 @@ dd {
       0 0 21px rgba(var(--c-gold-rgb), 0.38);
   }
 }
-@keyframes hub-table-pulse {
+/* Renamed from hub-table-pulse in Phase 59 with the class it animates. The inset ring is repeated
+   here on purpose: box-shadow is a single property, so a keyframe that listed only the outer glows
+   dropped the marker's outline for half of every cycle. */
+@keyframes hub-marker-pulse {
   50% {
     box-shadow:
-      0 0 0 13px rgba(var(--c-gold-rgb), 0.12),
-      0 0 34px rgba(var(--c-gold-rgb), 0.48);
+      inset 0 0 0 2px rgba(var(--c-gold-rgb), 0.68),
+      0 0 0 11px rgba(var(--c-gold-rgb), 0.11),
+      0 0 34px rgba(var(--c-gold-rgb), 0.46);
   }
 }
 @media (max-width: 1220px) {
@@ -4306,7 +4347,7 @@ dd {
     border-radius: 16px;
   }
   .hub-npc span,
-  .hub-table b {
+  .hub-marker b {
     font-size: 0.46rem;
   }
   .hub-sidepanel {
@@ -4346,33 +4387,8 @@ dd {
 /* -------------------------------------------------------------------------
    Milestone 3.4.1 REAL correction · Living Caribbean + movement repair
    ------------------------------------------------------------------------- */
-.hub-table {
-  width: 13%;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-.hub-table span {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  left: 50%;
-  top: 50%;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.6);
-  border-radius: 50%;
-  background: rgba(6, 35, 48, 0.68);
-  box-shadow: 0 0 24px rgba(var(--c-gold-rgb), 0.28);
-}
-.hub-table b {
-  top: 72%;
-  background: rgba(6, 35, 48, 0.75);
-}
-.hub-table.is-near span {
-  box-shadow:
-    0 0 0 9px rgba(var(--c-gold-rgb), 0.12),
-    0 0 30px rgba(var(--c-gold-rgb), 0.5);
-}
+/* The `.hub-table` medallion layer that lived here (a 38px gold-rimmed circle over an erased rect)
+   is gone with the class — see `.hub-marker` above for the one treatment all hub objects share. */
 .hub-player,
 .case-field-player {
   aspect-ratio: 2/3;
@@ -5044,6 +5060,9 @@ dd {
   margin: 0.15em 0 0.2em;
   font-size: clamp(2.5rem, 4.2vw, 5rem);
   line-height: 0.96;
+  /* This heading is sized off the viewport but wraps inside a ~350px column, so a long title has no
+     other way to fit. */
+  overflow-wrap: break-word;
 }
 .activity-copy p {
   font-size: 1rem;
@@ -5062,6 +5081,16 @@ dd {
   font:
     600 1.06rem/1.55 "Spectral",
     serif;
+}
+/* Sized for the column it actually occupies. `.activity-copy h1`'s viewport-scaled clamp assumes a
+   heading with room to breathe; a mission name in a ~300px column set at ~44px broke "The Triangle
+   Ledger" across three lines of display type. */
+/* The compound selector is load-bearing: `.activity-shell--wide .activity-copy h1` further down the
+   file has the same specificity as `.mission-shell .activity-copy h1` would, and being later it
+   would win. */
+.mission-shell.activity-shell--wide .activity-copy h1 {
+  font-size: clamp(1.9rem, 2.4vw, 3rem);
+  line-height: 1.06;
 }
 .mission-shell .mission-meta {
   display: flex;
@@ -5355,14 +5384,21 @@ dd {
   border-color: var(--gold);
   background: rgba(225, 182, 93, 0.14);
 }
+/* 340px, not the 220px this started at. Two problems at the old width: each ~212px card interior
+   was too narrow for its own "Place in" select (see .evidence-select-label select below), and a
+   four-item quest laid out 3 + 1 with a ragged hole. 340px resolves to two columns at every board
+   width this renders in — the mission board, the practice check, and the teacher's inline preview —
+   so a four-item quest reads as a 2 x 2. */
 .quest-evidence-sources {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   margin-bottom: 16px;
 }
 .evidence-card {
-  max-width: 320px;
+  /* Grid children default to min-width:auto, which lets a wide child (the select) push the card
+     past its track instead of being constrained by it. */
+  min-width: 0;
   padding: 14px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.22);
   border-radius: 14px;
@@ -5391,13 +5427,16 @@ dd {
   margin: 0;
   overflow-wrap: break-word;
 }
+/* Matched to .quest-evidence-sources above so a quest's bins and its cards land on the same rhythm
+   — four bins with long claim headings ("Reshaped Mobility, Warfare, and Transport") were wrapping
+   to three lines in 3 + 1 orphan tracks. */
 .quest-evidence-slots {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 .evidence-slot {
-  max-width: 320px;
+  min-width: 0;
   min-height: 90px;
   padding: 12px 14px;
   border: 1px dashed rgba(229, 190, 102, 0.4);
@@ -5545,6 +5584,11 @@ dd {
 }
 .evidence-select-label select {
   flex: 1;
+  /* `flex: 1` alone leaves min-width at `auto`, and a <select>'s automatic minimum size is the width
+     of its longest <option> — "Reshaped Mobility, Warfare, and Transport" is ~285px, so the control
+     refused to shrink inside its card and painted over the neighbouring one. Same fix, same reason,
+     as .sequence-item-label just below. */
+  min-width: 0;
   padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.3);
@@ -6385,55 +6429,9 @@ dd {
   margin-top: 14px;
   color: #9fe3de;
 }
-.hub-trophy {
-  position: absolute;
-  z-index: 20;
-  transform: translate(-50%, -50%);
-  width: 82px;
-  height: 54px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.58);
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(15, 66, 74, 0.92), rgba(4, 30, 43, 0.94));
-  color: #f8e8ba;
-  box-shadow:
-    0 10px 18px rgba(var(--c-black-rgb), 0.24),
-    inset 0 0 0 3px rgba(var(--c-gold-rgb), 0.08);
-  cursor: pointer;
-}
-.hub-trophy span {
-  display: block;
-  font-size: 1.1rem;
-  line-height: 1;
-  margin-bottom: 1px;
-  color: #f1cc78;
-}
-.hub-trophy b {
-  display: block;
-  font:
-    700 0.47rem "Cinzel",
-    serif;
-  letter-spacing: 0.05em;
-  line-height: 1.05;
-}
-.hub-trophy i {
-  position: absolute;
-  right: -8px;
-  top: -8px;
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #f1cc78;
-  color: #082c39;
-  font-style: normal;
-  font-weight: 900;
-}
-.hub-trophy.is-near {
-  box-shadow:
-    0 0 0 6px rgba(126, 221, 214, 0.15),
-    0 0 24px rgba(126, 221, 214, 0.35);
-}
+/* The Preservation Case's own `.hub-trophy` box lived here, the first of four layers that ended as a
+   teal pill floating a full height above its anchor. All four are gone with the class — the
+   Preservation Case is a `.hub-marker` like every other hub object now. */
 .archive-badges {
   margin: 12px 0 2px;
   padding: 12px;
@@ -6972,17 +6970,8 @@ html {
 .hub-npc {
   z-index: 28 !important;
 }
-.hub-table {
-  z-index: 22 !important;
-}
-.hub-trophy {
-  z-index: 26 !important;
-  width: 72px !important;
-  height: 48px !important;
-}
-.hub-trophy b {
-  font-size: 0.42rem !important;
-}
+/* The hub stacking order these two rules set (objects below NPCs below the player) now lives on
+   `.hub-marker`'s own z-index, unlayered. */
 /* .unit-badge-shelf/.unit-badge(+ modifiers) removed (Phase 45D dead-CSS sweep) — an older
    badge-shelf concept with zero references anywhere in main.js, superseded by
    unitOneBadgeCaseMarkup()'s .badge-case-grid/.badge-card/.badge-medallion system. */
@@ -7121,50 +7110,9 @@ html {
    only styling was a per-index z-index and a 0.92 scale on two of three, i.e. arbitrary leftover
    tuning that made three identical markers three slightly different sizes. */
 
-/* Preservation Case is no longer a tiny floating status strip. It is an opened badge case UI.
-   (.unit-badge-shelf's own display:none !important removed in the same Phase 45D sweep as its
-   base rule above — the class no longer exists anywhere to hide.) */
-.hub-trophy {
-  width: 106px !important;
-  height: 42px !important;
-  border-radius: 9px !important;
-  background: linear-gradient(180deg, rgba(54, 93, 85, 0.95), rgba(6, 40, 51, 0.96)) !important;
-  box-shadow:
-    0 8px 16px rgba(var(--c-black-rgb), 0.22),
-    inset 0 0 0 2px rgba(var(--c-gold-rgb), 0.09) !important;
-}
-.hub-trophy span {
-  display: inline-grid !important;
-  place-items: center !important;
-  width: 20px !important;
-  height: 20px !important;
-  margin: 0 2px 1px 0 !important;
-  border-radius: 5px !important;
-  background: rgba(var(--c-gold-rgb), 0.16) !important;
-  color: #ffe19a !important;
-  font-size: 0.85rem !important;
-  vertical-align: middle !important;
-}
-.hub-trophy b {
-  display: inline-block !important;
-  max-width: 70px !important;
-  font:
-    900 8.5px/1.04 system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif !important;
-  color: #fff2bf !important;
-  text-align: left !important;
-  vertical-align: middle !important;
-  letter-spacing: 0 !important;
-  text-transform: none !important;
-}
-.hub-trophy.is-near {
-  box-shadow:
-    0 0 0 6px rgba(126, 221, 214, 0.12),
-    0 0 22px rgba(126, 221, 214, 0.33) !important;
-}
+/* (The teal `.hub-trophy` restyle that sat here — the second of its four layers — went with the
+   class in Phase 59. `.preservation-case` below is the badge-case dialog it opens, which is a
+   different thing and is untouched.) */
 .archive-badges--compact span {
   font-size: 0.82rem !important;
   line-height: 1.45 !important;
@@ -7521,28 +7469,9 @@ html {
   z-index: -1;
 }
 
-/* Preservation Case belongs to the shelf: label above the bookshelf, not covering people. */
-.hub-trophy {
-  width: 124px !important;
-  height: 34px !important;
-  transform: translate(-50%, -110%) !important;
-  border-radius: 999px !important;
-  padding: 4px 9px !important;
-}
-.hub-trophy span {
-  width: 18px !important;
-  height: 18px !important;
-  font-size: 0.75rem !important;
-}
-.hub-trophy b {
-  max-width: 88px !important;
-  font-size: 8.5px !important;
-  white-space: normal !important;
-}
-.hub-trophy i {
-  right: -7px !important;
-  top: -8px !important;
-}
+/* "Preservation Case belongs to the shelf: label above the bookshelf, not covering people" — the
+   intent of the third `.hub-trophy` layer, and now how every hub object works by construction:
+   `.hub-marker--label-above` puts the pill above the object's own footprint. */
 .preservation-case article {
   border-radius: 28px !important;
 }
@@ -7781,13 +7710,8 @@ button:hover,
 .hub-player {
   z-index: 42 !important;
 }
-.hub-table {
-  width: 134px !important;
-  min-height: 58px !important;
-}
-.hub-table b {
-  font-size: 0.58rem !important;
-}
+/* (`.hub-table`'s fixed 134x58 hit rect used to be pinned here. A marker is sized from its object's
+   own footprint now — main.js hubMarkerStyle() — so there is nothing left to pin.) */
 .hub-npc {
   width: 7.1% !important;
 }
@@ -7803,10 +7727,9 @@ button:hover,
 .hub-npc[data-facing="up"] img {
   filter: brightness(0.94) saturate(0.96) drop-shadow(0 4px 3px rgba(var(--c-black-rgb), 0.25)) !important;
 }
-/* The second retired `.hub-trophy { top: <pct> }` override — see the note further up this file. */
-.hub-trophy b {
-  font-size: 9px !important;
-}
+/* The second retired `.hub-trophy { top: <pct> }` override sat here, and the label-size !important
+   that outlived it went with the class in Phase 59 — see `.hub-marker` for the one that replaced
+   all of them. */
 /* Widened from 1220px to 1400px (Phase 45E) — a real 1366x768 Chromebook viewport (this
    project's named target hardware) sat just above the old 1220px threshold, so the Institute's
    forced min-width:860px plus its min-height:650px/aspect-ratio:1.67:1 combination (which

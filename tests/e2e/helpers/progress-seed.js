@@ -88,14 +88,31 @@ async function walkTo(page, selector, playerId, { steps = 44, burstMs = 320 } = 
   const gap = () =>
     page.evaluate(
       ([sel, id]) => {
+        // Where to steer for. Most world nodes (NPCs, the player) are positioned by a centre point,
+        // so their inline left/top *is* the point. A hub object marker is different: since Phase 59
+        // it is a rect laid over the object's own tiles, positioned by its top-left corner and sized
+        // in px, so its centre has to be derived — steering at its corner walked the player off to
+        // the side of the Archive Room's doorway and into the wall.
+        const point = (el) => {
+          const left = Number.parseFloat(el.style.left);
+          const top = Number.parseFloat(el.style.top);
+          const width = Number.parseFloat(el.style.width);
+          const height = Number.parseFloat(el.style.height);
+          return {
+            x: Number.isFinite(width) ? left + width / 2 : left,
+            y: Number.isFinite(height) ? top + height / 2 : top,
+          };
+        };
         const to = document.querySelector(sel);
         const player = document.getElementById(id);
         if (!to || !player) return null;
+        const toPoint = point(to);
+        const playerPoint = point(player);
         return {
-          dx: Number.parseFloat(to.style.left) - Number.parseFloat(player.style.left),
-          dy: Number.parseFloat(to.style.top) - Number.parseFloat(player.style.top),
-          x: Number.parseFloat(player.style.left),
-          y: Number.parseFloat(player.style.top),
+          dx: toPoint.x - playerPoint.x,
+          dy: toPoint.y - playerPoint.y,
+          x: playerPoint.x,
+          y: playerPoint.y,
         };
       },
       [selector, playerId]

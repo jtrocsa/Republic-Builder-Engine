@@ -138,4 +138,37 @@ test.describe("Main Hall movement", () => {
     await expect(page.locator("#instituteMap")).toBeVisible();
     await expect(page.locator("#hubInteractPrompt")).toContainText("Chronicle Navigation Table");
   });
+
+  test("every interactable object is marked the same way, on its own footprint", async ({
+    page,
+  }) => {
+    // Phase 59. The Institute had grown three unrelated treatments for one idea — a medallion for the
+    // Navigation Table, the same class with a different glyph for the Archive Room door, and a
+    // separate pill for the Preservation Case — so this asserts the shared class, the label, and the
+    // property that made them shareable: the marker is sized from the object's painted tiles
+    // (main.js hubMarkerStyle(), 48px tiles), not from a fixed hit rect.
+    await seedProgress(page, {
+      currentScreen: "institute",
+      currentHubRoom: "main",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+
+    await expect(page.locator(".hub-marker")).toHaveCount(3);
+    for (const [target, label] of [
+      ["table", "Navigation Table"],
+      ["trophy", "Preservation Case"],
+      ["archiveDoor", "Archive Room"],
+    ]) {
+      const marker = page.locator(`.hub-marker[data-hub-target="${target}"]`);
+      await expect(marker.locator("b")).toHaveText(label);
+      // No glyph child survives — a labelled, glowing object does not also need an icon.
+      await expect(marker.locator("span")).toHaveCount(0);
+    }
+
+    // The Navigation Table's stamp is 3x2 tiles at (17,6); the plinth's is 2x2 at (3,2).
+    const box = await page.locator('.hub-marker[data-hub-target="table"]').boundingBox();
+    expect(box.width).toBeCloseTo(144, 0);
+    expect(box.height).toBeCloseTo(96, 0);
+  });
 });

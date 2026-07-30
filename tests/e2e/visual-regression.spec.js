@@ -375,6 +375,18 @@ test.describe("Gameplay visual-regression baselines", () => {
     });
     await expect(page.locator(".mission-shell")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("mission-appeal-ledger"));
+
+    // Case 1.02, the four-source/four-bin evidence-organizing board, baselined from Phase 59's
+    // layout report: the "Place in" select refused to shrink below its longest option and painted
+    // over the neighbouring card, and four bins laid out 3 + 1. Both are grid/flex sizing, so a
+    // pixel baseline is what actually catches a regression here.
+    await setScreen(page, {
+      currentScreen: "mission",
+      selectedUnitId: "unit-01",
+      activeCaseId: "case-002",
+    });
+    await expect(page.locator(".mission-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-exchange-ledger"));
   });
 
   test("archive challenges, review, completion, codex, and reconstruction", async ({ page }) => {

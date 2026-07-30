@@ -383,14 +383,23 @@ test.describe("Archive Challenge", () => {
     });
     await loadSeededSave(page);
 
-    // The button says the mission's own mechanic now, not "Open Archive Challenge" for all six.
+    // The button says the mission's own name — one mission, one name (Phase 59). It said the
+    // mission's `mechanic` ("Open Atlantic Route Puzzle") before that, which was better than the
+    // "Open Archive Challenge" all six shared but still a third name for a case whose marker,
+    // heading and button each said something different.
     const travel = page.locator('[data-action="travel"][data-case="case-002"]');
-    await expect(travel).toContainText("Open Atlantic Route Puzzle");
+    await expect(travel).toContainText("Open The Exchange Ledger");
+    await expect(page.locator('.route-marker[data-case="case-002"] b')).toContainText(
+      "The Exchange Ledger"
+    );
     await travel.click();
 
     // travelScreen() self-advances after 2500ms.
     await expect(page.locator(".mission-shell")).toBeVisible({ timeout: 10000 });
     await expect(page.locator(".mission-shell h1")).toContainText("Exchange Ledger");
+    // Case number in the eyebrow, mission name in the heading — the same split the teacher's
+    // Manage Content wizard header uses.
+    await expect(page.locator(".mission-shell .activity-copy .kicker")).toContainText("Case 1.02");
     await expect(page.locator(".mission-shell .quest")).toHaveCount(1);
   });
 
