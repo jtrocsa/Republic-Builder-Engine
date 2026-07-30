@@ -25,12 +25,102 @@ import {
   FIELD_MAPS,
   HUB_BLOCK_RECTS,
   HUB_GRID,
+  HUB_NPC_PATROLS,
   HUB_TARGETS,
   footBoxFor,
+  hubFootBoxFor,
   rectsOverlap,
 } from "../../apps/web/src/main.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+// --- hub-room traversal ---------------------------------------------------------------------------
+// Whether a room can actually be walked, as opposed to whether its furniture happens to leave a
+// clear cell somewhere near each target.
+//
+// The distinction is the whole reason this exists. Both hub rooms already asserted that every
+// interaction target has *a* clear cell within reach and that every spawn cell is clear — and the
+// Main Hall shipped with the Preservation Case sealed behind three furniture runs, 3.3 tiles from
+// the nearest cell a player could ever stand on, with both assertions green. Clearance is a local
+// property; reachability is not, and only the second one is what a player experiences.
+//
+// So: flood-fill the room from its spawn using the real hub foot box and the real edge test, and
+// require that the reachable region is the room. A pocket of open floor the player cannot enter is
+// a defect whether or not anything interactive is standing in it.
+const STEP = 0.1;
+
+function hubTraversal({ grid, blocks, spawn }) {
+  // Mirrors isHubBlocked(): the edge test, then the foot box against every collision rect.
+  const open = (x, y) =>
+    x >= 0.6 &&
+    y >= 0.8 &&
+    x <= grid.columns - 1.2 &&
+    y <= grid.rows - 1.2 &&
+    !blocks.some((b) => rectsOverlap(hubFootBoxFor(x, y), b));
+
+  const key = (i, j) => `${i},${j}`;
+  const at = (i) => Number((i * STEP).toFixed(4));
+  const start = [Math.round(spawn[0] / STEP), Math.round(spawn[1] / STEP)];
+
+  const reached = new Set();
+  if (open(at(start[0]), at(start[1]))) {
+    reached.add(key(...start));
+    const queue = [start];
+    while (queue.length) {
+      const [i, j] = queue.pop();
+      for (const [di, dj] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const ni = i + di;
+        const nj = j + dj;
+        if (reached.has(key(ni, nj))) continue;
+        if (!open(at(ni), at(nj))) continue;
+        reached.add(key(ni, nj));
+        queue.push([ni, nj]);
+      }
+    }
+  }
+
+  const stranded = [];
+  for (let i = 0; i <= Math.round(grid.columns / STEP); i += 1) {
+    for (let j = 0; j <= Math.round(grid.rows / STEP); j += 1) {
+      if (reached.has(key(i, j))) continue;
+      if (open(at(i), at(j))) stranded.push([at(i), at(j)]);
+    }
+  }
+
+  return {
+    open,
+    /** Is `[x, y]` in the same walkable component as the spawn? */
+    canStandAt: (x, y) => reached.has(key(Math.round(x / STEP), Math.round(y / STEP))),
+    /** Can the player get within `reach` of this point without leaving the spawn's component? */
+    canReach(x, y, reach) {
+      for (let dx = -reach; dx <= reach + 1e-9; dx += STEP) {
+        for (let dy = -reach; dy <= reach + 1e-9; dy += STEP) {
+          if (Math.hypot(dx, dy) > reach) continue;
+          if (this.canStandAt(x + dx, y + dy)) return true;
+        }
+      }
+      return false;
+    },
+    reachedCount: reached.size,
+    /** Open cells the spawn cannot get to — sealed pockets. */
+    stranded,
+  };
+}
+
+/** The bounding box of a pocket, so a failure says where to widen an aisle. */
+function pocketSummary(stranded) {
+  if (!stranded.length) return "none";
+  const xs = stranded.map(([x]) => x);
+  const ys = stranded.map(([, y]) => y);
+  return `${stranded.length} cells in x ${Math.min(...xs).toFixed(1)}–${Math.max(...xs).toFixed(
+    1
+  )}, y ${Math.min(...ys).toFixed(1)}–${Math.max(...ys).toFixed(1)}`;
+}
 
 const TMJ_BY_UNIT = {
   "unit-01": "caribbean-field.tmj",
@@ -228,25 +318,25 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
 });
 
 // The Institute Main Hall. Same treatment as the field maps: a generated .tmj, generated collision,
-// and hand-placed targets/spawns around the furniture.
+// and hand-placed targets/spawns around the furniture — plus, as of Phase 58, the traversal check
+// described above hubTraversal().
 //
-// The last assertion here is the one that matters most, and it is here because Phase 54's rebuild
-// broke exactly it. Six call sites passed `safeInstituteSpawn(7, 9)` or `(16, 9)` — the *painted*
-// Main Hall's spawn and its Navigation Table approach. The rebuild moved the furniture out from
-// under both, putting (7,9) inside a "sealed record chest", and safeInstituteSpawn() does not
-// validate. So a player arriving from the onboarding hallway, or using any Recall to Institute,
-// would have landed unable to move in any direction — the same freeze the Archive Room's own
-// exit-door comment warns about, on a screen every session passes through.
+// Two shipped defects live behind these assertions. Phase 54's rebuild left six call sites passing
+// `safeInstituteSpawn(7, 9)` or `(16, 9)` — the *painted* hall's spawn and its Navigation Table
+// approach — after the retile had put (7,9) inside a "sealed record chest"; safeInstituteSpawn()
+// does not validate, so every Recall to Institute would have landed the player unable to move.
+// Phase 57 added the spawn assertion for that. What it did not add was reachability, and the same
+// rebuild had also walled off the room's entire west end: the Preservation Case sat 3.3 tiles from
+// the nearest cell a player could reach, on a screen every session passes through.
 describe("institute main hall coordinates", () => {
   const tmj = JSON.parse(
     readFileSync(path.join(REPO_ROOT, "apps/web/src/content/maps/institute-hall.tmj"), "utf8")
   );
 
-  // Mirrors isHubBlocked()'s edge test.
-  const walkable = (x, y) =>
-    x >= 0.6 && y >= 0.8 && x <= HUB_GRID.columns - 1.2 && y <= HUB_GRID.rows - 1.2;
-  const clear = (x, y) =>
-    walkable(x, y) && !HUB_BLOCK_RECTS.some((b) => rectsOverlap(footBoxFor(x, y), b));
+  // safeInstituteSpawn()'s own default — the foyer entrance in the south wall, and the cell every
+  // flood fill below starts from, because it is where a player's first step in this room happens.
+  const SPAWN = [11.5, 9];
+  const hall = hubTraversal({ grid: HUB_GRID, blocks: HUB_BLOCK_RECTS, spawn: SPAWN });
 
   it("has a .tmj matching HUB_GRID (normal case)", () => {
     expect(tmj.width).toBe(HUB_GRID.columns);
@@ -254,41 +344,53 @@ describe("institute main hall coordinates", () => {
     expect(tmj.tilewidth).toBe(HUB_GRID.tile);
   });
 
-  it("leaves somewhere walkable within reach of each interaction target (normal case)", () => {
+  it("lets the player walk from the spawn to every interaction target (normal case)", () => {
     const unreachable = Object.entries(HUB_TARGETS)
-      .filter(([id, target]) => {
-        const reach = id === "table" ? 1.65 : 1.1;
-        for (let dx = -reach; dx <= reach; dx += 0.2) {
-          for (let dy = -reach; dy <= reach; dy += 0.2) {
-            if (Math.hypot(dx, dy) > reach) continue;
-            if (clear(target.x + dx, target.y + dy)) return false;
-          }
-        }
-        return true;
-      })
+      .filter(([id, target]) => !hall.canReach(target.x, target.y, id === "table" ? 1.65 : 1.1))
       .map(([id]) => id);
     expect(unreachable).toEqual([]);
   });
 
-  it("spawns the player clear of geometry at every entry point (edge case)", () => {
-    // safeInstituteSpawn()'s own default (the foyer entrance), and the two coordinates the other
-    // call sites derive from HUB_TARGETS: through the Archive Room door either way.
+  it("seals no pocket of open floor off from the rest of the hall (edge case)", () => {
+    // A room the player can only walk half of is the defect this catches. Stated as "every open
+    // cell is reachable" rather than as a coverage ratio: a pocket is a pocket at any size, and the
+    // failure message names where it is so the fix is a furniture move, not a hunt.
+    expect(pocketSummary(hall.stranded)).toBe("none");
+  });
+
+  it("spawns the player somewhere they can walk out of, at every entry point (edge case)", () => {
+    // safeInstituteSpawn()'s default, plus the coordinates the other call sites derive from
+    // HUB_TARGETS: through the Archive Room door, and beside the Navigation Table on recall.
     const entries = {
-      "foyer entrance (safeInstituteSpawn default)": [11.5, 9],
+      "foyer entrance (safeInstituteSpawn default)": SPAWN,
       "leaving the Archive Room": [HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6],
-      "recall to the Institute": [HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6],
+      "recall to the Institute": [HUB_TARGETS.table.x, HUB_TARGETS.table.y + 0.6],
     };
     const blocked = Object.entries(entries)
-      .filter(([, [x, y]]) => !clear(x, y))
+      .filter(([, [x, y]]) => !hall.canStandAt(x, y))
       .map(([name]) => name);
     expect(blocked).toEqual([]);
   });
 
   it("stands every NPC target clear of the furniture, so a patrol can start (edge case)", () => {
     const trapped = ["director", "amani", "julian"].filter(
-      (id) => !clear(HUB_TARGETS[id].x, HUB_TARGETS[id].y)
+      (id) => !hall.canStandAt(HUB_TARGETS[id].x, HUB_TARGETS[id].y)
     );
     expect(trapped).toEqual([]);
+  });
+
+  it("keeps every patrol waypoint walkable, so no NPC judders in place (edge case)", () => {
+    // isHubNpcBlocked() refuses a step into geometry, so a waypoint inside a rect leaves the NPC
+    // pushing against furniture forever. The field maps have had this assertion since Phase 52; the
+    // Main Hall's three loops were re-derived by hand every time the room was re-laid.
+    const bad = [];
+    for (const [id, waypoints] of Object.entries(HUB_NPC_PATROLS)) {
+      waypoints.forEach((point, index) => {
+        if (!hall.canStandAt(point.x, point.y))
+          bad.push(`${id}[${index}] at ${point.x},${point.y}`);
+      });
+    }
+    expect(bad).toEqual([]);
   });
 });
 
@@ -301,12 +403,13 @@ describe("archive room coordinates", () => {
   );
   const structures = tmj.layers.find((layer) => layer.name === "structures");
 
-  // Mirrors isHubBlocked()'s edge test in main.js.
-  const walkable = (x, y) =>
-    x >= 0.6 &&
-    y >= 0.8 &&
-    x <= ARCHIVE_ROOM_GRID.columns - 1.2 &&
-    y <= ARCHIVE_ROOM_GRID.rows - 1.2;
+  // Where main.js puts the player on entry: just inside the exit door in the south wall.
+  const SPAWN = [ARCHIVE_ROOM_TARGETS.exitDoor.x, ARCHIVE_ROOM_TARGETS.exitDoor.y - 0.6];
+  const room = hubTraversal({
+    grid: ARCHIVE_ROOM_GRID,
+    blocks: ARCHIVE_ROOM_BLOCK_RECTS,
+    spawn: SPAWN,
+  });
 
   function cells(rect) {
     const out = [];
@@ -352,34 +455,20 @@ describe("archive room coordinates", () => {
     expect(bad).toEqual([]);
   });
 
-  it("leaves somewhere walkable within reach of each interaction target (normal case)", () => {
+  it("lets the player walk from the entrance to every interaction target (normal case)", () => {
     const unreachable = Object.entries(ARCHIVE_ROOM_TARGETS)
-      .filter(([id, target]) => {
-        const reach = id === "table" ? 1.65 : 1.1;
-        for (let dx = -reach; dx <= reach; dx += 0.25) {
-          for (let dy = -reach; dy <= reach; dy += 0.25) {
-            if (Math.hypot(dx, dy) > reach) continue;
-            const x = target.x + dx;
-            const y = target.y + dy;
-            if (!walkable(x, y)) continue;
-            const foot = footBoxFor(x, y);
-            if (!ARCHIVE_ROOM_BLOCK_RECTS.some((b) => rectsOverlap(foot, b))) return false;
-          }
-        }
-        return true;
-      })
+      .filter(([id, target]) => !room.canReach(target.x, target.y, id === "table" ? 1.65 : 1.1))
       .map(([id]) => id);
     expect(unreachable).toEqual([]);
   });
 
-  it("spawns the player clear of geometry when they enter through the exit door (edge case)", () => {
+  it("seals no pocket of open floor off from the rest of the room (edge case)", () => {
+    expect(pocketSummary(room.stranded)).toBe("none");
+  });
+
+  it("spawns the player somewhere they can walk out of, entering through the exit door (edge case)", () => {
     // main.js drops the player at exitDoor.y - 0.6 on entry. A past regression froze all
     // movement because that very first foot-box already read as blocked.
-    const x = ARCHIVE_ROOM_TARGETS.exitDoor.x;
-    const y = ARCHIVE_ROOM_TARGETS.exitDoor.y - 0.6;
-    expect(walkable(x, y)).toBe(true);
-    const foot = footBoxFor(x, y);
-    const blocking = ARCHIVE_ROOM_BLOCK_RECTS.find((b) => rectsOverlap(foot, b));
-    expect(blocking?.kind).toBeUndefined();
+    expect(room.canStandAt(ARCHIVE_ROOM_TARGETS.exitDoor.x, SPAWN[1])).toBe(true);
   });
 });

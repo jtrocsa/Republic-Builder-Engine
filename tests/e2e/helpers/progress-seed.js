@@ -63,28 +63,55 @@ export async function holdKey(page, key, ms) {
  * no movement the player is against something, so the next one tries the other axis — enough to get
  * around a building without needing a real pathfinder in the test helper.
  */
-export async function walkToNpc(page, npcId, { steps = 44, burstMs = 320 } = {}) {
-  const npc = page.locator(`[data-npc="${npcId}"]`);
-  const isNear = () => npc.evaluate((el) => el.classList.contains("is-near"));
-  const gap = () =>
-    page.evaluate((id) => {
-      const target = document.querySelector(`[data-npc="${id}"]`);
-      const player = document.getElementById("caseFieldPlayer");
-      if (!target || !player) return null;
-      return {
-        dx: Number.parseFloat(target.style.left) - Number.parseFloat(player.style.left),
-        dy: Number.parseFloat(target.style.top) - Number.parseFloat(player.style.top),
-        x: Number.parseFloat(player.style.left),
-        y: Number.parseFloat(player.style.top),
-      };
-    }, npcId);
+export async function walkToNpc(page, npcId, options = {}) {
+  return walkTo(page, `[data-npc="${npcId}"]`, "caseFieldPlayer", options);
+}
 
-  let preferVertical = false;
+/**
+ * The Main Hall / Archive Room equivalent, keyed on a HUB_TARGETS id.
+ *
+ * Same reason as walkToNpc: the two timed holds this replaced encoded one specific furniture layout
+ * ("east until the record chest stops you at x=18.72, then north until the table stops you at
+ * y=7.06"). Phase 58 opened the south aisle end to end so nothing stops the player at 18.72 any
+ * more, and both assertions broke — while the thing they were checking, that the table is
+ * proximity-gated and opens, was working fine. Walking until the game's own `.is-near` appears
+ * survives the next re-lay too.
+ */
+export async function walkToHubTarget(page, targetId, options = {}) {
+  return walkTo(page, `[data-hub-target="${targetId}"]`, "institutePlayer", options);
+}
+
+/** Shared body of the two walkers above. See walkToNpc's comment for why it works this way. */
+async function walkTo(page, selector, playerId, { steps = 44, burstMs = 320 } = {}) {
+  const target = page.locator(selector);
+  const isNear = () => target.evaluate((el) => el.classList.contains("is-near"));
+  const gap = () =>
+    page.evaluate(
+      ([sel, id]) => {
+        const to = document.querySelector(sel);
+        const player = document.getElementById(id);
+        if (!to || !player) return null;
+        return {
+          dx: Number.parseFloat(to.style.left) - Number.parseFloat(player.style.left),
+          dy: Number.parseFloat(to.style.top) - Number.parseFloat(player.style.top),
+          x: Number.parseFloat(player.style.left),
+          y: Number.parseFloat(player.style.top),
+        };
+      },
+      [selector, playerId]
+    );
+
+  // Which axis the next burst must use, when the last one was blocked. Both directions have to be
+  // forcible: a single `preferVertical` flag only unsticks a blocked *horizontal* burst, because
+  // clearing it hands the choice straight back to the "larger gap wins" rule, which picks the blocked
+  // axis again whenever that axis is also the longer one. The Preservation Case walk deadlocked on
+  // exactly that — pushing north into the west reading nook forever with 1.7 tiles left to go east.
+  let forced = null;
   for (let i = 0; i < steps; i += 1) {
     if (await isNear()) return true;
     const before = await gap();
     if (!before) return false;
-    const vertical = preferVertical || Math.abs(before.dy) > Math.abs(before.dx);
+    const vertical = forced ? forced === "vertical" : Math.abs(before.dy) > Math.abs(before.dx);
     const key = vertical
       ? before.dy > 0
         ? "ArrowDown"
@@ -97,7 +124,7 @@ export async function walkToNpc(page, npcId, { steps = 44, burstMs = 320 } = {})
     // Blocked: that burst moved the player less than a pixel. Commit to the other axis for one step
     // so the walk slides along the obstacle instead of pushing into it forever.
     const moved = Math.abs(after.x - before.x) + Math.abs(after.y - before.y) > 1;
-    preferVertical = moved ? false : !vertical;
+    forced = moved ? null : vertical ? "horizontal" : "vertical";
   }
   return isNear();
 }

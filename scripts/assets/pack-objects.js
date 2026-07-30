@@ -139,6 +139,32 @@ function cutSprite(sheet, box, mask) {
   return { data: out, width: outW, height: outH, cols, rows };
 }
 
+/**
+ * Resamples a cut sprite to a smaller whole-tile footprint.
+ *
+ * For art that is the right *object* at the wrong *scale*. The brass compass on `Island survival/5`
+ * is drawn as a 2x2 hero prop — 96px of gold case, which is roughly the size of the player — and the
+ * Main Hall wants it as a 1x1 instrument sitting on the Navigation Table. Rescaling here rather than
+ * in CSS keeps it a real tile the map generator can stamp, and keeps the derived sheet the single
+ * place a sprite's on-grid size is decided.
+ *
+ * `nearest`, not a smoothing kernel: at exactly 2:1 it drops every other pixel and the result stays
+ * hard-edged pixel art, which is what the tile next to it will be. Mitchell and lanczos3 were both
+ * rendered and compared at 6x — each produces a visibly soft, anti-aliased object that reads as a
+ * photograph shrunk down and sits wrong beside the packs' 1px outlines.
+ */
+async function resizeSprite(sprite, { rows, cols }) {
+  const width = cols * TILE;
+  const height = rows * TILE;
+  const data = await sharp(sprite.data, {
+    raw: { width: sprite.width, height: sprite.height, channels: 4 },
+  })
+    .resize(width, height, { kernel: "nearest", fit: "fill" })
+    .raw()
+    .toBuffer();
+  return { data, width, height, cols, rows };
+}
+
 /** Places cut sprites into a grid, left to right, wrapping at PACK_COLUMNS. */
 function layout(sprites) {
   const placed = [];
@@ -194,7 +220,9 @@ async function buildSheet(spec) {
       mask = found.mask;
     }
 
-    cut.push({ name: object.name, ...cutSprite(sheet, box, mask), source: box });
+    let sprite = cutSprite(sheet, box, mask);
+    if (object.scale) sprite = await resizeSprite(sprite, object.scale);
+    cut.push({ name: object.name, ...sprite, source: box });
   }
 
   if (problems.length > 0) {

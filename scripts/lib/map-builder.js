@@ -117,6 +117,33 @@ export class MapBuilder {
     });
   }
 
+  /**
+   * Draws a small prop on the overlay layer, above whatever is already stamped at that cell.
+   *
+   * `stamp()` writes to `structures`, one tile per cell, so stamping a thing *onto* another thing
+   * replaces it — a compass placed on the Navigation Table's top would punch a transparent hole in
+   * the table and show the floor around it. The overlay layer is a second canvas the loader draws
+   * above the player and NPC sprites, so a prop put there composites over the furniture instead.
+   *
+   * Only for cells the player can never stand on (a `solid` object's own footprint). Anywhere else,
+   * overlay art would draw over the player.
+   */
+  overlayStamp(col, row, entry, label) {
+    const h = entry.h ?? 1;
+    const w = entry.w ?? 1;
+    const gids = this.gidRect(entry);
+    for (let r = 0; r < h; r += 1) {
+      for (let c = 0; c < w; c += 1) {
+        const cc = col + c;
+        const rr = row + r;
+        if (!this.inBounds(cc, rr)) continue;
+        if (!gids[r][c]) continue;
+        this.overlay[this.index(cc, rr)] = gids[r][c];
+      }
+    }
+    return { col, row, height: h, width: w, label };
+  }
+
   occupied(col, row) {
     if (!this.inBounds(col, row)) return true;
     const i = this.index(col, row);

@@ -35,6 +35,7 @@
 // and tests/unit/tile-footprints.test.js fails the build if one drifts from the pixels.
 
 import { CANONICAL, tile } from "../canonical-palette.js";
+import { InstituteArtifacts } from "../derived-objects.coords.js";
 
 export default {
   id: "institute-hall",
@@ -50,6 +51,9 @@ export default {
     { path: "Medieval Tavern/tile-B-05.png", name: "medieval-tavern-b05" },
     { path: "Medieval Tavern/Auto-tile-A4-walls-2.png", name: "medieval-tavern-walls-2" },
     { path: "Island survival/5.png", name: "island-survival-05" },
+    // Appended last, deliberately: firstgid is assigned in this order, so a new sheet anywhere
+    // earlier would renumber every GID already committed to institute-hall.tmj.
+    { path: "derived/institute-artifacts.png", name: "institute-artifacts" },
   ],
 
   tiles: {
@@ -121,8 +125,15 @@ export default {
      * [measured]
      */
     navigationTable: tile("Island survival/5.png", 8, 5, { h: 2, w: 3 }),
-    /** Brass mariner's compass on a stand, beside the table. [measured] */
-    brassCompass: tile("Island survival/5.png", 6, 8, { h: 2, w: 2 }),
+    /**
+     * Brass mariner's compass, repacked down to 1x1 so it sits *on* the Navigation Table as an
+     * instrument. The source art is 2x2 — 96px, about the player's own height — and standing it on
+     * the floor beside the table put a human-sized compass in the middle of the hall's main aisle,
+     * where it was both absurd and one of the collisions the playtest report marked. Rescaled by
+     * scripts/assets/pack-objects.js, which is also why it comes from the derived sheet rather than
+     * from `Island survival/5` directly.
+     */
+    compassSmall: InstituteArtifacts.compassSmall,
     /** Stone plinth holding a lit artifact — the Preservation Case's display stand. [measured] */
     preservationPlinth: tile("Island survival/5.png", 8, 8, { h: 2, w: 2 }),
     /** Carved stone stela, the Institute's founding marker. [measured] */

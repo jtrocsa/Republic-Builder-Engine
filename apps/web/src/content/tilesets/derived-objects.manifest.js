@@ -76,4 +76,21 @@ export const DERIVED_OBJECTS = [
       { name: "chapel", box: [293, 386, 380, 575] },
     ],
   },
+  {
+    // One sprite, and the only reason this spec exists is `scale`. The brass mariner's compass is
+    // drawn 2x2 — 96px, about the height of the player — so as a floor prop it stood in the Main
+    // Hall's main east-west aisle at roughly human size, which is both a collision the playtest
+    // report flagged and a joke about the size of a compass. At 1x1 it is an instrument sitting on
+    // the Navigation Table, which is where it belongs.
+    from: "Island survival/5.png",
+    out: "institute-artifacts.png",
+    objects: [
+      {
+        name: "compassSmall",
+        seed: [6, 8],
+        limit: { height: 2, width: 2 },
+        scale: { rows: 1, cols: 1 },
+      },
+    ],
+  },
 ];

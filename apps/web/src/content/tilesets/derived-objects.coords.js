@@ -45,3 +45,8 @@ export const TownCivic = {
   churchSteeple: tile("derived/town-civic.png", 0, 0, { h: 4, w: 2 }),
   chapel: tile("derived/town-civic.png", 0, 2, { h: 4, w: 2 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const InstituteArtifacts = {
+  compassSmall: tile("derived/institute-artifacts.png", 0, 0, { h: 1, w: 1 }),
+};

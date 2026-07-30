@@ -364,6 +364,14 @@ const resolveInstituteHallTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/Island survival/5.png", {
     eager: true,
     import: "default",
+  }),
+  // The brass compass, repacked down to 1x1 so it can sit on the Navigation Table — see
+  // derived-objects.manifest.js. A sheet named in a palette but missing from this resolver is not a
+  // missing tile: createTilesetImageResolver() throws, so renderTiledMap() rejects and the whole map
+  // draws as an empty frame. The visual-regression baseline is what caught that.
+  import.meta.glob("./assets/tilesets/derived/institute-artifacts.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderInstituteHallTiledMap() {
@@ -1327,33 +1335,38 @@ export const HUB_BLOCK_RECTS = INSTITUTE_HALL_BLOCKS;
 // targetReach() and outside the object's collision rect.
 export const HUB_TARGETS = {
   director: {
-    x: 9.5,
-    y: 8.5,
+    // The central opening in front of the foyer entrance — the first thing in front of the player
+    // when they walk in, which is what a greeter should be.
+    x: 10.0,
+    y: 8.6,
     name: "Director Rowan Hale",
     role: "Director of Field Studies",
     dialogue: () =>
       `History does not need another hero. It needs someone willing to follow the evidence. ${progress.completedCases.length ? `You have archived ${progress.completedCases.length} Unit 1 case${progress.completedCases.length === 1 ? "" : "s"}. Read what the record supports before deciding what it means.` : "The Institute needs Chroniclers who can separate a compelling story from evidence that can be examined."}`,
   },
   amani: {
-    x: 10.5,
-    y: 5.0,
+    // Working the record stacks, in the open cross-aisle below them.
+    x: 8.0,
+    y: 4.8,
     name: "Dr. Amani Soto",
     role: "Archive Researcher",
     dialogue: () =>
       "Context is not an answer key. Start with the record, write what you notice, then compare your reasoning with the Archive notes.",
   },
   julian: {
-    x: 16.5,
-    y: 8.5,
+    // In the south aisle short of the Navigation Table dais, west of the player's approach to it.
+    x: 15.5,
+    y: 8.9,
     name: "Professor Julian Park",
     role: "Route Historian",
     dialogue: () =>
       `The navigation table is ready. ${progress.unlocked.length > 1 ? "New Unit 1 routes are now available for review." : "The Caribbean route is the only active route for now."}`,
   },
   trophy: {
-    // The display plinth's south face. Its rect is (3,3)-(5,5), so the player stands at ~(4,5.6).
+    // The display plinth's south face. Its rect is (3,2)-(5,4) and the open cross-aisle starts
+    // directly below it, so the player stands at ~(4,4.1) — on the rug, 0.1 from this point.
     x: 4.0,
-    y: 5.0,
+    y: 4.0,
     name: "Preservation Case",
     role: "Unit 1 badge display",
     dialogue: () => {
@@ -1364,10 +1377,11 @@ export const HUB_TARGETS = {
     },
   },
   table: {
-    // The Navigation Table's south face; its rect is (17,5)-(20,7), and targetReach() gives this
-    // one a wider 1.65 radius, so the whole south side of the dais is a valid approach.
+    // The Navigation Table's south face; its rect is (17,6)-(20,8), and targetReach() gives this
+    // one a wider 1.65 radius, so the whole open south aisle below the dais is a valid approach —
+    // including the cell Recall to Institute now spawns into, at y + 0.6.
     x: 18.5,
-    y: 7.0,
+    y: 8.0,
     name: "Chronicle Navigation Table",
     role: "Archive interface",
     dialogue: () =>
@@ -1492,31 +1506,46 @@ function safeInstituteSpawn(x = 11.5, y = 9, facing = "up") {
   hubDialogueId = null;
   progress.currentHubRoom = "main";
 }
+/**
+ * Where a Chronotravel run puts the player when it ends — in the open south aisle just below the
+ * Navigation Table, facing it.
+ *
+ * Both recall paths used to arrive at the Archive Room door in the *north* wall, which is the far
+ * corner of the hall from the object the player left through, so every return began with the same
+ * walk back across the room. Spread as `safeInstituteSpawn(...instituteRecallSpawn())` from both, so
+ * the two can't drift apart the way six hardcoded spawn literals did before Phase 57.
+ */
+function instituteRecallSpawn() {
+  return [HUB_TARGETS.table.x, HUB_TARGETS.table.y + 0.6, "up"];
+}
 let hubDialogueId = null;
 // Small loops, each entirely on open floor of the room institute-hall.tmj paints — a patrol point
 // inside a collision rect makes isHubNpcBlocked() refuse the step and the NPC judders in place.
 // Deliberately staggered in shape as well as timing so the three don't read as marching in lockstep.
-const HUB_NPC_PATROLS = {
-  // Greeting the player near the foyer entrance, west of the runner.
+// Both open bands run y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the south aisle) against the
+// generated blocks, so every waypoint below is inside one of those two strips — which is also what
+// tests/unit/field-map-coordinates.test.js asserts, waypoint by waypoint.
+export const HUB_NPC_PATROLS = {
+  // Greeting the player in the open floor in front of the foyer entrance, west of the runner rug.
   director: [
-    { x: 9.5, y: 8.5 },
-    { x: 10.1, y: 8.5 },
-    { x: 10.1, y: 9.0 },
-    { x: 9.4, y: 9.0 },
+    { x: 9.6, y: 8.6 },
+    { x: 10.4, y: 8.6 },
+    { x: 10.4, y: 9.2 },
+    { x: 9.6, y: 9.2 },
   ],
-  // Working the record stacks in the north cross-aisle.
+  // Working the record stacks from the cross-aisle below them.
   amani: [
-    { x: 10.5, y: 5.0 },
-    { x: 11.3, y: 5.0 },
-    { x: 11.3, y: 5.4 },
-    { x: 10.5, y: 5.4 },
+    { x: 7.6, y: 4.6 },
+    { x: 8.4, y: 4.6 },
+    { x: 8.4, y: 5.2 },
+    { x: 7.6, y: 5.2 },
   ],
-  // On the walk-up to the Navigation Table dais, west of the player's approach lane.
+  // In the south aisle short of the Navigation Table dais, clear of the player's approach to it.
   julian: [
-    { x: 16.5, y: 8.5 },
-    { x: 17.1, y: 8.5 },
-    { x: 17.1, y: 9.0 },
-    { x: 16.4, y: 9.0 },
+    { x: 15.2, y: 8.9 },
+    { x: 15.9, y: 8.9 },
+    { x: 15.9, y: 9.4 },
+    { x: 15.2, y: 9.4 },
   ],
 };
 const hubNpcRuntime = Object.fromEntries(
@@ -1540,7 +1569,11 @@ let lastHubMoveAt = 0;
 function hubTargetState(id) {
   return hubNpcRuntime[id] || activeHubTargets()[id];
 }
-function hubFootBoxFor(x, y) {
+// Exported for tests/unit/field-map-coordinates.test.js's reachability flood fill. The hub's foot
+// box is NOT footBoxFor() — it is narrower (0.56 vs 0.68) and sits higher relative to the anchor —
+// so a room walked with the field box measures gaps the player cannot actually fit through, and
+// vice versa. Both hub rooms' assertions used the field box until Phase 58 caught it.
+export function hubFootBoxFor(x, y) {
   return { x1: x - 0.28, x2: x + 0.28, y1: y - 0.06, y2: y + 0.44 };
 }
 function hubRectBlocked(foot) {
@@ -8809,8 +8842,8 @@ function handleFieldClick(target, action) {
   }
   if (action === "field-recall") {
     progress.activeFieldNpc = null;
-    progress.hubNotice = "Temporal recall complete. You returned through the Archive room beacon.";
-    safeInstituteSpawn(HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6, "down");
+    progress.hubNotice = "Temporal recall complete. You rematerialized at the Navigation Table.";
+    safeInstituteSpawn(...instituteRecallSpawn());
     progress.currentScreen = "institute";
     save();
     render();
@@ -9061,7 +9094,7 @@ function handleReviewClick(target, action) {
     progress.activeCaseId = null;
     progress.hubNotice =
       "Field record received. The Archive has preserved your Codex transmission.";
-    safeInstituteSpawn(HUB_TARGETS.archiveDoor.x, HUB_TARGETS.archiveDoor.y + 0.6, "down");
+    safeInstituteSpawn(...instituteRecallSpawn());
     progress.currentScreen = "return-warp";
     save();
     render();
