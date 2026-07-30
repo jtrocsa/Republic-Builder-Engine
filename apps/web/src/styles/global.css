@@ -1793,28 +1793,59 @@ select {
   box-shadow: 0 18px 38px rgba(var(--c-black-rgb), 0.28);
   background: linear-gradient(135deg, #f3e5c0, #d8bf88);
 }
-.document-paper span {
+/* The record's own masthead — what this document is, printed on the document. Phase 58 moved
+   Creator/Date/Record here from a <dl> in the reader's right-hand column: they describe the paper,
+   so they belong on the paper. Shared by .document-paper and .document-image. */
+.document-masthead span {
+  display: block;
   font:
     700 0.64rem "Cinzel",
     serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.document-paper blockquote {
-  margin: 26px 0;
+.document-masthead dl {
+  display: grid;
+  gap: 3px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(73, 51, 30, 0.32);
+}
+.document-masthead dl div {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+/* The bare `dt`/`dd` rules further down set gold-on-navy for the dark screens that use definition
+   lists (the teacher dashboard, the case detail panel). Both colours have to be restated here or
+   the masthead renders pale gold text on parchment. */
+.document-masthead dt {
+  color: #6b4a24;
   font:
-    600 1.48rem/1.55 "Spectral",
+    700 0.62rem "Cinzel",
+    serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.document-masthead dd {
+  margin: 0;
+  color: #3f2c17;
+  font:
+    500 0.84rem/1.4 "DM Sans",
+    sans-serif;
+}
+.document-paper blockquote {
+  margin: 22px 0 0;
+  font:
+    600 1.36rem/1.55 "Spectral",
     serif;
 }
 .document-paper p {
+  margin: 22px 0 0;
   font:
-    600 1.36rem/1.52 "Spectral",
+    600 1.22rem/1.55 "Spectral",
     serif;
-}
-.document-paper small {
-  font:
-    500 0.78rem/1.5 "DM Sans",
-    sans-serif;
 }
 .document-image {
   width: 100%;
@@ -1824,11 +1855,14 @@ select {
   background: #d8c18c;
   color: #44331f;
 }
+.document-image .document-masthead {
+  padding: 4px 4px 12px;
+}
 .document-image img {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 500px;
+  max-height: 420px;
   object-fit: contain;
 }
 .document-image figcaption {
@@ -1868,18 +1902,9 @@ select {
 .reader-copy h1 {
   font-size: clamp(2.5rem, 4.4vw, 4.7rem);
 }
-.reader-copy dl {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  margin: 20px 0;
-}
-.reader-copy dl div {
-  padding: 11px;
-  border: 1px solid rgba(240, 204, 123, 0.22);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
-}
+/* `.reader-copy dl` used to style a Creator/Date/Record trio here, beside the document rather than on
+   it. Phase 58 moved that onto the paper itself as `.document-masthead` — the user's note was
+   specifically that these belong on the document — so the rules went with it. */
 dt {
   color: #edca70;
   font:
@@ -3259,11 +3284,12 @@ dd {
   .codex-grid {
     grid-template-columns: 1fr;
   }
-  .reader-copy dl {
-    grid-template-columns: 1fr;
-  }
   .reader-art {
     padding: 18px;
+  }
+  .document-masthead dl div {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
   .document-paper {
     padding: 26px 22px;

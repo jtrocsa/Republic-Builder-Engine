@@ -325,6 +325,35 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("source-reader"));
   });
 
+  test("source reader: a primary source that is laid out as prose", async ({ page }) => {
+    // `taino-context` in the test above is the *one* source in the game that genuinely is secondary
+    // context, so it is the only one whose masthead looked right before Phase 58. This is a primary
+    // source that also carries `visual: "context"` — 8 of the other 12 do — and it was therefore
+    // captioned "Secondary context record" and footed "Background evidence, not a Taíno-authored
+    // primary source". Its `record` is also one of the longest in the content, so it is the masthead's
+    // layout case: a value that has to wrap beside its label.
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-004",
+      unlocked: ["case-001", "case-004"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    // The charter is carried by the settlement minister — same route as
+    // tests/e2e/field-source-anchors.spec.js walks.
+    await walkToNpc(page, "settlement-minister");
+    await page.keyboard.press("e");
+    await page
+      .locator(
+        '.field-speech-bubble [data-action="start-source-activity"][data-source="riverbend-charter"]'
+      )
+      .click();
+    await expect(page.locator(".reader-shell")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("source-reader-primary-prose"));
+  });
+
   test("archive challenges, review, completion, codex, and reconstruction", async ({ page }) => {
     await seedProgress(page, { currentScreen: "archive-challenges", selectedUnitId: "unit-01" });
     await loadSeededSave(page);
