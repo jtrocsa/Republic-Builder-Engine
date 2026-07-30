@@ -2232,44 +2232,102 @@ dd {
     serif;
 }
 .mcq-block article {
-  padding: 14px 0;
+  display: grid;
+  gap: 10px;
+  padding: 18px 0;
   border-top: 1px solid rgba(var(--c-gold-rgb), 0.18);
 }
 .mcq-block article:first-of-type {
   border-top: 0;
+  padding-top: 4px;
 }
 .mcq-block article > p {
-  margin: 0 0 10px;
-  color: #dde6e2;
+  margin: 0;
+  color: #e9f1ee;
+  font-size: 1.02rem;
   line-height: 1.55;
 }
+.mcq-block article > p > b {
+  color: var(--gold-soft);
+  font-family: "Cinzel", serif;
+}
+/* The review's options are direct children of the <article>, not wrapped in a .quest-choices grid, so
+   the gap between them comes from the article's own grid — one spacing story either way. */
+.mcq-block article > .choice + .choice {
+  margin-top: -4px;
+}
+/* ONE rule set for every multiple-choice option in the game: the Archive Review's checkpoint
+   (main.js's `.mcq-block`) and all four quest renderers' options (`.quest-choices`, from
+   quest-types/generic/mcq-quest.js).
+
+   Before Phase 58 these were two shapes with two layouts, and the quest one rendered its *answer
+   text* at `700 0.65rem "Cinzel"` in gold, clipped to a 22px box — because `.choice span` below was
+   the A/B/C/D badge rule, `renderMcqQuest()` wrapped each option's text in a bare `<span>`, and the
+   only override (`.quest-choices .choice span`) reset display and width but neither font nor colour.
+   That was every option on every mission screen in the game, which is what the playtest report meant
+   by "the multiple choice text is small and the UI looks bad".
+
+   The badge and the text are now `.choice-badge` / `.choice-text`, named at both call sites, so the
+   selector cannot silently reclaim the wrong element again. */
 .choice {
-  display: grid;
-  grid-template-columns: 20px 26px 1fr;
-  gap: 8px;
-  align-items: center;
-  margin: 7px 0;
-  padding: 9px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.15);
-  border-radius: 8px;
-  color: #c5d4d1;
-  font-size: 0.86rem;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e4f0ee;
+  font-size: 1rem;
+  line-height: 1.55;
   cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+.choice:hover {
+  border-color: rgba(var(--c-gold-rgb), 0.5);
+  background: rgba(255, 255, 255, 0.085);
+}
+/* On the label, not the input: the whole row is the hit target, so the whole row shows focus. */
+.choice:focus-within {
+  border-color: var(--gold);
+  outline: 2px solid rgba(var(--c-gold-rgb), 0.38);
+  outline-offset: 2px;
+}
+.choice:has(input:checked) {
+  border-color: var(--gold);
+  background: rgba(var(--c-gold-rgb), 0.13);
+  color: #fff6e0;
 }
 .choice input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 4px 0 0;
   accent-color: #e0b45b;
 }
-.choice span {
+.choice-badge {
+  flex: none;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 25px;
+  height: 25px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.34);
-  border-radius: 5px;
+  border-radius: 6px;
   color: #e8c66f;
   font:
-    700 0.65rem "Cinzel",
+    700 0.72rem "Cinzel",
     serif;
+}
+.choice:has(input:checked) .choice-badge {
+  border-color: var(--gold);
+  background: rgba(var(--c-gold-rgb), 0.2);
+  color: #ffe9b4;
+}
+.choice-text {
+  flex: 1;
 }
 .saq-block blockquote {
   margin: 0 0 14px;
@@ -5125,20 +5183,51 @@ dd {
   margin: 0.25em 0 0;
   font-size: 0.92rem;
 }
+/* The Spanish-camp POV checkpoint's options. Its markup predates `.choice` and is a bare
+   `<label><input> text`, so it can't share that class without touching the one screen it belongs to —
+   but it is multiple choice on a mission screen, so it gets the same size, spacing, hover and
+   selected treatment. Anything less makes one mission look like a different app. */
 .choice-stack {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   margin: 18px 0;
 }
 .choice-stack label {
   display: flex;
-  gap: 11px;
+  gap: 12px;
   align-items: flex-start;
-  padding: 16px;
+  padding: 14px 16px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.22);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.05);
-  line-height: 1.45;
+  color: #e4f0ee;
+  font-size: 1rem;
+  line-height: 1.55;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+.choice-stack label:hover {
+  border-color: rgba(var(--c-gold-rgb), 0.5);
+  background: rgba(255, 255, 255, 0.085);
+}
+.choice-stack label:focus-within {
+  border-color: var(--gold);
+  outline: 2px solid rgba(var(--c-gold-rgb), 0.38);
+  outline-offset: 2px;
+}
+.choice-stack label:has(input:checked) {
+  border-color: var(--gold);
+  background: rgba(var(--c-gold-rgb), 0.13);
+  color: #fff6e0;
+}
+.choice-stack input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 4px 0 0;
+  accent-color: #e0b45b;
 }
 .quest-practice-item {
   margin-bottom: 26px;
@@ -5173,31 +5262,13 @@ dd {
   font-style: normal;
   color: var(--gold-soft);
 }
+/* Layout only. Everything about how an option *looks* now lives on `.choice` itself, shared with the
+   Archive Review's checkpoint — this block used to restate the whole appearance and then attempt to
+   undo the badge rule leaking onto the answer text. */
 .quest-choices {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   margin: 0;
-}
-.quest-choices .choice {
-  display: flex;
-  gap: 11px;
-  align-items: flex-start;
-  padding: 16px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.22);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  line-height: 1.45;
-  color: #dff1ef;
-  cursor: pointer;
-}
-.quest-choices .choice input {
-  accent-color: #e0b45b;
-  margin-top: 3px;
-}
-.quest-choices .choice span {
-  display: block;
-  width: auto;
-  place-items: unset;
 }
 .activity-feedback {
   margin-top: 16px;

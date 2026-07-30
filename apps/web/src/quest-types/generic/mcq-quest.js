@@ -64,11 +64,17 @@ export function renderMcqQuest(quest, state = {}) {
   <div class="quest-choices">
     ${quest.choices
       .map(
+        // Two explicitly-classed spans, not a bare <span> around the answer text. `.choice span` is
+        // the A/B/C/D badge rule shared with the Archive Review's checkpoint (global.css), so an
+        // unclassed span here inherited the badge's own type — 0.65rem gold Cinzel, clipped to a
+        // 22px box — for every option in every mission in the game. The classes make the contract
+        // explicit in both directions so a future CSS edit cannot silently reclaim the element.
         (choice, index) => `<label class="choice">
       <input type="radio" name="mcq-${escapeHtml(quest.id)}" data-mcq-quest="${escapeHtml(quest.id)}" value="${index}" ${
         String(selected) === String(index) ? "checked" : ""
       }>
-      <span>${escapeHtml(choice)}</span>
+      <span class="choice-badge" aria-hidden="true">${String.fromCharCode(65 + index)}</span>
+      <span class="choice-text">${escapeHtml(choice)}</span>
     </label>`
       )
       .join("")}
