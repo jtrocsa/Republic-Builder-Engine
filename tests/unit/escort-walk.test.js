@@ -8,7 +8,11 @@
 
 import { describe, it, expect } from "vitest";
 
-import { createEscortWalk, stepEscort, sampleTrail } from "../../apps/web/src/engine/escort-walk.js";
+import {
+  createEscortWalk,
+  stepEscort,
+  sampleTrail,
+} from "../../apps/web/src/engine/escort-walk.js";
 
 const SPEED = 2.2;
 const GAP = 1.15;
