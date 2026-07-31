@@ -3,6 +3,13 @@ export const DEFAULT_PROGRESS = {
   profile: { name: "Chronicler", appearance: "a" },
   currentScreen: "institute",
   currentHubRoom: "main",
+  // Which interior of the active field map the player is standing in, or null for outdoors. The
+  // field equivalent of currentHubRoom: FIELD_MAPS[unit].interiors is keyed by this, and
+  // activeFieldMap() resolves through it, so an interior is read by exactly the code an outdoor
+  // map is. `fieldReturn` is where to put them back when they step out — captured on entry rather
+  // than recomputed from the door, so leaving lands them where they came in from.
+  currentFieldRoom: null,
+  fieldReturn: null,
   selectedUnitId: "unit-01",
   selectedCaseId: "case-001",
   activeCaseId: null,

@@ -63,14 +63,22 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 // a defect whether or not anything interactive is standing in it.
 const STEP = 0.1;
 
-function hubTraversal({ grid, blocks, spawn }) {
-  // Mirrors isHubBlocked(): the edge test, then the foot box against every collision rect.
+// `footBox` and `margins` are parameters rather than hardcoded so a field interior can be flood
+// filled by the same code as a hub room. The two surfaces differ only in which foot box collision
+// uses and how close to the wall the edge test lets you stand — the reachability question, and the
+// answer's shape, are identical. Defaults reproduce the hub exactly, so existing callers are
+// unchanged.
+const HUB_MARGINS = { left: 0.6, top: 0.8, right: 1.2, bottom: 1.2 };
+const FIELD_MARGINS = { left: 1.2, top: 0.9, right: 1.2, bottom: 1.0 };
+
+function hubTraversal({ grid, blocks, spawn, footBox = hubFootBoxFor, margins = HUB_MARGINS }) {
+  // Mirrors isHubBlocked()/isFieldBlocked(): the edge test, then the foot box against every rect.
   const open = (x, y) =>
-    x >= 0.6 &&
-    y >= 0.8 &&
-    x <= grid.columns - 1.2 &&
-    y <= grid.rows - 1.2 &&
-    !blocks.some((b) => rectsOverlap(hubFootBoxFor(x, y), b));
+    x >= margins.left &&
+    y >= margins.top &&
+    x <= grid.columns - margins.right &&
+    y <= grid.rows - margins.bottom &&
+    !blocks.some((b) => rectsOverlap(footBox(x, y), b));
 
   const key = (i, j) => `${i},${j}`;
   const at = (i) => Number((i * STEP).toFixed(4));
@@ -491,6 +499,95 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     expect(afloat).toEqual([]);
   });
 });
+
+// --- field interiors ------------------------------------------------------------------------------
+// The rooms a field map opens into (Phase 65). Enrolled automatically: every interior declared on
+// any FIELD_MAPS entry is picked up here, the same way describe.each above picks up a new map.
+//
+// An interior fails differently from an outdoor map, which is why it gets its own suite rather than
+// joining the one above. There is no coastline to fall into and no route to strand — the failure is
+// a room the player walks into and cannot walk out of, or a doorstep standing somewhere the outdoor
+// map does not let them reach. Both are silent: the door renders, the entry works, and the player
+// is simply stuck. So the assertions are traversal-shaped, reusing the flood fill written for the
+// hub rooms, which exists because the Main Hall shipped with exactly this class of defect.
+const FIELD_INTERIORS = Object.entries(FIELD_MAPS).flatMap(([unitId, map]) =>
+  Object.values(map.interiors || {}).map((room) => [`${unitId} · ${room.id}`, map, room])
+);
+
+describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
+  "%s interior coordinates",
+  (_label, outdoor, room) => {
+    const grid = room.grid;
+    const walk = () =>
+      hubTraversal({
+        grid,
+        blocks: room.blocks,
+        spawn: [room.entry.x, room.entry.y],
+        footBox: footBoxFor,
+        margins: FIELD_MARGINS,
+      });
+
+    it("declares a 48px grid, matching every other surface", () => {
+      expect(grid.tile).toBe(FIELD_GRID.tile);
+      expect(grid.columns).toBeGreaterThan(0);
+      expect(grid.rows).toBeGreaterThan(0);
+    });
+
+    it("puts the player somewhere they can stand on entry", () => {
+      const traversal = walk();
+      expect(traversal.open(room.entry.x, room.entry.y)).toBe(true);
+      // A zero-size reachable region means the flood fill never started — the entry itself is
+      // inside a wall, and the room would open onto a frozen player.
+      expect(traversal.reachedCount).toBeGreaterThan(0);
+    });
+
+    it("lets the player reach the way out from where they came in", () => {
+      // The interaction reach the exit marker is gated on, so "the exit exists" and "the exit can
+      // be used" cannot disagree.
+      expect(walk().canReach(room.exit.x, room.exit.y, 1.45)).toBe(true);
+    });
+
+    it("has no sealed pocket of floor", () => {
+      const { stranded } = walk();
+      expect(pocketSummary(stranded)).toBe("none");
+    });
+
+    it("stands its doorstep somewhere the outdoor map can be walked to", () => {
+      // The door lives on the outdoor map, so it is checked against the outdoor map's land mask and
+      // collision — a doorstep stamped inside its own building's rect is reachable by nobody.
+      const { x, y } = room.door;
+      expect(x).toBeGreaterThan(0);
+      expect(y).toBeGreaterThan(0);
+      expect(x).toBeLessThan(FIELD_GRID.columns);
+      expect(y).toBeLessThan(FIELD_GRID.rows);
+      const nearby = [];
+      for (let dx = -1.45; dx <= 1.45 + 1e-9; dx += 0.1) {
+        for (let dy = -1.45; dy <= 1.45 + 1e-9; dy += 0.1) {
+          if (Math.hypot(dx, dy) > 1.45) continue;
+          if (isFieldGroundStandable(outdoor, x + dx, y + dy)) nearby.push([dx, dy]);
+        }
+      }
+      expect(nearby.length).toBeGreaterThan(0);
+    });
+
+    it("keeps its people and records off the furniture", () => {
+      const traversal = walk();
+      for (const npc of room.npcs) {
+        expect(traversal.open(npc.x, npc.y), `${npc.id} is inside a wall`).toBe(true);
+      }
+      for (const [id, point] of Object.entries(room.sourcePoints)) {
+        if (point.anchor?.npc) {
+          expect(
+            room.npcs.some((npc) => npc.id === point.anchor.npc),
+            `${id} anchors to an NPC not in this room`
+          ).toBe(true);
+          continue;
+        }
+        expect(traversal.canReach(point.x, point.y, 1.55), `${id} is unreachable`).toBe(true);
+      }
+    });
+  }
+);
 
 // The Institute Main Hall. Same treatment as the field maps: a generated .tmj, generated collision,
 // and hand-placed targets/spawns around the furniture — plus, as of Phase 58, the traversal check

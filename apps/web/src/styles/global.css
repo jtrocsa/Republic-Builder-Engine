@@ -4950,6 +4950,74 @@ dd {
   place-items: center;
 }
 /* ---------------------------------------------------------------------------
+   .field-door — a building you can walk into (Phase 65)
+   ---------------------------------------------------------------------------
+   Written once, here, in the world-button language the recall beacon and the record signals already
+   speak: a mark on a thing in the world with a label pill under it, not a UI card parked on the
+   grass. Deliberately quieter than `.recall-beacon` — recall is the one way off the map and should
+   stay the loudest thing on it, while a doorway is ordinary furniture the player passes constantly.
+   Restyle in place rather than appending an override layer; that is how `.source-signal--world`
+   accumulated the six competing declarations documented below. */
+.field-door {
+  position: absolute;
+  z-index: 9;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.field-door i {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(6, 35, 48, 0.82);
+  color: var(--gold-soft);
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1;
+  transition: box-shadow 200ms ease;
+}
+.field-door span {
+  white-space: nowrap;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(6, 35, 48, 0.88);
+  color: var(--ink);
+  font:
+    700 10px "Cinzel",
+    serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* Hidden until the player is close, matching `.source-signal--world small` — six labels shouting
+     across a market street is the clutter the marker consolidation existed to remove. */
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.field-door:hover i,
+.field-door.is-near i {
+  box-shadow: 0 0 16px rgba(var(--c-gold-rgb), 0.55);
+}
+.field-door:hover span,
+.field-door.is-near span {
+  opacity: 1;
+}
+/* The way out reads as an exit, not another destination. */
+.field-door--exit i {
+  border-color: rgba(100, 219, 235, 0.55);
+  color: #dffcff;
+}
+.field-door--exit span {
+  opacity: 1;
+}
+/* ---------------------------------------------------------------------------
    .source-signal--world — the single consolidated rule (Phase 56)
    ---------------------------------------------------------------------------
    This selector had accumulated six chronologically-layered redeclarations from separate hotfix

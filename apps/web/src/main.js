@@ -868,8 +868,11 @@ export function fieldNavGridFor(map) {
     fieldNavGrids.set(
       map.id,
       createNavGrid({
-        columns: FIELD_GRID.columns,
-        rows: FIELD_GRID.rows,
+        // The map's own size, not FIELD_GRID's — an interior is a different shape from the 56x36
+        // outdoor map it opens off, and routing it on the outdoor grid would plan walks through
+        // cells that do not exist in the room.
+        columns: (map.grid || FIELD_GRID).columns,
+        rows: (map.grid || FIELD_GRID).rows,
         roads: map.roads,
         occupied: stationedPosts(map.behaviours),
         isStandable: (x, y) => isFieldGroundStandable(map, x, y),
@@ -955,8 +958,8 @@ function updateFieldNpcs(now = performance.now()) {
 
     const node = nodes.get(id);
     if (!node) return;
-    node.style.left = `${(state.x * FIELD_GRID.tile).toFixed(1)}px`;
-    node.style.top = `${(state.y * FIELD_GRID.tile).toFixed(1)}px`;
+    node.style.left = `${(state.x * activeFieldGrid().tile).toFixed(1)}px`;
+    node.style.top = `${(state.y * activeFieldGrid().tile).toFixed(1)}px`;
     node.classList.toggle("is-walking-npc", state.walking);
     node.dataset.facing = state.facing;
     const npc = npcsById.get(id);
@@ -1569,9 +1572,35 @@ export const FIELD_MAPS = {
     worldMarkup: commonCauseWorldMarkup,
   },
 };
-function activeFieldMap() {
+/** The unit's outdoor map, whatever room the player is currently standing in. */
+function activeFieldOutdoorMap() {
   const unit = unitForCase(progress.activeCaseId);
   return FIELD_MAPS[unit?.id] || FIELD_MAPS["unit-01"];
+}
+/**
+ * The surface the player is on — the unit's outdoor map, or one of its interiors.
+ *
+ * An interior is deliberately the *same shape* as an outdoor map: `id`, `grid`, `isLand`, `blocks`,
+ * `roads`, `npcs`, `behaviours`, `sourcePoints`, `worldMarkup`. That is what makes this one function
+ * the whole switch — isFieldBlocked(), isFieldGroundStandable(), fieldNavGridFor(),
+ * buildFieldNpcRuntime(), updateFieldProximityUi() and nearestFieldInteraction() already read a map
+ * through this call, so they carried over to interiors without being touched. Mirrors the hub's
+ * activeHubGrid()/activeHubBlocks()/activeHubTargets() trio, which solves the same problem for
+ * the three Institute rooms.
+ */
+function activeFieldMap() {
+  const outdoor = activeFieldOutdoorMap();
+  const room = progress.currentFieldRoom;
+  return (room && outdoor.interiors?.[room]) || outdoor;
+}
+/** Every field surface declares its own size; only the outdoor maps share FIELD_GRID's 56x36. */
+function activeFieldGrid() {
+  return activeFieldMap().grid || FIELD_GRID;
+}
+const isInsideFieldInterior = () => activeFieldMap() !== activeFieldOutdoorMap();
+/** The interiors of the active unit's map, as a list, each carrying its own id. */
+function fieldInteriors() {
+  return Object.values(activeFieldOutdoorMap().interiors || {});
 }
 const activeFieldCaseId = () => progress.activeCaseId || "case-001";
 
@@ -1681,6 +1710,33 @@ export const ARCHIVE_ROOM_GRID = { columns: 20, rows: 12, tile: 48 };
 // transcribed by eye from the generator's trailing comments — the last hand-maintained collision
 // array in the game, three phases after every other map's was derived from its stamps.
 export const ARCHIVE_ROOM_BLOCK_RECTS = ARCHIVE_ROOM_BLOCKS;
+
+// --- field interiors -------------------------------------------------------------------------------
+// No map declares an `interiors` block yet; the first are Unit 4's printing office and canal-side
+// tavern. The runtime below is complete and was verified end to end (enter, walk, collide, centre
+// the camera, reload mid-room, exit) against a scaffold interior that reused archive-room.tmj —
+// removed rather than shipped, because a storehouse opening into a copy of the Archive Room is
+// incoherent content on a unit students are already playing.
+//
+// The shape a map attaches, when it has one:
+//
+//   FIELD_MAPS["unit-04"].interiors = {
+//     "canal-print-shop": {
+//       id, grid, isLand, blocks, roads, npcs, behaviours, sourcePoints, worldMarkup,
+//       entry: { x, y, facing },   // where the player lands inside
+//       exit:  { x, y },           // the threshold that puts them back outdoors
+//       door:  { x, y, label },    // the doorstep on the OUTDOOR map
+//     },
+//   };
+//
+// Two things that are not obvious and cost time to rediscover:
+//
+// 1. Attach it here, after this line — not inline in the FIELD_MAPS literal above. An interior's
+//    grid and blocks are `const`s declared further down the file than FIELD_MAPS, and reading one
+//    from an object literal that evaluates earlier is a temporal-dead-zone ReferenceError that takes
+//    the app down on boot, not a lint warning. The same hazard is recorded on the field boot guard.
+// 2. An interior is deliberately the same shape as an outdoor map, which is what lets
+//    activeFieldMap() hand back either one and leave every consumer untouched. Keep it that way.
 // Both coordinates are chosen against the furniture the generator stamps, and the generator's header
 // names them as load-bearing in the other direction too. Each sits on the *face* of its object; the
 // player stands roughly 0.6 tiles clear, which is inside targetReach() and outside the rect.
@@ -2608,7 +2664,10 @@ function stormHeldVector() {
 
 function sceneForMusic() {
   if (progress.currentScreen === "field")
-    return progress.activeFieldNpc ? "dialogue" : activeFieldMap().musicScene;
+    // The outdoor map's scene, deliberately, even when the player is inside one of its rooms:
+    // stepping through a doorway should not restart the track. An interior declares no musicScene
+    // of its own for exactly that reason.
+    return progress.activeFieldNpc ? "dialogue" : activeFieldOutdoorMap().musicScene;
   if (
     progress.currentScreen === "institute" ||
     progress.currentScreen === "archive" ||
@@ -7869,11 +7928,13 @@ function travelScreen() {
 }
 
 function fieldWorldStyle() {
-  return `width:${FIELD_GRID.columns * FIELD_GRID.tile}px;height:${FIELD_GRID.rows * FIELD_GRID.tile}px;transform:translate(${fieldCamera.x}px, ${fieldCamera.y}px)`;
+  const grid = activeFieldGrid();
+  return `width:${grid.columns * grid.tile}px;height:${grid.rows * grid.tile}px;transform:translate(${fieldCamera.x}px, ${fieldCamera.y}px)`;
 }
 
 function fieldPositionStyle() {
-  return `left:${(fieldMovement.x * FIELD_GRID.tile).toFixed(1)}px;top:${(fieldMovement.y * FIELD_GRID.tile).toFixed(1)}px;`;
+  const grid = activeFieldGrid();
+  return `left:${(fieldMovement.x * grid.tile).toFixed(1)}px;top:${(fieldMovement.y * grid.tile).toFixed(1)}px;`;
 }
 export { ellipse, rectsOverlap, footBoxFor };
 // Five overlapping ellipses, not four: the extra lobes give the island an irregular coastline
@@ -7909,7 +7970,8 @@ function npcFootBox(npc) {
   return { x1: state.x - 0.42, x2: state.x + 0.42, y1: state.y + 0.2, y2: state.y + 0.92 };
 }
 function isFieldBlocked(x, y) {
-  if (x < 1.2 || y < 0.9 || x > FIELD_GRID.columns - 1.2 || y > FIELD_GRID.rows - 1.0) return true;
+  const grid = activeFieldGrid();
+  if (x < 1.2 || y < 0.9 || x > grid.columns - 1.2 || y > grid.rows - 1.0) return true;
   const foot = footBoxFor(x, y);
   const landChecks = [
     [foot.x1, foot.y1],
@@ -7939,14 +8001,23 @@ function updateFieldPlayer() {
   );
   if (world) {
     const viewport = world.parentElement.getBoundingClientRect();
-    const worldWidth = FIELD_GRID.columns * FIELD_GRID.tile;
-    const worldHeight = FIELD_GRID.rows * FIELD_GRID.tile;
-    const px = fieldMovement.x * FIELD_GRID.tile;
-    const py = fieldMovement.y * FIELD_GRID.tile;
-    const minX = Math.min(0, viewport.width - worldWidth);
-    const minY = Math.min(0, viewport.height - worldHeight);
-    const camX = Math.round(Math.max(minX, Math.min(0, viewport.width / 2 - px)));
-    const camY = Math.round(Math.max(minY, Math.min(0, viewport.height / 2 - py)));
+    const grid = activeFieldGrid();
+    const worldWidth = grid.columns * grid.tile;
+    const worldHeight = grid.rows * grid.tile;
+    const px = fieldMovement.x * grid.tile;
+    const py = fieldMovement.y * grid.tile;
+    // A surface smaller than the frame is centred in it rather than pinned to the top-left, which
+    // is what the follow-and-clamp below degenerates to once the world stops being bigger than the
+    // viewport. Interiors are small enough to hit this on both axes; the outdoor maps never do.
+    // Still a pure function of player position — for a small room it is simply a constant one.
+    const camX =
+      worldWidth <= viewport.width
+        ? Math.round((viewport.width - worldWidth) / 2)
+        : Math.round(Math.max(viewport.width - worldWidth, Math.min(0, viewport.width / 2 - px)));
+    const camY =
+      worldHeight <= viewport.height
+        ? Math.round((viewport.height - worldHeight) / 2)
+        : Math.round(Math.max(viewport.height - worldHeight, Math.min(0, viewport.height / 2 - py)));
     fieldCamera = { x: camX, y: camY };
     world.style.transform = `translate(${camX}px, ${camY}px)`;
   }
@@ -7967,6 +8038,19 @@ function updateFieldProximityUi() {
     // An object-anchored marker never moves, but nothing stops a future point from anchoring to
     // something that does, and re-writing an unchanged style is free.
     node.style.cssText = sourcePointStyle(source.id);
+  });
+  // Doorsteps get the same proximity treatment as people and records — the label stays hidden until
+  // the player is within the reach that would actually let them walk through.
+  if (isInsideFieldInterior()) {
+    const room = activeFieldMap();
+    const exit = document.querySelector(".field-door--exit");
+    if (exit)
+      exit.classList.toggle("is-near", fieldDistanceTo(room.exit.x, room.exit.y) <= 1.45);
+    return;
+  }
+  fieldInteriors().forEach((room) => {
+    const node = document.querySelector(`.field-door[data-interior="${room.id}"]`);
+    if (node) node.classList.toggle("is-near", fieldDistanceTo(room.door.x, room.door.y) <= 1.45);
   });
 }
 function fieldHeldVector() {
@@ -8119,7 +8203,7 @@ function sourcePointPosition(sourceId) {
 }
 function sourcePointStyle(sourceId) {
   const { x, y } = sourcePointPosition(sourceId);
-  return `left:${(x * FIELD_GRID.tile).toFixed(1)}px;top:${(y * FIELD_GRID.tile).toFixed(1)}px`;
+  return `left:${(x * activeFieldGrid().tile).toFixed(1)}px;top:${(y * activeFieldGrid().tile).toFixed(1)}px`;
 }
 
 function fieldDistanceTo(x, y) {
@@ -8162,7 +8246,67 @@ function nearestFieldInteraction() {
     })
     .filter(Boolean)
     .filter((item) => item.distance <= 1.55);
-  return [...npcs, ...sources].sort((a, b) => a.distance - b.distance)[0] || null;
+  // Doors are a third kind of interaction, sorted into the same nearest-wins list at the same reach
+  // as a person — so standing between a doorstep and the NPC beside it gives you whichever you are
+  // actually closer to, rather than the door always winning because it was checked first.
+  const doors = isInsideFieldInterior()
+    ? [
+        {
+          type: "exit",
+          id: map.id,
+          label: "the way out",
+          distance: fieldDistanceTo(map.exit.x, map.exit.y),
+        },
+      ]
+    : fieldInteriors().map((room) => ({
+        type: "door",
+        id: room.id,
+        label: room.door.label,
+        distance: fieldDistanceTo(room.door.x, room.door.y),
+      }));
+  return [...npcs, ...sources, ...doors.filter((item) => item.distance <= 1.45)].sort(
+    (a, b) => a.distance - b.distance
+  )[0] || null;
+}
+/**
+ * Step into one of the active map's interiors, remembering where to put the player back.
+ *
+ * The return position is captured here rather than derived from the door on the way out, so a
+ * player who walks in from the north is put back on the north side of the doorstep.
+ */
+function enterFieldInterior(interiorId) {
+  const room = activeFieldOutdoorMap().interiors?.[interiorId];
+  if (!room) return;
+  progress.fieldReturn = { x: fieldMovement.x, y: fieldMovement.y, facing: fieldMovement.facing };
+  progress.currentFieldRoom = interiorId;
+  progress.activeFieldNpc = null;
+  progress.fieldNotice = "";
+  fieldMovement.x = room.entry.x;
+  fieldMovement.y = room.entry.y;
+  fieldMovement.facing = room.entry.facing || "up";
+  fieldMovement.moving = false;
+  fieldHeldKeys.clear();
+  playSfx("dialogue");
+  save();
+  render();
+}
+function exitFieldInterior() {
+  const room = activeFieldMap();
+  const back = progress.fieldReturn;
+  progress.currentFieldRoom = null;
+  progress.fieldReturn = null;
+  progress.activeFieldNpc = null;
+  progress.fieldNotice = "";
+  // Falling back to the doorstep covers a save written before this room existed, or a hand-edited
+  // one — never leave the player at whatever coordinate the interior happened to end on, which on
+  // a 56x36 outdoor map could be inside a wall or out at sea.
+  fieldMovement.x = back?.x ?? room.door?.x ?? activeFieldOutdoorMap().spawn.x;
+  fieldMovement.y = back?.y ?? room.door?.y ?? activeFieldOutdoorMap().spawn.y;
+  fieldMovement.facing = back?.facing || "down";
+  fieldMovement.moving = false;
+  fieldHeldKeys.clear();
+  save();
+  render();
 }
 function fieldTooFarNotice(label) {
   progress.fieldNotice = `Move closer to interact with ${label}.`;
@@ -8276,18 +8420,19 @@ function fieldNpcButton(npc) {
       ? `<em class="npc-source-badge ${availability === "secured" ? "is-secured" : ""}" aria-hidden="true">${availability === "secured" ? "✓" : "✦"}</em>`
       : "";
   const label = carried ? `${npc.name} — carries a record` : `Talk with ${npc.name}`;
-  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * FIELD_GRID.tile).toFixed(1)}px;top:${(state.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}<span>${esc(npc.label)}</span>${badge}</button>`;
+  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * activeFieldGrid().tile).toFixed(1)}px;top:${(state.y * activeFieldGrid().tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}<span>${esc(npc.label)}</span>${badge}</button>`;
 }
 function fieldDialogueBubble() {
   const npc = activeFieldMap().npcs.find((item) => item.id === progress.activeFieldNpc);
   if (!npc) return "";
   const state = fieldNpcState(npc);
-  const x = state.x * FIELD_GRID.tile;
-  const y = (state.y - 1.18) * FIELD_GRID.tile;
+  const grid = activeFieldGrid();
+  const x = state.x * grid.tile;
+  const y = (state.y - 1.18) * grid.tile;
   const edgeClass =
     x < 260
       ? " field-speech-bubble--left-edge"
-      : x > FIELD_GRID.columns * FIELD_GRID.tile - 300
+      : x > grid.columns * grid.tile - 300
         ? " field-speech-bubble--right-edge"
         : "";
   // A record-carrying NPC speaks first and hands the record over second. Routing straight to the
@@ -8304,8 +8449,32 @@ function fieldDialogueBubble() {
   return `<aside class="field-speech-bubble${edgeClass}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><b>${esc(npc.name)}</b><p>${esc(npc.text)}</p>${record}</aside>`;
 }
 function recallBeacon() {
-  const recall = activeFieldMap().recall;
-  return `<button class="recall-beacon" style="left:${(recall.x * FIELD_GRID.tile).toFixed(1)}px;top:${(recall.y * FIELD_GRID.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive room"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
+  // Outdoors only. Recalling to the Archive from inside a building would strand the return
+  // position in a room the player is no longer standing in; they step outside first.
+  if (isInsideFieldInterior()) return "";
+  const recall = activeFieldOutdoorMap().recall;
+  const grid = activeFieldGrid();
+  return `<button class="recall-beacon" style="left:${(recall.x * grid.tile).toFixed(1)}px;top:${(recall.y * grid.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive room"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
+}
+/**
+ * The doorstep markers on the outdoor map, and the threshold marker inside a room.
+ *
+ * Same visual language as the recall beacon and the record signals — a labelled world button the
+ * player walks to. Interaction is proximity-gated through nearestFieldInteraction() exactly like an
+ * NPC or a record, so clicking one from across the map moves nobody.
+ */
+function fieldDoorMarkers() {
+  const grid = activeFieldGrid();
+  if (isInsideFieldInterior()) {
+    const room = activeFieldMap();
+    return `<button class="field-door field-door--exit" style="left:${(room.exit.x * grid.tile).toFixed(1)}px;top:${(room.exit.y * grid.tile).toFixed(1)}px" data-action="field-exit-interior" aria-label="Step back outside"><i aria-hidden="true">↩</i><span>Step outside</span></button>`;
+  }
+  return fieldInteriors()
+    .map(
+      (room) =>
+        `<button class="field-door" style="left:${(room.door.x * grid.tile).toFixed(1)}px;top:${(room.door.y * grid.tile).toFixed(1)}px" data-action="field-enter-interior" data-interior="${esc(room.id)}" aria-label="Enter ${esc(room.door.label)}"><i aria-hidden="true">⌂</i><span>${esc(room.door.label)}</span></button>`
+    )
+    .join("");
 }
 function caribbeanWorldMarkup() {
   // The cartographer's table and the Spanish ships used to be CSS-drawn <div>s layered over the
@@ -8319,6 +8488,10 @@ function caribbeanWorldMarkup() {
 function riverbendWorldMarkup() {
   return `<canvas class="field-world-art" id="riverbendTiledCanvas" role="img" aria-label="Top-down colonial river settlement with a meetinghouse, clapboard dwellings, a barn, fenced crop plots, and a wharf on the river estuary"></canvas><canvas class="field-world-overlay" id="riverbendTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
+// An interior's worldMarkup follows the same two-canvas pattern as the maps above, and must use its
+// OWN canvas ids even if it draws a .tmj another surface also draws: renderTiledMapWithOverlay()
+// guards on `dataset.rendered`, so a shared id makes one surface's painted canvas count as proof the
+// other was painted too, and the second room renders as an empty frame.
 // Each map's briefing copy. There used to be a `defaultNotice` here too — a standing sentence printed
 // into #fieldNotice on arrival, which restated the `intro` right below it and then sat there for the
 // rest of the case. The notice is a status line, so it now says nothing until the game does.
@@ -8346,11 +8519,14 @@ function fieldScreen() {
   const caseId = activeFieldCaseId();
   const activeCase = caseById(caseId);
   const sources = sourcesForCase(caseId);
-  const copy = FIELD_COPY[map.id] || FIELD_COPY["unit-01"];
+  // Keyed on the outdoor map, not the active surface. Keyed on `map.id` this missed on every
+  // interior id and silently fell back to Unit 1's briefing — a student who walked into a building
+  // in the Chesapeake was told to follow the Caribbean shoreline.
+  const copy = FIELD_COPY[activeFieldOutdoorMap().id] || FIELD_COPY["unit-01"];
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -9006,6 +9182,9 @@ function render() {
     window.requestAnimationFrame(() => {
       updateFieldPlayer();
       updateFieldNpcs();
+      // Keyed off the active *surface* id, so an interior paints its own canvases rather than the
+      // outdoor map's. This is still the one genuinely hard-coded per-map switch in the field
+      // runtime — a new map or room adds a line here.
       if (activeFieldMap().id === "unit-02") renderRiverbendTiledMap();
       if (activeFieldMap().id === "unit-01") renderCaribbeanTiledMap();
       if (activeFieldMap().id === "unit-03") renderCommonCauseTiledMap();
@@ -9115,8 +9294,24 @@ function hydrateTeacherModeForStudent() {
   });
 }
 
-function resetFieldPosition() {
-  const spawn = activeFieldMap().spawn;
+/**
+ * Re-seed `fieldMovement`, which is runtime-only and so has to be rebuilt on every boot.
+ *
+ * `keepRoom` is the boot guard's, and only the boot guard's. Arriving at a case — by Chronotravel,
+ * by recall, by a reset, by a new game — always lands the player outdoors, so clearing the room is
+ * the default; leaving a stale one set would spawn them at an outdoor coordinate inside a 20x14
+ * room. A reload is the opposite case: the player was standing in a room a moment ago and expects
+ * to still be in it, exactly as `currentHubRoom` already survives a reload for the Institute's
+ * three rooms. Hence one flag rather than two functions — the position and the room have to be
+ * decided together or they disagree.
+ */
+function resetFieldPosition({ keepRoom = false } = {}) {
+  if (!keepRoom) {
+    progress.currentFieldRoom = null;
+    progress.fieldReturn = null;
+  }
+  const surface = activeFieldMap();
+  const spawn = surface.entry || surface.spawn;
   fieldMovement = {
     x: spawn.x,
     y: spawn.y,
@@ -9136,9 +9331,12 @@ function resetFieldPosition() {
 // unitForCase(), which is a `const` arrow declared several hundred lines below that point, so calling
 // it up there is a temporal-dead-zone ReferenceError that takes the whole app down on boot.
 if (progress.currentScreen === "field" && progress.activeCaseId) {
-  resetFieldPosition();
-  // Same reasoning as goToCase()'s: this guard puts the player back at the map's spawn, so whatever
-  // the notice was answering happened somewhere they are no longer standing.
+  // keepRoom: a reload is the one path that resumes an interior rather than arriving at a map. The
+  // saved room is preserved and the player re-seeded at that room's own entry, so reloading inside a
+  // building puts them back inside it — matching what currentHubRoom already does for the Institute.
+  resetFieldPosition({ keepRoom: true });
+  // Same reasoning as goToCase()'s: this guard puts the player back at the surface's entry point, so
+  // whatever the notice was answering happened somewhere they are no longer standing.
   progress.fieldNotice = "";
 }
 
@@ -9573,6 +9771,28 @@ function handleFieldClick(target, action) {
     };
     save();
     render();
+    return true;
+  }
+  if (action === "field-enter-interior") {
+    const interiorId = target.dataset.interior;
+    const room = activeFieldOutdoorMap().interiors?.[interiorId];
+    // Proximity-gated exactly like field-talk: a click on a doorstep across the map is a "move
+    // closer" notice, never a teleport-and-enter.
+    if (!room) return true;
+    if (fieldDistanceTo(room.door.x, room.door.y) > 1.45) {
+      fieldTooFarNotice(room.door.label);
+      return true;
+    }
+    enterFieldInterior(interiorId);
+    return true;
+  }
+  if (action === "field-exit-interior") {
+    const room = activeFieldMap();
+    if (fieldDistanceTo(room.exit.x, room.exit.y) > 1.45) {
+      fieldTooFarNotice("the way out");
+      return true;
+    }
+    exitFieldInterior();
     return true;
   }
   if (action === "field-recall") {
@@ -10968,6 +11188,8 @@ function handleWindowKeydown(event) {
           save();
           render();
         }
+        if (nearby.type === "door") enterFieldInterior(nearby.id);
+        if (nearby.type === "exit") exitFieldInterior();
         if (nearby.type === "source") {
           progress.activeFieldNpc = null;
           openSourceId = nearby.id;
