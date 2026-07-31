@@ -7,5 +7,32 @@
   "eslint.validate": ["javascript"],
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+
+  // Spell checking is configured in /cspell.json so that the CLI
+  // (npx cspell) and this editor share one dictionary. Word lists live
+  // in /.cspell/. Nothing to configure here.
+
+  // Supabase (project ref is already public in docs/architecture/PHASE-HISTORY.md).
+  // No password is stored: askForPassword prompts once per session, so this
+  // file stays safe to commit. If your project uses the IPv4 connection
+  // pooler, swap "server" for the pooler host from the Supabase dashboard
+  // (Project Settings -> Database) and set "username" to postgres.<project-ref>.
+  "sqltools.connections": [
+    {
+      "name": "Supabase - Chronicle",
+      "driver": "PostgreSQL",
+      "server": "db.rxhpxqbtrnswjevcuxon.supabase.co",
+      "port": 5432,
+      "database": "postgres",
+      "username": "postgres",
+      "askForPassword": true,
+      "connectionTimeout": 30,
+      "pgOptions": {
+        "ssl": {
+          "rejectUnauthorized": false
+        }
+      }
+    }
+  ]
 }

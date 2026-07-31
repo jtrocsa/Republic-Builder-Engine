@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en,en-GB",
+  "dictionaryDefinitions": [
+    {
+      "name": "chronicle-project",
+      "path": "./.cspell/project-words.txt",
+      "description": "Domain, engine, and tooling vocabulary for this repo.",
+      "addWords": true
+    },
+    {
+      "name": "chronicle-sources",
+      "path": "./.cspell/source-quotations.txt",
+      "description": "Period spellings quoted verbatim from primary sources.",
+      "addWords": false
+    }
+  ],
+  "dictionaries": ["chronicle-project", "chronicle-sources"],
+  "ignorePaths": [
+    "node_modules/**",
+    "**/dist/**",
+    "package-lock.json",
+    "test-results/**",
+    "playwright-report/**",
+    "coverage/**",
+    "**/*.tmj",
+    "**/*.png",
+    "apps/web/src/assets/**",
+    ".cspell/**"
+  ]
+}

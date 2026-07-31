@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["vite/client"],
+    "strict": false,
+    "resolveJsonModule": true
+  },
+  "include": ["apps/web/src/engine/**/*.js", "apps/web/src/repositories/**/*.js"],
+  "exclude": ["node_modules", "**/dist"]
+}
