@@ -3028,119 +3028,10 @@ dd {
 .director-extra-content[hidden] {
   display: none;
 }
-/* intro-hallway's real Tiled-rendered corridor (renderHallwayTiledMap(), same pattern as the
-   Archive Room's canvas — see docs/decision-log/0030-archive-room-tiled-interior.md) plus a
-   small door-art overlay cropped from the existing institute hub background. Portrait (narrower
-   than tall) since a corridor walked away from camera toward a door reads better tall than the
-   old landscape crop did. Sprite positions are driven by runHallwayWalk() in main.js patching
-   left/top inline, the same direct-DOM-patch convention used for hub/field movement. */
-.hallway-viewport {
-  position: relative;
-  width: min(300px, 78vw);
-  height: min(560px, 64vh);
-  margin: 0 auto 12px;
-  overflow: hidden;
-  border: 2px solid rgba(var(--c-gold-rgb), 0.5);
-  border-radius: 18px;
-  background: #04212d;
-  box-shadow: 0 20px 44px rgba(var(--c-black-rgb), 0.4);
-}
-/* Corridor framing: dark/teal vignette bands along both edges (echoing .director-scene__pillar's
-   gold/teal glow language) so the tile art reads as a hallway with walls on either side, since
-   the tileset draws floor/shelving accents but no wall tiles (see decision-log 0030). Pure CSS,
-   no new art. Painted above .hallway-scaler via ::before/::after rather than extra DOM nodes. */
-.hallway-viewport::before,
-.hallway-viewport::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 18%;
-  z-index: 2;
-  pointer-events: none;
-}
-.hallway-viewport::before {
-  left: 0;
-  background: linear-gradient(
-    to right,
-    rgba(4, 20, 28, 0.95) 0%,
-    rgba(23, 148, 158, 0.22) 60%,
-    rgba(4, 20, 28, 0) 100%
-  );
-}
-.hallway-viewport::after {
-  right: 0;
-  background: linear-gradient(
-    to left,
-    rgba(4, 20, 28, 0.95) 0%,
-    rgba(23, 148, 158, 0.22) 60%,
-    rgba(4, 20, 28, 0) 100%
-  );
-}
-/* Wraps the tile canvas + door overlay together so runHallwayWalk() can scale both as one unit
-   (the "dolly forward" effect) via a single transform, origin pinned to the door at the top. */
-.hallway-scaler {
-  position: absolute;
-  inset: 0;
-  transform-origin: 50% 0%;
-}
-.hallway-scaler canvas {
-  image-rendering: pixelated;
-}
-/* The far (top) end of the corridor: the Main Hall's panelled south wall with light spilling
-   through its open doorway, so the walk ends facing the same doors the player then spawns beside.
-
-   Drawn in CSS rather than cropped out of a bitmap. Until Phase 54 this was a `background-image`
-   slice of `chronicle-institute-hub.png` positioned at 29%/92% of a 650%-scaled copy — a set of
-   magic numbers that only meant anything relative to that one hand-drawn PNG, which the tiled
-   Main Hall rebuild retired. Gradients in the project's own navy/gold/timber palette need no
-   asset and don't go stale when the room beyond is re-laid-out. */
-.hallway-door {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 30%;
-  background:
-    /* warm light spilling out of the opening */
-    radial-gradient(
-      ellipse 34% 78% at 50% 100%,
-      rgba(var(--c-gold-rgb), 0.55),
-      rgba(var(--c-gold-rgb), 0.16) 55%,
-      transparent 78%
-    ),
-    /* the dark opening itself */
-    linear-gradient(
-        to right,
-        transparent 0 34%,
-        rgba(10, 22, 33, 0.92) 34% 66%,
-        transparent 66% 100%
-      ),
-    /* panelled wall either side, with a plank rhythm */
-    repeating-linear-gradient(to right, rgba(84, 56, 34, 1) 0 22px, rgba(66, 43, 26, 1) 22px 24px);
-  box-shadow: inset 0 -10px 26px rgba(var(--c-black-rgb), 0.45);
-}
-.hallway-sprite {
-  position: absolute;
-  width: 13%;
-  aspect-ratio: 48 / 56;
-  transform: translate(-50%, -50%);
-}
-/* The onboarding corridor scales its two figures with the viewport rather than pinning them to
-   the world's pixel size, so the sprite fills the box here instead of using --cast-w/--cast-h.
-   The percentage frame maths in .character-sprite is what makes that work unchanged. */
-.hallway-sprite .character-sprite {
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  transform: none;
-  filter: drop-shadow(0 6px 6px rgba(var(--c-black-rgb), 0.35));
-}
-/* Full-screen fade used for the hallway → Main Hall cut. Rendered by both introHallwayScreen()
-   (added to, then held, once the scripted walk reaches the door) and instituteMainRoomScreen()
-   (rendered already-active for one frame, then dropped a frame later so the transition reads as
-   a fade-in rather than a hard cut — see the hallwayFadeToInstitute handling in render()). */
+/* Full-screen black, used at both ends of the Entrance Hall → Main Hall cut: the doorway flicker
+   below plays on it, and instituteMainRoomScreen() then renders it already-active for one frame and
+   drops it a frame later so the arrival reads as a fade-in rather than a hard cut — see the
+   enterMainHallFromBlack handling in render(). */
 .scene-fade {
   position: fixed;
   inset: 0;
@@ -3153,9 +3044,88 @@ dd {
 .scene-fade.is-active {
   opacity: 1;
 }
+/* Walking through a door into a new area, the way the genre plays it: two hard cuts to black before
+   it holds, not a crossfade. `steps(1, end)` is what makes each stop a cut — the 480ms opacity
+   transition on the base rule is exactly what this must not do, hence the explicit `transition:
+   none`. `forwards` holds the final black frame, so the room swap lands underneath it and
+   completeHallwayEscort() can hang off `animationend` rather than a duplicated magic delay. */
+.scene-fade--doorway {
+  transition: none;
+  animation: doorway-flicker 900ms steps(1, end) forwards;
+}
+@keyframes doorway-flicker {
+  0%,
+  8% {
+    opacity: 0;
+  }
+  9%,
+  20% {
+    opacity: 1;
+  }
+  21%,
+  30% {
+    opacity: 0;
+  }
+  31%,
+  46% {
+    opacity: 1;
+  }
+  47%,
+  54% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .scene-fade {
     transition: none;
+  }
+  /* One straight cut to black, no pulses. main.js's timeout backstop covers the room swap here,
+     since with no animation there is no animationend to listen for. */
+  .scene-fade--doorway {
+    animation: none;
+    opacity: 1;
+  }
+}
+/* The Entrance Hall's dialogue bar. Reuses the director stage's typewriter rail wholesale
+   (#directorLineText / #directorContinueIndicator / #directorRevealRail, filled by
+   startIntroTypewriter()), but sits inside the room as a bar across the bottom of the page rather
+   than inside a full-screen scrim: the Director is standing right there on the map, and darkening
+   the room to talk to him would undo the reason the scene is in-world at all. */
+.hallway-dialogue {
+  position: relative;
+  z-index: 40;
+  max-width: min(1500px, 100% - 54px);
+  margin: 12px auto 0;
+  padding: 16px 20px 18px;
+  border: 2px solid rgba(var(--c-gold-rgb), 0.42);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(6, 26, 38, 0.96), rgba(3, 17, 26, 0.98));
+  box-shadow: 0 18px 40px rgba(var(--c-black-rgb), 0.45);
+  cursor: pointer;
+  text-align: left;
+}
+.hallway-dialogue__name {
+  margin: 0 0 6px;
+  font:
+    600 0.74rem/1 "Cinzel",
+    serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.hallway-dialogue .director-continue-indicator {
+  position: absolute;
+  right: 18px;
+  bottom: 12px;
+}
+@media (max-width: 900px) {
+  .hallway-dialogue {
+    max-width: calc(100% - 24px);
+    padding: 12px 14px 16px;
   }
 }
 @media (max-width: 700px) {
@@ -4006,13 +3976,16 @@ dd {
 /* `.institute-map__art` removed in Phase 54 — it styled the stretched `chronicle-institute-hub.png`
    that the tiled Main Hall replaced. Both Institute rooms now draw into canvases inside `.hub-world`
    and are styled by `.field-world-art` / `.field-world-overlay` like the field maps. */
-/* Both Institute rooms are camera rooms: the world is sized in px and scrolls inside this box rather
-   than being stretched to fit it. The Archive Room's 20x12 grid matches its frame exactly, so it
-   never scrolls at all. The Main Hall is 23x12 — one grid row shorter than its frame so nothing on
-   the north wall is ever clipped, and wider than it so the camera pans east and west. Its frame
-   therefore keeps the Archive Room's ratio rather than its own, and the extra width scrolls. */
+/* All three Institute rooms are camera rooms: the world is sized in px and scrolls inside this box
+   rather than being stretched to fit it. The Archive Room's 20x12 grid matches its frame exactly, so
+   it never scrolls at all. The Main Hall is 23x12 — one grid row shorter than its frame so nothing on
+   the north wall is ever clipped, and wider than it so the camera pans east and west. The Entrance
+   Hall is 20x18: the same width as the Archive Room, which is why all three share one ratio here,
+   and six rows taller than the frame so the camera pans north up the room as the Director leads the
+   player to the doors. That pan is the point of the room's proportions, not a side effect. */
 .institute-map--archive-room,
-.institute-map--main-hall {
+.institute-map--main-hall,
+.institute-map--hallway {
   aspect-ratio: 20/12;
 }
 /* The scrolling world of a camera-driven hub room. Sized in px by the screen that renders it

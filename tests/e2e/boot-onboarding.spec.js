@@ -1,13 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { PROGRESS_KEY } from "./helpers/progress-seed.js";
+import { PROGRESS_KEY, walkToHubNpc } from "./helpers/progress-seed.js";
 
-// Scenario 1: cold load -> identity creation -> lands on institute.
+// Scenario 1: cold load -> identity creation -> Entrance Hall -> Main Hall.
 // No seed here (a fresh profile) — this is the one spec that exercises the real onboarding
 // flow rather than jumping in via localStorage.
 test.describe("Boot and onboarding", () => {
   test("cold load through identity creation lands on institute", async ({ page }) => {
-    // Collapses the typewriter effect and the 5s hallway walk (main.js's prefersReducedMotion()
-    // checks), so the whole flow completes in well under a second of animation time.
+    // Collapses the typewriter effect and the Entrance Hall's doorway flicker (main.js's
+    // prefersReducedMotion() checks), so the whole flow completes in well under a second of
+    // animation time. The walk to the Director is real either way — it is player movement, not an
+    // animation, and walkToHubNpc() steers by position rather than by a fixed hold.
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
 
@@ -41,18 +43,39 @@ test.describe("Boot and onboarding", () => {
     await page.locator('[data-action="set-appearance"][data-value="a"]').click();
     await page.locator('[data-action="confirm-identity"]').click();
 
-    await expect(
-      page.locator('[data-action="intro-advance"][data-next="intro-hallway"]')
-    ).toBeVisible();
-    await page.locator('[data-action="intro-advance"][data-next="intro-hallway"]').click();
+    await expect(page.locator('[data-action="intro-advance"][data-next="hallway"]')).toBeVisible();
+    await page.locator('[data-action="intro-advance"][data-next="hallway"]').click();
 
-    await expect(page.locator("#instituteMap")).toBeVisible({ timeout: 10000 });
+    // The Entrance Hall. Phase 62 replaced a five-second scripted float with a walkable room, so
+    // this is where the player first controls anything: walk to Director Hale, then talk.
+    await expect(page.locator(".institute-map--hallway")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-hub-npc="director"]')).toBeVisible();
+    expect(await walkToHubNpc(page, "director")).toBe(true);
+    await expect(page.locator("#hubInteractPrompt")).toHaveText("Press E · Director Rowan Hale");
+
+    await page.keyboard.press("e");
+    const hallwayDialogue = page.locator(".hallway-dialogue");
+    await expect(hallwayDialogue).toBeVisible();
+
+    // Four beats, then the last press sets the Director walking and the player following. Clicking
+    // the bar is the same path as pressing E (see the hallway-dialogue-click handler), so this
+    // drives it the way the other intro screens are driven above.
+    for (let i = 0; i < 12; i += 1) {
+      if (!(await hallwayDialogue.isVisible().catch(() => false))) break;
+      await hallwayDialogue.click();
+      await page.waitForTimeout(40);
+    }
+
+    // The escort walk, then the doorway flicker, then the Main Hall with the tour waiting.
+    await expect(page.locator(".institute-map--main-hall")).toBeVisible({ timeout: 15000 });
 
     const stored = await page.evaluate(
       (key) => JSON.parse(window.localStorage.getItem(key) || "null"),
       PROGRESS_KEY
     );
     expect(stored.currentScreen).toBe("institute");
+    expect(stored.currentHubRoom).toBe("main");
+    expect(stored.tutorial.step).toBe("tour-intro");
     expect(stored.profile.name).toBe("Test Player");
   });
 });

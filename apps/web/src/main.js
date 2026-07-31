@@ -75,6 +75,7 @@ import {
   UNIT_03_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-03-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
+import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
 import landCoastlines from "./content/maps/land-coastlines.json";
@@ -222,7 +223,7 @@ import {
 import { evaluateSubmission } from "./engine/evaluator-client.js";
 import { spriteDirection, spriteSheetStyle, walkCycleSeconds } from "./engine/sprite-animation.js";
 import { createBehaviourState, stepBehaviour } from "./engine/npc-behaviour.js";
-import { buildCircuit, createNavGrid } from "./engine/npc-routing.js";
+import { buildCircuit, createNavGrid, findRoute } from "./engine/npc-routing.js";
 
 const app = document.querySelector("#app");
 // Director intro scene reveal cards — lookup keys, not literal paths, so content stays
@@ -1623,6 +1624,17 @@ const TUTORIAL_TOUR_STEPS = ["intro", "table", "archiveDoor", "trophy"];
 function isTutorialTourActive() {
   return typeof progress.tutorial?.step === "string" && progress.tutorial.step.startsWith("tour-");
 }
+/**
+ * Whether a scripted beat currently owns the hub, so the player's own input has to stand down.
+ *
+ * One concept, checked at the same three sites the tutorial tour's lock already used — the institute
+ * keydown handler, runHubMovementLoop() and interactWithHubTarget(). The Entrance Hall scene added a
+ * second reason to lock movement, and two independent locks checked at overlapping subsets of three
+ * places is how a screen ends up controllable during half of one cutscene.
+ */
+function isHubInputLocked() {
+  return isTutorialTourActive() || hallwayScene.phase !== "idle";
+}
 function currentTourStepId() {
   return isTutorialTourActive() ? progress.tutorial.step.slice("tour-".length) : null;
 }
@@ -1673,7 +1685,50 @@ function safeInstituteSpawn(x = 11.5, y = 9, facing = "up") {
 function instituteRecallSpawn() {
   return [HUB_TARGETS.table.x, HUB_TARGETS.table.y + 0.6, "up"];
 }
+/**
+ * Puts the player just inside the Entrance Hall's south doors with the scene wound back to the top.
+ *
+ * The counterpart to safeInstituteSpawn() for the one room that isn't the Main Hall by default. It
+ * resets `hallwayScene` as well as the position because both entry points want that: arriving from
+ * Registration, and resuming a save that was in this room when it was written.
+ */
+function enterHallwayRoom() {
+  stopHallwayScene();
+  hubHeldKeys.clear();
+  stopHubMovementLoop();
+  const [x, y, facing] = HALLWAY_SPAWN;
+  instituteMovement = { x, y, facing, moving: false, step: false, queued: null };
+  hubDialogueId = null;
+  Object.assign(hallwayNpcRuntime.director, {
+    ...HALLWAY_NPC_BEHAVIOURS.director.at,
+    facing: HALLWAY_NPC_BEHAVIOURS.director.facing,
+    walking: false,
+  });
+  progress.currentScreen = "institute";
+  progress.currentHubRoom = "hallway";
+  progress.tutorial.step = "hallway";
+}
+/** Cancels anything the Entrance Hall scene has in flight. Safe to call when nothing is running. */
+function stopHallwayScene() {
+  if (hallwayScene.frame) window.cancelAnimationFrame(hallwayScene.frame);
+  clearTimeout(hallwayScene.fadeTimer);
+  hallwayScene = { phase: "idle", escort: null, frame: null, lastAt: 0, fadeTimer: null };
+}
 let hubDialogueId = null;
+/**
+ * The Entrance Hall's one-shot scene, in one object rather than the five separate module lets the
+ * retired `intro-hallway` walk kept — so there is a single thing to read and a single thing to reset.
+ *
+ * `phase` is also the room's input lock (see isHubInputLocked()):
+ *   idle     an ordinary walkable hub room. The player has full control.
+ *   talking  the Director's briefing is on screen; movement is off and E advances a line.
+ *   escort   he is walking to the doors and the player is following him. No input at all.
+ *   flicker  the doorway transition is playing over the top of everything.
+ *
+ * Declared up here beside hubDialogueId, not down with the intro-screen state it replaced, because
+ * updateInstituteNpcs() below reads it and a `let` further down the file would be in its TDZ.
+ */
+let hallwayScene = { phase: "idle", escort: null, frame: null, lastAt: 0, fadeTimer: null };
 // What each staff member is doing in the Main Hall — see FIELD_NPC_BEHAVIOURS above and
 // engine/npc-behaviour.js for the three kinds.
 //
@@ -1738,11 +1793,31 @@ export const HALLWAY_NAV_GRID = createNavGrid({
   rows: HALLWAY_GRID.rows,
   isStandable: (x, y) => isHallwayGroundStandable(x, y),
 });
+const hallwayNpcRuntime = {
+  director: createBehaviourState({
+    ...HALLWAY_NPC_BEHAVIOURS.director,
+    speed: HUB_NPC_SPEED,
+    seed: "director",
+  }),
+};
+/** The Archive Room has nobody in it. Hoisted so every empty-room tick shares one object. */
+const HUB_NPC_RUNTIME_NONE = {};
+/**
+ * The behaviour states belonging to whichever hub room the player is standing in.
+ *
+ * An empty object is the honest way to say "nobody lives here" — it iterates zero times, which is
+ * what the `currentHubRoom === "archive"` early return in updateInstituteNpcs() used to hand-code.
+ */
+function activeHubNpcRuntime() {
+  if (progress.currentHubRoom === "hallway") return hallwayNpcRuntime;
+  if (progress.currentHubRoom === "archive") return HUB_NPC_RUNTIME_NONE;
+  return hubNpcRuntime;
+}
 const hubHeldKeys = new Set();
 let hubMoveFrame = null;
 let lastHubMoveAt = 0;
 function hubTargetState(id) {
-  return hubNpcRuntime[id] || activeHubTargets()[id];
+  return activeHubNpcRuntime()[id] || activeHubTargets()[id];
 }
 // Exported for tests/unit/field-map-coordinates.test.js's reachability flood fill. The hub's foot
 // box is NOT footBoxFor() — it is narrower (0.56 vs 0.68) and sits higher relative to the anchor —
@@ -1786,7 +1861,7 @@ function isHubNpcBlocked(id, x, y) {
   if (x < 0.6 || y < 0.8 || x > grid.columns - 1.2 || y > grid.rows - 1.2) return true;
   if (hubRectBlocked(foot)) return true;
   if (rectsOverlap(foot, hubFootBoxFor(instituteMovement.x, instituteMovement.y))) return true;
-  return Object.entries(hubNpcRuntime).some(
+  return Object.entries(activeHubNpcRuntime()).some(
     ([otherId, other]) => otherId !== id && rectsOverlap(foot, hubFootBoxFor(other.x, other.y))
   );
 }
@@ -1795,20 +1870,18 @@ function updateInstituteNpcs(now = performance.now()) {
   if (progress.currentScreen !== "institute") return;
   const elapsed = lastHubNpcTickAt ? now - lastHubNpcTickAt : NPC_TICK_MS;
   lastHubNpcTickAt = now;
-  // Director/Amani/Julian only exist and patrol in the Main Hall; skip their
-  // tick while the player is in the Archive Room, but still update the
-  // player sprite/position below (that has to run in every room).
-  if (progress.currentHubRoom === "archive") {
-    updateInstitutePlayer();
-    return;
-  }
   const nodes = new Map(
     [...document.querySelectorAll("[data-hub-npc]")].map((node) => [node.dataset.hubNpc, node])
   );
-  Object.entries(hubNpcRuntime).forEach(([id, state]) => {
-    // Standing still while being spoken to, and while walking the player through the tutorial
-    // tour — the Director cannot wander off mid-sentence.
-    if (hubDialogueId === id || (id === "director" && isTutorialTourActive()))
+  Object.entries(activeHubNpcRuntime()).forEach(([id, state]) => {
+    // Standing still while being spoken to, while walking the player through the tutorial tour, and
+    // for the whole of the Entrance Hall scene — the Director cannot wander off mid-sentence, and
+    // once the escort starts, runHallwayEscort() owns his position. Letting this tick also
+    // stepBehaviour() him during the escort would be two loops writing the same coordinates.
+    if (
+      hubDialogueId === id ||
+      (id === "director" && (isTutorialTourActive() || hallwayScene.phase !== "idle"))
+    )
       state.walking = false;
     else stepBehaviour(state, elapsed, (x, y) => isHubNpcBlocked(id, x, y));
 
@@ -1855,6 +1928,22 @@ if (progress.currentScreen === "institute" && progress.currentHubRoom === "archi
     queued: null,
   };
 }
+// Phase 62 retired the `intro-hallway` screen: the onboarding corridor is a hub room now. Migrate a
+// save written mid-onboarding here, above the VALID_SCREENS check below, which would otherwise see
+// an unknown screen and drop the player into the Main Hall having skipped the whole introduction.
+if (progress.currentScreen === "intro-hallway") {
+  progress.currentScreen = "institute";
+  progress.currentHubRoom = "hallway";
+  progress.tutorial.step = "hallway";
+}
+// A save left in the Entrance Hall resumes at its spawn with the scene wound back to the top, rather
+// than wherever the player was standing. The scene is fifteen seconds and replaying it costs
+// nothing, which buys the removal of a whole failure class: resuming mid-conversation into a room
+// with a locked-out player, a Director halfway to the door and a typewriter that will never fire.
+if (progress.currentScreen === "institute" && progress.currentHubRoom === "hallway") {
+  const [x, y, facing] = HALLWAY_SPAWN;
+  instituteMovement = { x, y, facing, moving: false, step: false, queued: null };
+}
 const VOLATILE_SCREENS = new Set(["source"]);
 const VALID_SCREENS = new Set([
   "institute",
@@ -1883,7 +1972,6 @@ const VALID_SCREENS = new Set([
   "intro-protocol",
   "identity",
   "intro-registration",
-  "intro-hallway",
   "join",
   "login",
   "teacher-dashboard",
@@ -2296,17 +2384,10 @@ let activeTravelTimeout = null;
 let introLineIndex = 0;
 let introTypewriterTimer = null;
 const introSeenSteps = new Set();
-// intro-hallway scripted walk (Director leads the newly-created Chronicler from the
-// registration screen into the Main Hall) — runtime-only state for the bespoke
-// requestAnimationFrame walk loop and the fade-to-black that follows it.
-let hallwayWalkFrame = null;
-let hallwayWalkStartedAt = null;
-let hallwayWalkDone = false;
-let hallwayFadeTimer = null;
-// Set right before the hallway walk hands off to the Main Hall so instituteMainRoomScreen()
-// renders one frame with the fade overlay at full opacity, then render()'s institute
-// requestAnimationFrame block removes .is-active so it transitions back to 0 (a fade-in cut).
-let hallwayFadeToInstitute = false;
+// Set right before the Entrance Hall hands off to the Main Hall so instituteMainRoomScreen() renders
+// one frame with the fade overlay at full opacity, then render()'s institute requestAnimationFrame
+// block removes .is-active so it transitions back to 0 (a fade-in cut).
+let enterMainHallFromBlack = false;
 // Ambient decoration on the director intro screens (seal/HUD readouts + drifting phrase layer) —
 // purely cosmetic, independent of dialogue/typewriter state, so it gets its own start/stop loop
 // (see startDirectorSceneDecor()) rather than piggybacking on the typewriter's per-step timers.
@@ -6230,10 +6311,8 @@ function handleManageContentClick(target, action) {
 // else appears in the backdrop unrelated to the current line.
 const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidden="true"><div class="director-scene__ledger"></div><span class="director-scene__pillar director-scene__pillar--1"></span><span class="director-scene__pillar director-scene__pillar--2"></span><span class="director-scene__pillar director-scene__pillar--3"></span></div>`;
 
-// Decorative-only markup for the default (sprite) stage: a technical-instrument seal behind the
-// character, corner HUD brackets, and monospace data readouts. Deliberately not rendered on
-// intro-hallway, whose custom stageHtml (a Tiled corridor) has its own frame language and none of
-// this geometry — see the usingDefaultStage gate in directorSceneMarkup().
+// Decorative-only markup for the director stage: a technical-instrument seal behind the character,
+// corner HUD brackets, and monospace data readouts.
 // The record readout lives in the stage's top-left corner, which is exactly where
 // intro-protocol's .director-extra-content cards panel renders — kept as a separate fragment
 // (see directorSceneMarkup()) so it can be omitted whenever extraContent is present instead of
@@ -6363,24 +6442,16 @@ function spawnPhrase(layer) {
 // render()) is the single source of truth for filling it in, whether that's typing a fresh line or
 // instantly restoring a previously-seen step. Keeping that logic in one place avoids the markup and
 // the JS state machine silently drifting out of sync.
-function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "", stageHtml = "" }) {
-  // The default sprite stage gets the seal/HUD/phrase-layer decoration; a custom stageHtml (e.g.
-  // intro-hallway's Tiled corridor) has its own frame language and none of that geometry applies.
-  const usingDefaultStage = !stageHtml;
-  const stage =
-    stageHtml ||
-    `<img class="director-scene__sprite" src="${CHARACTER_SHEETS.director.portrait}" alt="Director Rowan Hale" draggable="false">`;
+function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" }) {
+  const stage = `<img class="director-scene__sprite" src="${CHARACTER_SHEETS.director.portrait}" alt="Director Rowan Hale" draggable="false">`;
   // The record readout is omitted whenever extraContent is present (intro-protocol only) since
   // that panel occupies the same top-left corner — see DIRECTOR_STAGE_DECOR_RECORD_READOUT.
-  const stageDecor = usingDefaultStage
-    ? DIRECTOR_STAGE_DECOR + (extraContent ? "" : DIRECTOR_STAGE_DECOR_RECORD_READOUT)
-    : "";
+  const stageDecor =
+    DIRECTOR_STAGE_DECOR + (extraContent ? "" : DIRECTOR_STAGE_DECOR_RECORD_READOUT);
   // The phrase layer is a top-level scene sibling (not nested in .director-scene__stage) so its
   // inset:0 box shares the same coordinate space as .director-extra-content and the bottom bar —
   // pickSafeZonePoint() needs to reason about the sprite and the dialogue box together.
-  const phraseLayer = usingDefaultStage
-    ? `<div class="director-scene__phrase-layer" id="directorPhraseLayer" aria-hidden="true"></div>`
-    : "";
+  const phraseLayer = `<div class="director-scene__phrase-layer" id="directorPhraseLayer" aria-hidden="true"></div>`;
   // The reveal rail lives here, directly above the dialogue box it's illustrating, rather than
   // floating in the stage's top-right corner — see docs decision to anchor reveals to what's
   // being said instead of parking them in a disconnected corner.
@@ -6409,26 +6480,7 @@ function introProtocolScreen() {
   return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
 }
 
-// The scripted walk from Registration into the Main Hall — reuses directorSceneMarkup()'s
-// bottom dialogue bar (typewriter, Continue indicator, reveal rail) wholesale via its stageHtml
-// override, swapping in a real Tiled-rendered corridor (renderHallwayTiledMap(), same
-// renderTiledMap()/createTilesetImageResolver() pattern the Archive Room uses, see
-// docs/decision-log/0030-archive-room-tiled-interior.md) plus a small door-art overlay cropped
-// from the existing institute hub background, framing the same door the player emerges at.
-// Two sprite divs are animated by runHallwayWalk(). No Continue/back buttons — the walk itself
-// drives the transition into the Main Hall once it completes (see completeHallwayWalk()), so
-// buttonsHtml is intentionally empty.
-function introHallwayScreen() {
-  const stageHtml = `<div class="hallway-viewport"><div class="hallway-scaler" id="hallwayScaler"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="A corridor lined with archive record shelving and torches, leading to a door"></canvas><div class="hallway-door" aria-hidden="true"></div></div><div class="hallway-sprite hallway-sprite--player" id="hallwayPlayerSprite" style="left:53%;top:86%">${characterSpriteMarkup(chroniclerKey(), "up")}</div><div class="hallway-sprite hallway-sprite--director" id="hallwayDirectorSprite" style="left:45%;top:76%">${characterSpriteMarkup("director", "up")}</div></div>`;
-  return `${chrome()}<main class="director-stage">${directorSceneMarkup({
-    eyebrow: "Chronicle Institute · Orientation",
-    title: "Welcome to the Institute.",
-    buttonsHtml: "",
-    stageHtml,
-  })}</main><div class="scene-fade" id="sceneFade"></div>`;
-}
-
-// Resolves the {stepKey, lines} for whichever intro screen/step is currently active.
+// Resolves the {stepKey, lines} for whichever intro beat is currently active.
 // stepKey is unique per step (director-briefing steps are keyed by index) so introSeenSteps
 // tracks "has this exact beat been typed out before" independent of screen navigation.
 function currentIntroLines() {
@@ -6444,7 +6496,11 @@ function currentIntroLines() {
   if (progress.currentScreen === "intro-protocol") {
     return { stepKey: "intro-protocol", lines: CHRONICLE_OPENING_DEFAULTS.scenes.oath.body };
   }
-  if (progress.currentScreen === "intro-hallway") {
+  // The Entrance Hall's conversation is the one beat that isn't a screen of its own — it is spoken
+  // in-world, in a walkable hub room, so it keys off the scene phase instead. Everything else about
+  // it is identical, which is the point: the typewriter, the continue indicator and tap-to-skip all
+  // come for free rather than being rebuilt inside a hub dialogue panel.
+  if (hallwayScene.phase === "talking") {
     // The only content line in this file that interpolates player state — scoped to this one
     // branch since nothing else here has a reason to reference progress.profile.name.
     const name = progress.profile.name || "Chronicler";
@@ -6521,70 +6577,104 @@ function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
-const HALLWAY_WALK_MS = 5000;
-// Bespoke requestAnimationFrame walk for intro-hallway, following the same direct-DOM-patch
-// convention updateInstituteNpcs()/runHubMovementLoop() already use rather than re-rendering
-// per frame. Not a general cutscene engine — this is deliberately one-off, one-shot animation
-// code for this single scripted moment (see docs/tour-plan.md "Explicitly not building").
-function runHallwayWalk(now) {
-  if (progress.currentScreen !== "intro-hallway" || hallwayWalkDone) {
-    hallwayWalkFrame = null;
+// Faster than HUB_NPC_SPEED's indoor amble (1.15), which is too slow to read as leading anyone, and
+// slower than the player's own 3.65, which would read as a jog. walkCycleSeconds() turns this into a
+// 0.5s stride for both bodies, so nobody skates — see the ground-speed invariant in CLAUDE.md.
+const HALLWAY_ESCORT_SPEED = 2.2;
+// A little over one tile: close enough to read as following, far enough that the two sprites never
+// overlap into a single blob.
+const ESCORT_GAP = 1.15;
+/**
+ * Ends the Director's briefing and starts the walk to the Main Hall doors.
+ *
+ * The follower is `instituteMovement` itself, which is the one choice that makes the rest of this
+ * free: updateHubCamera() is already a pure function of that object, so the camera pans up the room
+ * behind the player with no new code and CLAUDE.md's camera invariant untouched. The leader is the
+ * Director's own behaviour state, so instituteNpc()'s markup and updateInstituteNpcs()'s DOM patch
+ * keep drawing him exactly as they already did.
+ */
+function startHallwayEscort() {
+  const director = hallwayNpcRuntime.director;
+  hallwayScene.phase = "escort";
+  hallwayScene.escort = createEscortWalk({
+    waypoints: findRoute(HALLWAY_NAV_GRID, director, HALLWAY_DOOR_APPROACH) || [],
+    speed: HALLWAY_ESCORT_SPEED,
+    gap: ESCORT_GAP,
+    leader: director,
+    follower: instituteMovement,
+  });
+  hallwayScene.lastAt = performance.now();
+  render();
+  hallwayScene.frame = window.requestAnimationFrame(runHallwayEscort);
+}
+// Self-terminating rAF in the same shape as runHubMovementLoop(), including its elapsed clamp, and
+// patching the DOM directly rather than re-rendering per frame.
+function runHallwayEscort(now) {
+  if (hallwayScene.phase !== "escort") {
+    hallwayScene.frame = null;
     return;
   }
-  if (!hallwayWalkStartedAt) hallwayWalkStartedAt = now;
-  const reduced = prefersReducedMotion();
-  const duration = reduced ? 1 : HALLWAY_WALK_MS;
-  const elapsed = now - hallwayWalkStartedAt;
-  const t = Math.min(1, elapsed / duration);
-  const playerEl = document.getElementById("hallwayPlayerSprite");
-  const directorEl = document.getElementById("hallwayDirectorSprite");
-  const scalerEl = document.getElementById("hallwayScaler");
-  // Scale the corridor art (tile canvas + door overlay together) up as the walk progresses — a
-  // dolly-forward, not just the sprites sliding over static art — so it reads as advancing down
-  // the corridor toward the door. Origin pinned to the door (top-center of the portrait corridor)
-  // so the door frames tighter rather than sliding out of view, replacing the old
-  // background-size-driven crop zoom now that the art is a canvas, not a background-image.
-  if (scalerEl) scalerEl.style.transform = `scale(${1 + t * 0.35})`;
-  // Director leads (higher/further along), player follows a step behind and to one side —
-  // a fixed horizontal/vertical offset the whole walk so the two sprites read as single-file
-  // "follow me" rather than converging into an overlapping blob by the time they reach the door.
-  if (playerEl) {
-    playerEl.style.left = "53%";
-    playerEl.style.top = `${86 - t * 44}%`;
-    // Both figures walk north up the corridor for the whole scene, so the walk cycle just runs —
-    // this used to hand-flip between two frames on a 220ms timer, which the CSS animation now does
-    // across the full cycle. Reduced motion holds the standing frame instead.
-    playerEl.querySelector(".character-sprite")?.classList.toggle("is-walking", !reduced);
-    directorEl?.querySelector(".character-sprite")?.classList.toggle("is-walking", !reduced);
+  const elapsed = Math.min(48, Math.max(0, now - hallwayScene.lastAt || 16));
+  hallwayScene.lastAt = now;
+  const { leaderDone } = stepEscort(hallwayScene.escort, elapsed);
+
+  const director = hallwayNpcRuntime.director;
+  const node = document.querySelector('[data-hub-npc="director"]');
+  if (node) {
+    node.style.cssText = hubCharacterStyle(director.x, director.y);
+    node.classList.toggle("is-walking-npc", director.walking);
+    node.dataset.facing = director.facing;
+    applyCharacterSprite(
+      node.querySelector(".character-sprite"),
+      "director",
+      director.facing,
+      director.walking,
+      HALLWAY_ESCORT_SPEED
+    );
   }
-  if (directorEl) {
-    directorEl.style.left = "45%";
-    directorEl.style.top = `${76 - t * 44}%`;
-  }
-  if (t >= 1) {
-    hallwayWalkDone = true;
-    hallwayWalkFrame = null;
-    completeHallwayWalk();
-    return;
-  }
-  hallwayWalkFrame = window.requestAnimationFrame(runHallwayWalk);
+  updateInstitutePlayer(HALLWAY_ESCORT_SPEED);
+
+  // Cut on leaderDone rather than waiting for the follower to close up: the Director steps through
+  // the doors and the screen starts pulsing while the player is still a step behind him, which is
+  // what it should look like. The loop keeps running underneath, so the follower catches up beneath
+  // the black rather than freezing mid-stride.
+  if (leaderDone) completeHallwayEscort();
+  hallwayScene.frame = window.requestAnimationFrame(runHallwayEscort);
 }
 
-// Fires once the walk reaches the door: fades to black, holds briefly, then cuts to the Main
-// Hall with the tour's first (unhighlighted) beat active. safeInstituteSpawn() is the
-// same spawn point the old direct "Enter Institute" → institute jump used.
-function completeHallwayWalk() {
-  document.getElementById("sceneFade")?.classList.add("is-active");
-  const holdMs = prefersReducedMotion() ? 60 : 420;
-  clearTimeout(hallwayFadeTimer);
-  hallwayFadeTimer = setTimeout(() => {
+// How long the doorway flicker runs. Must match @keyframes doorway-flicker in global.css — this is
+// only the backstop for reduced motion, where there is no animation to listen to.
+const DOORWAY_FLICKER_MS = 900;
+// Fires once the Director reaches the Main Hall doors: plays the doorway flicker over the top of the
+// room, then cuts to the Main Hall with the tour's first (unhighlighted) beat active.
+// safeInstituteSpawn() is the same spawn point every other route into that room uses.
+function completeHallwayEscort() {
+  if (hallwayScene.phase === "flicker") return;
+  hallwayScene.phase = "flicker";
+  const fade = document.getElementById("sceneFade");
+  fade?.classList.add("scene-fade--doorway");
+  // Idempotent, because two things race to call it: the animation's own end event and the timeout
+  // below. Whichever arrives first does the work; the other finds the room already changed.
+  const enterMainHall = () => {
+    if (progress.currentHubRoom !== "hallway") return;
+    stopHallwayScene();
     safeInstituteSpawn();
-    progress.currentScreen = "institute";
     progress.tutorial.step = "tour-intro";
-    hallwayFadeToInstitute = true;
+    enterMainHallFromBlack = true;
     save();
     render();
-  }, holdMs);
+  };
+  // animationend is the primary hook: the keyframes end held at full black, so it fires at exactly
+  // the moment the screen is covered — no magic delay duplicated between the CSS and here, and no
+  // chance of swapping rooms during one of the transparent beats between pulses. The timeout is the
+  // backstop for reduced motion, where there is no animation and no animationend to wait for.
+  if (fade && !prefersReducedMotion())
+    fade.addEventListener("animationend", enterMainHall, { once: true });
+  clearTimeout(hallwayScene.fadeTimer);
+  hallwayScene.fadeTimer = setTimeout(
+    enterMainHall,
+    prefersReducedMotion() ? 60 : DOORWAY_FLICKER_MS + 120
+  );
 }
 
 // Base per-character delay for the intro typewriter, plus extra hold time (as a multiple of
@@ -6662,7 +6752,7 @@ function identityScreen() {
 
 function introRegistrationScreen() {
   const r = CHRONICLE_IDENTITY_DEFAULTS.registration;
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(r.eyebrow)}</p><h1>${esc(r.title)}</h1><p class="subtitle">${esc(r.subtitle)}</p><p><b>${esc(r.profileLabel)}:</b> ${esc(progress.profile.name)} · <b>${esc(r.assignmentLabel)}:</b> ${esc(r.assignment)}</p><p>${esc(r.codexLabel)} — ${esc(r.codexBody)}</p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="identity">${esc(r.back)}</button><button class="btn btn-gold" data-action="intro-advance" data-next="intro-hallway">${esc(r.enter)} →</button></div></section></main>`;
+  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(r.eyebrow)}</p><h1>${esc(r.title)}</h1><p class="subtitle">${esc(r.subtitle)}</p><p><b>${esc(r.profileLabel)}:</b> ${esc(progress.profile.name)} · <b>${esc(r.assignmentLabel)}:</b> ${esc(r.assignment)}</p><p>${esc(r.codexLabel)} — ${esc(r.codexBody)}</p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="identity">${esc(r.back)}</button><button class="btn btn-gold" data-action="intro-advance" data-next="hallway">${esc(r.enter)} →</button></div></section></main>`;
 }
 
 const UNIT_BADGES = {
@@ -6809,7 +6899,13 @@ function nearestHubTarget() {
     ) || null
   );
 }
-function updateInstitutePlayer() {
+/**
+ * @param {number} [speed] the player's current ground speed in tiles/second, which sets the walk
+ *   cycle. Defaults to HUB_SPEED — pass the escort's slower pace while it owns the player, or the
+ *   legs run 66% faster than the feet travel, which is exactly the skating CLAUDE.md's invariant
+ *   is about.
+ */
+function updateInstitutePlayer(speed = HUB_SPEED) {
   const player = document.getElementById("institutePlayer");
   const sprite = document.getElementById("institutePlayerSprite");
   const prompt = document.getElementById("hubInteractPrompt");
@@ -6821,10 +6917,13 @@ function updateInstitutePlayer() {
     chroniclerKey(),
     instituteMovement.facing,
     instituteMovement.moving,
-    HUB_SPEED
+    speed
   );
   updateHubCamera();
-  const nearby = nearestHubTarget();
+  // No "Press E" while a scripted beat owns the room: the Director stays well inside reach for the
+  // whole conversation and the whole escort, so without this the prompt hangs on screen offering an
+  // interaction that is already happening.
+  const nearby = isHubInputLocked() ? null : nearestHubTarget();
   if (prompt) {
     prompt.hidden = !nearby;
     prompt.textContent = nearby ? `Press E · ${nearby[1].name}` : "";
@@ -6878,7 +6977,7 @@ function stopHubMovementLoop() {
   lastHubMoveAt = 0;
 }
 function runHubMovementLoop(now) {
-  if (progress.currentScreen !== "institute" || isTutorialTourActive()) {
+  if (progress.currentScreen !== "institute" || isHubInputLocked()) {
     hubHeldKeys.clear();
     instituteMovement.moving = false;
     stopHubMovementLoop();
@@ -6921,7 +7020,7 @@ function runHubMovementLoop(now) {
   hubMoveFrame = window.requestAnimationFrame(runHubMovementLoop);
 }
 function interactWithHubTarget(id) {
-  if (isTutorialTourActive()) return;
+  if (isHubInputLocked()) return;
   const target = activeHubTargets()[id];
   if (!target) return;
   if (targetDistance(target, id) > targetReach(id)) {
@@ -6963,6 +7062,19 @@ function interactWithHubTarget(id) {
     render();
     return;
   }
+  if (target.action === "hallway-brief") {
+    playSfx("dialogue");
+    hallwayScene.phase = "talking";
+    introLineIndex = 0;
+    hubHeldKeys.clear();
+    stopHubMovementLoop();
+    instituteMovement.moving = false;
+    // Turn to face each other rather than leaving whichever way they were walking.
+    instituteMovement.facing = "up";
+    hallwayNpcRuntime.director.facing = "down";
+    render();
+    return;
+  }
   playSfx(id === "trophy" ? "archive-receive" : "dialogue");
   hubDialogueId = id;
   render();
@@ -6970,15 +7082,42 @@ function interactWithHubTarget(id) {
 function instituteNpc(targetId, label) {
   const target = activeHubTargets()[targetId];
   const state = hubTargetState(targetId);
-  const isNear = targetDistance(target, targetId) <= targetReach(targetId);
-  const walking = Boolean(hubNpcRuntime[targetId]?.walking);
+  const runtime = activeHubNpcRuntime();
+  const isNear = !isHubInputLocked() && targetDistance(target, targetId) <= targetReach(targetId);
+  const walking = Boolean(runtime[targetId]?.walking);
   // hubCharacterStyle() rather than the percentage math this used to inline: the Main Hall became a
   // camera room in Phase 54, and a hardcoded percentage would have placed all three NPCs wrong the
   // moment HUB_GRID gained a `tile`.
-  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubCharacterStyle(state.x, state.y)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><span class="cast-shadow"></span>${characterSpriteMarkup(targetId, state.facing || "down", { walking, speed: hubNpcRuntime[targetId]?.speed })}<span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
+  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubCharacterStyle(state.x, state.y)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><span class="cast-shadow"></span>${characterSpriteMarkup(targetId, state.facing || "down", { walking, speed: runtime[targetId]?.speed })}<span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
 }
 function instituteScreen() {
-  return progress.currentHubRoom === "archive" ? archiveRoomScreen() : instituteMainRoomScreen();
+  if (progress.currentHubRoom === "archive") return archiveRoomScreen();
+  if (progress.currentHubRoom === "hallway") return instituteHallwayScreen();
+  return instituteMainRoomScreen();
+}
+/**
+ * The Entrance Hall: the first room the player walks into, and the first thing they control.
+ *
+ * Deliberately the same shell as the other two rooms, down to `#instituteMap` and `#hubWorld`, so
+ * the doorway flicker cuts to the Main Hall without the page geometry moving underneath it. What
+ * differs is what belongs to an entrance rather than a hub: one NPC, no object markers, no Codex
+ * button (there is nothing in it yet) and no reset link (a footgun to put in front of someone who
+ * has been playing for ninety seconds).
+ */
+function instituteHallwayScreen() {
+  const nearby = isHubInputLocked() ? null : nearestHubTarget();
+  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Orientation · Unit 1</p><div class="archive-badges archive-badges--compact"><b>First steps</b><span>Director Hale is waiting for you on the runner. Walk up to him and press E.</span></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
+  const worldStyle = `width:${HALLWAY_GRID.columns * HALLWAY_GRID.tile}px;height:${HALLWAY_GRID.rows * HALLWAY_GRID.tile}px`;
+  // The typewriter bar is the same rail the director-stage intro screens use — #directorLineText,
+  // #directorContinueIndicator and #directorRevealRail all have to be here by those exact ids, since
+  // startIntroTypewriter() writes into them and returns early without the rail. The Entrance Hall
+  // authors no reveals, so the rail stays empty; the briefing's own reveals are untouched, in their
+  // own screen.
+  const dialogue =
+    hallwayScene.phase === "talking"
+      ? `<div class="hallway-dialogue" data-action="hallway-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><div class="director-reveal-rail" id="directorRevealRail" hidden></div><p class="hallway-dialogue__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div>`
+      : "";
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Entrance Hall</h1><p class="hub-subtitle">Where every recovered record comes in.</p><p>Walk to Director Hale with the arrow keys or WASD, then press E to speak with him.</p><div class="hub-meta"><span>Chronicle Institute · Orientation</span><span>Your first day.</span></div>${sidePanel}</section><section class="institute-map institute-map--hallway" id="instituteMap" aria-label="Playable Chronicle Institute entrance hall"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="Top-down stone entrance hall: record cabinets and pigeonhole racks down both long walls, an intake bench and a reading table in the middle, and double doors at the far end leading into the Institute's main hall"></canvas><canvas class="field-world-overlay" id="hallwayTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue}</main><div class="scene-fade" id="sceneFade"></div>`;
 }
 // Caption panel for the post-hallway guided tour — reuses the existing .hub-dialogue panel
 // structure/styling (the same markup hubDialogueId's dialogue renders) rather than inventing new
@@ -7004,7 +7143,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${hallwayFadeToInstitute ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -8513,13 +8652,10 @@ function render() {
   clearTimeout(activeTravelTimeout);
   clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
-  // Navigating away from intro-hallway mid-walk (refresh, reset, a stray render() call) must not
-  // leave an orphaned rAF loop or fade timeout running against DOM nodes this render is about to
-  // replace.
-  window.cancelAnimationFrame(hallwayWalkFrame);
-  hallwayWalkFrame = null;
-  clearTimeout(hallwayFadeTimer);
-  hallwayFadeTimer = null;
+  // Leaving the Entrance Hall mid-scene (refresh, reset, a stray render() call) must not leave an
+  // orphaned escort loop or flicker timeout running against DOM nodes this render is about to
+  // replace. Re-entering the room is what starts it again, from the top.
+  if (progress.currentHubRoom !== "hallway") stopHallwayScene();
   let html;
   try {
     switch (progress.currentScreen) {
@@ -8537,9 +8673,6 @@ function render() {
         break;
       case "intro-registration":
         html = introRegistrationScreen();
-        break;
-      case "intro-hallway":
-        html = introHallwayScreen();
         break;
       case "archive":
         html = archiveScreen();
@@ -8656,24 +8789,19 @@ function render() {
       if (activeFieldMap().id === "unit-01") renderCaribbeanTiledMap();
       if (activeFieldMap().id === "unit-03") renderCommonCauseTiledMap();
     });
-  if (progress.currentScreen === "intro-hallway") {
-    hallwayWalkStartedAt = null;
-    hallwayWalkDone = false;
-    hallwayWalkFrame = window.requestAnimationFrame(runHallwayWalk);
-    renderHallwayTiledMap();
-  }
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {
       updateInstitutePlayer();
       updateInstituteNpcs();
       if (progress.currentHubRoom === "archive") renderArchiveRoomTiledMap();
+      else if (progress.currentHubRoom === "hallway") renderHallwayTiledMap();
       else renderInstituteHallTiledMap();
     });
-    // The Main Hall's first render right after the hallway walk includes the fade div at full
-    // opacity for one frame (see instituteMainRoomScreen()); dropping .is-active a frame later
-    // lets its CSS transition read as a fade-in rather than a hard cut.
-    if (hallwayFadeToInstitute) {
-      hallwayFadeToInstitute = false;
+    // The Main Hall's first render right after the Entrance Hall's doorway flicker includes the fade
+    // div at full opacity for one frame (see instituteMainRoomScreen()); dropping .is-active a frame
+    // later lets its CSS transition read as a fade-in rather than a hard cut.
+    if (enterMainHallFromBlack) {
+      enterMainHallFromBlack = false;
       window.requestAnimationFrame(() => {
         document.getElementById("sceneFade")?.classList.remove("is-active");
       });
@@ -9015,15 +9143,19 @@ function handleOnboardingClick(target, action) {
     const next = target.dataset.next;
     if (next === "intro-briefing") briefingStep = 0;
     if (next === "institute") safeInstituteSpawn();
-    if (next === "intro-hallway") {
-      progress.tutorial.step = "hallway";
-      hallwayWalkStartedAt = null;
-      hallwayWalkDone = false;
-    }
     introLineIndex = 0;
-    progress.currentScreen = next;
+    // The Entrance Hall is a hub room rather than a screen, so it is the one destination here that
+    // needs a room set as well as a screen — enterHallwayRoom() does both, plus the spawn.
+    if (next === "hallway") enterHallwayRoom();
+    else progress.currentScreen = next;
     save();
     render();
+    return true;
+  }
+  if (action === "hallway-dialogue-click") {
+    // Mirrors the keydown path in handleWindowKeydown(): skip the typing if mid-line, advance to the
+    // next beat, and once the last one is fully revealed, set off.
+    if (!advanceIntroDialogue()) startHallwayEscort();
     return true;
   }
   if (action === "briefing-next") {
@@ -10567,7 +10699,18 @@ function handleWindowKeydown(event) {
     return;
   }
   if (progress.currentScreen === "institute") {
-    if (isTutorialTourActive()) return;
+    // Above the generic E-to-interact block below, and returning unconditionally, because the
+    // Director never leaves reach during his own briefing: falling through would re-enter
+    // interactWithHubTarget("director") on every advance, reset introLineIndex to 0, and loop the
+    // first line forever.
+    if (hallwayScene.phase === "talking") {
+      if (key === "e" || key === "enter" || key === " ") {
+        event.preventDefault();
+        if (!advanceIntroDialogue()) startHallwayEscort();
+      }
+      return;
+    }
+    if (isHubInputLocked()) return;
     if (key === "e" || key === "enter") {
       const nearby = nearestHubTarget();
       if (nearby) {

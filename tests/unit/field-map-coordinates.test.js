@@ -784,7 +784,10 @@ describe("institute entrance hall coordinates", () => {
       HALLWAY_NPC_BEHAVIOURS.director.at,
       HALLWAY_DOOR_APPROACH
     );
-    expect(route).not.toBeNull();
+    // Length, not just non-null: findRoute() returns [] when start and goal share a cell, and
+    // startHallwayEscort() coerces its null to [] as well. Either would sail past a bare
+    // not-null check and then finish the escort on its first frame, teleporting nobody anywhere.
+    expect(route.length).toBeGreaterThan(0);
     const offFloor = route.filter((point) => !isHallwayGroundStandable(point.x, point.y));
     expect(offFloor).toEqual([]);
     // The player follows this same trail a fixed distance behind, so it also has to be walkable

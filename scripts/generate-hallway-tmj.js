@@ -211,6 +211,13 @@ map.stamp(12, 12, T.plantPotted, "base", "hall greenery");
 // nobody furnished.
 map.stamp(DOOR_COLS[0], 2, T.rugBlue, "decor", "main hall runner");
 map.stamp(DOOR_COLS[0], 14, T.rugGreen, "decor", "entrance runner");
+// Two more laid either side of the greeting floor, where the conversation happens and the room is
+// otherwise bare stone for four tiles in every direction. `decor`, so they are floor the player
+// walks over rather than furniture to walk around — the only kind of dressing an open band can
+// carry. Deliberately only this band: a rug in all four of them read as a showroom rather than as a
+// room, and this is the one the player actually stands still in.
+map.stamp(3, 11, T.rugGreen, "decor", "greeting floor runner");
+map.stamp(15, 11, T.rugGreen, "decor", "greeting floor runner");
 
 // --- wall dressing ----------------------------------------------------------------------------------
 // All `decor`, and all inside a wall band whose rect already blocks — which is what lets the open
@@ -228,11 +235,17 @@ map.stamp(4, 0, T.bannerNavy, "decor", "institute pennant");
 map.stamp(7, 0, T.bannerGold, "decor", "institute pennant");
 map.stamp(12, 0, T.bannerGold, "decor", "institute pennant");
 map.stamp(15, 0, T.bannerNavy, "decor", "institute pennant");
-// Sconces down the long side walls — the only structures art in cols 0 and 19, and therefore what
-// backs those two wall rects for the "every rect has drawn art" check.
-for (const row of [5, 11]) {
+// Sconces down the long side walls — the only structures art in cols 0 and 19, and therefore also
+// what backs those two wall rects for the "every rect has drawn art" check. One per open band on
+// each side: the room is fourteen rows deep, and two brackets in that much wall left the long
+// stretches between them reading as unlit corridor rather than as a hall someone works in.
+for (const row of [3, 7, 11, 15]) {
   map.stamp(0, row, T.wallSconce, "decor", "wall sconce");
   map.stamp(WIDTH - 1, row, T.wallSconce, "decor", "wall sconce");
+}
+for (const row of [5, 9, 13]) {
+  map.stamp(0, row, T.wallTorch, "decor", "wall torch");
+  map.stamp(WIDTH - 1, row, T.wallTorch, "decor", "wall torch");
 }
 
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));

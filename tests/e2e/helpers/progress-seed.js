@@ -81,6 +81,17 @@ export async function walkToHubTarget(page, targetId, options = {}) {
   return walkTo(page, `[data-hub-target="${targetId}"]`, "institutePlayer", options);
 }
 
+/**
+ * The same walk, but toward a person rather than a piece of furniture.
+ *
+ * `[data-hub-npc]` and `[data-hub-target]` are deliberately different attributes — a person is not
+ * furniture, and only the latter carries a sized marker rect — so they need separate selectors. Both
+ * get `.is-near` from updateHubProximityUi(), which is what this waits for.
+ */
+export async function walkToHubNpc(page, npcId, options = {}) {
+  return walkTo(page, `[data-hub-npc="${npcId}"]`, "institutePlayer", options);
+}
+
 /** Shared body of the two walkers above. See walkToNpc's comment for why it works this way. */
 async function walkTo(page, selector, playerId, { steps = 44, burstMs = 320 } = {}) {
   const target = page.locator(selector);

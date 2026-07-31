@@ -16,9 +16,9 @@ import { PROGRESS_KEY, seedProgress, loadSeededSave, walkToNpc } from "./helpers
 //
 // Determinism notes (read before adding more screenshots to this file):
 // - `page.emulateMedia({ reducedMotion: "reduce" })` is set on every test. main.js's own
-//   prefersReducedMotion() checks (drifting ambient-phrase layer, hallway walk timing) key off
-//   this, and Playwright's default `animations: "disabled"` on toHaveScreenshot freezes CSS
-//   transitions/animations at their end state regardless.
+//   prefersReducedMotion() checks (drifting ambient-phrase layer, the Entrance Hall's doorway
+//   flicker) key off this, and Playwright's default `animations: "disabled"` on toHaveScreenshot
+//   freezes CSS transitions/animations at their end state regardless.
 // - `#directorArchiveClock` (main.js:5478) is a live elapsed-time readout on the three director
 //   intro scenes, driven by `setInterval`, not CSS — it survives `animations: "disabled"` and
 //   must be masked explicitly.
@@ -27,10 +27,11 @@ import { PROGRESS_KEY, seedProgress, loadSeededSave, walkToNpc } from "./helpers
 //   the static mini-game *select* screen. Covering the in-progress states would need either a
 //   frozen/seeded RNG or full-stage masking, neither of which exists yet; flagged as a gap, not
 //   silently skipped.
-// - The intro-hallway scripted walk and the Institute badge-case modal (reached by walking to
-//   the Preservation Case, HUB_TARGETS.trophy at (1.7, 1.0) from the default (7, 9) spawn,
-//   crossing several HUB_BLOCK_RECTS) are also out of this pass's bounded scope — same reason,
-//   flagged as follow-up, not silently dropped.
+// - The Entrance Hall's escort walk (two characters moving on a requestAnimationFrame loop) and
+//   the Institute badge-case modal (reached by walking to the Preservation Case, HUB_TARGETS.trophy
+//   at (1.7, 1.0) from the default (7, 9) spawn, crossing several HUB_BLOCK_RECTS) are out of this
+//   pass's bounded scope — same reason, flagged as follow-up, not silently dropped. The Entrance
+//   Hall's *static* state is covered below; hallway-onboarding.spec.js covers the walk behaviourally.
 //
 // Jumping between screens mid-test: `seedProgress()` (via addInitScript) only ever writes if
 // the key is still empty — correct for save-persistence.spec.js's reload-survives-real-writes
@@ -129,6 +130,21 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page.locator("#archiveRoomMap")).toBeVisible();
     await waitForTiledCanvas(page, "archiveRoomTiledCanvas");
     await expect(page).toHaveScreenshot(snap("institute-archive-room"));
+
+    // The Entrance Hall, seeded at its own spawn with the scene idle — the state the player is in
+    // for the second or two before they walk up to the Director. This is the baseline that would
+    // catch the room drawing as an empty frame, which is what a tileset sheet missing from
+    // resolveHallwayTilesetImage()'s globs produces: createTilesetImageResolver() throws, the
+    // canvas never gets its `rendered` flag, and no other assertion in the suite notices.
+    await setScreen(page, {
+      currentScreen: "institute",
+      currentHubRoom: "hallway",
+      tutorial: { step: "hallway" },
+    });
+    await expect(page.locator(".institute-map--hallway")).toBeVisible();
+    await waitForTiledCanvas(page, "hallwayTiledCanvas");
+    await page.addStyleTag({ content: ".hub-npc { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("institute-entrance-hall"));
   });
 
   test("archive: Navigation Table and Mini-Games select", async ({ page }) => {
