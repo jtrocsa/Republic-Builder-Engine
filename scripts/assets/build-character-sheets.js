@@ -28,6 +28,7 @@ import { Buffer } from "node:buffer";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import zlib from "node:zlib";
 
 import sharp from "sharp";
 
@@ -121,8 +122,94 @@ async function download(url, target) {
   writeFileSync(target, Buffer.from(await response.arrayBuffer()));
 }
 
+/**
+ * Minimal zip reader — walks the central directory, inflating stored and deflated entries.
+ *
+ * Here rather than a dependency because it is the only archive this repo ever opens, and it opens
+ * exactly one shape: PixelLab's character download. Twenty lines beats a package.
+ */
+function unzip(buffer) {
+  const files = new Map();
+  for (let i = 0; i < buffer.length - 4; i += 1) {
+    if (buffer.readUInt32LE(i) !== 0x02014b50) continue; // central directory file header
+    const nameLength = buffer.readUInt16LE(i + 28);
+    const name = buffer.toString("utf8", i + 46, i + 46 + nameLength);
+    const offset = buffer.readUInt32LE(i + 42);
+    const method = buffer.readUInt16LE(offset + 8);
+    const compressed = buffer.readUInt32LE(offset + 18);
+    const start = offset + 30 + buffer.readUInt16LE(offset + 26) + buffer.readUInt16LE(offset + 28);
+    const raw = buffer.subarray(start, start + compressed);
+    files.set(name, method === 0 ? raw : zlib.inflateRawSync(raw));
+  }
+  return files;
+}
+
+/**
+ * One zip per character holding every rotation and every animation frame, addressed by character id
+ * alone.
+ *
+ * The per-frame CDN URLs above need a separate animation UUID for each direction, and those UUIDs
+ * only exist for the cast imported before Unit 4 — PixelLab stopped surfacing them and everything
+ * generated since was downloaded this way instead. So a character with no `walk` ids is not
+ * missing data: it is on the newer route, and this is the only way back to its source art if the
+ * cache is ever cold. Which is the whole reason the ids live in this file at all.
+ */
+const BULK_DOWNLOAD = (id) => `https://api.pixellab.ai/mcp/characters/${id}/download`;
+
+async function fetchBulk(character) {
+  const response = await fetch(BULK_DOWNLOAD(character.id));
+  // PixelLab answers 423 while any job on the character is still running, so the endpoint doubles
+  // as a completion check — a character fetched too early is not a failed one.
+  if (response.status === 423) throw new Error(`${character.key}: generation still running`);
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText} for ${character.key}`);
+  }
+  const files = unzip(Buffer.from(await response.arrayBuffer()));
+  const state = JSON.parse(files.get("metadata.json").toString("utf8")).states?.[0];
+  if (!state) throw new Error(`${character.key}: archive has no character state`);
+  // A character can hold more than one animation group, so which one to build from is stated
+  // rather than guessed. Most of the Unit 4/5 cast carries two: an abandoned v3 walk whose back
+  // view drifts several pixels up the canvas over the cycle, and the template walk that replaced
+  // it. Taking "the first group" would pick between them by whatever order the archive happens to
+  // list, which is how a character silently ships the broken cycle.
+  const groups = Object.entries(state.frames?.animations ?? {});
+  const group = character.walkGroup
+    ? groups.find(([name]) => name === character.walkGroup)
+    : groups[0];
+  if (character.walkGroup && !group) {
+    throw new Error(`${character.key}: no animation group named ${character.walkGroup}`);
+  }
+  const [, byDirection] = group ?? [null, {}];
+  for (const direction of DIRECTIONS) {
+    const compass = COMPASS[direction];
+    const stand = cachePath(character, compass, null);
+    mkdirSync(path.dirname(stand), { recursive: true });
+    writeFileSync(stand, files.get(state.frames.rotations[compass]));
+    (byDirection[compass] ?? []).forEach((source, n) => {
+      writeFileSync(cachePath(character, compass, n), files.get(source));
+    });
+  }
+}
+
 async function fetchAll() {
+  const waiting = [];
   for (const character of CHARACTERS) {
+    if (!character.walk) {
+      // A character whose jobs are still running is reported and skipped rather than aborting the
+      // run. Importing a cast is incremental by nature — several are always still generating — and
+      // a throw here would discard every download that came after it in the list.
+      if (!existsSync(cachePath(character, "south", null))) {
+        try {
+          await fetchBulk(character);
+        } catch (error) {
+          if (!/still running/.test(error.message)) throw error;
+          waiting.push(character.key);
+          continue;
+        }
+      }
+      console.log(`fetched ${character.key} (bulk)`);
+      continue;
+    }
     for (const direction of DIRECTIONS) {
       const compass = COMPASS[direction];
       const stand = cachePath(character, compass, null);
@@ -135,6 +222,9 @@ async function fetchAll() {
     }
     console.log(`fetched ${character.key}`);
   }
+  if (waiting.length) {
+    console.log(`\nstill generating, re-run to collect: ${waiting.join(", ")}`);
+  }
 }
 
 /**
@@ -142,6 +232,11 @@ async function fetchAll() {
  * rotation. A character with `mirrorWestFromEast` has no west walk animation in PixelLab, so its
  * west moving columns are its east frames flipped — done here, in the asset, so that nothing
  * mirrors at runtime and the rest of the cast stays honest four-direction art.
+ *
+ * That flag is the whole test, deliberately. It used to be inferred from a missing `walk` id, which
+ * worked only while every character carried four of them: the Unit 4/5 cast arrives through
+ * fetchBulk() with no ids at all, and the inference would have quietly mirrored east onto all four
+ * directions for twenty characters whose real north and west art was sitting in the cache.
  */
 async function sourceFrames(character) {
   const frames = [];
@@ -152,7 +247,7 @@ async function sourceFrames(character) {
       column: 0,
       buffer: readFileSync(cachePath(character, compass, null)),
     });
-    const mirrored = !character.walk[compass];
+    const mirrored = character.mirrorWestFromEast && compass === "west";
     const from = mirrored ? "east" : compass;
     for (let n = 0; n < character.frames; n += 1) {
       let buffer = readFileSync(cachePath(character, from, n));

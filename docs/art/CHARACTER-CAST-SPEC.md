@@ -19,8 +19,10 @@ the file to trust.
 
 **Account state.** At the Phase 60 import: quota exhausted (46 of 40 used), $1.81 credit. At the
 Phase 64 import: 51 of 40 used, $0.91 credit, `generations_remaining: 0`. **Neither import spent
-any of it** — both drew on characters already generated in the account. Unit 3 stays blocked on
-credit, not on work.
+any of it** — both drew on characters already generated in the account. The Unit 4/5 import is the
+first that actually generated: the subscription allowance stays exhausted, but **credit fallback
+works and is what gets billed**, at roughly $0.02 per job (a create is 1 job, a four-direction walk
+is 4). Unit 3 was never blocked on anything but a decision to spend.
 
 **The canvas is pinned, not derived.** Since Phase 64, `canonicalCanvas()` clamps to
 `SPRITE_CANVAS` (48×56, ground row 49) instead of sizing itself from the widest cast member. Adding
@@ -70,7 +72,7 @@ Hale"), which is the style reference for the whole cast:
 
 ```
 mode:        "standard"        # 1 generation each; "pro" costs 20-40 and "v3" 2-9
-size:        88               # the Director's own size
+size:        40               # NOT 88 — see below
 view:        "low top-down"   # classic 3/4 RPG angle, matches every existing sprite
 n_directions: 8
 outline:     "single color black outline"
@@ -79,10 +81,37 @@ detail:      "high detail"
 proportions: {"type": "preset", "name": "heroic"}
 ```
 
-**Why 8 directions when the game only uses three.** `create_character` returns all 8 rotations
-for one generation, and south / north / east map exactly onto the game's `down` / `up` / `side`.
-`scaleX(-1)` already mirrors `side` for left-facing, so no west frame is needed. Eight directions
-is not waste — it is three poses for the price of one, with five spare.
+**`size` is 40, not 88.** This line read `88` from Phase 60 until the Unit 4/5 import, and it was
+wrong: 88 is the Director's finished _canvas_, but PixelLab's `size` argument is a character
+dimension and the canvas it returns is roughly 1.4× larger. Passing 88 yields a 124×124 canvas
+carrying a **110px body against the Director's 44px** — two and a half times too dense, which the
+build would then have to resample by 0.41× and destroy. The measured relationship is
+`body ≈ 1.35 × size − 8.5`, so:
+
+| `size` passed | canvas |                 body |
+| ------------: | -----: | -------------------: |
+|            36 |     52 |                   40 |
+|        **40** | **56** | **~45** ← the target |
+|            88 |    124 |                  110 |
+
+Four characters were generated at 88 and thrown away before this was caught. A second consequence:
+at a 56px canvas a v3 walk costs 1 generation per direction, where at 124px it costs 2.
+
+**Animate with the `walking-8-frames` template, not `v3`.** Both produce a usable cycle and cost
+about the same, but v3 draws a back view _receding_ — the body climbs 4–6px up the canvas across
+the north cycle and then snaps back at the loop point, which reads in game as a limp. The template
+is skeleton-driven and cannot do this: measured across the Unit 4/5 cast it holds 2px of vertical
+travel, exactly matching the Unit 1/2 characters. `tests/unit/character-sheet-geometry.test.js`
+fails at anything past 5px, which is how this was found. Template also fixes the frame count at 8,
+keeping the whole cast on one 9-column strip.
+
+**Why 8 directions when the game uses four.** `create_character` returns all 8 rotations for one
+generation, and south / north / east / west map exactly onto the game's `down` / `up` / `right` /
+`left`. Eight directions is not waste — it is four poses for the price of one, with four spare.
+(This paragraph used to say the game uses _three_ and mirrors `side` with `scaleX(-1)`. That
+stopped being true at Phase 60: there is no `side` sheet and nothing mirrors at runtime — west is
+its own generated art, and the one character built from flipped east frames, `powhatan-woman`, has
+the flip baked into the PNG.)
 
 **Cost.** ~1 generation per character. Template walk animations cost **1 generation per
 direction**, so a walk cycle in three directions triples a character's cost. In the event, walk

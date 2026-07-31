@@ -630,6 +630,21 @@ const CHARACTER_SHEETS = {
   "jamestown-watchman": characterSheet(`${FIELD}/npc-jamestown-watchman`, 9),
   "jamestown-african-man": characterSheet(`${FIELD}/npc-jamestown-african-man`, 9),
   "jamestown-servant": characterSheet(`${FIELD}/npc-jamestown-servant`, 9),
+  // Unit 4 · Canal Crossroads, upstate New York, 1845. Ten columns, not nine: PixelLab's v3 walk
+  // keeps its reference frame, so these cycles are 9 frames where the earlier cast's are 8. The
+  // column count travels with the character precisely so both can ship unchanged.
+  "canal-boat-captain": characterSheet(`${FIELD}/npc-canal-boat-captain`, 9),
+  "canal-lock-keeper-woman": characterSheet(`${FIELD}/npc-canal-lock-keeper-woman`, 9),
+  "textile-mill-worker": characterSheet(`${FIELD}/npc-textile-mill-worker`, 9),
+  "abolitionist-printer": characterSheet(`${FIELD}/npc-abolitionist-printer`, 9),
+  "abolitionist-lecturer": characterSheet(`${FIELD}/npc-abolitionist-lecturer`, 9),
+  "market-farmer": characterSheet(`${FIELD}/npc-market-farmer`, 9),
+  // Unit 5 · Richmond, Virginia, 1864.
+  "richmond-dock-laborer": characterSheet(`${FIELD}/npc-richmond-dock-laborer`, 9),
+  "slave-trade-clerk": characterSheet(`${FIELD}/npc-slave-trade-clerk`, 9),
+  "confederate-official": characterSheet(`${FIELD}/npc-confederate-official`, 9),
+  "richmond-hospital-worker": characterSheet(`${FIELD}/npc-richmond-hospital-worker`, 9),
+  "richmond-shopkeeper": characterSheet(`${FIELD}/npc-richmond-shopkeeper`, 9),
   // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six
   // keep the placeholder art Unit 3 already used, rebuilt into the same strip format. Giving them
   // their own keys is the point: without it, upgrading `columbus` to real 1492 art would silently

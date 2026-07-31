@@ -338,7 +338,128 @@ export const CHARACTERS = [
       west: "541289f5-e612-4bf1-89b5-88d21577147e",
     },
   },
+
+  // ---- Unit 4 · Canal Crossroads, upstate New York, 1845 --------------------------------------
+  //
+  // Everything from here down carries no `walk` ids, and that is not an omission. PixelLab stopped
+  // surfacing a per-direction animation UUID, so this cast was downloaded through the bulk
+  // character endpoint instead, which needs only the id above it — see fetchBulk(). All four
+  // directions are real generated art; nothing below is mirrored.
+  {
+    key: "canal-boat-captain",
+    stem: "chronicle-sprites/field/npc-canal-boat-captain",
+    name: "Erie Canal Boat Captain",
+    id: "b623b8f7-8a29-4562-9c20-ec6620dc7afa",
+    frames: 8,
+    walkGroup: "canal-boat-captain-walk8",
+  },
+  {
+    key: "canal-lock-keeper-woman",
+    stem: "chronicle-sprites/field/npc-canal-lock-keeper-woman",
+    name: "Canal Lock Keeper Woman",
+    id: "860097b6-2513-45b6-b0ee-d9c50ee2e60f",
+    frames: 8,
+    walkGroup: "canal-lock-keeper-woman-walk8",
+  },
+  {
+    key: "textile-mill-worker",
+    stem: "chronicle-sprites/field/npc-textile-mill-worker",
+    name: "Young Textile Mill Worker",
+    id: "493bc0bf-a466-4593-814f-9c9e09892003",
+    frames: 8,
+    walkGroup: "textile-mill-worker-walk8",
+  },
+  {
+    key: "abolitionist-printer",
+    stem: "chronicle-sprites/field/npc-abolitionist-printer",
+    name: "Free Black Abolitionist Printer",
+    id: "d04a1e5a-5e5c-4a4f-a50d-cc269ebd5f4b",
+    frames: 8,
+    walkGroup: "abolitionist-printer-walk8",
+  },
+  {
+    key: "abolitionist-lecturer",
+    stem: "chronicle-sprites/field/npc-abolitionist-lecturer",
+    name: "Woman Abolitionist Lecturer",
+    id: "8bc14095-8a36-422d-a032-0488172f8f4f",
+    frames: 8,
+    walkGroup: "abolitionist-lecturer-walk8",
+  },
+  {
+    key: "market-farmer",
+    stem: "chronicle-sprites/field/npc-market-farmer",
+    name: "Market-Oriented Family Farmer",
+    id: "b4bd2a0b-cfdd-49d1-8d4b-320fb60fb8e5",
+    frames: 8,
+    walkGroup: "market-farmer-walk8",
+  },
+
+  // ---- Unit 5 · Richmond, Virginia, 1864 -------------------------------------------------------
+  {
+    key: "richmond-dock-laborer",
+    stem: "chronicle-sprites/field/npc-richmond-dock-laborer",
+    name: "Enslaved Richmond Dock Laborer",
+    id: "70cc40cd-e372-4107-933c-5e7cd316e619",
+    frames: 8,
+    walkGroup: "richmond-dock-laborer-walk8",
+  },
+  {
+    key: "slave-trade-clerk",
+    stem: "chronicle-sprites/field/npc-slave-trade-clerk",
+    name: "Richmond Slave-Trading Office Clerk",
+    id: "d83cb6b3-a5f9-460a-a0e2-05c63e20a4dc",
+    frames: 8,
+    walkGroup: "slave-trade-clerk-walk8",
+  },
+  {
+    key: "confederate-official",
+    stem: "chronicle-sprites/field/npc-confederate-official",
+    name: "Secessionist Politician and Confederate Clerk",
+    id: "6d8b7c02-ada2-40e2-913c-8e9337289ec4",
+    frames: 8,
+    walkGroup: "confederate-official-walk8",
+  },
+  {
+    key: "richmond-hospital-worker",
+    stem: "chronicle-sprites/field/npc-richmond-hospital-worker",
+    name: "Richmond Wartime Hospital Worker",
+    id: "7fc555bc-10a7-45aa-ba75-1e1d6a2e1163",
+    frames: 8,
+    walkGroup: "richmond-hospital-worker-walk8",
+  },
+  {
+    key: "richmond-shopkeeper",
+    stem: "chronicle-sprites/field/npc-richmond-shopkeeper",
+    name: "White Richmond Shopkeeper",
+    id: "f40422bb-542c-47f0-869b-2596ca769875",
+    frames: 8,
+    walkGroup: "richmond-shopkeeper-walk8",
+  },
 ];
+
+/**
+ * Generated PixelLab characters that are deliberately not built yet, recorded here so the ids
+ * survive.
+ *
+ * They exist in the account and their frames sit in `reports/pixellab-staging/`, which is
+ * gitignored — so without this list the only record of them would be outside version control.
+ * Nothing reads it; promoting one means moving its entry up into CHARACTERS with a `stem`.
+ *
+ *   usct-soldier             31a79b8d-5d16-453d-ba20-7ea101430d4f
+ *   freedwoman-teacher       828def1c-4f4f-497b-8f8b-2e867b03fff0
+ *   freedmens-bureau-agent   861166e4-d2b9-4ca6-b502-64ca9017d500
+ *   reconstruction-delegate  50a52920-4323-419c-8c90-0beb0c062ed1
+ *
+ * The four above are Reconstruction-era people and cannot stand in Richmond in 1864 without
+ * breaking the wartime map's own historical-state rule. They belong to Unit 5's Reconstruction
+ * mission, which renders no field sprites, so they wait there rather than shipping unused.
+ *
+ *   british-line-infantry-private  c05ac60c-a508-451f-9dcf-afad0d28c850
+ *
+ * A 1770s redcoat, and a real upgrade over Unit 3's placeholder cast — but its south walk has 8
+ * frames where the other three have 9, which this file's single `frames` count cannot express.
+ * Out of scope for Units 4 and 5; left for whoever revisits Philadelphia.
+ */
 
 /**
  * Unit 3 (Philadelphia, 1767) has no PixelLab art — the account holds a 1492 Caribbean and a
