@@ -645,6 +645,7 @@ const CHARACTER_SHEETS = {
   "jacksonian-editor": characterSheet(`${FIELD}/npc-jacksonian-editor`, 9),
   "german-cooper": characterSheet(`${FIELD}/npc-german-cooper`, 9),
   "canal-mule-driver": characterSheet(`${FIELD}/npc-canal-mule-driver`, 9),
+  "revival-preacher": characterSheet(`${FIELD}/npc-revival-preacher`, 9),
   // Unit 5 · Richmond, Virginia, 1864.
   "richmond-dock-laborer": characterSheet(`${FIELD}/npc-richmond-dock-laborer`, 9),
   "slave-trade-clerk": characterSheet(`${FIELD}/npc-slave-trade-clerk`, 9),
@@ -655,6 +656,7 @@ const CHARACTER_SHEETS = {
   "tredegar-ironworker": characterSheet(`${FIELD}/npc-tredegar-ironworker`, 9),
   "confederate-private": characterSheet(`${FIELD}/npc-confederate-private`, 9),
   "richmond-free-black-barber": characterSheet(`${FIELD}/npc-richmond-free-black-barber`, 9),
+  "richmond-refugee-woman": characterSheet(`${FIELD}/npc-richmond-refugee-woman`, 9),
   "richmond-relief-society-woman": characterSheet(`${FIELD}/npc-richmond-relief-society-woman`, 9),
   "richmond-government-messenger": characterSheet(`${FIELD}/npc-richmond-government-messenger`, 9),
   // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six

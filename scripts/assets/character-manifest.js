@@ -446,6 +446,19 @@ export const CHARACTERS = [
     walkGroup: "german-cooper-walk8",
   },
   {
+    key: "revival-preacher",
+    stem: "chronicle-sprites/field/npc-revival-preacher",
+    name: "Second Great Awakening Preacher",
+    // Regenerated for height, not costume. The first attempt's rotations disagreed with each other —
+    // a 40px body facing south against 42-43 facing the other three — and the build normalizes a
+    // character by one scale factor taken from its tallest pose, so no single number could bring the
+    // short one up without overshooting the rest. Asking for "standing tall at full height with long
+    // legs and a long torso" produced 42/45/45/44, which the shared canvas can hold.
+    id: "ddf2953a-2f9b-4ff7-a2a0-4c74532d965d",
+    frames: 8,
+    walkGroup: "revival-preacher-walk8",
+  },
+  {
     key: "canal-mule-driver",
     stem: "chronicle-sprites/field/npc-canal-mule-driver",
     name: "Canal Towpath Mule Driver",
@@ -508,6 +521,18 @@ export const CHARACTERS = [
     id: "c8372f10-927d-45ed-8248-2f618901432e",
     frames: 8,
     walkGroup: "richmond-seamstress-walk8",
+  },
+  {
+    key: "richmond-refugee-woman",
+    stem: "chronicle-sprites/field/npc-richmond-refugee-woman",
+    name: "Richmond Wartime Refugee Woman",
+    // Regenerated because the first attempt came out in what read as bib overalls with divided
+    // legs — 20th-century workwear on an 1864 map. "Ankle-length skirt" was not enough on its own;
+    // spelling out that it falls in a single unbroken cone from the waist to the shoes, with no
+    // trousers and no divided legs, is what produced a skirt. Worth remembering for the next dress.
+    id: "985e17e7-ef53-4e81-8533-b5b456dc78a4",
+    frames: 8,
+    walkGroup: "richmond-refugee-woman-walk8",
   },
   {
     key: "richmond-free-black-barber",
