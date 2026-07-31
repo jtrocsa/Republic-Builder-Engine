@@ -415,6 +415,47 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "canal-boardinghouse-keeper-walk8",
   },
+  {
+    key: "canal-irish-laborer",
+    stem: "chronicle-sprites/field/npc-canal-irish-laborer",
+    name: "Irish Canal Laborer",
+    // Regenerated without the shovel. The first attempt's shovel appeared in the south view only
+    // and slid hip-to-shoulder mid-walk, shedding detached fragments beside the head. He is the
+    // map's most-walked character, so a flickering prop would be on screen constantly. Held props
+    // are the single least reliable thing PixelLab renders across rotations — the same run lost a
+    // newspaper and a leather apron the same way — so the working rule is to describe the person
+    // and let the map's own stamped props carry the trade.
+    id: "b7f6be31-c467-4894-958b-36285800f044",
+    frames: 8,
+    walkGroup: "canal-irish-laborer-walk8",
+  },
+  {
+    key: "jacksonian-editor",
+    stem: "chronicle-sprites/field/npc-jacksonian-editor",
+    name: "Jacksonian Newspaper Editor",
+    id: "919495a9-7a61-444f-8249-fbc7ce753cb1",
+    frames: 8,
+    walkGroup: "jacksonian-editor-walk8",
+  },
+  {
+    key: "german-cooper",
+    stem: "chronicle-sprites/field/npc-german-cooper",
+    name: "German Immigrant Cooper",
+    id: "0f7a91fe-5c16-477f-847f-9473d696c21e",
+    frames: 8,
+    walkGroup: "german-cooper-walk8",
+  },
+  {
+    key: "canal-mule-driver",
+    stem: "chronicle-sprites/field/npc-canal-mule-driver",
+    name: "Canal Towpath Mule Driver",
+    // A hoggee, roughly fifteen. Generated as a youth rather than a child on purpose: the build
+    // normalizes every body to the same 45px height, so a child would come out adult-sized anyway,
+    // and a teenager is both historically right for the job and honest about what the art can show.
+    id: "6c0c5163-abea-4a5b-a677-65ce68533ae6",
+    frames: 8,
+    walkGroup: "canal-mule-driver-walk8",
+  },
 
   // ---- Unit 5 · Richmond, Virginia, 1864 -------------------------------------------------------
   {
@@ -483,6 +524,29 @@ export const CHARACTERS = [
     id: "d7cc2155-39c4-494a-9d16-42c2202774cc",
     frames: 8,
     walkGroup: "richmond-relief-society-woman-walk8",
+  },
+  {
+    key: "tredegar-ironworker",
+    stem: "chronicle-sprites/field/npc-tredegar-ironworker",
+    name: "Tredegar Ironworks Laborer",
+    // Regenerated for distinctness, not for accuracy: the first attempt's soot-marked leather apron
+    // did not render and its shirt came out light, leaving him confusable with
+    // `richmond-dock-laborer` — two characters posted on the same map a few hundred tiles apart.
+    // This one wears the apron chest-to-knee over a dark shirt and reads as a different trade.
+    id: "6fa5fb61-03c9-4cc6-9e0b-4d5f3d2780b5",
+    frames: 8,
+    walkGroup: "tredegar-ironworker-walk8",
+  },
+  {
+    key: "confederate-private",
+    stem: "chronicle-sprites/field/npc-confederate-private",
+    name: "Confederate Infantry Private",
+    // Underfed, patched, and carrying nothing: the map must not romanticize the Confederacy, and
+    // the cheapest way to fail that is a clean uniform and a heroic pose. The first attempt also
+    // shed detached fragments and an out-of-palette element at the hand where its musket sat.
+    id: "ed1b5b3c-39ce-4bfe-b91b-1fd7a1fe324a",
+    frames: 8,
+    walkGroup: "confederate-private-walk8",
   },
   {
     key: "richmond-government-messenger",
