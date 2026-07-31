@@ -206,6 +206,32 @@ describe("buildCircuit", () => {
     expect(circuit.length).toBeGreaterThan(circuit.filter((point) => point.stop).length);
   });
 
+  // A stop can say what the person does on arriving, not just where they arrive. Without this the
+  // archivist walks east along her shelves and then stands there facing east, staring down the
+  // aisle rather than at the stacks she came to read.
+  it("carries a stop's authored facing and pause onto its arrival waypoint (normal case)", () => {
+    const circuit = buildCircuit(grid, [
+      { x: 0.5, y: 1.5, facing: "up", pauseMs: [2600, 4600] },
+      { x: 9.5, y: 1.5, facing: "down" },
+    ]);
+    const stops = circuit.filter((point) => point.stop);
+    expect(stops[0]).toMatchObject({ x: 9.5, facing: "down" });
+    expect(stops[0].pauseMs).toBeUndefined();
+    expect(stops[1]).toMatchObject({ x: 0.5, facing: "up", pauseMs: [2600, 4600] });
+  });
+
+  // The destination's intent, not the origin's — an arrival describes where the person got to.
+  it("leaves the corners on the way with no facing of their own (edge case)", () => {
+    const corner = gridFrom(["....#####", "....#####", "........."]);
+    const circuit = buildCircuit(corner, [
+      { x: 0.5, y: 0.5, facing: "up" },
+      { x: 8.5, y: 2.5, facing: "down" },
+    ]);
+    const corners = circuit.filter((point) => !point.stop);
+    expect(corners.length).toBeGreaterThan(0);
+    expect(corners.every((point) => point.facing === undefined)).toBe(true);
+  });
+
   it("drops a leg it cannot path rather than failing the whole circuit (edge case)", () => {
     const split = gridFrom(["..#..", "..#..", "..#.."]);
     const circuit = buildCircuit(split, [

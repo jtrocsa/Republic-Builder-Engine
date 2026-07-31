@@ -562,6 +562,27 @@ const characterSheetFiles = {
     import: "default",
   }),
 };
+// Every direction of every character is its own file, so a turn repoints background-image at a PNG
+// the browser has either never fetched or has discarded the decoded bitmap for. `.character-sprite`
+// is an empty span with nothing in it but that background, so it paints *nothing* for the frames
+// between the style write and the swap resolving — which is the blink the playtest saw on every
+// change of direction, on every character, on both surfaces.
+//
+// Holding a live Image per URL keeps each resource alive in the memory cache for the session, so
+// applyCharacterSprite() is only ever swapping to something already decoded. ~105 files of a few KB
+// each, every one of which the game fetches anyway the first time somebody faces that way.
+//
+// Guarded on `Image` rather than assuming a DOM: several unit tests import this module, and it must
+// not throw at load outside a browser. Exported for the same reason `app` is checked elsewhere — the
+// array only has to stay referenced for the images to stay alive.
+export const CHARACTER_SHEET_PRELOAD =
+  typeof Image === "function"
+    ? Object.values(characterSheetFiles).map((url) => {
+        const image = new Image();
+        image.src = url;
+        return image;
+      })
+    : [];
 function characterSheet(stem, columns) {
   const file = (suffix) => {
     const url = characterSheetFiles[`./assets/${stem}-${suffix}.png`];
@@ -636,9 +657,17 @@ function characterSpriteMarkup(key, facing, { id = "", walking = false, speed } 
 function applyCharacterSprite(node, key, facing, walking, speed) {
   if (!node) return;
   const sheet = sheetFor(key);
-  node.style.setProperty("--sprite-sheet", `url('${sheet[spriteDirection(facing)]}')`);
-  node.style.setProperty("--sprite-columns", String(sheet.columns));
-  node.style.setProperty("--sprite-walk-frames", String(sheet.columns - 1));
+  const url = sheet[spriteDirection(facing)];
+  // Only when the sheet actually changes. This runs every tick for every body on screen, and
+  // rewriting the custom property with the value it already holds is style work for no visual
+  // difference. characterSpriteMarkup() emits the sheet inline but no data-sheet, so the first call
+  // after each render() writes it once and then goes quiet.
+  if (node.dataset.sheet !== url) {
+    node.style.setProperty("--sprite-sheet", `url('${url}')`);
+    node.style.setProperty("--sprite-columns", String(sheet.columns));
+    node.style.setProperty("--sprite-walk-frames", String(sheet.columns - 1));
+    node.dataset.sheet = url;
+  }
   if (speed !== undefined) node.style.setProperty("--sprite-cycle", `${walkCycleSeconds(speed)}s`);
   node.classList.toggle("is-walking", Boolean(walking));
 }
@@ -1732,12 +1761,12 @@ let hallwayScene = { phase: "idle", escort: null, frame: null, lastAt: 0, fadeTi
 // What each staff member is doing in the Main Hall — see FIELD_NPC_BEHAVIOURS above and
 // engine/npc-behaviour.js for the three kinds.
 //
-// Two of the three are stationed rather than wandering, and that is the room, not a preference:
-// only two bands of the hall are open floor, y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the
-// south aisle), so a disc large enough to be worth walking spends most of itself against
-// furniture. An archivist at the stacks and a director greeting arrivals are both doing something
-// standing still anyway, and Julian gets the south aisle, which is a corridor and therefore a
-// route.
+// Nobody wanders in here, and that is the room, not a preference: only two bands of the hall are
+// open floor, y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the south aisle), so a disc large
+// enough to be worth walking spends most of itself against furniture. Both bands are corridors,
+// which makes them routes — Amani has the cross-aisle in front of the stacks, Julian the south
+// aisle. Only the Director is stationed, and only because the tutorial tour walks the player to him
+// and he cannot be elsewhere when it does.
 //
 // Every post also had to move clear of a reading stool. The stools are `decor` and carry no
 // collision — the generator's south aisle deliberately has no solid stamps in it — so before
@@ -1749,9 +1778,34 @@ export const HUB_NPC_BEHAVIOURS = {
   // Greeting the player in the open floor in front of the foyer entrance, west of the runner rug.
   // Stationed because the tutorial tour walks the player to him and he cannot be elsewhere.
   director: { kind: "station", at: { x: 9.6, y: 8.6 }, facing: "down" },
-  // Working the record stacks from the cross-aisle below them — moved east from column 7.6, which
-  // was on top of a stool, to below the shelf run at columns 9-10.
-  amani: { kind: "station", at: { x: 10.0, y: 4.6 }, facing: "up" },
+  // Working the record stacks: three sections of the shelf run, a stop at each, facing the shelf
+  // she is reading rather than the way she walked in. She was a station here until Phase 64 and
+  // read as furniture — the playtest note is that an archivist should be working her stacks, not
+  // standing in front of them.
+  //
+  // Row 4 and not 4.6: the foot box is 0.5 tall, so y=4.5 clears the reading stools on row 5
+  // entirely, and it is the cell centre findRoute() walks to anyway. And deliberately west of
+  // column 11 — cols 11-12 are the Archive Room approach the generator leaves clear, the one lane
+  // from the foyer entrance to the door, and now that staff are solid (see isHubBlocked) a body
+  // crossing it is a body standing in the room's main artery.
+  //
+  // `facing` on the behaviour itself, not just the stops, so the first thing she does on a cold load
+  // is look at the shelves — createBehaviourState() opens with a settling pause of up to 900ms, and
+  // without this she spends it facing the camera.
+  //
+  // The pause is longer than the 700-1700ms a route stop defaults to, because reading a shelf is
+  // meant to read as reading a shelf, and shorter than the first pass's 2600-4600, which measured
+  // out at 30% of her time walking — the stops were long enough that she was a station again with
+  // an occasional stroll. This lands near half and half.
+  amani: {
+    kind: "route",
+    facing: "up",
+    stops: [
+      { x: 5.5, y: 4.5, facing: "up", pauseMs: [1500, 2900] },
+      { x: 7.5, y: 4.5, facing: "up", pauseMs: [1500, 2900] },
+      { x: 9.5, y: 4.5, facing: "up", pauseMs: [1500, 2900] },
+    ],
+  },
   // The south aisle end to end, between the foyer runner and the Navigation Table dais, on row 9
   // rather than row 8 so the circuit passes south of the stools instead of through them.
   julian: {
@@ -6941,14 +6995,40 @@ function updateHubProximityUi() {
     if (node) node.classList.toggle("is-near", isHubTargetNear(id));
   });
 }
+/**
+ * Whether a step from `here` to `next` runs into one of `bodies` — the other people in the room.
+ *
+ * The whole subtlety is the second clause. A body the walker is ALREADY standing inside does not
+ * block, or an overlap would be permanent: every direction out of it overlaps too, so the walker is
+ * boxed in for good. Two things in this game produce an overlap without ever consulting a collision
+ * test — safeInstituteSpawn()'s default (11.5, 9) lands 0.4 tiles off one of Julian's stops, and the
+ * Entrance Hall escort parks the player a stride behind the Director — and both need the way out.
+ *
+ * Exported and taking its rects rather than reading module state, per CLAUDE.md's export-in-place
+ * rule: isHubBlocked() below is the half that knows about the room, and this is the half worth
+ * asserting on.
+ *
+ * @param {{x1:number,y1:number,x2:number,y2:number}} next  foot box of the step being considered
+ * @param {{x1:number,y1:number,x2:number,y2:number}} here  foot box where the walker is standing
+ * @param {{x1:number,y1:number,x2:number,y2:number}[]} bodies
+ */
+export function isBlockedByBody(next, here, bodies) {
+  return bodies.some((body) => rectsOverlap(next, body) && !rectsOverlap(here, body));
+}
 function isHubBlocked(x, y) {
   const grid = activeHubGrid();
   const edge = x < 0.6 || y < 0.8 || x > grid.columns - 1.2 || y > grid.rows - 1.2;
   if (edge) return true;
   const foot = hubFootBoxFor(x, y);
   if (hubRectBlocked(foot)) return true;
-  // NPCs should feel alive, but they should not make the Archive feel stuck or maze-like.
-  return false;
+  // Staff are solid, the same way field NPCs are in isFieldBlocked(). Both directions hold now:
+  // isHubNpcBlocked() has always refused to walk an NPC through the player, and until Phase 64 this
+  // side did not reciprocate, so the player walked through Prof. Park.
+  return isBlockedByBody(
+    foot,
+    hubFootBoxFor(instituteMovement.x, instituteMovement.y),
+    Object.values(activeHubNpcRuntime()).map((npc) => hubFootBoxFor(npc.x, npc.y))
+  );
 }
 function hubHeldVector() {
   let dx = 0;

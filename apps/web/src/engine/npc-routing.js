@@ -314,7 +314,15 @@ export function findRoute(grid, from, to) {
  * a carpenter's round trip is a smaller defect than a carpenter who never moves, and the coordinate
  * test asserts none of the authored stops is in that state anyway.
  *
- * @returns {{x:number, y:number, stop?:boolean}[]} may be empty if no leg is walkable
+ * An authored stop may also say what the person is doing once they get there — `facing` for what
+ * they are looking at, `pauseMs` for how long they stay — and those travel through onto the arrival
+ * waypoint. Without them a routed NPC stands at the end of a leg facing whichever way they happened
+ * to walk in, which is why an archivist walking east along her shelves used to end up staring down
+ * the aisle rather than at the stacks.
+ *
+ * @param {{x:number, y:number, facing?:string, pauseMs?:[number,number]}[]} stops
+ * @returns {{x:number, y:number, stop?:boolean, facing?:string, pauseMs?:[number,number]}[]} may be
+ *          empty if no leg is walkable
  */
 export function buildCircuit(grid, stops) {
   const legs = [];
@@ -326,7 +334,12 @@ export function buildCircuit(grid, stops) {
     if (!route || route.length === 0) continue;
     for (const point of route.slice(0, -1)) legs.push({ x: point.x, y: point.y });
     const arrival = route[route.length - 1];
-    legs.push({ x: arrival.x, y: arrival.y, stop: true });
+    // `to`, not `from`: the arrival belongs to the leg's destination, so it is the destination's
+    // authored intent that describes what the person does on getting there.
+    const waypoint = { x: arrival.x, y: arrival.y, stop: true };
+    if (to.facing) waypoint.facing = to.facing;
+    if (to.pauseMs) waypoint.pauseMs = to.pauseMs;
+    legs.push(waypoint);
   }
   return legs;
 }

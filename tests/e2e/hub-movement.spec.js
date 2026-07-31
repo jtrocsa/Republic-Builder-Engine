@@ -24,12 +24,16 @@ function hubTileFromStyle(left, top) {
   return { x: Number.parseFloat(left) / TILE, y: Number.parseFloat(top) / TILE };
 }
 
-async function readInstitutePlayerTile(page) {
-  const style = await page.locator("#institutePlayer").evaluate((el) => ({
+async function readTileOf(page, selector) {
+  const style = await page.locator(selector).evaluate((el) => ({
     left: el.style.left,
     top: el.style.top,
   }));
   return hubTileFromStyle(style.left, style.top);
+}
+
+async function readInstitutePlayerTile(page) {
+  return readTileOf(page, "#institutePlayer");
 }
 
 test.describe("Main Hall movement", () => {
@@ -172,5 +176,70 @@ test.describe("Main Hall movement", () => {
     const box = await page.locator('.hub-marker[data-hub-target="table"]').boundingBox();
     expect(box.width).toBeCloseTo(144, 0);
     expect(box.height).toBeCloseTo(96, 0);
+  });
+
+  // Phase 64. isHubBlocked() tested walls and furniture and deliberately not people, so the player
+  // walked straight through Prof. Park while isHubNpcBlocked() had always refused to walk him
+  // through the player. Banked end-to-end rather than as a unit test because the unit half
+  // (isBlockedByBody, tests/unit/main-collision.test.js) can only assert the rect arithmetic — that
+  // the movement loop actually consults it is a browser fact.
+  test("a staff member is solid, and standing on one is not a trap", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "institute",
+      currentHubRoom: "main",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#institutePlayer")).toBeVisible();
+
+    // Spawn is (11.5, 9); the Director is stationed at (9.6, 8.6) and never moves. Walking west runs
+    // the player into him, and the west wall is another eight tiles past that — so stopping short of
+    // him at all is the assertion. hubFootBoxFor is 0.56 wide, so two bodies touch at a 0.56 gap.
+    const director = await readTileOf(page, '[data-hub-npc="director"]');
+    await holdKey(page, "ArrowLeft", 2500);
+    const stopped = await readInstitutePlayerTile(page);
+    expect(stopped.x - director.x).toBeGreaterThan(0.5);
+    expect(stopped.x - director.x).toBeLessThan(1.0);
+
+    // And the way out again. safeInstituteSpawn()'s default lands 0.4 tiles off one of Julian's
+    // stops, so an overlap is a state the player really reaches — if a body the player is already
+    // inside blocked them, every direction out of it would too and they would be stuck for good.
+    await holdKey(page, "ArrowRight", 700);
+    const escaped = await readInstitutePlayerTile(page);
+    expect(escaped.x).toBeGreaterThan(stopped.x + 0.3);
+  });
+
+  // Phase 64: Dr. Soto was a station and read as furniture. She works the shelf run now — and stays
+  // west of column 11, because cols 11-12 are the one lane from the foyer to the Archive Room door
+  // and the first test in this file walks straight up it.
+  test("Dr. Soto works her stacks and faces them while she reads", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "institute",
+      currentHubRoom: "main",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator('[data-hub-npc="amani"]')).toBeVisible();
+
+    const seen = [];
+    for (let i = 0; i < 40; i += 1) {
+      seen.push(
+        await page.locator('[data-hub-npc="amani"]').evaluate((el) => ({
+          x: Number.parseFloat(el.style.left) / 48,
+          facing: el.dataset.facing,
+          walking: el.classList.contains("is-walking-npc"),
+        }))
+      );
+      await page.waitForTimeout(250);
+    }
+
+    const xs = seen.map((s) => s.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(1.5);
+    expect(Math.max(...xs)).toBeLessThan(11);
+    expect(seen.some((s) => s.walking)).toBe(true);
+    // The whole point of the authored facing: stopped means reading the shelf in front of her, not
+    // standing frozen facing whichever way she happened to arrive.
+    const stoppedFacings = new Set(seen.filter((s) => !s.walking).map((s) => s.facing));
+    expect([...stoppedFacings]).toEqual(["up"]);
   });
 });

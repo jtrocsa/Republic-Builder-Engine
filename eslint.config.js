@@ -23,6 +23,7 @@ export default [
         requestAnimationFrame: "readonly",
         structuredClone: "readonly",
         Blob: "readonly",
+        Image: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
         CSS: "readonly",

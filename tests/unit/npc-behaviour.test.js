@@ -265,6 +265,65 @@ describe("stepBehaviour: route", () => {
     expect(walkedMs / 60_000).toBeGreaterThan(0.7);
   });
 
+  /**
+   * Every facing held during a pause *at a stop*.
+   *
+   * Gated on having walked first, because createBehaviourState() opens with a settling pause of up
+   * to 900ms so a room does not begin with everyone stepping off on the same tick. That one belongs
+   * to nobody's stop and still carries the default "down".
+   */
+  function facingsWhileStopped(state, ticks = 6000) {
+    const seen = new Set();
+    let hasWalked = false;
+    for (let i = 0; i < ticks; i += 1) {
+      stepBehaviour(state, 33, OPEN);
+      hasWalked = hasWalked || state.walking;
+      if (hasWalked && state.phase === "pause") seen.add(state.facing);
+    }
+    return seen;
+  }
+
+  // An archivist walking east along her shelves and then standing there facing east is staring down
+  // the aisle, not at the stacks. A stop's authored facing is what she came here to look at, so it
+  // survives the whole pause — including beginPause()'s idle turn, which is someone with nothing in
+  // particular to look at glancing around the room.
+  it("holds a stop's authored facing for the whole pause (normal case)", () => {
+    const STARE = [
+      { x: 24, y: 12 },
+      { x: 24, y: 16, stop: true, facing: "up" },
+      { x: 24, y: 12 },
+      { x: 20, y: 12, stop: true, facing: "up" },
+    ];
+    expect([...facingsWhileStopped(carpenter(STARE))]).toEqual(["up"]);
+  });
+
+  // The counterpart: a stop with nothing authored still gets the idle turn, so the assertion above
+  // is a facing the author asked for rather than routes having quietly stopped looking around.
+  it("still looks around at a stop that asked for nothing (normal case)", () => {
+    expect(facingsWhileStopped(carpenter()).size).toBeGreaterThan(1);
+  });
+
+  it("stays at a stop for the length that stop asked for (normal case)", () => {
+    const LINGER = [
+      { x: 24, y: 12 },
+      { x: 24, y: 16, stop: true, pauseMs: [8000, 8000] },
+    ];
+    const state = carpenter(LINGER);
+    // Cadence is a per-NPC multiplier drawn once from the seed, so the assertion is against the
+    // authored 8s scaled by it — not against a bare 8s, which would make this a seed snapshot.
+    const expected = 8000 * state.cadence;
+    let longest = 0;
+    let current = 0;
+    for (let i = 0; i < 3000; i += 1) {
+      stepBehaviour(state, 33, OPEN);
+      current = state.phase === "pause" ? current + 33 : 0;
+      longest = Math.max(longest, current);
+    }
+    expect(longest).toBeGreaterThan(expected * 0.9);
+    // And it is the stop's number, not the 700-1700ms default it replaced.
+    expect(longest).toBeGreaterThan(BEHAVIOUR_DEFAULTS.stopPauseMs[1] * 2);
+  });
+
   // Someone held up on a road is a person waiting. Re-planning on every contact is what would make
   // two NPCs meeting in a lane shuffle around each other indefinitely.
   it("waits in place when the way is blocked, then carries on (edge case)", () => {

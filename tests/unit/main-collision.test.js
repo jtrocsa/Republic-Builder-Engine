@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { ellipse, isCaribbeanLand, footBoxFor, rectsOverlap } from "../../apps/web/src/main.js";
+import {
+  ellipse,
+  isCaribbeanLand,
+  footBoxFor,
+  hubFootBoxFor,
+  isBlockedByBody,
+  rectsOverlap,
+} from "../../apps/web/src/main.js";
 
 describe("ellipse", () => {
   it("is true for the center point (normal case)", () => {
@@ -58,5 +65,41 @@ describe("rectsOverlap", () => {
     const a = { x1: 0, x2: 1, y1: 0, y2: 1 };
     const b = { x1: 1, x2: 2, y1: 0, y2: 1 };
     expect(rectsOverlap(a, b)).toBe(false);
+  });
+});
+
+// The Institute's staff became solid in Phase 64 — until then the player walked straight through
+// Prof. Park, while isHubNpcBlocked() had always refused to walk him through the player.
+describe("isBlockedByBody", () => {
+  const staff = [hubFootBoxFor(10, 4.5)];
+
+  it("stops a step into somebody standing there (normal case)", () => {
+    const here = hubFootBoxFor(10, 6);
+    expect(isBlockedByBody(hubFootBoxFor(10, 4.6), here, staff)).toBe(true);
+  });
+
+  it("lets a step past somebody a body's width away (normal case)", () => {
+    const here = hubFootBoxFor(10, 6);
+    expect(isBlockedByBody(hubFootBoxFor(10, 5.5), here, staff)).toBe(false);
+  });
+
+  // The escape hatch, and the reason this is a function rather than a `.some()` inline. Without it
+  // an overlap is permanent: every direction out of somebody also overlaps them, so a player who
+  // spawned on Julian's aisle line could never move again.
+  it("lets the walker out of somebody they are already standing inside (edge case)", () => {
+    const here = hubFootBoxFor(10, 4.5);
+    expect(isBlockedByBody(hubFootBoxFor(10, 4.4), here, staff)).toBe(false);
+    expect(isBlockedByBody(hubFootBoxFor(10.2, 4.5), here, staff)).toBe(false);
+  });
+
+  // Standing inside one person is not a licence to walk through the next one.
+  it("still blocks a different body while overlapping one (edge case)", () => {
+    const here = hubFootBoxFor(10, 4.5);
+    const pair = [hubFootBoxFor(10, 4.5), hubFootBoxFor(10.9, 4.5)];
+    expect(isBlockedByBody(hubFootBoxFor(10.5, 4.5), here, pair)).toBe(true);
+  });
+
+  it("is false in an empty room (edge case)", () => {
+    expect(isBlockedByBody(hubFootBoxFor(10, 4.5), hubFootBoxFor(10, 6), [])).toBe(false);
   });
 });

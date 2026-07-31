@@ -17,7 +17,11 @@
 //            job is to be somewhere — a minister at his door, an archivist at the stacks.
 //   route    Walks a circuit of stops, pausing at each. The way between them is pathfound by
 //            npc-routing.js against the map's roads, so a route is authored as places, not as
-//            coordinates that have to be hand-checked against collision.
+//            coordinates that have to be hand-checked against collision. A stop may also say what
+//            the person is doing once they arrive — `facing` for what they are looking at,
+//            `pauseMs` for how long they stay — since "walks to the stacks and reads them" is a
+//            different job from "walks to the stacks", and only the first one needs the person to
+//            still be facing the shelves after they stop.
 //   wander   Phase 61's disc, retuned. For people with somewhere to be but no errand: two
 //            Powhatan on open shore, a fisher on the beach.
 //
@@ -129,7 +133,8 @@ function beginPause(state, milliseconds) {
  * @param {object} config
  * @param {"station"|"route"|"wander"} [config.kind]
  * @param {{x:number,y:number}} [config.at]        station: the post
- * @param {{x:number,y:number,stop?:boolean}[]} [config.waypoints]  route: from buildCircuit()
+ * @param {{x:number,y:number,stop?:boolean,facing?:string,pauseMs?:[number,number]}[]}
+ *        [config.waypoints]                       route: from buildCircuit()
  * @param {{x:number,y:number}} [config.home]      wander: the centre of the disc
  * @param {number} [config.radius]                 wander
  * @param {number} [config.speed]                  tiles per second
@@ -283,8 +288,19 @@ function spendRoute(state, ms, isBlocked) {
   const arrived = state.waypoints[state.waypointIndex];
   state.waypointIndex = (state.waypointIndex + 1) % state.waypoints.length;
   state.blockedTicks = 0;
-  if (arrived.stop)
-    beginPause(state, between(state.random, BEHAVIOUR_DEFAULTS.stopPauseMs) * state.cadence);
+  if (arrived.stop) {
+    beginPause(
+      state,
+      between(state.random, arrived.pauseMs || BEHAVIOUR_DEFAULTS.stopPauseMs) * state.cadence
+    );
+    // After beginPause(), not before: it is the thing that rolls turnAt. An authored facing means
+    // the person is looking at something they came here to look at, so it also cancels the idle
+    // turn — an archivist reading a shelf does not glance around the room every few seconds.
+    if (arrived.facing) {
+      state.facing = arrived.facing;
+      state.turnAt = null;
+    }
+  }
   return left;
 }
 
