@@ -7106,7 +7106,15 @@ function instituteScreen() {
  */
 function instituteHallwayScreen() {
   const nearby = isHubInputLocked() ? null : nearestHubTarget();
-  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Orientation · Unit 1</p><div class="archive-badges archive-badges--compact"><b>First steps</b><span>Director Hale is waiting for you on the runner. Walk up to him and press E.</span></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
+  // One objective and one control legend, not three restatements of the same sentence. The controls
+  // line stays a sibling of the card rather than a third <span> inside it: `.archive-badges span`
+  // outranks `.hub-controls`, and folding it in would erase the muted styling that tells the player
+  // which of the two lines is the thing to do and which is the key to press.
+  //
+  // The card is a sibling of `.hub-intro` below, not a child of it as it is in the other two rooms.
+  // Nested, `.hub-intro p:not(.kicker)` outranked both `.hub-sidepanel .role` and `.hub-controls`,
+  // so the card's two quiet lines were silently rendered at intro-body size.
+  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Orientation · Unit 1</p><div class="archive-badges archive-badges--compact"><b>First steps</b><span>Walk to Director Hale and press E to speak with him.</span></div><p class="hub-controls">Arrow keys / WASD to move · E or click to interact</p></aside>`;
   const worldStyle = `width:${HALLWAY_GRID.columns * HALLWAY_GRID.tile}px;height:${HALLWAY_GRID.rows * HALLWAY_GRID.tile}px`;
   // The typewriter bar is the same rail the director-stage intro screens use — #directorLineText,
   // #directorContinueIndicator and #directorRevealRail all have to be here by those exact ids, since
@@ -7117,7 +7125,11 @@ function instituteHallwayScreen() {
     hallwayScene.phase === "talking"
       ? `<div class="hallway-dialogue" data-action="hallway-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><div class="director-reveal-rail" id="directorRevealRail" hidden></div><p class="hallway-dialogue__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div>`
       : "";
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Entrance Hall</h1><p class="hub-subtitle">Where every recovered record comes in.</p><p>Walk to Director Hale with the arrow keys or WASD, then press E to speak with him.</p><div class="hub-meta"><span>Chronicle Institute · Orientation</span><span>Your first day.</span></div>${sidePanel}</section><section class="institute-map institute-map--hallway" id="instituteMap" aria-label="Playable Chronicle Institute entrance hall"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="Top-down stone entrance hall: record cabinets and pigeonhole racks down both long walls, an intake bench and a reading table in the middle, and double doors at the far end leading into the Institute's main hall"></canvas><canvas class="field-world-overlay" id="hallwayTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue}</main><div class="scene-fade" id="sceneFade"></div>`;
+  // The dialogue sits in `.hub-column` alongside `.hub-intro`, not inside it: `.hub-intro
+  // p:not(.kicker)` is a descendant selector that outranks `.director-dialogue-box__text`, so nesting
+  // the bar would quietly restyle the typewriter it is built around. One wrapper keeps the Director's
+  // speech directly under the status card and off the fold, without touching the map's grid column.
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><div class="hub-column"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Entrance Hall</h1><p class="hub-subtitle">Where every recovered record comes in.</p><div class="hub-meta"><span>Chronicle Institute · Orientation · Your first day.</span></div></section>${sidePanel}${dialogue}</div><section class="institute-map institute-map--hallway" id="instituteMap" aria-label="Playable Chronicle Institute entrance hall"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="Top-down stone entrance hall: record cabinets and pigeonhole racks down both long walls, an intake bench and a reading table in the middle, and double doors at the far end leading into the Institute's main hall"></canvas><canvas class="field-world-overlay" id="hallwayTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main><div class="scene-fade" id="sceneFade"></div>`;
 }
 // Caption panel for the post-hallway guided tour — reuses the existing .hub-dialogue panel
 // structure/styling (the same markup hubDialogueId's dialogue renders) rather than inventing new
@@ -7950,7 +7962,12 @@ function fieldTooFarNotice(label) {
   progress.activeFieldNpc = null;
   save();
   const notice = document.getElementById("fieldNotice");
-  if (notice) notice.textContent = progress.fieldNotice;
+  // This path patches the DOM instead of re-rendering, so it has to reveal the line itself — the
+  // notice ships hidden now that it has no standing text to show.
+  if (notice) {
+    notice.textContent = progress.fieldNotice;
+    notice.hidden = false;
+  }
 }
 /**
  * Whether a record can be pursued yet: `"secured"`, `"available"`, or `"locked"`.
@@ -8095,27 +8112,24 @@ function caribbeanWorldMarkup() {
 function riverbendWorldMarkup() {
   return `<canvas class="field-world-art" id="riverbendTiledCanvas" role="img" aria-label="Top-down colonial river settlement with a meetinghouse, clapboard dwellings, a barn, fenced crop plots, and a wharf on the river estuary"></canvas><canvas class="field-world-overlay" id="riverbendTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
+// Each map's briefing copy. There used to be a `defaultNotice` here too — a standing sentence printed
+// into #fieldNotice on arrival, which restated the `intro` right below it and then sat there for the
+// rest of the case. The notice is a status line, so it now says nothing until the game does.
 const FIELD_COPY = {
   "unit-01": {
     intro:
       "You are the only Chronicler in the field. Start in the village, gather observations, then follow the shoreline toward the Spanish camp and map fragments as the record opens.",
-    defaultNotice:
-      "The Chronometer places you near the village first. Talk with people, observe the settlement, then compare what you learn with written records.",
     progressHint:
       "Complete the village investigation, Columbus source encounter, and map reconstruction.",
   },
   "unit-02": {
     intro:
       "You arrive at a young river settlement. Speak with its people, then secure the charter, the servant's letter, and the wharf accounts before the record destabilizes.",
-    defaultNotice:
-      "The Chronometer places you on the settlement green. The wharf accounts sit across the river bridge.",
     progressHint: "Secure the charter, the servant's letter, and the wharf accounts.",
   },
   "unit-03": {
     intro:
       "You arrive on a Philadelphia gathering ground threaded with news from the frontier, the press, the assembly, and the wharf. Walk the square, speak with its people, then gather all seven records before the record destabilizes.",
-    defaultNotice:
-      "The Chronometer places you near the town well. The print shop, assembly hall, chapel, statehouse steps, wharf, frontier dispatch post, and family residence each hold a record.",
     progressHint:
       "Secure the frontier speech, the farmer's letters, the liberty speech, the elegy, the proclamation, the petition, and the private letter.",
   },
@@ -8127,9 +8141,9 @@ function fieldScreen() {
   const sources = sourcesForCase(caseId);
   const copy = FIELD_COPY[map.id] || FIELD_COPY["unit-01"];
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
-  const fieldNotice = progress.fieldNotice || copy.defaultNotice;
+  const fieldNotice = progress.fieldNotice;
   const kicker = `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice">${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 function villageSceneMarkup(active, observed) {
@@ -8916,6 +8930,9 @@ function resetFieldPosition() {
 // it up there is a temporal-dead-zone ReferenceError that takes the whole app down on boot.
 if (progress.currentScreen === "field" && progress.activeCaseId) {
   resetFieldPosition();
+  // Same reasoning as goToCase()'s: this guard puts the player back at the map's spawn, so whatever
+  // the notice was answering happened somewhere they are no longer standing.
+  progress.fieldNotice = "";
 }
 
 function resetCaseOneDemo() {
@@ -8942,7 +8959,13 @@ function goToCase(caseId) {
   playSfx("chrono");
   progress.activeCaseId = caseId;
   progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
-  if (caseById(caseId)?.route === "field") resetFieldPosition();
+  if (caseById(caseId)?.route === "field") {
+    resetFieldPosition();
+    // The notice answers something the player just did, so it must not outlive the visit that
+    // produced it — it is saved with the rest of progress, and arriving to a stale "Move closer to
+    // interact with the burgess." would be the only thing the line ever said.
+    progress.fieldNotice = "";
+  }
   progress.currentScreen = "travel";
   save();
   render();

@@ -3108,6 +3108,29 @@ dd {
   cursor: pointer;
   text-align: left;
 }
+/* The status column as one grid item, so the bar can follow the status card instead of being
+   auto-placed into a second grid row underneath the whole room. Sibling of `.hub-intro`, never a
+   child: `.hub-intro p:not(.kicker)` would win over the bar's own text rules. */
+.hub-column {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+/* The bar was authored full-width across the page; in the status column it fills the track. */
+.hub-column .hallway-dialogue {
+  margin: 12px 0 0;
+  max-width: none;
+}
+/* Same text in a third of the width wraps to roughly three times the lines, and the column has a
+   status card above it. The room's heading gives up the 68px it could afford when the column held
+   nothing else, and the Director's line drops to body size, so the longest beat lands above the fold
+   at 1366x768 rather than 121px under it. */
+.hub-column .hub-intro h1 {
+  font-size: clamp(2.1rem, 3.1vw, 3.4rem);
+}
+.hub-column .hallway-dialogue .director-dialogue-box__text {
+  font-size: 1rem;
+}
 .hallway-dialogue__name {
   margin: 0 0 6px;
   font:
@@ -4487,6 +4510,13 @@ dd {
 .case-field--living .field-intro h1 {
   font-size: clamp(2.8rem, 4.35vw, 4.8rem);
 }
+/* The field's status line. It carries only what the game has just said — "Move closer to interact
+   with X.", a record secured, a gate explained — so it is absent, not blank, the rest of the time.
+   Explicit like .hub-interact-prompt[hidden] rather than relying on the UA rule, since every other
+   .field-notice declaration here is a layered override waiting to set `display` by accident. */
+.field-notice[hidden] {
+  display: none;
+}
 .field-notice {
   margin-top: 14px;
   padding: 12px 13px;
@@ -4842,9 +4872,9 @@ dd {
 .case-field--living .field-intro p {
   max-width: 33ch;
 }
-.field-notice {
-  min-height: 74px;
-}
+/* `min-height: 74px` used to hold the line at two rows so a longer runtime message could not shove
+   the column around. It reserved that space whether or not there was anything to say, which is dead
+   air now that the standing text is gone. */
 .field-path {
   display: none !important;
 }

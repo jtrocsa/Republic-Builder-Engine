@@ -67,6 +67,42 @@ test.describe("Institute Entrance Hall", () => {
     await expect(page.locator("#hubInteractPrompt")).toBeHidden();
   });
 
+  test("puts the Director's speech on screen without scrolling for it", async ({ page }) => {
+    // The bar used to be a bare child of `.hub-shell--status-left` with no grid placement of its
+    // own, so auto-placement dropped it into a second row underneath the whole room — the Director
+    // talked below the fold while the map filled the screen. It now shares `.hub-column` with the
+    // status rail. 1366x768 is the viewport the visual-regression baselines are recorded at, and the
+    // smallest this layout is expected to fit in without collapsing to one column.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    expect(await walkToHubNpc(page, "director")).toBe(true);
+    await page.keyboard.press("e");
+
+    const dialogue = page.locator(".hallway-dialogue");
+    await expect(dialogue).toBeVisible();
+
+    // Under the status card, in the status column, not beside the card or over the room.
+    const card = await page.locator(".hub-sidepanel--left").boundingBox();
+    const opening = await dialogue.boundingBox();
+    expect(opening.y).toBeGreaterThanOrEqual(card.y + card.height);
+    expect(opening.x).toBeLessThan(
+      await page.locator("#instituteMap").evaluate((el) => el.offsetLeft)
+    );
+
+    // Every beat, not just the first: the bar is sized by its longest line, and the beats differ by
+    // three wrapped lines in a column this narrow. Advanced with dispatchEvent rather than click()
+    // because Playwright scrolls an element into view before clicking it — which would slide the
+    // sticky column up and quietly make the very assertion below pass on its own.
+    for (let beat = 0; beat < 12; beat += 1) {
+      if (!(await dialogue.isVisible().catch(() => false))) break;
+      await page.waitForTimeout(2600); // let the typewriter finish revealing this line
+      const box = await dialogue.boundingBox().catch(() => null);
+      if (!box) break;
+      expect(box.y + box.height, `beat ${beat} runs past the fold`).toBeLessThanOrEqual(768);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      await dialogue.dispatchEvent("click").catch(() => {});
+    }
+  });
+
   test("clears the interaction prompt when the player walks back out of reach (edge case)", async ({
     page,
   }) => {
