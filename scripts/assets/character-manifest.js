@@ -393,6 +393,28 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "market-farmer-walk8",
   },
+  {
+    key: "haudenosaunee-diplomat",
+    stem: "chronicle-sprites/field/npc-haudenosaunee-diplomat",
+    name: "Haudenosaunee Community Diplomat",
+    // The Erie Canal was cut through Haudenosaunee homelands and Oneida and Onondaga land cessions
+    // were under active pressure into the 1840s, so an upstate New York map without this character
+    // has a hole in it. The first generation had to be thrown away: the long trade shirt rendered
+    // in the south view only and the other three showed bare arms and shoulders, which is the
+    // generic-tribal depiction the art brief prohibits. This one covers arms and shoulders in all
+    // four rotations. `-walk`, not `-walk8`: animated before the naming convention settled.
+    id: "313727be-ec52-4fd6-bce7-a9abb5d3ef14",
+    frames: 8,
+    walkGroup: "haudenosaunee-diplomat-walk",
+  },
+  {
+    key: "canal-boardinghouse-keeper",
+    stem: "chronicle-sprites/field/npc-canal-boardinghouse-keeper",
+    name: "Irish Canal Boardinghouse Keeper",
+    id: "24d8cf84-6749-4f3b-9a80-b7f822be66ff",
+    frames: 8,
+    walkGroup: "canal-boardinghouse-keeper-walk8",
+  },
 
   // ---- Unit 5 · Richmond, Virginia, 1864 -------------------------------------------------------
   {
@@ -434,6 +456,43 @@ export const CHARACTERS = [
     id: "f40422bb-542c-47f0-869b-2596ca769875",
     frames: 8,
     walkGroup: "richmond-shopkeeper-walk8",
+  },
+  {
+    key: "richmond-seamstress",
+    stem: "chronicle-sprites/field/npc-richmond-seamstress",
+    name: "Enslaved Richmond Seamstress",
+    // Regenerated: the first attempt's north rotation was not a back view — it still faced camera
+    // with eyes visible, which is the north/south substitution failure mode. Describing the apron
+    // as tied behind her with the ties hanging is what gave the model a reason to draw a real back.
+    id: "c8372f10-927d-45ed-8248-2f618901432e",
+    frames: 8,
+    walkGroup: "richmond-seamstress-walk8",
+  },
+  {
+    key: "richmond-free-black-barber",
+    stem: "chronicle-sprites/field/npc-richmond-free-black-barber",
+    name: "Free Black Richmond Barber",
+    id: "e2224526-4097-41b9-8e85-b7a79fe147e2",
+    frames: 8,
+    walkGroup: "richmond-free-black-barber-walk8",
+  },
+  {
+    key: "richmond-relief-society-woman",
+    stem: "chronicle-sprites/field/npc-richmond-relief-society-woman",
+    name: "Richmond Relief Society Organizer",
+    id: "d7cc2155-39c4-494a-9d16-42c2202774cc",
+    frames: 8,
+    walkGroup: "richmond-relief-society-woman-walk8",
+  },
+  {
+    key: "richmond-government-messenger",
+    stem: "chronicle-sprites/field/npc-richmond-government-messenger",
+    name: "Richmond Government Messenger",
+    // Civilian, deliberately: no insignia, belt, or weapon. The map must not romanticize the
+    // Confederacy, and its most-seen routed character being a soldier is the easy way to fail that.
+    id: "78c5dd6e-8a65-49a7-a262-3ffe6d635be6",
+    frames: 8,
+    walkGroup: "richmond-government-messenger-walk8",
   },
 ];
 

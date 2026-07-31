@@ -71,8 +71,15 @@ export default [
     },
   },
   {
-    // Don't lint build output, vendor code, or asset folders
-    ignores: ["**/dist/**", "node_modules/**", "vendor/**", "**/*.min.js"],
+    // Don't lint build output, vendor code, or asset folders.
+    //
+    // `reports/` is gitignored working output — asset caches, staging downloads, and the throwaway
+    // Node scripts that produce them. It is not repository source and is not on a clean checkout,
+    // so linting it only means `npm run lint` reports errors that depend on which one-off tools a
+    // given machine happens to have run. It did: the character-import tooling left .mjs files there
+    // that failed no-undef on `process` and `Buffer`, breaking the lint gate locally while tracked
+    // source was clean.
+    ignores: ["**/dist/**", "node_modules/**", "vendor/**", "**/*.min.js", "reports/**"],
   },
   eslintConfigPrettier,
 ];

@@ -173,11 +173,21 @@ async function fetchBulk(character) {
   // it. Taking "the first group" would pick between them by whatever order the archive happens to
   // list, which is how a character silently ships the broken cycle.
   const groups = Object.entries(state.frames?.animations ?? {});
+  // No groups at all means the walk has not been queued or has not landed — the same "come back
+  // later" case as the 423 above, not a mistake. Groups present but none by that name is a real
+  // error: a typo in `walkGroup`, which would otherwise silently build a character from whatever
+  // animation happened to be first.
+  if (character.walkGroup && groups.length === 0) {
+    throw new Error(`${character.key}: generation still running`);
+  }
   const group = character.walkGroup
     ? groups.find(([name]) => name === character.walkGroup)
     : groups[0];
   if (character.walkGroup && !group) {
-    throw new Error(`${character.key}: no animation group named ${character.walkGroup}`);
+    throw new Error(
+      `${character.key}: no animation group named ${character.walkGroup} ` +
+        `(has: ${groups.map(([n]) => n).join(", ")})`
+    );
   }
   const [, byDirection] = group ?? [null, {}];
   for (const direction of DIRECTIONS) {

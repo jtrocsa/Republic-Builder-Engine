@@ -64,11 +64,17 @@ const CAST = [
   ["chronicle-sprites/field/npc-abolitionist-printer", 9],
   ["chronicle-sprites/field/npc-abolitionist-lecturer", 9],
   ["chronicle-sprites/field/npc-market-farmer", 9],
+  ["chronicle-sprites/field/npc-haudenosaunee-diplomat", 9],
+  ["chronicle-sprites/field/npc-canal-boardinghouse-keeper", 9],
   ["chronicle-sprites/field/npc-richmond-dock-laborer", 9],
   ["chronicle-sprites/field/npc-slave-trade-clerk", 9],
   ["chronicle-sprites/field/npc-confederate-official", 9],
   ["chronicle-sprites/field/npc-richmond-hospital-worker", 9],
   ["chronicle-sprites/field/npc-richmond-shopkeeper", 9],
+  ["chronicle-sprites/field/npc-richmond-seamstress", 9],
+  ["chronicle-sprites/field/npc-richmond-free-black-barber", 9],
+  ["chronicle-sprites/field/npc-richmond-relief-society-woman", 9],
+  ["chronicle-sprites/field/npc-richmond-government-messenger", 9],
   ["chronicle-sprites/field/legacy-scribe", 3],
   ["chronicle-sprites/field/legacy-columbus", 3],
   ["chronicle-sprites/field/legacy-sailor", 3],
@@ -244,17 +250,29 @@ describe("character sheets", () => {
     for (const direction of SPRITE_DIRECTIONS) {
       const file = path.join(ASSETS, `${stem}-${direction}.png`);
       const bottoms = [];
+      const silhouettes = [];
       for (let column = 0; column < columns; column += 1) {
-        bottoms.push(bodySpan(await columnRows(file, column)).bottom);
+        const rows = await columnRows(file, column);
+        bottoms.push(bodySpan(rows).bottom);
+        // Travel is measured on the silhouette — the lowest row carrying any ink at all — while
+        // the plant below stays on body rows. Two measures because they answer two questions.
+        // "Does a frame stand on the line" is about the build's own anchoring, which uses body
+        // rows, so it has to be read the same way. "Does the body slide up the canvas" is about
+        // where the character *touches the ground*, and a foot is legitimately narrower than the
+        // 4px a body row needs: mid-stride, a woman in an ankle-length skirt shows one lifted foot
+        // and a couple of pixels of the other, so the body measure stops finding feet and reports
+        // the hem or the torso instead. That read the seamstress as sliding 6px while her actual
+        // silhouette moved 2 — a walk cycle failing review for having a long skirt.
+        silhouettes.push(bodySpan(rows, 1).bottom);
       }
       const planted = Math.max(...bottoms);
-      const highest = Math.min(...bottoms);
+      const travel = Math.max(...silhouettes) - Math.min(...silhouettes);
       expect(planted, `${stem}-${direction} never plants a foot on the ground line`).toBe(
         SPRITE_CANVAS.ground - 1
       );
       expect(
-        planted - highest,
-        `${stem}-${direction} stride spans ${planted - highest}px of vertical travel`
+        travel,
+        `${stem}-${direction} stride spans ${travel}px of vertical travel`
       ).toBeLessThanOrEqual(ceiling);
     }
   });

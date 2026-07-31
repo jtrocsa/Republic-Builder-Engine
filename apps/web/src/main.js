@@ -639,12 +639,18 @@ const CHARACTER_SHEETS = {
   "abolitionist-printer": characterSheet(`${FIELD}/npc-abolitionist-printer`, 9),
   "abolitionist-lecturer": characterSheet(`${FIELD}/npc-abolitionist-lecturer`, 9),
   "market-farmer": characterSheet(`${FIELD}/npc-market-farmer`, 9),
+  "haudenosaunee-diplomat": characterSheet(`${FIELD}/npc-haudenosaunee-diplomat`, 9),
+  "canal-boardinghouse-keeper": characterSheet(`${FIELD}/npc-canal-boardinghouse-keeper`, 9),
   // Unit 5 · Richmond, Virginia, 1864.
   "richmond-dock-laborer": characterSheet(`${FIELD}/npc-richmond-dock-laborer`, 9),
   "slave-trade-clerk": characterSheet(`${FIELD}/npc-slave-trade-clerk`, 9),
   "confederate-official": characterSheet(`${FIELD}/npc-confederate-official`, 9),
   "richmond-hospital-worker": characterSheet(`${FIELD}/npc-richmond-hospital-worker`, 9),
   "richmond-shopkeeper": characterSheet(`${FIELD}/npc-richmond-shopkeeper`, 9),
+  "richmond-seamstress": characterSheet(`${FIELD}/npc-richmond-seamstress`, 9),
+  "richmond-free-black-barber": characterSheet(`${FIELD}/npc-richmond-free-black-barber`, 9),
+  "richmond-relief-society-woman": characterSheet(`${FIELD}/npc-richmond-relief-society-woman`, 9),
+  "richmond-government-messenger": characterSheet(`${FIELD}/npc-richmond-government-messenger`, 9),
   // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six
   // keep the placeholder art Unit 3 already used, rebuilt into the same strip format. Giving them
   // their own keys is the point: without it, upgrading `columbus` to real 1492 art would silently
