@@ -68,3 +68,13 @@ export const CanalWorks = {
   washTub: tile("derived/canal-works.png", 0, 10, { h: 2, w: 2 }),
   noticeBoard: tile("derived/canal-works.png", 0, 12, { h: 2, w: 1 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const CivilWarWorks = {
+  wallTent: tile("derived/civil-war-works.png", 0, 0, { h: 2, w: 3 }),
+  rampart: tile("derived/civil-war-works.png", 0, 3, { h: 1, w: 3 }),
+  abatis: tile("derived/civil-war-works.png", 0, 6, { h: 2, w: 3 }),
+  fieldGun: tile("derived/civil-war-works.png", 0, 9, { h: 2, w: 2 }),
+  supplyWagon: tile("derived/civil-war-works.png", 0, 11, { h: 2, w: 2 }),
+  hospitalCot: tile("derived/civil-war-works.png", 0, 13, { h: 2, w: 1 }),
+};

@@ -154,4 +154,48 @@ export const DERIVED_OBJECTS = [
       { name: "noticeBoard", box: [470, 24, 516, 102] },
     ],
   },
+  {
+    // Unit 5's commissioned props, and the one entry here that closes a gap the style guide had
+    // carried since the library was first catalogued. `military.civilWar.camp` was registered
+    // because the WWI packs are the wrong war by fifty years and `army`/`modern military` are wrong
+    // by a century — Island survival's canvas tents were the only near-miss in 250 sheets and they
+    // read as castaway shelters. That gap blocked `p5-civil-war-camp` outright. These six close it.
+    //
+    // What each one is for, on a map that is a city rather than a camp: the tent, the rampart and
+    // the abatis are the City Edge margin treatment along Richmond's north-east road; the field gun
+    // and the supply wagon are the ordnance and the depot; the cot furnishes the Chimborazo ward.
+    //
+    // **The chevaux-de-frise was commissioned and dropped, after five rolls.** Three of them came
+    // back a picket fence and one a palisade: the model reads "a beam with sharpened stakes driven
+    // through it" as fencing, however the request is phrased, and a fence on a fortification line is
+    // worse than no object at all. The rampart and the abatis already carry the edge, and of the
+    // three obstacles the chevaux-de-frise is the one that reads least legibly at 48px anyway. If it
+    // is ever wanted, generate it as a *shape* — crossed poles threaded on a beam, a row of X's —
+    // rather than by naming the thing.
+    //
+    // `abatis` is the one object here whose name was decided by the render rather than the prompt.
+    // The roll that produced it was asking for a barricade of several felled trees and returned one
+    // trunk bristling with branches — which is precisely what a single abatis element is, so it took
+    // that name and gets stamped two or three in a row for a run. Read it as timber, not as milled
+    // work: it has bark, branch stubs and a root flare.
+    //
+    // Scale follows the canal sheet's rule — the canvas is the scale — but these are outdoor objects
+    // and the reference is different. Buildings in this library run 94-183px and trees 129-142px
+    // against a 45px body, so a tent at 98px reads as a small structure a person stoops into, and a
+    // gun at 81px long as a field piece rather than a siege one. The cot is deliberately smaller than
+    // `canal-works.png`'s `ropeBed` (44x78 against 56x90): a folding camp cot is narrower and lower
+    // than a rope bedstead, and the two beds in this game should not be the same object twice.
+    //
+    // Cut by explicit box, printed by reports/_review/compose-commission.mjs, as above.
+    from: "Chronicle Commissions/civil-war-works.png",
+    out: "civil-war-works.png",
+    objects: [
+      { name: "wallTent", box: [8, 6, 106, 78] },
+      { name: "rampart", box: [114, 56, 218, 78] },
+      { name: "abatis", box: [226, 9, 330, 78] },
+      { name: "fieldGun", box: [338, 15, 419, 78] },
+      { name: "supplyWagon", box: [427, 3, 510, 78] },
+      { name: "hospitalCot", box: [518, 0, 562, 78] },
+    ],
+  },
 ];

@@ -280,7 +280,9 @@ export const GAPS = [
   "architecture.indigenous.northAmerican", // longhouse, pueblo, plains lodge — nothing fits.
   // Island survival's bohio huts are Caribbean/Taino-appropriate ONLY; do not reuse them as
   // generic "Native American."
-  "military.civilWar.camp", // Union/Confederate tents, artillery, earthworks.
+  // `military.civilWar.camp` was here, and is CLOSED — commissioned as derived/civil-war-works.png
+  // (wall tent, rampart, abatis, field gun, supply wagon, hospital cot). See the manifest entry for
+  // what was generated and for the one object, the chevaux-de-frise, that was dropped.
   "architecture.plantation.greatHouse", // Greek Revival columned house. Fields and quarters are
   // covered (farm + Wild West tile-B-08); the great house is not.
   "streetscape.midCentury", // 1950s-specific. Highway Rest Area / Modern Park read contemporary.

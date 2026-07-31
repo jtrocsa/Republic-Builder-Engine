@@ -251,7 +251,6 @@ test fails if a planned map claims a gap that is not registered there.
 | Gap                                        | Detail                                                                                                                                                                                                                                                                            |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Indigenous North American architecture** | Longhouse, pueblo, plains lodge. Nothing fits. Island survival's bohío huts are Caribbean/Taíno-appropriate and correctly used for `case-001`; reusing them as generic "Native American" would flatten distinct cultures into one wrong image. Blocks `p1-indigenous-settlement`. |
-| **Civil War military camp**                | Union/Confederate tents, artillery, earthworks. The WWI packs are the wrong war by fifty years; `army`/`modern military` by a century. Blocks `p5-civil-war-camp`.                                                                                                                |
 | **Antebellum plantation great house**      | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                        |
 | **Mid-century streetscape**                | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged.                                                                                                                                                           |
 | **Antebellum American commercial street**  | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged. |
@@ -264,6 +263,20 @@ and everything else in town is the period-right clapboard already repacked into
 going up is both what the art supports and what the history says, so the mix is doing real work rather
 than hiding a mismatch. Anyone reaching for `tile-B-01` on a Period 4 map should reach for the
 clapboard first and keep the brick for the buildings that are meant to look new.
+
+The **Civil War military camp** gap is now **closed, and actioned.** It was the register's hardest
+entry: the WWI packs are the wrong war by fifty years, `army` and `modern military` wrong by a
+century, and Island survival's canvas tents — the only near-miss in 250 sheets — read as castaway
+shelters. Six objects were commissioned into `derived/civil-war-works.png`: a wall tent, an earthwork
+rampart, an abatis, a field gun, an army supply wagon and a hospital cot. That unblocks
+`p5-civil-war-camp` and furnishes Richmond's City Edge margin and its Chimborazo ward.
+
+A seventh, the **chevaux-de-frise, was commissioned and abandoned after five rolls** — three came
+back a picket fence and one a palisade, because the generator reads "a beam with sharpened stakes
+driven through it" as fencing however it is asked. The rampart and the abatis already carry a
+fortification line, and of the three obstacles the chevaux-de-frise is the least legible at 48px.
+Anyone retrying it should describe the **shape** — crossed poles threaded along a beam, a row of
+X's — rather than name the object.
 
 The **"modern institute interior"** gap this register used to carry is now **closed**, though not
 yet actioned. It was recorded when the only candidate was the off-grid `Modern Interiors` pack;

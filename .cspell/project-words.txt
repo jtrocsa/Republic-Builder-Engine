@@ -47,6 +47,7 @@ Benavente
 Bernal
 blitter
 boatshed
+boatwoman
 bohio
 Bohío
 bohios
@@ -68,6 +69,7 @@ Chronotraveling
 Cinzel
 cleanroom
 collidable
+Colligan
 Comeau's
 commoncause
 componentized
@@ -90,11 +92,13 @@ digitsensitive
 Dijkstras
 Donnan's
 dont
+dormered
 dragleave
 dragover
 dragstart
 dred
 easystarjs
+Echota
 Ellsberg
 encomienda
 encomienda's
@@ -114,6 +118,7 @@ freedmens
 freedpeople
 freedpeoples
 freedpeople's
+frise
 Frethorne
 Frethorne's
 frontmatter
@@ -135,6 +140,7 @@ hipp
 HIPP's
 hitbox
 hitboxes
+hoggee
 homeownership
 hotfixes
 hoverable
@@ -185,6 +191,7 @@ maxlength
 maxrects
 mcculloch
 Mcpjson
+Meehan
 minigames
 mislinking
 Motolinía
@@ -283,6 +290,7 @@ shortcutting
 sidepanel
 simurai
 sindresorhus
+Skanawati
 spritejs
 SPRITESHEET
 srcs
@@ -320,6 +328,8 @@ tinify
 tinyqueue
 toggleable
 topbar
+Topo
+topojson
 Toribio
 touchstart
 trackside
@@ -351,6 +361,7 @@ unthrottled
 unwalkable
 upserted
 Upserts
+usct
 valuenow
 versionable
 Vietnamization
@@ -366,7 +377,9 @@ Wayfinding
 wilsons
 Wirt
 Wirt's
+Württemberg
 workadventure
 Workstream
 workstreams
 Yeardley
+Zboray

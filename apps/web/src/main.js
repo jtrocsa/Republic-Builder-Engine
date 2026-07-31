@@ -1362,9 +1362,10 @@ const UNIT2_FIELD_NPCS = [
   {
     id: "settlement-smith",
     // Beside the storage shed (22.0,22.0-24.0,24.0), at the south edge of the village. There is no
-    // forge, anvil or bellows tile in any palette this project owns — `military.civilWar.camp` and
-    // the trades props are registered gaps in canonical-palette.js — so he is placed by the
-    // structure his work actually sat next to rather than given invented scenery.
+    // forge, anvil or bellows tile in any palette this project owns, so he is placed by the
+    // structure his work actually sat next to rather than given invented scenery. (This note used to
+    // cite `military.civilWar.camp` as the comparable registered gap; that one has since been closed
+    // by commissioning derived/civil-war-works.png. A forge has not.)
     x: 25.0,
     y: 23.5,
     group: "settlement",

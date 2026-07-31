@@ -139,15 +139,19 @@ export const PLANNED_MAPS = [
   {
     id: "p5-civil-war-camp",
     period: 5,
-    status: "blocked",
+    status: "planned",
     intent: "A Union or Confederate encampment.",
-    sheets: [],
-    gap: "military.civilWar.camp",
+    sheets: [
+      "derived/civil-war-works.png", // wall tent, rampart, abatis, field gun, supply wagon, cot
+      "farm/6.png", // tilled rows, grass, split-rail fencing, trees
+      "derived/farm-trees.png", // the tree line a camp is pitched under
+    ],
     notes:
-      "BLOCKED. No period tents, artillery or earthworks exist in the library. The WWI packs are " +
-      "the wrong war by fifty years and carry tanks; `army` and `modern military` are wrong by a " +
-      "century. Island survival's canvas tents are the only near-miss and read as castaway " +
-      "shelters, not military. Needs new art.",
+      "UNBLOCKED. The gap this carried — no period tents, artillery or earthworks anywhere in the " +
+      "library — was closed by commissioning `derived/civil-war-works.png`, six objects generated " +
+      "for Richmond's City Edge margin and its ward. A whole encampment map would want more than " +
+      "six: a second tent silhouette so a camp street is not one roof repeated, a cook fire, and a " +
+      "stand of arms. Those are extensions of an established sheet now, not a blocker.",
   },
   {
     id: "p5-courthouse-interior",
