@@ -583,13 +583,20 @@ export const CHARACTER_SHEET_PRELOAD =
         return image;
       })
     : [];
-function characterSheet(stem, columns) {
+/**
+ * One character's strips. `idle` is optional: a character that declares one has a second set of
+ * strips holding a breathing cycle, which is what a stationed body plays instead of holding a
+ * single frame for as long as the player is in the room. It carries its own column count because
+ * the idle template is 4 frames where the walk is 8 — they are separate files precisely so neither
+ * has to compromise, and so adding an idle changes nothing about the walk strips already shipped.
+ */
+function characterSheet(stem, columns, { idleColumns = 0 } = {}) {
   const file = (suffix) => {
     const url = characterSheetFiles[`./assets/${stem}-${suffix}.png`];
     if (!url) throw new Error(`missing character sheet: ${stem}-${suffix}.png`);
     return url;
   };
-  return {
+  const sheet = {
     columns,
     portrait: file("portrait"),
     down: file("down"),
@@ -597,14 +604,27 @@ function characterSheet(stem, columns) {
     left: file("left"),
     right: file("right"),
   };
+  if (idleColumns) {
+    sheet.idleColumns = idleColumns;
+    sheet.idle = {
+      down: file("idle-down"),
+      up: file("idle-up"),
+      left: file("idle-left"),
+      right: file("idle-right"),
+    };
+  }
+  return sheet;
 }
 const FIELD = "chronicle-sprites/field";
 const CHARACTER_SHEETS = {
   // Institute staff. Director Hale is the cast's style and scale reference — every other body is
   // normalized to his height, and he must not be regenerated (docs/art/CHARACTER-CAST-SPEC.md).
-  director: characterSheet("institute/director-rowan-hale", 7),
-  amani: characterSheet("institute/researcher-amani-soto", 9),
-  julian: characterSheet("institute/professor-julian-park", 9),
+  // `idleColumns: 5` gives each of them a breathing cycle to play while stood at their posts. The
+  // Institute staff are the reason this exists: the player stands next to these three at close
+  // range in three hub rooms every session, and until now each was a single unmoving frame.
+  director: characterSheet("institute/director-rowan-hale", 7, { idleColumns: 5 }),
+  amani: characterSheet("institute/researcher-amani-soto", 9, { idleColumns: 5 }),
+  julian: characterSheet("institute/professor-julian-park", 9, { idleColumns: 5 }),
   // Player appearances.
   "chronicler-a": characterSheet(`${FIELD}/chronicler-a`, 9),
   "chronicler-b": characterSheet(`${FIELD}/chronicler-b`, 9),
@@ -634,7 +654,9 @@ const CHARACTER_SHEETS = {
   // keeps its reference frame, so these cycles are 9 frames where the earlier cast's are 8. The
   // column count travels with the character precisely so both can ship unchanged.
   "canal-boat-captain": characterSheet(`${FIELD}/npc-canal-boat-captain`, 9),
-  "canal-lock-keeper-woman": characterSheet(`${FIELD}/npc-canal-lock-keeper-woman`, 9),
+  "canal-lock-keeper-woman": characterSheet(`${FIELD}/npc-canal-lock-keeper-woman`, 9, {
+    idleColumns: 5,
+  }),
   "textile-mill-worker": characterSheet(`${FIELD}/npc-textile-mill-worker`, 9),
   "abolitionist-printer": characterSheet(`${FIELD}/npc-abolitionist-printer`, 9),
   "abolitionist-lecturer": characterSheet(`${FIELD}/npc-abolitionist-lecturer`, 9),
@@ -653,7 +675,7 @@ const CHARACTER_SHEETS = {
   "richmond-hospital-worker": characterSheet(`${FIELD}/npc-richmond-hospital-worker`, 9),
   "richmond-shopkeeper": characterSheet(`${FIELD}/npc-richmond-shopkeeper`, 9),
   "richmond-seamstress": characterSheet(`${FIELD}/npc-richmond-seamstress`, 9),
-  "tredegar-ironworker": characterSheet(`${FIELD}/npc-tredegar-ironworker`, 9),
+  "tredegar-ironworker": characterSheet(`${FIELD}/npc-tredegar-ironworker`, 9, { idleColumns: 5 }),
   "confederate-private": characterSheet(`${FIELD}/npc-confederate-private`, 9),
   "richmond-free-black-barber": characterSheet(`${FIELD}/npc-richmond-free-black-barber`, 9),
   "richmond-refugee-woman": characterSheet(`${FIELD}/npc-richmond-refugee-woman`, 9),
@@ -684,31 +706,60 @@ function chroniclerKey() {
 // player can share one keyframe and both look like they are pushing the ground. Omit it for the
 // cutscene figures, which have no ground speed and keep the CSS fallback.
 /** Inline custom properties pointing one sprite element at one direction of one character. */
-function characterSpriteStyle(key, facing, speed) {
+function characterSpriteStyle(key, facing, speed, { idling = false } = {}) {
   const sheet = sheetFor(key);
+  if (idling && sheet.idle) {
+    const url = sheet.idle[spriteDirection(facing)];
+    return `${spriteSheetStyle(url, sheet.idleColumns)}--sprite-cycle:${IDLE_CYCLE_SECONDS}s;`;
+  }
   return spriteSheetStyle(sheet[spriteDirection(facing)], sheet.columns, speed);
 }
-/** The sprite element itself. Walking state is a class the movement loops toggle. */
+/**
+ * The sprite element itself. Walking state is a class the movement loops toggle.
+ *
+ * The idle state is resolved here as well as in applyCharacterSprite(), so that a character with a
+ * breathing cycle is breathing on the frame it is first painted rather than holding one frame until
+ * the next movement tick reaches it.
+ */
 function characterSpriteMarkup(key, facing, { id = "", walking = false, speed } = {}) {
-  return `<span class="character-sprite${walking ? " is-walking" : ""}"${id ? ` id="${id}"` : ""} style="${characterSpriteStyle(key, facing, speed)}" aria-hidden="true"></span>`;
+  const idling = !walking && Boolean(sheetFor(key).idle);
+  const classes = `character-sprite${walking ? " is-walking" : ""}${idling ? " is-idling" : ""}`;
+  return `<span class="${classes}"${id ? ` id="${id}"` : ""} style="${characterSpriteStyle(key, facing, speed, { idling })}" aria-hidden="true"></span>`;
 }
+/**
+ * Seconds for one breathing cycle. Not derived from ground speed the way a stride is — a standing
+ * body is not covering ground — so it is stated once here. Slow enough to read as breathing rather
+ * than fidgeting.
+ */
+const IDLE_CYCLE_SECONDS = 2.4;
+
 /** Repoints an already-rendered sprite element at a different direction, in place. */
 function applyCharacterSprite(node, key, facing, walking, speed) {
   if (!node) return;
   const sheet = sheetFor(key);
-  const url = sheet[spriteDirection(facing)];
+  // A character that is standing still plays its breathing cycle if it has one, and otherwise
+  // holds column 0 exactly as it always did. Both are the same mechanism — a strip whose column 0
+  // is a standing pose — so the swap is a sheet URL and a column count, and the stepping keyframe
+  // is untouched.
+  const idling = !walking && Boolean(sheet.idle);
+  const url = idling ? sheet.idle[spriteDirection(facing)] : sheet[spriteDirection(facing)];
+  const columns = idling ? sheet.idleColumns : sheet.columns;
   // Only when the sheet actually changes. This runs every tick for every body on screen, and
   // rewriting the custom property with the value it already holds is style work for no visual
   // difference. characterSpriteMarkup() emits the sheet inline but no data-sheet, so the first call
   // after each render() writes it once and then goes quiet.
   if (node.dataset.sheet !== url) {
     node.style.setProperty("--sprite-sheet", `url('${url}')`);
-    node.style.setProperty("--sprite-columns", String(sheet.columns));
-    node.style.setProperty("--sprite-walk-frames", String(sheet.columns - 1));
+    node.style.setProperty("--sprite-columns", String(columns));
+    node.style.setProperty("--sprite-walk-frames", String(columns - 1));
     node.dataset.sheet = url;
   }
-  if (speed !== undefined) node.style.setProperty("--sprite-cycle", `${walkCycleSeconds(speed)}s`);
+  if (idling) node.style.setProperty("--sprite-cycle", `${IDLE_CYCLE_SECONDS}s`);
+  else if (speed !== undefined) {
+    node.style.setProperty("--sprite-cycle", `${walkCycleSeconds(speed)}s`);
+  }
   node.classList.toggle("is-walking", Boolean(walking));
+  node.classList.toggle("is-idling", idling);
 }
 
 let fieldMovement = { x: 28.0, y: 22.0, facing: "down", moving: false, step: false, queued: null };

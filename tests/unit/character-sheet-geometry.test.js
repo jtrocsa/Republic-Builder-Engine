@@ -91,6 +91,16 @@ const CAST = [
   ["chronicle-sprites/field/legacy-gardener", 3],
 ];
 
+// Characters that also ship a breathing cycle, and its column count. Mirrors the `idleColumns`
+// argument in main.js's CHARACTER_SHEETS, for the same reason CAST mirrors the registry itself.
+const IDLE_CAST = [
+  ["institute/director-rowan-hale", 5],
+  ["institute/researcher-amani-soto", 5],
+  ["institute/professor-julian-park", 5],
+  ["chronicle-sprites/field/npc-canal-lock-keeper-woman", 5],
+  ["chronicle-sprites/field/npc-tredegar-ironworker", 5],
+];
+
 /** Per-row opaque pixel counts for one column of a strip. */
 async function columnRows(file, index) {
   const { data, info } = await sharp(file)
@@ -282,6 +292,62 @@ describe("character sheets", () => {
         travel,
         `${stem}-${direction} stride spans ${travel}px of vertical travel`
       ).toBeLessThanOrEqual(ceiling);
+    }
+  });
+
+  // A breathing cycle is art on the same canvas standing on the same ground line, so it answers to
+  // the same assertions. Its own list only because an idle strip is a different width — 4 template
+  // frames against the walk's 8.
+  it.each(IDLE_CAST)("%s breathes on the shared canvas and ground line", async (stem, columns) => {
+    for (const direction of SPRITE_DIRECTIONS) {
+      const file = path.join(ASSETS, `${stem}-idle-${direction}.png`);
+      const meta = await sharp(file).metadata();
+      expect(meta.height, `${stem}-idle-${direction} height`).toBe(SPRITE_CANVAS.height);
+      expect(meta.width, `${stem}-idle-${direction} width`).toBe(SPRITE_CANVAS.width * columns);
+
+      const bottoms = [];
+      const silhouettes = [];
+      for (let column = 0; column < columns; column += 1) {
+        const rows = await columnRows(file, column);
+        bottoms.push(bodySpan(rows).bottom);
+        silhouettes.push(bodySpan(rows, 1).bottom);
+      }
+      const travel = Math.max(...silhouettes) - Math.min(...silhouettes);
+      expect(Math.max(...bottoms), `${stem}-idle-${direction} foot row`).toBe(
+        SPRITE_CANVAS.ground - 1
+      );
+      // Tighter than the walk's 5px. A stride legitimately lifts the body; breathing does not, so
+      // anything past a couple of pixels here means the template re-posed the character rather
+      // than animating it — which is exactly what the action templates did before this landed.
+      expect(
+        travel,
+        `${stem}-idle-${direction} drifts ${travel}px while standing`
+      ).toBeLessThanOrEqual(3);
+    }
+  });
+
+  // The standing pose is the same source rotation, cropped by the same window at the same scale and
+  // placed by the same offset in both strips, so its silhouette must land on exactly the same
+  // pixels. That is what guarantees a character cannot jump or shift the instant it starts or stops
+  // breathing — a whole class of bug closed by one comparison rather than by eye.
+  //
+  // Silhouette rather than full colour: the strips are written as palette PNGs, and a palette is
+  // built per image. The idle strip's other frames pull its palette somewhere slightly different
+  // from the walk strip's, so identical source pixels legitimately encode to RGB values a step
+  // apart. Alpha is not quantized, and alpha is where the geometry lives.
+  it.each(IDLE_CAST)("%s shares one standing pose across both strips", async (stem) => {
+    for (const direction of SPRITE_DIRECTIONS) {
+      const alpha = async (file) => {
+        const { data } = await sharp(path.join(ASSETS, file))
+          .extract({ left: 0, top: 0, width: SPRITE_CANVAS.width, height: SPRITE_CANVAS.height })
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+        return Buffer.from(data.filter((_, i) => i % 4 === 3));
+      };
+      const walk = await alpha(`${stem}-${direction}.png`);
+      const idle = await alpha(`${stem}-idle-${direction}.png`);
+      expect(Buffer.compare(walk, idle), `${stem} ${direction} standing pose moved`).toBe(0);
     }
   });
 

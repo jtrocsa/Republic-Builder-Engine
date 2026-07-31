@@ -39,6 +39,13 @@ export const CHARACTERS = [
     reference: true,
     id: "ddc5c73c-ba31-4f17-8622-5d1f376872dd",
     frames: 6,
+    // A stationed character used to be one frozen frame, held for as long as the player stood in
+    // the room. `breathing-idle` is the only template that suits a person standing still: the
+    // action templates (pushing, pull-heavy-object) re-pose the body into a platformer lunge that
+    // leaves the 48x56 canvas entirely and loses the costume with it. Adding an animation does not
+    // regenerate the character, so the "do not regenerate the Director" rule is untouched.
+    idleGroup: "director-idle",
+    idleFrames: 4,
     walk: {
       south: "2266e6e8-c031-4254-8424-fa3839d02293",
       north: "6f94928a-6fe2-4fc2-b7ae-c06ee183104c",
@@ -52,6 +59,8 @@ export const CHARACTERS = [
     name: "Female Professor",
     id: "1f8768e1-3913-47c0-bb5e-4de6a0e879f6",
     frames: 8,
+    idleGroup: "amani-idle",
+    idleFrames: 4,
     walk: {
       south: "04c9c990-e889-4184-9aef-284e973d3da6",
       north: "99603c90-1e4a-4fd2-a59c-322ece55a430",
@@ -65,6 +74,8 @@ export const CHARACTERS = [
     name: "Male Professor",
     id: "1b8194bc-fa5f-4bbd-949c-e81068ed18e2",
     frames: 8,
+    idleGroup: "julian-idle",
+    idleFrames: 4,
     walk: {
       south: "c2f783c8-d434-49a8-a5cd-869710354f68",
       north: "ce92a3f8-cb48-41da-9ec4-fea4f3549660",
@@ -360,6 +371,8 @@ export const CHARACTERS = [
     id: "860097b6-2513-45b6-b0ee-d9c50ee2e60f",
     frames: 8,
     walkGroup: "canal-lock-keeper-woman-walk8",
+    idleGroup: "canal-lock-keeper-woman-idle",
+    idleFrames: 4,
   },
   {
     key: "textile-mill-worker",
@@ -561,6 +574,8 @@ export const CHARACTERS = [
     id: "6fa5fb61-03c9-4cc6-9e0b-4d5f3d2780b5",
     frames: 8,
     walkGroup: "tredegar-ironworker-walk8",
+    idleGroup: "tredegar-ironworker-idle",
+    idleFrames: 4,
   },
   {
     key: "confederate-private",

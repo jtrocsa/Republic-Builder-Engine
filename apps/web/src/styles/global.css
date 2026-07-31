@@ -3550,6 +3550,15 @@ dd {
 .character-sprite.is-walking {
   animation: characterWalk var(--sprite-cycle, 0.72s) steps(var(--sprite-walk-frames, 1)) infinite;
 }
+/* A standing character's breathing cycle. It steps through an idle strip with the same keyframe,
+   because the keyframe is written against `--sprite-walk-frames` rather than a fixed count and an
+   idle strip has the same shape as a walk strip — a standing pose in column 0, the cycle after it.
+   Its own class rather than reusing .is-walking: that class is also what the field and hub loops
+   pair with footstep audio and the walking bob on the parent node, and a stationary body must not
+   pick either of those up. */
+.character-sprite.is-idling {
+  animation: characterWalk var(--sprite-cycle, 2.4s) steps(var(--sprite-walk-frames, 1)) infinite;
+}
 @keyframes characterWalk {
   from {
     background-position-x: calc(100% / var(--sprite-walk-frames));
@@ -3559,7 +3568,8 @@ dd {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .character-sprite.is-walking {
+  .character-sprite.is-walking,
+  .character-sprite.is-idling {
     animation: none;
   }
 }

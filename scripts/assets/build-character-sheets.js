@@ -110,9 +110,27 @@ function unionBounds(boxes) {
 
 // ---- source frames -----------------------------------------------------------------------------
 
-function cachePath(character, compass, index) {
-  const name = index === null ? `${compass}-stand.png` : `${compass}-${index}.png`;
+/**
+ * Where one source frame is cached. `kind` names the cycle it belongs to: "walk" keeps the original
+ * flat `<compass>-<n>.png` naming so every already-cached character stays valid, and anything else
+ * is suffixed. The standing rotation is shared by every cycle, so it has no kind.
+ */
+function cachePath(character, compass, index, kind = "walk") {
+  if (index === null) return path.join(CACHE, character.key, `${compass}-stand.png`);
+  const name = kind === "walk" ? `${compass}-${index}.png` : `${compass}-${kind}-${index}.png`;
   return path.join(CACHE, character.key, name);
+}
+
+/**
+ * The cycles one character declares, as [kind, groupName, frameCount].
+ *
+ * Every character has a walk. `idleGroup` is optional and is what stops a stationed character being
+ * a single frozen frame — see the idle strips in buildCharacter().
+ */
+function cyclesOf(character) {
+  const cycles = [["walk", character.walkGroup, character.frames]];
+  if (character.idleGroup) cycles.push(["idle", character.idleGroup, character.idleFrames]);
+  return cycles;
 }
 
 async function download(url, target) {
@@ -156,7 +174,7 @@ function unzip(buffer) {
  */
 const BULK_DOWNLOAD = (id) => `https://api.pixellab.ai/mcp/characters/${id}/download`;
 
-async function fetchBulk(character) {
+async function fetchBulk(character, kinds = cyclesOf(character).map(([kind]) => kind)) {
   const response = await fetch(BULK_DOWNLOAD(character.id));
   // PixelLab answers 423 while any job on the character is still running, so the endpoint doubles
   // as a completion check — a character fetched too early is not a failed one.
@@ -180,46 +198,61 @@ async function fetchBulk(character) {
   if (character.walkGroup && groups.length === 0) {
     throw new Error(`${character.key}: generation still running`);
   }
-  const group = character.walkGroup
-    ? groups.find(([name]) => name === character.walkGroup)
-    : groups[0];
-  if (character.walkGroup && !group) {
-    throw new Error(
-      `${character.key}: no animation group named ${character.walkGroup} ` +
-        `(has: ${groups.map(([n]) => n).join(", ")})`
-    );
-  }
-  const [, byDirection] = group ?? [null, {}];
+
   for (const direction of DIRECTIONS) {
     const compass = COMPASS[direction];
     const stand = cachePath(character, compass, null);
     mkdirSync(path.dirname(stand), { recursive: true });
     writeFileSync(stand, files.get(state.frames.rotations[compass]));
-    (byDirection[compass] ?? []).forEach((source, n) => {
-      writeFileSync(cachePath(character, compass, n), files.get(source));
-    });
+  }
+
+  for (const [kind, groupName] of cyclesOf(character)) {
+    if (!kinds.includes(kind)) continue;
+    const group = groupName ? groups.find(([name]) => name === groupName) : groups[0];
+    if (groupName && !group) {
+      throw new Error(
+        `${character.key}: no animation group named ${groupName} ` +
+          `(has: ${groups.map(([n]) => n).join(", ")})`
+      );
+    }
+    const [, byDirection] = group ?? [null, {}];
+    for (const direction of DIRECTIONS) {
+      const compass = COMPASS[direction];
+      (byDirection[compass] ?? []).forEach((source, n) => {
+        writeFileSync(cachePath(character, compass, n, kind), files.get(source));
+      });
+    }
   }
 }
 
 async function fetchAll() {
   const waiting = [];
   for (const character of CHARACTERS) {
-    if (!character.walk) {
-      // A character whose jobs are still running is reported and skipped rather than aborting the
-      // run. Importing a cast is incremental by nature — several are always still generating — and
-      // a throw here would discard every download that came after it in the list.
-      if (!existsSync(cachePath(character, "south", null))) {
-        try {
-          await fetchBulk(character);
-        } catch (error) {
-          if (!/still running/.test(error.message)) throw error;
-          waiting.push(character.key);
-          continue;
-        }
+    // A character whose jobs are still running is reported and skipped rather than aborting the
+    // run. Importing a cast is incremental by nature — several are always still generating — and a
+    // throw here would discard every download that came after it in the list.
+    const collect = async (kinds) => {
+      try {
+        await fetchBulk(character, kinds);
+        return true;
+      } catch (error) {
+        if (!/still running/.test(error.message)) throw error;
+        waiting.push(character.key);
+        return false;
       }
+    };
+
+    if (!character.walk) {
+      // Each cycle is checked separately, or a character cached before it had an idle would never
+      // fetch one: the archive is only opened when something is missing, and "the walk is already
+      // here" is not the same question as "is the idle here".
+      const needWalk = !existsSync(cachePath(character, "south", null));
+      const needIdle = character.idleGroup && !existsSync(cachePath(character, "south", 0, "idle"));
+      if ((needWalk || needIdle) && !(await collect(needWalk ? undefined : ["idle"]))) continue;
       console.log(`fetched ${character.key} (bulk)`);
       continue;
     }
+
     for (const direction of DIRECTIONS) {
       const compass = COMPASS[direction];
       const stand = cachePath(character, compass, null);
@@ -230,10 +263,17 @@ async function fetchAll() {
         if (!existsSync(target)) await download(frameUrl(character, compass, n), target);
       }
     }
+    // The per-frame CDN URLs above need an animation UUID per direction, and only the walk has
+    // them — an idle added later has no ids anywhere, because PixelLab stopped surfacing them. So
+    // the original cast fetches its walk the way it always did and picks up an idle through the
+    // bulk archive, which needs nothing but the character id.
+    if (character.idleGroup && !existsSync(cachePath(character, "south", 0, "idle"))) {
+      if (!(await collect(["idle"]))) continue;
+    }
     console.log(`fetched ${character.key}`);
   }
   if (waiting.length) {
-    console.log(`\nstill generating, re-run to collect: ${waiting.join(", ")}`);
+    console.log(`\nstill generating, re-run to collect: ${[...new Set(waiting)].join(", ")}`);
   }
 }
 
@@ -248,7 +288,7 @@ async function fetchAll() {
  * fetchBulk() with no ids at all, and the inference would have quietly mirrored east onto all four
  * directions for twenty characters whose real north and west art was sitting in the cache.
  */
-async function sourceFrames(character) {
+async function sourceFrames(character, kind = "walk", count = character.frames) {
   const frames = [];
   for (const direction of DIRECTIONS) {
     const compass = COMPASS[direction];
@@ -259,8 +299,8 @@ async function sourceFrames(character) {
     });
     const mirrored = character.mirrorWestFromEast && compass === "west";
     const from = mirrored ? "east" : compass;
-    for (let n = 0; n < character.frames; n += 1) {
-      let buffer = readFileSync(cachePath(character, from, n));
+    for (let n = 0; n < count; n += 1) {
+      let buffer = readFileSync(cachePath(character, from, n, kind));
       if (mirrored) buffer = await sharp(buffer).flop().png().toBuffer();
       frames.push({ direction, column: n + 1, buffer });
     }
@@ -289,11 +329,20 @@ async function sourceFrames(character) {
  *            whatever a character happens to be holding and by how far its limbs swing.
  */
 async function measure(character) {
-  const frames = await sourceFrames(character);
+  // Every cycle is measured into one window, not one window each. The crop rect and scale are what
+  // decide how big a character is drawn, so a walk window and an idle window would render the same
+  // person at two sizes and pop him between them the moment he stopped moving.
+  const cycles = {};
+  for (const [kind, , count] of cyclesOf(character)) {
+    cycles[kind] = await sourceFrames(character, kind, count);
+  }
+  const frames = cycles.walk;
   const boxes = [];
-  for (const frame of frames) {
-    const s = await scan(frame.buffer);
-    if (s) boxes.push(s.box);
+  for (const cycle of Object.values(cycles)) {
+    for (const frame of cycle) {
+      const s = await scan(frame.buffer);
+      if (s) boxes.push(s.box);
+    }
   }
 
   let body = 0;
@@ -308,7 +357,7 @@ async function measure(character) {
     stance[frame.direction] = { ground: span.bottom, centreX: s.medianX };
   }
 
-  return { character, frames, window: unionBounds(boxes), body, stance };
+  return { character, frames, cycles, window: unionBounds(boxes), body, stance };
 }
 
 /**
@@ -488,40 +537,55 @@ function blankCanvas(canvas) {
 }
 
 async function buildCharacter(entry, canvas) {
-  const { character, frames, window, scaled } = entry;
-  const columns = character.frames + 1;
+  const { character, cycles, window, scaled } = entry;
   const written = [];
-
   const wheres = {};
-  for (const direction of DIRECTIONS) {
-    const ours = frames.filter((f) => f.direction === direction);
-    const normalized = new Map();
-    for (const frame of ours) {
-      normalized.set(frame.column, await normalizeFrame(frame.buffer, window, scaled));
+
+  /**
+   * One cycle's four strips. Every cycle is cropped by the same window and drawn at the same scale
+   * (see measure()), and each is anchored by its own most-planted frame, so a character's feet land
+   * on the same row whether it is walking or standing and breathing.
+   */
+  const buildCycle = async (kind, frames, count) => {
+    const columns = count + 1;
+    for (const direction of DIRECTIONS) {
+      const ours = frames.filter((f) => f.direction === direction);
+      const normalized = new Map();
+      for (const frame of ours) {
+        normalized.set(frame.column, await normalizeFrame(frame.buffer, window, scaled));
+      }
+      const where = await placements(
+        normalized.get(0),
+        [...normalized.entries()].filter(([c]) => c > 0).map(([, b]) => b),
+        canvas
+      );
+      // The portrait is cut from the walk cycle's standing placement, so only that one is kept.
+      if (kind === "walk") wheres[direction] = where;
+      const strip = blankCanvas({ width: canvas.width * columns, height: canvas.height });
+      const composites = [];
+      for (const frame of ours) {
+        const at = frame.column === 0 ? where.stand : where.walk;
+        const placed = await placeInCell(normalized.get(frame.column), at, canvas);
+        if (!placed) continue;
+        composites.push({
+          input: placed.input,
+          left: frame.column * canvas.width + placed.left,
+          top: placed.top,
+        });
+      }
+      const suffix = kind === "walk" ? direction : `${kind}-${direction}`;
+      const target = path.join(ASSETS, `${character.stem}-${suffix}.png`);
+      mkdirSync(path.dirname(target), { recursive: true });
+      await strip.composite(composites).png({ palette: true, dither: 0 }).toFile(target);
+      written.push(target);
     }
-    const where = await placements(
-      normalized.get(0),
-      [...normalized.entries()].filter(([c]) => c > 0).map(([, b]) => b),
-      canvas
-    );
-    wheres[direction] = where;
-    const strip = blankCanvas({ width: canvas.width * columns, height: canvas.height });
-    const composites = [];
-    for (const frame of ours) {
-      const at = frame.column === 0 ? where.stand : where.walk;
-      const placed = await placeInCell(normalized.get(frame.column), at, canvas);
-      if (!placed) continue;
-      composites.push({
-        input: placed.input,
-        left: frame.column * canvas.width + placed.left,
-        top: placed.top,
-      });
-    }
-    const target = path.join(ASSETS, `${character.stem}-${direction}.png`);
-    mkdirSync(path.dirname(target), { recursive: true });
-    await strip.composite(composites).png({ palette: true, dither: 0 }).toFile(target);
-    written.push(target);
+  };
+
+  // Walk first: the portrait placement comes out of it, and the idle strip is optional.
+  for (const [kind, , count] of cyclesOf(character)) {
+    await buildCycle(kind, cycles[kind], count);
   }
+  const frames = cycles.walk;
 
   // The portrait is the same normalized south standing pose on the same canvas, kept as its own
   // single-frame file because several surfaces draw a character as a still image rather than as an
