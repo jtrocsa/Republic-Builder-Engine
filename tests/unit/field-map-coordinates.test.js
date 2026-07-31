@@ -23,6 +23,13 @@ import {
   ARCHIVE_ROOM_TARGETS,
   FIELD_GRID,
   FIELD_MAPS,
+  HALLWAY_BLOCK_RECTS,
+  HALLWAY_DOOR_APPROACH,
+  HALLWAY_GRID,
+  HALLWAY_NAV_GRID,
+  HALLWAY_NPC_BEHAVIOURS,
+  HALLWAY_SPAWN,
+  HALLWAY_TARGETS,
   HUB_BLOCK_RECTS,
   HUB_GRID,
   HUB_NAV_GRID,
@@ -32,10 +39,11 @@ import {
   footBoxFor,
   hubFootBoxFor,
   isFieldGroundStandable,
+  isHallwayGroundStandable,
   isHubGroundStandable,
   rectsOverlap,
 } from "../../apps/web/src/main.js";
-import { buildCircuit } from "../../apps/web/src/engine/npc-routing.js";
+import { buildCircuit, findRoute } from "../../apps/web/src/engine/npc-routing.js";
 import institutePalette from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -681,5 +689,107 @@ describe("archive room coordinates", () => {
     // main.js drops the player at exitDoor.y - 0.6 on entry. A past regression froze all
     // movement because that very first foot-box already read as blocked.
     expect(room.canStandAt(ARCHIVE_ROOM_TARGETS.exitDoor.x, SPAWN[1])).toBe(true);
+  });
+});
+
+// The Entrance Hall gets the same treatment as the Archive Room, plus one assertion neither other
+// hub room needs: the escort walk is a *routed* walk, so the room has to guarantee not just that the
+// player can reach the Director but that findRoute() can get the Director from his post to the door
+// with the player following. Before Phase 62 none of this was checkable — the map had no collision
+// at all, because the corridor was a scripted cutscene nobody could walk in.
+describe("institute entrance hall coordinates", () => {
+  const tmj = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, "apps/web/src/content/maps/hallway.tmj"), "utf8")
+  );
+  const structures = tmj.layers.find((layer) => layer.name === "structures");
+
+  const hall = hubTraversal({
+    grid: HALLWAY_GRID,
+    blocks: HALLWAY_BLOCK_RECTS,
+    spawn: HALLWAY_SPAWN,
+  });
+
+  function cells(rect) {
+    const out = [];
+    for (
+      let row = Math.floor(rect.y1);
+      row <= Math.min(Math.ceil(rect.y2) - 1, tmj.height - 1);
+      row += 1
+    ) {
+      for (
+        let col = Math.floor(rect.x1);
+        col <= Math.min(Math.ceil(rect.x2) - 1, tmj.width - 1);
+        col += 1
+      ) {
+        if (row >= 0 && col >= 0) out.push([col, row]);
+      }
+    }
+    return out;
+  }
+
+  it("has a .tmj matching HALLWAY_GRID (normal case)", () => {
+    expect(tmj.width).toBe(HALLWAY_GRID.columns);
+    expect(tmj.height).toBe(HALLWAY_GRID.rows);
+    expect(tmj.tilewidth).toBe(HALLWAY_GRID.tile);
+  });
+
+  it("draws its greenery on an overlay layer, so the player walks behind it (normal case)", () => {
+    // The four `base` stamps flanking the spine are the reason this map gained a third layer. If a
+    // future layout makes them all `solid` the layer disappears and walk-behind goes with it.
+    const overlay = tmj.layers.find((layer) => layer.name === "overlay");
+    expect(overlay?.data.some(Boolean)).toBe(true);
+  });
+
+  it("backs every collision rect with drawn furniture (normal case)", () => {
+    const empty = HALLWAY_BLOCK_RECTS.filter((block) =>
+      cells(block).every(([col, row]) => structures.data[row * tmj.width + col] === 0)
+    ).map((block) => block.kind);
+    expect(empty).toEqual([]);
+  });
+
+  it("keeps every collision rect inside the room (edge case)", () => {
+    const bad = HALLWAY_BLOCK_RECTS.filter(
+      (b) =>
+        b.x1 >= b.x2 ||
+        b.y1 >= b.y2 ||
+        b.x1 < 0 ||
+        b.y1 < 0 ||
+        b.x2 > HALLWAY_GRID.columns ||
+        b.y2 > HALLWAY_GRID.rows
+    ).map((b) => b.kind);
+    expect(bad).toEqual([]);
+  });
+
+  it("spawns the player somewhere they can walk out of (edge case)", () => {
+    expect(hall.canStandAt(HALLWAY_SPAWN[0], HALLWAY_SPAWN[1])).toBe(true);
+  });
+
+  it("stands the Director somewhere the player can walk up to him (normal case)", () => {
+    expect(isHallwayGroundStandable(...Object.values(HALLWAY_NPC_BEHAVIOURS.director.at))).toBe(
+      true
+    );
+    const unreachable = Object.entries(HALLWAY_TARGETS)
+      .filter(([, target]) => !hall.canReach(target.x, target.y, 1.1))
+      .map(([id]) => id);
+    expect(unreachable).toEqual([]);
+  });
+
+  it("seals no pocket of open floor off from the rest of the room (edge case)", () => {
+    expect(pocketSummary(hall.stranded)).toBe("none");
+  });
+
+  it("routes the escort walk from the Director's post to the doorway (normal case)", () => {
+    const route = findRoute(
+      HALLWAY_NAV_GRID,
+      HALLWAY_NPC_BEHAVIOURS.director.at,
+      HALLWAY_DOOR_APPROACH
+    );
+    expect(route).not.toBeNull();
+    const offFloor = route.filter((point) => !isHallwayGroundStandable(point.x, point.y));
+    expect(offFloor).toEqual([]);
+    // The player follows this same trail a fixed distance behind, so it also has to be walkable
+    // from the spawn's component — a route through a pocket would strand the follower.
+    const unwalkable = route.filter((point) => !hall.canStandAt(point.x, point.y));
+    expect(unwalkable).toEqual([]);
   });
 });

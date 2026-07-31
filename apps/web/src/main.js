@@ -124,6 +124,7 @@ import {
 } from "./content/maps/common-cause-field.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
+import { HALLWAY_BLOCKS } from "./content/maps/hallway.blocks.js";
 import {
   createStormNavigationGame,
   tickStormNavigationGame,
@@ -430,12 +431,12 @@ function renderInstituteHallTiledMap() {
     resolveInstituteHallTilesetImage
   );
 }
-// Onboarding hallway corridor — see scripts/generate-hallway-tmj.js. Reuses the exact same three
-// Medieval Tavern sheets as the Archive Room above (the glob calls target identical file paths,
-// so Vite doesn't bundle any additional tileset sheets) for visual continuity between the two
-// Institute interiors. This is a scripted cutscene (runHallwayWalk() in main.js drives the sprite
-// positions directly), so unlike Archive Room there's no HALLWAY_GRID/BLOCK_RECTS/TARGETS —
-// no player movement or collision happens here.
+// The Institute's Entrance Hall — see scripts/generate-hallway-tmj.js. Shares the Main Hall's five
+// interior sheets exactly (the glob calls target identical file paths, so Vite bundles no additional
+// tileset art) because its north doors open straight into that room and the two have to read as one
+// building. Unlike the Main Hall it draws no Island survival props: the Navigation Table and the
+// Preservation Case are what make that room the hub, and an entrance hall holding them too would
+// blunt the handoff.
 const hallwayTmj = JSON.parse(hallwayTmjRaw);
 const resolveHallwayTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/Medieval Tavern/tile-B-01.png", {
@@ -449,14 +450,22 @@ const resolveHallwayTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/Medieval Tavern/tile-B-05.png", {
     eager: true,
     import: "default",
+  }),
+  // Real stone walls, added in Phase 62 when this stopped being a cutscene backdrop whose "walls"
+  // were two CSS gradient bands. Same caveat as the Main Hall's resolver above: a sheet named in the
+  // palette but missing here makes createTilesetImageResolver() throw, and the map draws as an empty
+  // frame rather than failing loudly.
+  import.meta.glob("./assets/tilesets/Medieval Tavern/Auto-tile-A4-walls-2.png", {
+    eager: true,
+    import: "default",
+  }),
+  import.meta.glob("./assets/tilesets/derived/institute-furnishings.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderHallwayTiledMap() {
-  const canvas = document.getElementById("hallwayTiledCanvas");
-  if (!canvas || canvas.dataset.rendered === "true") return;
-  renderTiledMap(canvas, hallwayTmj, resolveHallwayTilesetImage).then(() => {
-    canvas.dataset.rendered = "true";
-  });
+  renderTiledMapWithOverlay("hallwayTiledCanvas", hallwayTmj, resolveHallwayTilesetImage);
 }
 // Common Cause field (Unit 3) Tiled rebuild — see docs/decision-log/0032-common-cause-tiled-rebuild.md
 // and 0036 for the Phase 53 pass that retired the Medieval Fantasy Town building silhouettes.
@@ -1552,14 +1561,58 @@ export const ARCHIVE_ROOM_TARGETS = {
     action: "leave-archive-room",
   },
 };
+// The Institute's third walkable room: the Entrance Hall the player arrives in, one room south of
+// the Main Hall. Until Phase 62 this was `intro-hallway`, a screen of its own holding a five-second
+// scripted walk — two sprites lerped up a fixed track over a 6x10 strip of floor with no walls and
+// no collision. It is an ordinary hub room now, and the player's first moment of control, so it
+// needs nothing the other two rooms don't already have. See
+// docs/decision-log/0046-institute-entrance-hall-and-escort-walk.md.
+export const HALLWAY_GRID = { columns: 20, rows: 18, tile: 48 };
+// Generated from the same stamps that painted hallway.tmj — the map had no collision at all before,
+// because nothing walked in it.
+export const HALLWAY_BLOCK_RECTS = HALLWAY_BLOCKS;
+// Just inside the entry doors in the south wall (stamped at cols 9-10, rows 16-17), facing up the
+// room at the Director. 3.8 tiles short of him, which is about a second at HUB_SPEED — long enough
+// to have learned the keys, short enough not to be a hike.
+export const HALLWAY_SPAWN = [10.0, 15.3, "up"];
+// Where the escort walk ends: dead centre of the Main Hall doorway, one tile inside the north wall.
+export const HALLWAY_DOOR_APPROACH = { x: 10.0, y: 2.6 };
+export const HALLWAY_TARGETS = {
+  director: {
+    // On the greeting runner in the open band at rows 10-11, on the spine, so he is the first thing
+    // in the room the player walks into. Deliberately no `marker`: he is an NPC, and NPCs carry
+    // their name below the sprite rather than a .hub-marker glow on furniture.
+    x: 10.0,
+    y: 10.4,
+    name: "Director Rowan Hale",
+    role: "Director of Field Studies",
+    // The Entrance Hall's words come from CHRONICLE_OPENING_DEFAULTS.scenes.hallway through the
+    // intro typewriter, not from a single-string hub dialogue panel — see the "hallway-brief"
+    // branch in interactWithHubTarget().
+    dialogue: () => "",
+    action: "hallway-brief",
+  },
+};
+export const HALLWAY_NPC_BEHAVIOURS = {
+  // Waiting for the player, facing south down the spine at the doors they come through. Stationed
+  // rather than wandering for the same reason the Main Hall's Director is: the scene walks the
+  // player to him, so he cannot be somewhere else when they arrive.
+  director: { kind: "station", at: { x: 10.0, y: 10.4 }, facing: "down" },
+};
 function activeHubGrid() {
-  return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_GRID : HUB_GRID;
+  if (progress.currentHubRoom === "archive") return ARCHIVE_ROOM_GRID;
+  if (progress.currentHubRoom === "hallway") return HALLWAY_GRID;
+  return HUB_GRID;
 }
 function activeHubBlocks() {
-  return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_BLOCK_RECTS : HUB_BLOCK_RECTS;
+  if (progress.currentHubRoom === "archive") return ARCHIVE_ROOM_BLOCK_RECTS;
+  if (progress.currentHubRoom === "hallway") return HALLWAY_BLOCK_RECTS;
+  return HUB_BLOCK_RECTS;
 }
 function activeHubTargets() {
-  return progress.currentHubRoom === "archive" ? ARCHIVE_ROOM_TARGETS : HUB_TARGETS;
+  if (progress.currentHubRoom === "archive") return ARCHIVE_ROOM_TARGETS;
+  if (progress.currentHubRoom === "hallway") return HALLWAY_TARGETS;
+  return HUB_TARGETS;
 }
 
 // Post-hallway guided tour of the Main Hall (progress.tutorial.step === "tour-<id>" for one of
@@ -1677,6 +1730,14 @@ const hubNpcRuntime = Object.fromEntries(
     }),
   ])
 );
+// The Entrance Hall's router. No `occupied` posts: the only person in the room is the Director, and
+// he is the one being routed — listing his own post as furniture would make his first step
+// unreachable from where he is standing.
+export const HALLWAY_NAV_GRID = createNavGrid({
+  columns: HALLWAY_GRID.columns,
+  rows: HALLWAY_GRID.rows,
+  isStandable: (x, y) => isHallwayGroundStandable(x, y),
+});
 const hubHeldKeys = new Set();
 let hubMoveFrame = null;
 let lastHubMoveAt = 0;
@@ -1705,6 +1766,19 @@ export function isHubGroundStandable(x, y) {
   if (x < 0.6 || y < 0.8 || x > HUB_GRID.columns - 1.2 || y > HUB_GRID.rows - 1.2) return false;
   const foot = hubFootBoxFor(x, y);
   return !INSTITUTE_HALL_BLOCKS.some((block) => rectsOverlap(foot, block));
+}
+/**
+ * The Entrance Hall's static walkability, for the router — the same shape as the Main Hall's above,
+ * pinned to its own room's blocks for the same reason.
+ *
+ * A `function` declaration, not a `const` arrow: HALLWAY_NAV_GRID is built at module load and calls
+ * this during construction, so an arrow declared below it would be in its temporal dead zone.
+ */
+export function isHallwayGroundStandable(x, y) {
+  if (x < 0.6 || y < 0.8 || x > HALLWAY_GRID.columns - 1.2 || y > HALLWAY_GRID.rows - 1.2)
+    return false;
+  const foot = hubFootBoxFor(x, y);
+  return !HALLWAY_BLOCKS.some((block) => rectsOverlap(foot, block));
 }
 function isHubNpcBlocked(id, x, y) {
   const foot = hubFootBoxFor(x, y);
