@@ -50,8 +50,19 @@ test("Riverbend's cast goes about its business", async ({ page }) => {
     await page.waitForTimeout(SAMPLE_MS);
   }
 
+  // Everyone the settlement is authored to have a post rather than an errand: the minister at the
+  // meetinghouse door, the smith at his fire, and the three watch posts. Named here rather than
+  // derived, because the point of the test is that the authored intent survived to the screen.
+  const STATIONED = [
+    "settlement-minister",
+    "settlement-smith",
+    "settlement-watch-gate",
+    "settlement-watch-road",
+    "settlement-watch-wharf",
+  ];
+
   const ids = samples[0].map((npc) => npc.id);
-  expect(ids.length, "Riverbend's whole cast is on the map").toBe(9);
+  expect(ids.length, "Riverbend's whole cast is on the map").toBe(15);
 
   const trackOf = (id) => samples.map((sample) => sample.find((npc) => npc.id === id));
   const rangeOf = (id) => {
@@ -61,24 +72,33 @@ test("Riverbend's cast goes about its business", async ({ page }) => {
     return Math.max(...xs) - Math.min(...xs) + (Math.max(...ys) - Math.min(...ys));
   };
 
-  // The minister is the one person authored to stand still, and standing still has to mean it: a
-  // player told to find him at the meetinghouse has to find him at the meetinghouse.
-  expect(rangeOf("settlement-minister"), "the minister holds his post").toBeLessThan(0.05);
-  expect(trackOf("settlement-minister").every((npc) => !npc.walking)).toBe(true);
+  // Standing still has to mean it: a player told to find the minister at the meetinghouse has to
+  // find him at the meetinghouse, and a watch that drifts off its post is not a watch.
+  for (const id of STATIONED) {
+    expect(rangeOf(id), `${id} holds their post`).toBeLessThan(0.05);
+    expect(
+      trackOf(id).every((npc) => !npc.walking),
+      `${id} never walks`
+    ).toBe(true);
+  }
 
   // Everyone else covers real ground inside fifteen seconds. Two tiles is a low bar on purpose —
   // it is not measuring how far they get, it is catching the person who is stuck against
   // something, which is what "4 x 0.3 tiles" looked like.
   const stuck = ids
-    .filter((id) => id !== "settlement-minister")
+    .filter((id) => !STATIONED.includes(id))
     .filter((id) => rangeOf(id) < 2)
     .map((id) => `${id} covered ${rangeOf(id).toFixed(1)} tiles`);
   expect(stuck).toEqual([]);
 
   // And the settlement is in motion rather than posing. Averaged, not per frame: everyone pausing
   // at the same instant occasionally is a coincidence, and only the average says whether the place
-  // is inhabited or a diorama.
+  // is inhabited or a diorama. The bar is against the ten who have somewhere to be, not the cast —
+  // adding stationary watch posts must not make it easier to pass.
+  const mobile = ids.length - STATIONED.length;
   const moving = samples.map((sample) => sample.filter((npc) => npc.walking).length);
   const average = moving.reduce((total, n) => total + n, 0) / moving.length;
-  expect(average, `only ${average.toFixed(1)} of 9 in motion on average`).toBeGreaterThan(4);
+  expect(average, `only ${average.toFixed(1)} of ${mobile} in motion on average`).toBeGreaterThan(
+    mobile / 2
+  );
 });

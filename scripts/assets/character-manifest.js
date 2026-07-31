@@ -156,6 +156,32 @@ export const CHARACTERS = [
       west: "d934a31c-f279-44f0-8128-fcb128b69868",
     },
   },
+  {
+    key: "caribbean-child",
+    stem: "chronicle-sprites/field/npc-caribbean-child",
+    name: "Caribbean child",
+    id: "f5e6c82e-ad35-4245-b26f-7ae1d32d7068",
+    frames: 8,
+    walk: {
+      south: "6a275021-0962-4782-9b52-7668632bb09c",
+      north: "0d87d376-15bc-4962-9b69-01ca1b25a54a",
+      east: "a20f132c-3cf6-4b59-b4f7-e76a1636b52d",
+      west: "db48465b-de72-41ac-b06d-291a1e4eb24f",
+    },
+  },
+  {
+    key: "spanish-scribe",
+    stem: "chronicle-sprites/field/npc-spanish-scribe",
+    name: "Spanish expedition scribe and notary",
+    id: "f53ae8f0-f970-4ada-b8e5-ac257c6c6a2a",
+    frames: 8,
+    walk: {
+      south: "a8ca3830-333a-47d0-af74-5ebaab613235",
+      north: "5eb8d502-9579-4aa9-96ab-94e257146ebd",
+      east: "565b73c6-eb28-4843-809c-921c26affe3a",
+      west: "ae27e13a-55b4-4083-b1c9-fa4f65d43a8f",
+    },
+  },
 
   // ---- Unit 2 · Riverbend / Jamestown, 1607-1620 ----------------------------------------------
   {
@@ -242,6 +268,74 @@ export const CHARACTERS = [
       north: "c9061f4a-198f-4f3e-8f86-f9968d665517",
       east: "acac3f2b-200b-40ef-a96b-618abd689df4",
       west: null,
+    },
+  },
+  {
+    key: "jamestown-blacksmith",
+    stem: "chronicle-sprites/field/npc-jamestown-blacksmith",
+    name: "English blacksmith working at Jamestown",
+    id: "171e79bf-af0c-4cda-bbd6-99890040ab35",
+    frames: 8,
+    walk: {
+      south: "af288099-33c4-401e-a0f1-40ff280a335f",
+      north: "82278b14-bcfb-4a26-a419-51baea1ef0f8",
+      east: "3ddf8ad0-c890-44f6-985d-5c2393d94b21",
+      west: "147a1459-857f-44ba-9b55-abcaf5895651",
+    },
+  },
+  // The two below are separate PixelLab characters that happen to carry the same prompt text as
+  // their account name. They are told apart by id, and by which of the settlement's three watch
+  // posts they stand at; `soldier` is the one in fuller kit, `watchman` the plainer one.
+  {
+    key: "jamestown-soldier",
+    stem: "chronicle-sprites/field/npc-jamestown-soldier",
+    name: "English soldier or settlement watchman",
+    id: "cd27a499-b04a-4461-afa0-6ef74ce1cd86",
+    frames: 8,
+    walk: {
+      south: "1bea9d90-be7f-4e73-b10d-6507e90788b1",
+      north: "b23f751a-6063-4298-9294-c235b7049011",
+      east: "ea0005c9-c882-45d6-b4bc-7b48f0375126",
+      west: "5948d1de-18ad-4dc0-9677-a44749a85405",
+    },
+  },
+  {
+    key: "jamestown-watchman",
+    stem: "chronicle-sprites/field/npc-jamestown-watchman",
+    name: "English soldier or settlement watchman",
+    id: "028177a6-e08c-4d74-bc47-0001330b840b",
+    frames: 8,
+    walk: {
+      south: "cef00162-2677-405f-b454-7eb53469da63",
+      north: "d589a782-64fb-48ec-b7f7-98ed57c1855a",
+      east: "7a33924b-d927-459a-af74-fd116a8615da",
+      west: "8f835dc2-0a69-4083-afdb-b60cca50c651",
+    },
+  },
+  {
+    key: "jamestown-african-man",
+    stem: "chronicle-sprites/field/npc-jamestown-african-man",
+    name: "African man living at Jamestown",
+    id: "73e6740f-1a5a-462d-aa4a-c7029bc32b57",
+    frames: 8,
+    walk: {
+      south: "9c0ed909-6d05-44b5-b433-860af8b599c0",
+      north: "3adbc734-d940-4747-aac8-ecd65a879b0c",
+      east: "38b4deb9-ae7b-43e0-b804-f7aa01e8919f",
+      west: "b2744d0b-e805-4506-898a-c40838aef933",
+    },
+  },
+  {
+    key: "jamestown-servant",
+    stem: "chronicle-sprites/field/npc-jamestown-servant",
+    name: "English indentured laborer Jamestown",
+    id: "998d5242-4377-431c-9d66-0a8ac6e77faa",
+    frames: 8,
+    walk: {
+      south: "70c9efd6-b2b7-47dc-9dc9-c8a11df9312f",
+      north: "d898f1e6-d327-40c1-aa74-829373b650df",
+      east: "550959ef-3189-4fa4-9b6c-a6a2885ad862",
+      west: "541289f5-e612-4bf1-89b5-88d21577147e",
     },
   },
 ];

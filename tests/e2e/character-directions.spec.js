@@ -91,11 +91,12 @@ const SHEETS_BY_CASE = {
     "taino-fisher": "npc-caribbean-man",
     "spanish-sailor": "npc-spanish-sailor",
     columbus: "npc-columbus",
-    "spanish-scribe": "npc-spanish-sailor",
+    "spanish-scribe": "npc-spanish-scribe",
+    "taino-child": "npc-caribbean-child",
   },
   "case-004": {
     "settlement-minister": "npc-jamestown-gentleman",
-    "indentured-servant": "npc-jamestown-laborer",
+    "indentured-servant": "npc-jamestown-servant",
     "settlement-burgess": "npc-jamestown-gentleman",
     "settlement-goodwife": "npc-jamestown-settler-woman",
     "river-fisher": "npc-jamestown-laborer",
@@ -103,6 +104,14 @@ const SHEETS_BY_CASE = {
     "settlement-carpenter": "npc-jamestown-carpenter",
     "powhatan-man": "npc-powhatan-man",
     "powhatan-woman": "npc-powhatan-woman",
+    "settlement-smith": "npc-jamestown-blacksmith",
+    // Two watch posts share `soldier` and the third is `watchman`. That the map holds two distinct
+    // sheets here rather than one posted three times is the assertion worth having.
+    "settlement-watch-gate": "npc-jamestown-soldier",
+    "settlement-watch-wharf": "npc-jamestown-soldier",
+    "settlement-watch-road": "npc-jamestown-watchman",
+    "angolan-laborer": "npc-jamestown-african-man",
+    "field-servant-south": "npc-jamestown-servant",
   },
   // Unit 3 is deliberately frozen on its placeholder art: no Revolutionary-era characters exist,
   // and inheriting Unit 1's would put Christopher Columbus on a Philadelphia street in 1767.

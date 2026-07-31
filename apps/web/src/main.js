@@ -613,6 +613,8 @@ const CHARACTER_SHEETS = {
   "spanish-sailor": characterSheet(`${FIELD}/npc-spanish-sailor`, 9),
   "caribbean-man": characterSheet(`${FIELD}/npc-caribbean-man`, 9),
   "caribbean-woman": characterSheet(`${FIELD}/npc-caribbean-woman`, 9),
+  "caribbean-child": characterSheet(`${FIELD}/npc-caribbean-child`, 9),
+  "spanish-scribe": characterSheet(`${FIELD}/npc-spanish-scribe`, 9),
   // Unit 2 · Riverbend / Jamestown, 1607-1620.
   "jamestown-laborer": characterSheet(`${FIELD}/npc-jamestown-laborer`, 9),
   "jamestown-gentleman": characterSheet(`${FIELD}/npc-jamestown-gentleman`, 9),
@@ -620,6 +622,14 @@ const CHARACTER_SHEETS = {
   "jamestown-settler-woman": characterSheet(`${FIELD}/npc-jamestown-settler-woman`, 9),
   "powhatan-man": characterSheet(`${FIELD}/npc-powhatan-man`, 9),
   "powhatan-woman": characterSheet(`${FIELD}/npc-powhatan-woman`, 9),
+  "jamestown-blacksmith": characterSheet(`${FIELD}/npc-jamestown-blacksmith`, 9),
+  // Two separate sheets, not one posted twice: the settlement's three watch posts are meant to
+  // read as different men, so `soldier` stands at the field gate and the landing and `watchman`
+  // on the landward road.
+  "jamestown-soldier": characterSheet(`${FIELD}/npc-jamestown-soldier`, 9),
+  "jamestown-watchman": characterSheet(`${FIELD}/npc-jamestown-watchman`, 9),
+  "jamestown-african-man": characterSheet(`${FIELD}/npc-jamestown-african-man`, 9),
+  "jamestown-servant": characterSheet(`${FIELD}/npc-jamestown-servant`, 9),
   // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six
   // keep the placeholder art Unit 3 already used, rebuilt into the same strip format. Giving them
   // their own keys is the point: without it, upgrading `columbus` to real 1492 art would silently
@@ -760,9 +770,18 @@ const FIELD_NPCS = [
     group: "spanish",
     name: "Spanish scribe",
     label: "Scribe",
-    // No scribe was generated; the common seaman is the only period-correct Castilian in the cast.
-    sprite: "spanish-sailor",
+    sprite: "spanish-scribe",
     text: "Ink can make a voyage last longer than memory. Still, I choose words for the court, and those choices matter.",
+  },
+  {
+    id: "taino-child",
+    x: 28.5,
+    y: 17.6,
+    group: "taino",
+    name: "Taíno child",
+    label: "Child",
+    sprite: "caribbean-child",
+    text: "My grandmother says the strangers ask the same question over and over — where the gold is. Nobody asks me what grows here, and I could tell them.",
   },
 ];
 // What each person is doing. Three kinds, defined in engine/npc-behaviour.js:
@@ -812,6 +831,10 @@ const FIELD_NPC_BEHAVIOURS = {
       { x: 43.5, y: 19.5 },
     ],
   },
+  // Playing on the open ground south of the village fire (31.0,16.0-32.0,17.0), off the road
+  // junction where the village track meets the island's waist. A small disc, because a child at
+  // play stays in sight of the fire rather than running the length of the island.
+  "taino-child": { kind: "wander", home: { x: 28.5, y: 17.6 }, radius: 1.2 },
 };
 // Base walking speed for a field NPC, in tiles per second, against the player's FIELD_SPEED of
 // 3.65. The gap is the point: the player travels at a run and the settlement walks, which is what
@@ -1009,9 +1032,8 @@ const MAP_PIECES = [
 ];
 const MAP_TRAY_ORDER = ["p7", "p2", "p10", "p4", "p1", "p9", "p3", "p6", "p5", "p8"];
 
-// ---- Unit 2 field: Riverbend Settlement (placeholder data, same engine) ----
+// ---- Unit 2 field: Riverbend Settlement ----
 const UNIT2_FIELD_NPCS = [
-  // Placeholder roster: sprites reuse Unit 1 art until Unit 2 sprites exist.
   {
     id: "settlement-minister",
     x: 26.0,
@@ -1029,7 +1051,7 @@ const UNIT2_FIELD_NPCS = [
     group: "settlement",
     name: "Indentured field servant",
     label: "Field servant",
-    sprite: "jamestown-laborer",
+    sprite: "jamestown-servant",
     text: "Seven years I owe for my passage. The rows do not care whose name is on the contract.",
   },
   {
@@ -1113,6 +1135,84 @@ const UNIT2_FIELD_NPCS = [
     label: "Powhatan woman",
     sprite: "powhatan-woman",
     text: "The corn the strangers ate through the winter grew in our fields. Women plant it, tend it, and decide what may be spared. Remember that when you are told the trade ran only one way.",
+  },
+  // A second wave of the cast: the trades and the watch the settlement plainly had and the map did
+  // not show, plus two more people working the crop. Riverbend has four plots and until now one
+  // worker, so three of them were painted fields nobody had ever been in.
+  {
+    id: "settlement-smith",
+    // Beside the storage shed (22.0,22.0-24.0,24.0), at the south edge of the village. There is no
+    // forge, anvil or bellows tile in any palette this project owns — `military.civilWar.camp` and
+    // the trades props are registered gaps in canonical-palette.js — so he is placed by the
+    // structure his work actually sat next to rather than given invented scenery.
+    x: 25.0,
+    y: 23.5,
+    group: "settlement",
+    name: "Settlement blacksmith",
+    label: "Blacksmith",
+    sprite: "jamestown-blacksmith",
+    text: "Nails, hinges, hoes, and the iron off every barrel that lands — it all comes back to me sooner or later. The Company sent us gold-refiners the first year. We had no gold and no second hoe.",
+  },
+  {
+    id: "settlement-watch-gate",
+    // The east end of the high street, beside the gate through the row-22 field fence.
+    x: 47.0,
+    y: 20.6,
+    group: "settlement",
+    name: "Watchman at the field gate",
+    label: "Watchman",
+    sprite: "jamestown-soldier",
+    text: "Corn in the ground is worth more than coin here, so somebody stands at the gate while it ripens. Sixteen hours in armour and the muster still counts me a gentleman's man.",
+  },
+  {
+    id: "settlement-watch-road",
+    // A tile south of the row-6 road, watching the landward approach to the settlement.
+    x: 38.0,
+    y: 7.5,
+    group: "settlement",
+    name: "Watchman on the landward road",
+    label: "Watchman",
+    sprite: "jamestown-watchman",
+    text: "The river we can see coming. The land side we cannot. After the last hard winter the Company ordered a watch kept on this road at all hours, and so it is kept.",
+  },
+  {
+    id: "settlement-watch-wharf",
+    // Above the wharf market stall (18.0,19.0-20.0,21.0), overlooking the landing.
+    x: 18.5,
+    y: 18.0,
+    group: "settlement",
+    name: "Watchman at the landing",
+    label: "Watchman",
+    sprite: "jamestown-soldier",
+    text: "Every ship that ties up here I see first. Men come off them owing years, and goods come off them owing duty. My work is to know which is which before it walks up the street.",
+  },
+  {
+    id: "angolan-laborer",
+    // The north plot, plot(42,7)-(51,13) — maize, fenced off the settlement, entered from its west
+    // edge. Confined to his field, which is the point.
+    x: 43.5,
+    y: 9.0,
+    group: "settlement",
+    name: "Angolan man of the settlement",
+    label: "Field hand",
+    sprite: "jamestown-african-man",
+    // August 1619: "20. and odd Negroes" landed at Point Comfort from the White Lion and were
+    // traded to the colony for provisions. Their status was not the chattel slavery Virginia would
+    // codify decades later, and it was not the termed indenture the English servant beside him
+    // holds either — the muster rolls simply list them without a term. The line says exactly that
+    // much and does not resolve it, because the record does not.
+    text: "I was taken from Ndongo, put aboard at Luanda, and taken again off that ship at Point Comfort and traded here for victuals. The Englishman in the next field counts down seven years. Nobody has told me what I am counting down to.",
+  },
+  {
+    id: "field-servant-south",
+    // The south plot, plot(42,23)-(51,29) — the kitchen garden, entered by the row-22 gate.
+    x: 44.5,
+    y: 25.0,
+    group: "settlement",
+    name: "Indentured kitchen-garden servant",
+    label: "Field servant",
+    sprite: "jamestown-servant",
+    text: "Tobacco pays the Company, so tobacco gets the good ground and the good hands. Cabbage and roots get me. But it is this plot the settlement eats from when the ships are late.",
   },
 ];
 // Riverbend is the map the playtest note was written against, so it is the one authored in most
@@ -1199,6 +1299,33 @@ const UNIT2_FIELD_NPC_BEHAVIOURS = {
     stops: [
       { x: 12.0, y: 11.5 },
       { x: 14.5, y: 12.5 },
+    ],
+  },
+  // A smith works at his fire, so he stands at it, facing the shed he works out of. His post sits
+  // clear of the shed's own door cells (23,24) and (24,24): a station is injected into the nav grid
+  // as `occupied`, and standing in a doorway would close that approach to everyone else for good.
+  "settlement-smith": { kind: "station", at: { x: 25.0, y: 23.5 }, facing: "left" },
+  // Three posts, because a watch is posted — the whole job is being at a particular place. Each one
+  // faces what it is there to watch: the gate south of him, the landward road north of him, the
+  // river west of him.
+  "settlement-watch-gate": { kind: "station", at: { x: 47.0, y: 20.6 }, facing: "down" },
+  "settlement-watch-road": { kind: "station", at: { x: 38.0, y: 7.5 }, facing: "up" },
+  "settlement-watch-wharf": { kind: "station", at: { x: 18.5, y: 18.0 }, facing: "left" },
+  // Both of these walk their own plot and nothing else, the way the indentured servant walks the
+  // pumpkin bed. No road is wanted or reachable inside a fenced field, and none is needed: the two
+  // stops are the ends of the rows.
+  "angolan-laborer": {
+    kind: "route",
+    stops: [
+      { x: 43.5, y: 9.0 },
+      { x: 47.5, y: 11.5 },
+    ],
+  },
+  "field-servant-south": {
+    kind: "route",
+    stops: [
+      { x: 44.5, y: 25.0 },
+      { x: 48.5, y: 27.5 },
     ],
   },
 };

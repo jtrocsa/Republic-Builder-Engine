@@ -45,12 +45,19 @@ const CAST = [
   ["chronicle-sprites/field/npc-spanish-sailor", 9],
   ["chronicle-sprites/field/npc-caribbean-man", 9],
   ["chronicle-sprites/field/npc-caribbean-woman", 9],
+  ["chronicle-sprites/field/npc-caribbean-child", 9],
+  ["chronicle-sprites/field/npc-spanish-scribe", 9],
   ["chronicle-sprites/field/npc-jamestown-laborer", 9],
   ["chronicle-sprites/field/npc-jamestown-gentleman", 9],
   ["chronicle-sprites/field/npc-jamestown-carpenter", 9],
   ["chronicle-sprites/field/npc-jamestown-settler-woman", 9],
   ["chronicle-sprites/field/npc-powhatan-man", 9],
   ["chronicle-sprites/field/npc-powhatan-woman", 9],
+  ["chronicle-sprites/field/npc-jamestown-blacksmith", 9],
+  ["chronicle-sprites/field/npc-jamestown-soldier", 9],
+  ["chronicle-sprites/field/npc-jamestown-watchman", 9],
+  ["chronicle-sprites/field/npc-jamestown-african-man", 9],
+  ["chronicle-sprites/field/npc-jamestown-servant", 9],
   ["chronicle-sprites/field/legacy-scribe", 3],
   ["chronicle-sprites/field/legacy-columbus", 3],
   ["chronicle-sprites/field/legacy-sailor", 3],
@@ -215,25 +222,29 @@ describe("character sheets", () => {
   // both feet mid-pass legitimately sits a few pixels high — that is the walk. What must not
   // happen is the whole body sliding up or down the canvas, which is the failure mode when frames
   // are aligned to their own bounding boxes instead of to the character's ground line.
-  it("anchors every walk cycle to the shared ground line", async () => {
+  //
+  // One case per character rather than one case for the cast: this is the most expensive
+  // assertion in the file — every column of every direction is decoded and scanned row by row —
+  // and as a single case its cost grew with the cast until it overran vitest's default 5s budget.
+  // Split, each character is measured against its own budget, and a failure names the character in
+  // the test title instead of only in the message.
+  it.each(CAST)("%s anchors its walk cycle to the shared ground line", async (stem, columns) => {
     const ceiling = 5;
-    for (const [stem, columns] of CAST) {
-      for (const direction of SPRITE_DIRECTIONS) {
-        const file = path.join(ASSETS, `${stem}-${direction}.png`);
-        const bottoms = [];
-        for (let column = 0; column < columns; column += 1) {
-          bottoms.push(bodySpan(await columnRows(file, column)).bottom);
-        }
-        const planted = Math.max(...bottoms);
-        const highest = Math.min(...bottoms);
-        expect(planted, `${stem}-${direction} never plants a foot on the ground line`).toBe(
-          SPRITE_CANVAS.ground - 1
-        );
-        expect(
-          planted - highest,
-          `${stem}-${direction} stride spans ${planted - highest}px of vertical travel`
-        ).toBeLessThanOrEqual(ceiling);
+    for (const direction of SPRITE_DIRECTIONS) {
+      const file = path.join(ASSETS, `${stem}-${direction}.png`);
+      const bottoms = [];
+      for (let column = 0; column < columns; column += 1) {
+        bottoms.push(bodySpan(await columnRows(file, column)).bottom);
       }
+      const planted = Math.max(...bottoms);
+      const highest = Math.min(...bottoms);
+      expect(planted, `${stem}-${direction} never plants a foot on the ground line`).toBe(
+        SPRITE_CANVAS.ground - 1
+      );
+      expect(
+        planted - highest,
+        `${stem}-${direction} stride spans ${planted - highest}px of vertical travel`
+      ).toBeLessThanOrEqual(ceiling);
     }
   });
 

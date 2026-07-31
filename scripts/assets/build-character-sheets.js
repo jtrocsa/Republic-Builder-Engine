@@ -31,6 +31,8 @@ import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
+import { SPRITE_CANVAS } from "../../apps/web/src/engine/sprite-animation.js";
+
 import {
   CHARACTERS,
   COMPASS,
@@ -207,8 +209,8 @@ async function measure(character) {
 /**
  * How far a character's body height may differ from the cast target before it is rescaled.
  *
- * Fourteen of the fifteen land within 44-46px of each other — a 4.5% spread that reads as ordinary
- * variation in adult height, and rescaling any of them by 0.96 would resample the art for no
+ * Twenty-one of the twenty-two land within 44-47px of each other — a 6.5% spread that reads as
+ * ordinary variation in height, and rescaling any of them by 0.96 would resample the art for no
  * visible gain. Only the Powhatan woman is a real outlier at 40px, because PixelLab generated her
  * on an 80px canvas while the rest of the cast got 88-96px. Correcting a generation-parameter
  * accident is worth one resample; equalising natural height differences is not.
@@ -248,8 +250,22 @@ async function measureAll() {
  * wide enough for the widest reach, with the ground line on one fixed row. Because it is shared,
  * a body of N source pixels renders at the same on-screen height for every character, and CSS
  * needs no per-character or per-map compensation.
+ *
+ * ── Why the result is pinned rather than used as measured ────────────────────────────────────────
+ * The 48x56 canvas this derived when the cast was first imported did not stay a derived number: it
+ * is now a shipped contract. `SPRITE_CANVAS` states it, global.css computes `--cast-w`/`--cast-h`
+ * from it, and tests/unit/character-sheet-geometry.test.js asserts every committed strip against
+ * it. So letting one new character widen it does not just affect that character — it silently
+ * rewrites all 100-odd existing PNGs at a new size and invalidates the CSS tokens and 20 visual
+ * baselines along with them.
+ *
+ * A soldier's raised pike is exactly the kind of thing that would do it, and clipping a few pixels
+ * off a pike tip is a far smaller loss than resizing the whole cast to accommodate it. So the
+ * measured canvas is reported, and the pinned one is what gets built on. If a genuine reason to
+ * change the canvas ever arrives, change `SPRITE_CANVAS` deliberately and re-bank everything
+ * downstream — don't let a new character decide it.
  */
-function canonicalCanvas(measured) {
+function measuredCanvas(measured) {
   const all = measured.flatMap((m) => DIRECTIONS.map((d) => ({ m, p: m.place[d] })));
   const above = Math.max(...all.map(({ p }) => p.above));
   const below = Math.max(...all.map(({ p }) => p.below));
@@ -260,6 +276,27 @@ function canonicalCanvas(measured) {
     ground: above,
     body: TARGET_BODY,
   };
+}
+
+function canonicalCanvas(measured) {
+  const wanted = measuredCanvas(measured);
+  const canvas = {
+    width: SPRITE_CANVAS.width,
+    height: SPRITE_CANVAS.height,
+    ground: SPRITE_CANVAS.ground - 1,
+    body: TARGET_BODY,
+  };
+  const over = [];
+  if (wanted.width > canvas.width) over.push(`width ${wanted.width}`);
+  if (wanted.height > canvas.height) over.push(`height ${wanted.height}`);
+  if (wanted.ground > canvas.ground) over.push(`ground row ${wanted.ground}`);
+  if (over.length) {
+    console.warn(
+      `note: cast wants ${over.join(", ")}; pinned to ` +
+        `${canvas.width}x${canvas.height} ground ${canvas.ground}. Overhanging props will clip.`
+    );
+  }
+  return canvas;
 }
 
 /**
@@ -310,6 +347,30 @@ async function normalizeFrame(buffer, window, scaled) {
     .toBuffer();
 }
 
+/**
+ * One frame's composite arguments for its cell of a strip, clipped to the cell.
+ *
+ * Needed because the canvas is pinned (see canonicalCanvas): a frame whose prop reaches past the
+ * shared canvas would otherwise be handed to sharp at a negative offset or at a size larger than
+ * its destination, and sharp rejects both outright rather than cropping. Clipping here is what
+ * turns "this character is too wide" from a build crash into a few clipped pixels of pike.
+ */
+async function placeInCell(buffer, at, canvas) {
+  const { width: w, height: h } = await sharp(buffer).metadata();
+  const cropLeft = Math.max(0, -at.left);
+  const cropTop = Math.max(0, -at.top);
+  const left = Math.max(0, at.left);
+  const top = Math.max(0, at.top);
+  const width = Math.min(w - cropLeft, canvas.width - left);
+  const height = Math.min(h - cropTop, canvas.height - top);
+  if (width <= 0 || height <= 0) return null;
+  const clipped = cropLeft > 0 || cropTop > 0 || width < w || height < h;
+  const input = clipped
+    ? await sharp(buffer).extract({ left: cropLeft, top: cropTop, width, height }).png().toBuffer()
+    : buffer;
+  return { input, left, top };
+}
+
 function blankCanvas(canvas) {
   return sharp({
     create: {
@@ -343,10 +404,12 @@ async function buildCharacter(entry, canvas) {
     const composites = [];
     for (const frame of ours) {
       const at = frame.column === 0 ? where.stand : where.walk;
+      const placed = await placeInCell(normalized.get(frame.column), at, canvas);
+      if (!placed) continue;
       composites.push({
-        input: normalized.get(frame.column),
-        left: frame.column * canvas.width + at.left,
-        top: at.top,
+        input: placed.input,
+        left: frame.column * canvas.width + placed.left,
+        top: placed.top,
       });
     }
     const target = path.join(ASSETS, `${character.stem}-${direction}.png`);
@@ -360,9 +423,15 @@ async function buildCharacter(entry, canvas) {
   // animated sprite: the onboarding Director scene, hub dialogue portraits, the hallway walk, the
   // village-activity cutscene and the Chronicler selection cards. Those must not be handed a strip.
   const stand = frames.find((f) => f.direction === "down" && f.column === 0);
-  const portrait = blankCanvas(canvas).composite([
-    { input: await normalizeFrame(stand.buffer, window, scaled), ...wheres.down.stand },
-  ]);
+  const portrait = blankCanvas(canvas).composite(
+    [
+      await placeInCell(
+        await normalizeFrame(stand.buffer, window, scaled),
+        wheres.down.stand,
+        canvas
+      ),
+    ].filter(Boolean)
+  );
   const portraitTarget = path.join(ASSETS, `${character.stem}-portrait.png`);
   const scaleUp = character.portraitScale ?? 1;
   const buffer = await portrait.png().toBuffer();
@@ -434,7 +503,13 @@ async function buildLegacy(canvas) {
       const composites = [];
       for (const [column, frame] of normalized.entries()) {
         const at = column === 0 ? where.stand : where.walk;
-        composites.push({ input: frame, left: column * canvas.width + at.left, top: at.top });
+        const placed = await placeInCell(frame, at, canvas);
+        if (!placed) continue;
+        composites.push({
+          input: placed.input,
+          left: column * canvas.width + placed.left,
+          top: placed.top,
+        });
       }
       const target = path.join(ASSETS, `chronicle-sprites/field/${legacy.key}-${direction}.png`);
       await strip.composite(composites).png({ palette: true, dither: 0 }).toFile(target);
@@ -443,9 +518,15 @@ async function buildLegacy(canvas) {
 
     const portraitTarget = path.join(ASSETS, `chronicle-sprites/field/${legacy.key}-portrait.png`);
     await blankCanvas(canvas)
-      .composite([
-        { input: await normalizeFrame(poses.down[0], window, scaled), ...legacyWheres.down.stand },
-      ])
+      .composite(
+        [
+          await placeInCell(
+            await normalizeFrame(poses.down[0], window, scaled),
+            legacyWheres.down.stand,
+            canvas
+          ),
+        ].filter(Boolean)
+      )
       .png({ palette: true, dither: 0 })
       .toFile(portraitTarget);
     written.push(portraitTarget);

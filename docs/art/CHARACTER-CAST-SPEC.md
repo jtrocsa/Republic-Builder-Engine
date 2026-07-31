@@ -1,21 +1,32 @@
 # Character cast spec
 
-**Status: executed (Phase 60).** Fifteen characters were generated and are now live — see
+**Status: executed (Phase 60, extended Phase 64).** Fifteen characters landed at Phase 60 and seven
+more at Phase 64, for a live cast of twenty-two — see
 [`docs/decision-log/0043-one-cast-one-canvas-four-directions.md`](../decision-log/0043-one-cast-one-canvas-four-directions.md)
-for what was decided during the import, and
+for what was decided during the first import,
+[`0047-seven-more-characters-and-a-pinned-canvas.md`](../decision-log/0047-seven-more-characters-and-a-pinned-canvas.md)
+for the second, and
 [`CHARACTER-SPRITESHEET-STANDARD.md`](./CHARACTER-SPRITESHEET-STANDARD.md) for the renderer.
 
 This document is kept as the parameter sheet and the record of what was ordered. **The roster below
 is not what the account contains.** It was written for a 22-character cast covering Riverbend as a
 1620s Puritan settlement and Philadelphia in the 1770s; what was actually generated is a
-15-character cast covering the Caribbean in 1492, Jamestown and Tsenacommacah in 1607-1620, the
+22-character cast covering the Caribbean in 1492, Jamestown and Tsenacommacah in 1607-1620, the
 Institute, and the two Chroniclers. Philadelphia was never generated, and Unit 3 is frozen on its
-placeholder art as a result. The live mapping from character to sprite key lives in
-[`scripts/assets/character-manifest.js`](../../scripts/assets/character-manifest.js), which is the
-file to trust.
+six `legacy-*` placeholder sheets as a result. The live mapping from character to sprite key lives
+in [`scripts/assets/character-manifest.js`](../../scripts/assets/character-manifest.js), which is
+the file to trust.
 
-**Account state at import:** subscription quota exhausted (46 generations used of 40), $1.81 credit
-remaining. Nothing in the import spent any of it.
+**Account state.** At the Phase 60 import: quota exhausted (46 of 40 used), $1.81 credit. At the
+Phase 64 import: 51 of 40 used, $0.91 credit, `generations_remaining: 0`. **Neither import spent
+any of it** — both drew on characters already generated in the account. Unit 3 stays blocked on
+credit, not on work.
+
+**The canvas is pinned, not derived.** Since Phase 64, `canonicalCanvas()` clamps to
+`SPRITE_CANVAS` (48×56, ground row 49) instead of sizing itself from the widest cast member. Adding
+a character with a long prop therefore clips that prop rather than silently resizing every other
+PNG in the cast and invalidating the CSS tokens and the visual baselines with it. The build prints
+what the cast _wanted_ so the trade is visible — see `docs/decision-log/0047-*.md`.
 
 ## The problem being fixed
 
@@ -75,9 +86,9 @@ is not waste — it is three poses for the price of one, with five spare.
 
 **Cost.** ~1 generation per character. Template walk animations cost **1 generation per
 direction**, so a walk cycle in three directions triples a character's cost. In the event, walk
-cycles were generated in **four** directions for fourteen of the fifteen characters — the Powhatan
-woman is missing her west cycle, and her west strip is built from mirrored east frames rather than
-spending another generation against an exhausted quota. Budget accordingly:
+cycles were generated in **four** directions for twenty-one of the twenty-two characters — the
+Powhatan woman is missing her west cycle, and her west strip is built from mirrored east frames
+rather than spending another generation against an exhausted quota. Budget accordingly:
 
 | Scope                                  | Generations |
 | -------------------------------------- | ----------: |
@@ -113,23 +124,25 @@ profession or cosmetics — those systems are removed from the design and must n
 | `amani`    | `researcher-amani-soto` | Archive researcher, 30s, dark coiled hair tied up, wire-rim glasses, cardigan over a collared shirt, holding a slim document folder. Scholarly, warm. |
 | `julian`   | `professor-julian-park` | Route historian, 50s, greying hair, tweed jacket with elbow patches, waistcoat, rolled chart under one arm.                                           |
 
-### Unit 1 · Caribbean, 1492 — 6 characters
+### Unit 1 · Caribbean, 1492 — 8 characters
 
 Existing sprite keys (`assets/chronicle-sprites/field/npc-*.png`). These are the only field NPCs
 whose art already matches their role.
 
-| sprite key       | description                                                                                                                                                                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `taino-elder`    | Taíno community elder, older, dignified bearing, cotton _nagua_ wrap, shell and gold _guanín_ pendant, hair in a traditional cut. Depict with the same care and specificity as the European figures — no generic "tribal" shorthand. |
-| `taino-gardener` | Taíno cultivator working a conuco, wrapped cotton skirt, digging stick, woven carrying basket on one hip.                                                                                                                            |
-| `taino-fisher`   | Taíno canoe worker, coiled fishing line and net over the shoulder, paddle in hand.                                                                                                                                                   |
-| `spanish-sailor` | Castilian common seaman, 1492: loose linen shirt, wide slops, knitted cap, bare feet, rope coil.                                                                                                                                     |
-| `columbus`       | Christopher Columbus as a ship's captain: dark doublet, short cape, flat velvet cap, holding a rolled chart. Authority, not heroism.                                                                                                 |
-| `spanish-scribe` | Ship's scribe/notary, dark scholar's robe, portable writing desk slung at the waist, quill.                                                                                                                                          |
+| sprite key        | description                                                                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `taino-elder`     | Taíno community elder, older, dignified bearing, cotton _nagua_ wrap, shell and gold _guanín_ pendant, hair in a traditional cut. Depict with the same care and specificity as the European figures — no generic "tribal" shorthand. |
+| `taino-gardener`  | Taíno cultivator working a conuco, wrapped cotton skirt, digging stick, woven carrying basket on one hip.                                                                                                                            |
+| `taino-fisher`    | Taíno canoe worker, coiled fishing line and net over the shoulder, paddle in hand.                                                                                                                                                   |
+| `spanish-sailor`  | Castilian common seaman, 1492: loose linen shirt, wide slops, knitted cap, bare feet, rope coil.                                                                                                                                     |
+| `columbus`        | Christopher Columbus as a ship's captain: dark doublet, short cape, flat velvet cap, holding a rolled chart. Authority, not heroism.                                                                                                 |
+| `spanish-scribe`  | Ship's scribe/notary, dark scholar's robe, portable writing desk slung at the waist, quill. **Real art since Phase 64** — until then the NPC named "Spanish scribe" wore the sailor sheet.                                           |
+| `caribbean-child` | Taíno child, Phase 64. Carries a woven basket; reads visibly shorter than the adult cast at the same 45px body target.                                                                                                               |
 
-### Unit 2 · Riverbend Settlement, 1620s — 6 characters _(new art)_
+### Unit 2 · Riverbend Settlement, 1620s — 11 characters
 
-These currently reuse Unit 1 sprites. New keys: `npc-<id>.png` etc.
+The six below are the original roster. `powhatan-man`/`powhatan-woman` landed with Phase 60; the
+five Phase 64 additions follow.
 
 | npc id                | description                                                                                                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -139,6 +152,16 @@ These currently reuse Unit 1 sprites. New keys: `npc-<id>.png` etc.
 | `settlement-goodwife` | Settlement goodwife, plain long gown, white coif and apron, wooden pail.                                      |
 | `river-fisher`        | River fisher, oiled canvas smock, netting needle, creel basket.                                               |
 | `wharf-clerk`         | Wharf clerk, ink-stained fingers, dark jerkin, ledger book open in the crook of one arm.                      |
+
+Phase 64, sprite keys rather than npc ids because several are posted more than once:
+
+| sprite key              | description                                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jamestown-blacksmith`  | Settlement smith, leather apron, cap, tongs. Posted beside the storage shed — the tile library has no forge, anvil or bellows.                                                                    |
+| `jamestown-soldier`     | Watchman in fuller kit: tricorn, bandolier, musket held low. Posted twice (field gate, river landing).                                                                                            |
+| `jamestown-watchman`    | The plainer of the two: brown longcoat, wide hat, long musket shouldered. Posted once, on the landward road. **His musket is the reason the canvas pin exists** — it wants 50px of a 48px canvas. |
+| `jamestown-african-man` | Angolan man of the settlement, 1619. Work clothes, carrying basket. Ambient dialogue only, deliberately not an evidence source — see `docs/decision-log/0047-*.md`.                               |
+| `jamestown-servant`     | Indentured laborer: shirtsleeves, bucket and spade. Distinct from `jamestown-laborer`'s shouldered hoe, which it replaced on the `indentured-servant` NPC. Posted twice.                          |
 
 ### Unit 3 · Philadelphia, 1770s — 6 characters _(new art)_
 
