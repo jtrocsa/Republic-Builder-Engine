@@ -173,9 +173,9 @@ for (const [id, line] of [
 ]) {
   test(`${id} is reachable on foot and talks`, async ({ page }) => {
     // The Powhatan landing sits eighteen tiles from the settlement spawn, right across the map,
-    // which is more ground than walkToNpc's default 44-step budget covers. Longer walk, longer
-    // budget — and a test timeout that can accommodate it rather than one that truncates the walk
-    // and reports the map as unreachable.
+    // which is more ground than walkToNpc's default budget covers. Longer walk, longer budget — and
+    // a test timeout that can accommodate it rather than one that truncates the walk and reports the
+    // map as unreachable.
     test.setTimeout(60_000);
     await seedProgress(page, {
       currentScreen: "field",
@@ -185,7 +185,10 @@ for (const [id, line] of [
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    expect(await walkToNpc(page, id, { steps: 90, burstMs: 400 }), `${id} is reachable`).toBe(true);
+    expect(
+      await walkToNpc(page, id, { burstMs: 400, timeoutMs: 40_000 }),
+      `${id} is reachable`
+    ).toBe(true);
     await page.keyboard.press("e");
     const bubble = page.locator(".field-speech-bubble");
     await expect(bubble).toBeVisible();

@@ -254,6 +254,16 @@ test fails if a planned map claims a gap that is not registered there.
 | **Civil War military camp**                | Union/Confederate tents, artillery, earthworks. The WWI packs are the wrong war by fifty years; `army`/`modern military` by a century. Blocks `p5-civil-war-camp`.                                                                                                                |
 | **Antebellum plantation great house**      | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                        |
 | **Mid-century streetscape**                | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged.                                                                                                                                                           |
+| **Antebellum American commercial street**  | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged. |
+
+**The Second Empire substitution, as used on `canal-crossroads-field`.** That map does not solve the
+gap above; it manages it. The masonry sheet dresses the six buildings a boomtown would genuinely have
+built in brick — the free bank, the printing office, the Market Street block, the immigrant terraces —
+and everything else in town is the period-right clapboard already repacked into
+`derived/farm-buildings.png`. A canal town in 1845 that is mostly timber with a few new brick blocks
+going up is both what the art supports and what the history says, so the mix is doing real work rather
+than hiding a mismatch. Anyone reaching for `tile-B-01` on a Period 4 map should reach for the
+clapboard first and keep the brick for the buildings that are meant to look new.
 
 The **"modern institute interior"** gap this register used to carry is now **closed**, though not
 yet actioned. It was recorded when the only candidate was the off-grid `Modern Interiors` pack;

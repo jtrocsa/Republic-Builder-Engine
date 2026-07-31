@@ -91,20 +91,16 @@ export const PLANNED_MAPS = [
   },
 
   // ---------------------------------------------------------------------------- Period 4
-  {
-    id: "p4-canal-steamboat",
-    period: 4,
-    status: "planned",
-    intent: "The market revolution: canal traffic and river steamboats.",
-    sheets: [
-      "Steampunk/1.png", // paddle-wheel steamboats — the only ones in the library
-      "19th Centruy European Dock/tile-B-06.png", // water, quay, decking
-      "19th Centruy European Dock/tile-B-05.png", // cargo stacks
-    ],
-    notes:
-      "Steampunk is a prop quarry only, never a base pack — its gears, airships and mecha are " +
-      "disqualifying. Take the steamboats and leave the rest.",
-  },
+  // `p4-canal-steamboat` was here and has been BUILT, as canal-crossroads-field — see that map's own
+  // palette file. Its sheet selection survived the build with two corrections worth recording,
+  // because both were only decidable against the pixels:
+  //
+  //   * Steampunk/1's usable content is the canal LOCK at (14,0) and the flat cargo BARGE at (14,4),
+  //     not its paddle steamers — a mule-drawn canal boat is what an 1845 Erie town runs on, and the
+  //     steamers on that sheet are brass-heavy besides. Still a prop quarry, still nothing else taken.
+  //   * The Dock pack's water is the Atlantic family and wrong for a canal; the channel is painted in
+  //     Medieval Fishing Village/tile-B-04's still blue instead, and the Dock pack earns its place on
+  //     quay coping, bollards, derricks, cargo and cattails.
   {
     id: "p4-mill-town",
     period: 4,
@@ -116,8 +112,10 @@ export const PLANNED_MAPS = [
       "Medieval Fantasy Town/1.png", // worker housing
     ],
     notes:
-      "Medieval Fantasy Town/3.png's water-wheel mill is the anchor. Factory's modern robot and " +
-      "CNC sheets are excluded; only the brick smokestacks carry back this far.",
+      "Medieval Fantasy Town/3.png's water-wheel mill is the anchor, and canal-crossroads-field " +
+      "now proves it out at (12,0) as a 4x4 stamp with its flume. Factory's modern robot and " +
+      "CNC sheets are excluded; only the brick smokestacks carry back this far. Still distinct " +
+      "from the canal town: a Lowell-style mill town is a company village, not a port.",
   },
 
   // ---------------------------------------------------------------------------- Period 5

@@ -148,6 +148,7 @@ const TMJ_BY_UNIT = {
   "unit-01": "caribbean-field.tmj",
   "unit-02": "riverbend-field.tmj",
   "unit-03": "common-cause-field.tmj",
+  "unit-04": "canal-crossroads-field.tmj",
 };
 
 function loadTmj(file) {

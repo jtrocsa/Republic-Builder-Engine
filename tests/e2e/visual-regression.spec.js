@@ -119,7 +119,18 @@ test.describe("Gameplay visual-regression baselines", () => {
     // screenshot — since the NPC keeps moving, that box lands a few px off between the two
     // stability-check frames and the edges themselves show up as a diff. Hiding via CSS instead
     // removes the element from the render entirely, so there's nothing left to drift.
-    await page.addStyleTag({ content: ".hub-npc { visibility: hidden !important; }" });
+    //
+    // The interaction prompt has to go with them, and for the same reason rather than a new one.
+    // Professor Park is a *route* as of Phase 64 — he walks the south aisle between (11.5,9.4) and
+    // (18.5,9.4), straight past where this test seeds the player — so "Press E · Professor Julian
+    // Park" appears and disappears depending on where in his circuit the screenshot lands. Hiding
+    // the sprite does not stop him walking, and this baseline failed on it once in a run where
+    // nothing about the hub had changed. What the prompt says when you are next to somebody is
+    // asserted properly in hub-movement, boot-onboarding and hallway-onboarding, which put the
+    // player in a known place first instead of waiting to see who wanders by.
+    await page.addStyleTag({
+      content: ".hub-npc, #hubInteractPrompt { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("institute-main-hall"));
 
     await setScreen(page, {

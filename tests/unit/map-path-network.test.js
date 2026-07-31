@@ -52,18 +52,31 @@ function sheetPathOf(tileset) {
 }
 
 /**
- * Every gid the road material's terrain block can paint, resolved against the committed .tmj's own
- * tileset ordering rather than recomputed from the palette's sheet list — a gid only means anything
- * relative to one map's ordering.
+ * A palette's road materials, as a list.
+ *
+ * `road` is a single tile name on the three maps that have one made surface. Canal Crossroads has
+ * three — packed earth for the streets, paving for the canal banks and the basin quay, and plank
+ * decking for the crossing over the water — and all three are road in the only sense this file
+ * measures: ground a person walks from one building to another on. The first entry is the one new
+ * road is painted in, which is what the generator hands to `RoadNetwork`.
  */
-function roadGidsFor(tmj, entry) {
+const roadNamesOf = (palette) => (Array.isArray(palette.road) ? palette.road : [palette.road]);
+
+/**
+ * Every gid a map's road materials can paint, resolved against the committed .tmj's own tileset
+ * ordering rather than recomputed from the palette's sheet list — a gid only means anything relative
+ * to one map's ordering. Returns null if any named material's sheet is not in this map at all.
+ */
+function roadGidsFor(tmj, entries) {
   const bySheet = new Map(tmj.tilesets.map((tileset) => [sheetPathOf(tileset), tileset]));
-  const tileset = bySheet.get(entry.sheet);
-  if (!tileset) return null;
   const gids = new Set();
-  for (let row = 0; row < (entry.h ?? 1); row += 1) {
-    for (let col = 0; col < (entry.w ?? 1); col += 1) {
-      gids.add(tileset.firstgid + (entry.row + row) * tileset.columns + (entry.col + col));
+  for (const entry of entries) {
+    const tileset = bySheet.get(entry.sheet);
+    if (!tileset) return null;
+    for (let row = 0; row < (entry.h ?? 1); row += 1) {
+      for (let col = 0; col < (entry.w ?? 1); col += 1) {
+        gids.add(tileset.firstgid + (entry.row + row) * tileset.columns + (entry.col + col));
+      }
     }
   }
   return gids;
@@ -75,12 +88,13 @@ describe.each(palettes.map((palette) => [path.basename(palette.map), palette]))(
     const tmj = JSON.parse(readFileSync(path.join(REPO_ROOT, palette.map), "utf8"));
     const ground = tmj.layers.find((layer) => String(layer.name).toLowerCase() === "ground");
 
+    const roadEntries = roadNamesOf(palette).map((name) => palette.tiles[name]);
+
     it("declares a road material that exists in its own tiles and in the committed map", () => {
-      expect(
-        palette.tiles[palette.road],
-        `${palette.road} is not a tile in this palette`
-      ).toBeTruthy();
-      expect(roadGidsFor(tmj, palette.tiles[palette.road])).not.toBeNull();
+      for (const name of roadNamesOf(palette)) {
+        expect(palette.tiles[name], `${name} is not a tile in this palette`).toBeTruthy();
+      }
+      expect(roadGidsFor(tmj, roadEntries)).not.toBeNull();
     });
 
     it("runs a road to every building's door", async () => {
@@ -92,7 +106,7 @@ describe.each(palettes.map((palette) => [path.basename(palette.map), palette]))(
       expect(doors, `${blocksFile} exports no *_DOORS`).toBeTruthy();
       expect(doors.length).toBeGreaterThan(0);
 
-      const roadGids = roadGidsFor(tmj, palette.tiles[palette.road]);
+      const roadGids = roadGidsFor(tmj, roadEntries);
       const isRoad = (col, row) =>
         col >= 0 &&
         row >= 0 &&
@@ -112,7 +126,9 @@ describe.each(palettes.map((palette) => [path.basename(palette.map), palette]))(
 
       expect(
         stranded.map(
-          (door) => `(${door.col},${door.row}) has no ${palette.road} within ${MAX_DOOR_TO_ROAD}`
+          (door) =>
+            `(${door.col},${door.row}) has no ${roadNamesOf(palette).join("/")} ` +
+            `within ${MAX_DOOR_TO_ROAD}`
         )
       ).toEqual([]);
     });
@@ -121,7 +137,7 @@ describe.each(palettes.map((palette) => [path.basename(palette.map), palette]))(
       const blocksFile = palette.map.replace(/\.tmj$/, ".blocks.js");
       const blocks = await import(pathToFileURL(path.join(REPO_ROOT, blocksFile)).href);
       const doors = Object.entries(blocks).find(([name]) => name.endsWith("_DOORS"))[1];
-      const roadGids = roadGidsFor(tmj, palette.tiles[palette.road]);
+      const roadGids = roadGidsFor(tmj, roadEntries);
       const cells = new Set();
       for (let row = 0; row < ground.height; row += 1) {
         for (let col = 0; col < ground.width; col += 1) {

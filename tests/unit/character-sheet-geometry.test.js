@@ -5,6 +5,7 @@
 // ships. If someone re-exports one character from PixelLab and drops the file in by hand — the
 // obvious thing to do, and how the Director's frames came to disagree by a pixel before — these
 // assertions are what catches it.
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

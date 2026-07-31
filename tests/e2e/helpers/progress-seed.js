@@ -60,8 +60,9 @@ export async function holdKey(page, key, ms) {
  *
  * So this reads both positions out of the DOM each step and moves along whichever axis has the
  * larger gap, in short bursts, until the game's own `.is-near` class appears. When a burst produces
- * no movement the player is against something, so the next one tries the other axis — enough to get
- * around a building without needing a real pathfinder in the test helper.
+ * no movement the player is against something, so the next few commit to the other axis — enough to
+ * get around a building without needing a real pathfinder in the test helper. See `walkTo` below for
+ * why "the next few" and not "the next one".
  */
 export async function walkToNpc(page, npcId, options = {}) {
   return walkTo(page, `[data-npc="${npcId}"]`, "caseFieldPlayer", options);
@@ -92,8 +93,37 @@ export async function walkToHubNpc(page, npcId, options = {}) {
   return walkTo(page, `[data-hub-npc="${npcId}"]`, "institutePlayer", options);
 }
 
-/** Shared body of the two walkers above. See walkToNpc's comment for why it works this way. */
-async function walkTo(page, selector, playerId, { steps = 44, burstMs = 320 } = {}) {
+/**
+ * Shared body of the walkers above. See walkToNpc's comment for why it works this way.
+ *
+ * Two things were wrong here, and both were measured rather than guessed at — this walk failed
+ * intermittently four times across separate runs, and reproduces every time at six workers.
+ *
+ * 1. **A step budget is the wrong bound.** Movement is time-based, so a 320ms burst ought to cover
+ *    the same ground every time — except `runFieldMovementLoop()` clamps its frame delta with
+ *    `Math.min(48, ...)`, deliberately, so a tab switch or a stalled frame cannot teleport the player
+ *    through a wall. Under parallel workers a page rendering at 10fps therefore advances 48ms of
+ *    movement per 100ms of wall clock. Traced bursts covered 20-40px against the 56px they should:
+ *    between a third and two thirds throughput, so a fixed 44 bursts stopped reaching the elder. The
+ *    game code is right; the bound was wrong. It is wall-clock and real progress now.
+ *
+ * 2. **One burst is not enough to slide past anything.** The Caribbean walk passes an obstacle
+ *    around (28,18) where north is blocked, and the old rule — on a blocked burst, try the other axis
+ *    *once* — jiggles rather than slides: one burst sideways, then straight back into the same wall.
+ *    At full speed a single sideways burst happened to clear it most of the time, which is why this
+ *    only ever failed under load. Committing to the perpendicular axis for `slideBursts` in a row is
+ *    what actually gets around a building, and is still nowhere near a pathfinder.
+ *
+ * `maxStalls` then means what it says: that many bursts in a row that moved nothing on either axis,
+ * which is genuinely stuck rather than slowly working around something. `timeoutMs` is the backstop
+ * that makes a broken walk fail the spec instead of hanging it.
+ */
+async function walkTo(
+  page,
+  selector,
+  playerId,
+  { burstMs = 320, timeoutMs = 20_000, maxStalls = 10, slideBursts = 3 } = {}
+) {
   const target = page.locator(selector);
   const isNear = () => target.evaluate((el) => el.classList.contains("is-near"));
   const gap = () =>
@@ -135,7 +165,10 @@ async function walkTo(page, selector, playerId, { steps = 44, burstMs = 320 } = 
   // axis again whenever that axis is also the longer one. The Preservation Case walk deadlocked on
   // exactly that — pushing north into the west reading nook forever with 1.7 tiles left to go east.
   let forced = null;
-  for (let i = 0; i < steps; i += 1) {
+  let forcedLeft = 0;
+  let stalls = 0;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline && stalls < maxStalls) {
     if (await isNear()) return true;
     const before = await gap();
     if (!before) return false;
@@ -149,10 +182,19 @@ async function walkTo(page, selector, playerId, { steps = 44, burstMs = 320 } = 
         : "ArrowLeft";
     await holdKey(page, key, burstMs);
     const after = await gap();
-    // Blocked: that burst moved the player less than a pixel. Commit to the other axis for one step
-    // so the walk slides along the obstacle instead of pushing into it forever.
+    // Blocked: that burst moved the player less than a pixel.
     const moved = Math.abs(after.x - before.x) + Math.abs(after.y - before.y) > 1;
-    forced = moved ? null : vertical ? "horizontal" : "vertical";
+    stalls = moved ? 0 : stalls + 1;
+    if (!moved) {
+      // Commit to the perpendicular axis for a few bursts, long enough to get past whatever is in
+      // the way. One burst only jiggles: it steps aside and then walks straight back into the same
+      // wall, because "larger gap wins" picks the blocked axis again the moment the force is lifted.
+      forced = vertical ? "horizontal" : "vertical";
+      forcedLeft = slideBursts;
+    } else if (forcedLeft > 0) {
+      forcedLeft -= 1;
+      if (forcedLeft === 0) forced = null;
+    }
   }
   return isNear();
 }
