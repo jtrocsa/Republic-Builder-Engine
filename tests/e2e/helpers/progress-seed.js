@@ -118,7 +118,7 @@ export async function walkToHubNpc(page, npcId, options = {}) {
  * which is genuinely stuck rather than slowly working around something. `timeoutMs` is the backstop
  * that makes a broken walk fail the spec instead of hanging it.
  */
-async function walkTo(
+export async function walkTo(
   page,
   selector,
   playerId,

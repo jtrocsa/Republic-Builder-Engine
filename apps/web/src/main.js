@@ -7,6 +7,7 @@ import {
   UNIT_02_REVIEW,
 } from "./content/unit-02-campaign.js";
 import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
+import { UNIT_04, CASE_010_SOURCES, CASE_010_LANES } from "./content/unit-04-campaign.js";
 import { CED_THEME_LABEL } from "./content/ced-taxonomy.js";
 import { skillsForQuestSlots } from "./engine/ced-alignment.js";
 import {
@@ -74,6 +75,16 @@ import {
   UNIT_03_ARCHIVE_SAQ_QUESTS,
   UNIT_03_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-03-quests.js";
+import {
+  UNIT_04_MCQ_QUESTS,
+  UNIT_04_SEQUENCING_QUESTS,
+  UNIT_04_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_04_SOURCE_ANALYSIS_QUESTS,
+  UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
+  UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+  UNIT_04_ARCHIVE_SAQ_QUESTS,
+  UNIT_04_ARCHIVE_DBQ_QUESTS,
+} from "./content/quests/unit-04-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -2309,13 +2320,32 @@ export const ARCHIVE_ROOM_BLOCK_RECTS = ARCHIVE_ROOM_BLOCKS;
 // 2. An interior is deliberately the same shape as an outdoor map, which is what lets
 //    activeFieldMap() hand back either one and leave every consumer untouched. Keep it that way.
 //
+/**
+ * An interior's land mask: everywhere inside the room.
+ *
+ * Every field surface must declare `isLand`, including the ones with no coastline — isFieldBlocked()
+ * and isNpcStandingOnLand() both call `map.isLand(...)` unconditionally, so an interior without one
+ * throws `map.isLand is not a function` on the first movement frame and the screen falls through to
+ * the recovery state. That shipped in the first pass of these two rooms and was caught by the e2e
+ * walkthrough rather than by any unit test, because the unit suite checks an interior's traversal
+ * through its `blocks` and never calls this.
+ *
+ * A room needs no shape here beyond "inside the walls": the walls are real collision rects, so the
+ * only job left is refusing to leave the grid entirely. Written against the room's own grid rather
+ * than FIELD_GRID, which is 56x36 and would let a 20x14 room's mask claim ground it does not have.
+ */
+const interiorGround = (grid) => (x, y) => x >= 0 && y >= 0 && x <= grid.columns && y <= grid.rows;
+
 // Canal Crossroads' two rooms, the first ever declared. `musicScene` is `settlement` on both, the
 // same as the town outside: an interior is a room in that town, not a change of place, and stepping
 // through a door should not restart the score.
+const CANAL_PRINT_SHOP_GRID = { columns: 20, rows: 14, tile: 48 };
+const CANAL_BOARDING_HOUSE_GRID = { columns: 22, rows: 14, tile: 48 };
 FIELD_MAPS["unit-04"].interiors = {
   "canal-print-shop": {
     id: "canal-print-shop",
-    grid: { columns: 20, rows: 14, tile: 48 },
+    grid: CANAL_PRINT_SHOP_GRID,
+    isLand: interiorGround(CANAL_PRINT_SHOP_GRID),
     blocks: CANAL_PRINT_SHOP_BLOCKS,
     roads: [],
     npcs: UNIT4_PRINT_SHOP_NPCS,
@@ -2332,7 +2362,8 @@ FIELD_MAPS["unit-04"].interiors = {
   },
   "canal-boarding-house": {
     id: "canal-boarding-house",
-    grid: { columns: 22, rows: 14, tile: 48 },
+    grid: CANAL_BOARDING_HOUSE_GRID,
+    isLand: interiorGround(CANAL_BOARDING_HOUSE_GRID),
     blocks: CANAL_BOARDING_HOUSE_BLOCKS,
     roads: [],
     npcs: UNIT4_BOARDING_HOUSE_NPCS,
@@ -3289,11 +3320,12 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-const UNITS = [UNIT_01, UNIT_02, UNIT_03];
+const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04];
 const UNIT_SOURCES = {
   "case-001": CASE_001_SOURCES,
   "case-004": CASE_004_SOURCES,
   "case-007": CASE_007_SOURCES,
+  "case-010": CASE_010_SOURCES,
 };
 const PRACTICE_CHECK_QUESTS = {
   "case-001": {
@@ -3314,6 +3346,12 @@ const PRACTICE_CHECK_QUESTS = {
     evidenceOrganizing: UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_03_SOURCE_ANALYSIS_QUESTS,
   },
+  "case-010": {
+    mcq: UNIT_04_MCQ_QUESTS,
+    sequencing: UNIT_04_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_04_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_04_SOURCE_ANALYSIS_QUESTS,
+  },
 };
 // Quest content for both kinds of authored challenge, resolved by
 // (questType, questId): a case's own `archiveChallenge` pointer — which
@@ -3330,14 +3368,23 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
     ...UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
   ],
-  sequencing: [...UNIT_01_ARCHIVE_CHALLENGE_QUESTS, ...UNIT_02_ARCHIVE_SEQUENCING_QUESTS],
+  sequencing: [
+    ...UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
+    ...UNIT_02_ARCHIVE_SEQUENCING_QUESTS,
+    ...UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
+  ],
   mcq: [...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS, ...UNIT_03_ARCHIVE_MCQ_QUESTS],
   saq: [
     ...UNIT_01_ARCHIVE_SAQ_QUESTS,
     ...UNIT_02_ARCHIVE_SAQ_QUESTS,
     ...UNIT_03_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_04_ARCHIVE_SAQ_QUESTS,
   ],
-  dbq: UNIT_03_ARCHIVE_DBQ_QUESTS,
+  dbq: [...UNIT_03_ARCHIVE_DBQ_QUESTS, ...UNIT_04_ARCHIVE_DBQ_QUESTS],
+  // Unit 4's case-012 is the first mission in the game whose quest is a hipp — see the header of
+  // content/quests/unit-04-quests.js. Missions resolve through this same table, so the type needed
+  // a key here as well as in INVESTIGATION_QUESTS_BY_TYPE below.
+  hipp: UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
 };
 // Returns {questType, quest} rather than just the content — a published
 // teacher-authored replacement can be a genuinely different quest type than
@@ -3387,7 +3434,8 @@ export const sourceById = (id) => {
   const official =
     CASE_001_SOURCES.find((item) => item.id === id) ||
     CASE_004_SOURCES.find((item) => item.id === id) ||
-    CASE_007_SOURCES.find((item) => item.id === id);
+    CASE_007_SOURCES.find((item) => item.id === id) ||
+    CASE_010_SOURCES.find((item) => item.id === id);
   return official ? resolveSourceSlot(official) : undefined;
 };
 // Author Mode unlocks every unit/case for design navigation without touching the save.
@@ -8955,13 +9003,21 @@ function fieldSourceSignal(source) {
   const caseId = activeFieldCaseId();
   const availability = sourceAvailability(caseId, source.id);
   if (availability === "locked") return "";
+  // A record that is not on this surface draws nothing here. Since Phase 66 a case's records can be
+  // spread across an outdoor map and its interiors — Unit 4 keeps three in the town and one behind
+  // each of two doors — and `sources` is the whole case's list on every surface, because the
+  // objective tracker is a unit checklist rather than a per-room one. Without this guard,
+  // sourcePointPosition()'s `?? 10` fallback stacked every off-surface record as a live ✦ marker at
+  // tile (10,10) of whatever room the player was standing in: three phantom markers in the middle of
+  // each interior, and two more out in the workshop district of the town.
+  //
+  // nearestFieldInteraction() has always had the equivalent guard, so `E` never offered one of
+  // these — which is exactly why it took a screenshot to notice.
+  const point = activeFieldMap().sourcePoints[source.id];
+  if (!point) return "";
   // An NPC-anchored record has no world marker of its own: the star rides on the NPC's own button
   // (see fieldNpcButton), so the record and the person holding it are one thing to walk up to.
   if (sourceAnchorNpc(source.id)) return "";
-  const point = activeFieldMap().sourcePoints[source.id] || {
-    label: source.title,
-    kind: source.type,
-  };
   const secured = availability === "secured";
   const action = secured ? "open-source" : "start-source-activity";
   const near = isNearFieldSource(source.id);
@@ -9128,8 +9184,9 @@ const FIELD_COPY = {
   },
   "unit-04": {
     intro:
-      "You arrive on the towpath of a canal town that did not exist twenty years ago. Walk the line, speak with the people the canal brought here, then secure the toll receipt, the workshop time book, and the notices on the Reform Square board.",
-    progressHint: "Secure the toll receipt, the workshop time book, and the reform notices.",
+      "You arrive on the towpath of a canal town that did not exist twenty years ago. Walk the line and speak with the people the canal brought here. Three records are out in the town — a boat's toll receipt, a workshop's time book, and the notices on the Reform Square board — and two more are behind doors: the printing office on Market Street, and the boardinghouse in the quarter below the towpath.",
+    progressHint:
+      "Five records: the toll receipt, the workshop time book, the reform notices, the printer's order book, and the boardinghouse register.",
   },
 };
 function fieldScreen() {
@@ -9143,7 +9200,14 @@ function fieldScreen() {
   const copy = FIELD_COPY[activeFieldOutdoorMap().id] || FIELD_COPY["unit-01"];
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
   const fieldNotice = progress.fieldNotice;
-  const kicker = `${activeCase.location} · ${activeCase.date}`;
+  // Most cases already carry the date inside `location` ("Caribbean · 1493", "Philadelphia,
+  // Pennsylvania · 1763–1783"), and appending `date` unconditionally printed it twice on every one
+  // of them — "Caribbean · 1493 · 1493" has been on the Unit 1 field screen since it shipped. Two
+  // of Unit 2's cases carry a placeless location with no date ("The Atlantic circuit"), which is why
+  // the append exists at all, so this keeps it for those and drops it where it would repeat.
+  const kicker = activeCase.location.includes(activeCase.date)
+    ? activeCase.location
+    : `${activeCase.location} · ${activeCase.date}`;
   return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
@@ -9596,6 +9660,20 @@ const RECONSTRUCTION_LANES = {
       "protest-and-rhetoric": "A record of colonists organizing or arguing against British policy.",
       "revolution-and-its-promises":
         "A record of the Revolution's ideals being invoked, extended, or denied once war began.",
+    }[lane.id],
+  })),
+  // Unit 4's lanes are arguments rather than topics, so their hints have to say what a record is
+  // being read *as* — every one of the five could be filed in two of these, and choosing is the
+  // interpretive work the case is asking for.
+  "case-010": CASE_010_LANES.map((lane) => ({
+    ...lane,
+    hint: {
+      "what-the-canal-gave":
+        "A record of what cheap transport and a reachable market made possible.",
+      "what-it-cost-to-work":
+        "A record of what the new economy demanded from the people whose labour ran it.",
+      "what-people-did-about-it":
+        "A record of someone organizing, arguing, or profiting in response to the change.",
     }[lane.id],
   })),
 };

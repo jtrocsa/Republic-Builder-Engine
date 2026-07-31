@@ -11,9 +11,11 @@
 import * as unit01Campaign from "../content/unit-01-campaign.js";
 import * as unit02Campaign from "../content/unit-02-campaign.js";
 import * as unit03Campaign from "../content/unit-03-campaign.js";
+import * as unit04Campaign from "../content/unit-04-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
+import * as unit04Quests from "../content/quests/unit-04-quests.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -77,6 +79,21 @@ export function loadChronicleContent() {
       archiveMcqQuests: unit03Quests.UNIT_03_ARCHIVE_MCQ_QUESTS,
       archiveSaqQuests: unit03Quests.UNIT_03_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit03Quests.UNIT_03_ARCHIVE_DBQ_QUESTS,
+    },
+    // Unit 4 carries no investigation quests — see the header of unit-04-quests.js for why, and
+    // note that adding them later is additive rather than a change to anything here.
+    unit04: {
+      unit: unit04Campaign.UNIT_04,
+      sources: unit04Campaign.CASE_010_SOURCES,
+      lanes: unit04Campaign.CASE_010_LANES,
+      mcqQuests: unit04Quests.UNIT_04_MCQ_QUESTS,
+      evidenceOrganizingQuests: unit04Quests.UNIT_04_EVIDENCE_ORGANIZING_QUESTS,
+      sequencingQuests: unit04Quests.UNIT_04_SEQUENCING_QUESTS,
+      sourceAnalysisQuests: unit04Quests.UNIT_04_SOURCE_ANALYSIS_QUESTS,
+      archiveSequencingQuests: unit04Quests.UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
+      archiveSourceAnalysisQuests: unit04Quests.UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+      archiveSaqQuests: unit04Quests.UNIT_04_ARCHIVE_SAQ_QUESTS,
+      archiveDbqQuests: unit04Quests.UNIT_04_ARCHIVE_DBQ_QUESTS,
     },
   };
 }

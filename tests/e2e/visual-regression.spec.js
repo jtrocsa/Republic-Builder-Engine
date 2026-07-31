@@ -245,6 +245,40 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("field-common-cause"));
   });
 
+  // Three baselines for Unit 4, because it introduced two things no earlier unit had: a map whose
+  // record markers include doorsteps, and interiors. The two rooms are worth a pixel baseline
+  // specifically — every other check on them is structural (who is in the room, which grid, does
+  // the exit work), and none of it would notice a wall block painted on the wrong layer or a tile
+  // whose transparent row draws a hairline through the floor. That defect class is exactly what
+  // shipped down the canal bank in Phase 3 and got caught by eye.
+  test("field: the Canal Crossroads and both of its rooms (Unit 4)", async ({ page }) => {
+    const seed = {
+      currentScreen: "field",
+      activeCaseId: "case-010",
+      unlocked: ["case-001", "case-010"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    };
+    await seedProgress(page, seed);
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "canalCrossroadsTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-canal-crossroads"));
+
+    // Both interiors, seeded directly — see field-interiors.spec.js for why the rooms are entered
+    // by seeding rather than walked into from the towpath. setScreen() replaces the whole save
+    // rather than merging into it, so each call carries the full seed.
+    await setScreen(page, { ...seed, currentFieldRoom: "canal-print-shop" });
+    await waitForTiledCanvas(page, "canalPrintShopTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-canal-print-shop"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "canal-boarding-house" });
+    await waitForTiledCanvas(page, "canalBoardingHouseTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-canal-boarding-house"));
+  });
+
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({
     page,
   }) => {

@@ -534,6 +534,25 @@ describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
       expect(grid.rows).toBeGreaterThan(0);
     });
 
+    // Added after both of the first two interiors shipped without one. isFieldBlocked() and
+    // isNpcStandingOnLand() call `map.isLand(...)` on every movement frame with no guard, so a
+    // surface missing it throws `map.isLand is not a function` the moment the player presses a
+    // direction and the whole screen falls through to the recovery state. Nothing above catches
+    // that: the traversal fill works from `blocks` alone, and the doorstep check runs against the
+    // *outdoor* map's mask. It took an e2e walkthrough to find, which is one round trip too many
+    // for a missing field.
+    it("declares a land mask, and calls the whole room land", () => {
+      expect(typeof room.isLand, `${room.id} must declare isLand`).toBe("function");
+      expect(room.isLand(room.entry.x, room.entry.y), "the entry cell is land").toBe(true);
+      expect(room.isLand(room.exit.x, room.exit.y), "the exit cell is land").toBe(true);
+      // Interior walls are collision rects, so the mask's only job is refusing to leave the grid.
+      expect(room.isLand(grid.columns / 2, grid.rows / 2)).toBe(true);
+      expect(room.isLand(-1, grid.rows / 2), "outside the west wall is not land").toBe(false);
+      expect(room.isLand(grid.columns / 2, grid.rows + 1), "past the south wall is not land").toBe(
+        false
+      );
+    });
+
     it("puts the player somewhere they can stand on entry", () => {
       const traversal = walk();
       expect(traversal.open(room.entry.x, room.entry.y)).toBe(true);

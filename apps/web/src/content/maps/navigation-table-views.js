@@ -26,6 +26,11 @@ export const UNIT_MAP_VIEW = {
   "unit-01": "atlantic-wide",
   "unit-02": "atlantic-wide",
   "unit-03": "north-america",
+  // Unit 4's three cases are an upstate New York canal town (43.1N, 75.9W), Washington (38.9N,
+  // 77.0W) and New Echota in the Cherokee Nation (34.6N, 84.9W). All three fall inside the existing
+  // north-america box, so this unit adds no view of its own — which is the point of the box being a
+  // reusable framing rather than one per unit.
+  "unit-04": "north-america",
 };
 
 export const DEFAULT_MAP_VIEW = "atlantic-wide";

@@ -351,6 +351,73 @@ function main() {
     )
   );
 
+  results.push(runSchema("unit-04-campaign.js: UNIT_04", UnitSchema, content.unit04.unit));
+  results.push(
+    runSchema("unit-04-campaign.js: CASE_010_LANES", CaseLanesSchema, content.unit04.lanes)
+  );
+  results.push(
+    runSchema(
+      "unit-04-campaign.js: CASE_010_SOURCES",
+      buildSourcesSchema({ reconstructionIds: content.unit04.lanes.map((lane) => lane.id) }),
+      content.unit04.sources
+    )
+  );
+  results.push(
+    runSchema("unit-04-quests.js: UNIT_04_MCQ_QUESTS", McqQuestListSchema, content.unit04.mcqQuests)
+  );
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_EVIDENCE_ORGANIZING_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit04.evidenceOrganizingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit04.sequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_SOURCE_ANALYSIS_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit04.sourceAnalysisQuests
+    )
+  );
+  // Unit 4's two missions, and the first of each type to be one: case-011 is a sequencing mission
+  // and case-012 a hipp mission. Both validate against the same list schemas as their Practice
+  // Check counterparts above, because a mission's quest is an ordinary quest of that type.
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_ARCHIVE_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit04.archiveSequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit04.archiveSourceAnalysisQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_ARCHIVE_SAQ_QUESTS",
+      SaqQuestListSchema,
+      content.unit04.archiveSaqQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-04-quests.js: UNIT_04_ARCHIVE_DBQ_QUESTS",
+      DbqQuestListSchema,
+      content.unit04.archiveDbqQuests
+    )
+  );
+
   // Primary source reference library (apps/web/src/content/primary-source-library/)
   // — syllabus-wide research reference for Units 1-9, not gameplay content.
   // See docs/content-guide/primary-source-library.md.
@@ -407,6 +474,7 @@ function main() {
       { source: "unit-01-quests.js:UNIT_01_MCQ_QUESTS", items: content.unit01.mcqQuests },
       { source: "unit-02-quests.js:UNIT_02_MCQ_QUESTS", items: content.unit02.mcqQuests },
       { source: "unit-03-quests.js:UNIT_03_MCQ_QUESTS", items: content.unit03.mcqQuests },
+      { source: "unit-04-quests.js:UNIT_04_MCQ_QUESTS", items: content.unit04.mcqQuests },
       {
         source: "unit-01-quests.js:UNIT_01_INVESTIGATION_MCQ_QUESTS",
         items: content.unit01.investigationMcqQuests,
@@ -449,6 +517,14 @@ function main() {
         source: "unit-02-quests.js:UNIT_02_ARCHIVE_SEQUENCING_QUESTS",
         items: content.unit02.archiveSequencingQuests,
       },
+      {
+        source: "unit-04-quests.js:UNIT_04_SEQUENCING_QUESTS",
+        items: content.unit04.sequencingQuests,
+      },
+      {
+        source: "unit-04-quests.js:UNIT_04_ARCHIVE_SEQUENCING_QUESTS",
+        items: content.unit04.archiveSequencingQuests,
+      },
     ],
     "evidence-organizing": [
       {
@@ -479,6 +555,10 @@ function main() {
         source: "unit-03-quests.js:UNIT_03_ARCHIVE_CHALLENGE_QUESTS",
         items: content.unit03.archiveChallengeQuests,
       },
+      {
+        source: "unit-04-quests.js:UNIT_04_EVIDENCE_ORGANIZING_QUESTS",
+        items: content.unit04.evidenceOrganizingQuests,
+      },
     ],
     hipp: [
       {
@@ -497,6 +577,14 @@ function main() {
         source: "unit-03-quests.js:UNIT_03_INVESTIGATION_QUESTS",
         items: content.unit03.investigationQuests,
       },
+      {
+        source: "unit-04-quests.js:UNIT_04_SOURCE_ANALYSIS_QUESTS",
+        items: content.unit04.sourceAnalysisQuests,
+      },
+      {
+        source: "unit-04-quests.js:UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
+        items: content.unit04.archiveSourceAnalysisQuests,
+      },
     ],
     saq: [
       {
@@ -511,11 +599,19 @@ function main() {
         source: "unit-03-quests.js:UNIT_03_ARCHIVE_SAQ_QUESTS",
         items: content.unit03.archiveSaqQuests,
       },
+      {
+        source: "unit-04-quests.js:UNIT_04_ARCHIVE_SAQ_QUESTS",
+        items: content.unit04.archiveSaqQuests,
+      },
     ],
     dbq: [
       {
         source: "unit-03-quests.js:UNIT_03_ARCHIVE_DBQ_QUESTS",
         items: content.unit03.archiveDbqQuests,
+      },
+      {
+        source: "unit-04-quests.js:UNIT_04_ARCHIVE_DBQ_QUESTS",
+        items: content.unit04.archiveDbqQuests,
       },
     ],
   };
@@ -554,16 +650,19 @@ function main() {
       { source: "unit-01-campaign.js:UNIT_01.cases", items: content.unit01.unit.cases },
       { source: "unit-02-campaign.js:UNIT_02.cases", items: content.unit02.unit.cases },
       { source: "unit-03-campaign.js:UNIT_03.cases", items: content.unit03.unit.cases },
+      { source: "unit-04-campaign.js:UNIT_04.cases", items: content.unit04.unit.cases },
     ]),
     ...checkUniqueGlobalIds("cross-reference: source ids", [
       { source: "unit-01-campaign.js:CASE_001_SOURCES", items: content.unit01.sources },
       { source: "unit-02-campaign.js:CASE_004_SOURCES", items: content.unit02.sources },
       { source: "unit-03-campaign.js:CASE_007_SOURCES", items: content.unit03.sources },
+      { source: "unit-04-campaign.js:CASE_010_SOURCES", items: content.unit04.sources },
     ]),
     ...checkCasePeriodMatchesUnit("cross-reference: case ced.period matches unit period", [
       content.unit01.unit,
       content.unit02.unit,
       content.unit03.unit,
+      content.unit04.unit,
     ]),
     // Every array feeding one QUEST_TYPES key gets merged into one flat
     // lookup in main.js (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE/
@@ -581,6 +680,7 @@ function main() {
         ...archiveChallengeEntries("unit-01-campaign.js:UNIT_01", content.unit01.unit),
         ...archiveChallengeEntries("unit-02-campaign.js:UNIT_02", content.unit02.unit),
         ...archiveChallengeEntries("unit-03-campaign.js:UNIT_03", content.unit03.unit),
+        ...archiveChallengeEntries("unit-04-campaign.js:UNIT_04", content.unit04.unit),
       ],
       questTypeKeys,
       questsByType
@@ -591,6 +691,7 @@ function main() {
         ...investigationEntries("unit-01-campaign.js:CASE_001_SOURCES", content.unit01.sources),
         ...investigationEntries("unit-02-campaign.js:CASE_004_SOURCES", content.unit02.sources),
         ...investigationEntries("unit-03-campaign.js:CASE_007_SOURCES", content.unit03.sources),
+        ...investigationEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
       ],
       questTypeKeys,
       questsByType
