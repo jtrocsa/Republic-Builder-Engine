@@ -93,4 +93,26 @@ export const DERIVED_OBJECTS = [
       },
     ],
   },
+  {
+    // The Institute's seating, and the first art in this repo that was made for it rather than
+    // borrowed. The Medieval Tavern pack draws every 1x1 prop to fill its 48px tile whatever the
+    // object is, so its stool is painted 45px tall — exactly the height of a character's standing
+    // body, which is what the playtest screenshot circled. Nothing smaller exists to swap to: every
+    // furniture cell on that sheet measures 42-48px.
+    //
+    // So these were generated to size instead. The canvas is what sets the scale — a stool drawn on
+    // a 96x26 strip comes out 19px, a quarter-body, without anything being downscaled afterwards —
+    // and the palette is forced from the Medieval Tavern stool they stand beside, so they belong to
+    // the same room. See docs/decision-log/0045.
+    //
+    // Cut by explicit box rather than by seed: the source sheet is laid out by hand and the boxes
+    // are the layout, so a flood fill would only be re-deriving what is already known.
+    from: "Chronicle Institute/furnishings.png",
+    out: "institute-furnishings.png",
+    objects: [
+      { name: "stool", box: [0, 8, 18, 27] },
+      { name: "stoolAlt", box: [24, 8, 43, 27] },
+      { name: "lowBench", box: [48, 14, 180, 27] },
+    ],
+  },
 ];

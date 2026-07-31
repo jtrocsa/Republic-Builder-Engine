@@ -25,12 +25,18 @@ import {
   FIELD_MAPS,
   HUB_BLOCK_RECTS,
   HUB_GRID,
-  HUB_NPC_PATROLS,
+  HUB_NAV_GRID,
+  HUB_NPC_BEHAVIOURS,
   HUB_TARGETS,
+  fieldNavGridFor,
   footBoxFor,
   hubFootBoxFor,
+  isFieldGroundStandable,
+  isHubGroundStandable,
   rectsOverlap,
 } from "../../apps/web/src/main.js";
+import { buildCircuit } from "../../apps/web/src/engine/npc-routing.js";
+import institutePalette from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -172,6 +178,107 @@ function blockingRect(map, x, y) {
   return map.blocks.find((block) => rectsOverlap(foot, block));
 }
 
+// --- who can end up standing where -----------------------------------------------------------
+// Every point a behaviour can put an NPC on. For a route that has to be the whole walked path, not
+// just the stops: the burgess's stops were a comfortable 2.9 tiles from the minister's post and the
+// road between them ran within 1.1 tiles of him, which is inside interaction reach.
+function territoryOf(behaviour, grid) {
+  if (behaviour.kind !== "route") {
+    return { points: [behaviour.at || behaviour.home], radius: behaviour.radius || 0 };
+  }
+  const points = [];
+  let previous = behaviour.stops[0];
+  for (const waypoint of buildCircuit(grid, behaviour.stops)) {
+    const steps = Math.max(
+      1,
+      Math.ceil(Math.hypot(waypoint.x - previous.x, waypoint.y - previous.y) * 4)
+    );
+    for (let step = 1; step <= steps; step += 1) {
+      points.push({
+        x: previous.x + (waypoint.x - previous.x) * (step / steps),
+        y: previous.y + (waypoint.y - previous.y) * (step / steps),
+      });
+    }
+    previous = waypoint;
+  }
+  return { points, radius: 0 };
+}
+
+/** Closest the two territories can bring their NPCs, in tiles. Negative means they overlap. */
+function territoryGap(a, b) {
+  let closest = Infinity;
+  for (const p of a.points) {
+    for (const q of b.points) {
+      closest = Math.min(closest, Math.hypot(p.x - q.x, p.y - q.y) - a.radius - b.radius);
+    }
+  }
+  return closest;
+}
+
+// Two NPCs who can be within interaction reach of each other are interchangeable to the player:
+// nearestFieldInteraction() answers with whoever is closest and has no way to know which was meant.
+// Both of this phase's ways of getting that wrong shipped in a working build and passed every other
+// assertion:
+//
+//   - The Powhatan pair's posts were 2.5 tiles apart and both wandered a 2.4 radius, two discs
+//     almost entirely on top of one another. Once they walked continually they swapped places, and
+//     a player who walked to the woman was answered by the man.
+//   - The burgess's *path* ran past the stationed minister, so a walk to the minister sometimes
+//     opened the burgess instead. The stop-based version of this check passed it at 2.9 tiles.
+//
+// The bar is the interaction reach itself (1.45) plus a little. It is deliberately NOT "no player
+// can ever be near two people at once", which would need 2.9 and would forbid two neighbours using
+// the same street — the market square would be a morgue. It is "these two can never be standing on
+// top of each other", which is what makes one of them reliably the nearer once you have walked up.
+const MIN_TERRITORY_GAP = 1.5;
+
+function crowdedPairs(behaviours, grid) {
+  const entries = Object.entries(behaviours).map(([id, behaviour]) => [
+    id,
+    territoryOf(behaviour, grid),
+  ]);
+  const crowded = [];
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      const gap = territoryGap(entries[i][1], entries[j][1]);
+      if (gap < MIN_TERRITORY_GAP) {
+        crowded.push(`${entries[i][0]} / ${entries[j][0]} ${gap.toFixed(2)} tiles apart`);
+      }
+    }
+  }
+  return crowded;
+}
+
+/**
+ * Every cell of a map's `structures` layer painted with a given palette tile.
+ *
+ * Resolved against the committed .tmj's own tileset ordering rather than recomputed from the
+ * palette's sheet list, because a gid only means anything relative to one map's ordering — the same
+ * reasoning as roadGidsFor() in tests/unit/map-path-network.test.js. This is how a `decor` stamp can
+ * be located at all: decor carries no collision rect, so it leaves no trace in `<map>.blocks.js` and
+ * the painted tile is the only record that it is there.
+ */
+function cellsPainted(tmj, entry) {
+  const structures = tmj.layers.find((layer) => layer.name === "structures");
+  const tileset = tmj.tilesets.find((set) =>
+    String(set.image).replace(/\\/g, "/").endsWith(`assets/tilesets/${entry.sheet}`)
+  );
+  if (!tileset || !structures) return [];
+  const gids = new Set();
+  for (let row = 0; row < (entry.h ?? 1); row += 1) {
+    for (let col = 0; col < (entry.w ?? 1); col += 1) {
+      gids.add(tileset.firstgid + (entry.row + row) * tileset.columns + (entry.col + col));
+    }
+  }
+  const cells = [];
+  for (let row = 0; row < structures.height; row += 1) {
+    for (let col = 0; col < structures.width; col += 1) {
+      if (gids.has(structures.data[row * structures.width + col])) cells.push({ col, row });
+    }
+  }
+  return cells;
+}
+
 describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, map) => {
   const tmj = loadTmj(TMJ_BY_UNIT[unitId]);
   const structures = tmj.layers.find((layer) => layer.name === "structures");
@@ -209,17 +316,23 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     expect(trapped).toEqual([]);
   });
 
-  // Since Phase 61 a post is a home anchor and a radius, not four waypoints — see
-  // engine/npc-wander.js. That makes the old "every waypoint is walkable" assertion the wrong
-  // shape: an NPC's step is gated by isFieldNpcBlocked() at runtime, so a radius overlapping the
-  // sea costs it some pacing room rather than stranding it. What still has to hold is that the
-  // post itself is standable — an NPC whose home is inside a hut never gets a first step.
-  it("stands every NPC on walkable ground at its own post (edge case)", () => {
+  // Since Phase 61 an NPC's placement is not four waypoints, and since Phase 62 it is one of three
+  // behaviours — see engine/npc-behaviour.js. An NPC's step is gated by isFieldNpcBlocked() at
+  // runtime, so a wander radius overlapping the sea costs it some pacing room rather than
+  // stranding it. What still has to hold is that the anchor is standable: a station inside a hut,
+  // or a route stop the router cannot snap to, is someone who never moves again.
+  const anchorsOf = (behaviour) =>
+    behaviour.kind === "route" ? behaviour.stops : [behaviour.at || behaviour.home];
+
+  it("stands every NPC on walkable ground at every place it is sent (edge case)", () => {
     const bad = [];
-    for (const [id, post] of Object.entries(map.patrols)) {
-      if (!footIsOnLand(map, post.home.x, post.home.y)) bad.push(`${id} home off land`);
-      const block = blockingRect(map, post.home.x, post.home.y);
-      if (block) bad.push(`${id} home inside "${block.kind}"`);
+    for (const [id, behaviour] of Object.entries(map.behaviours)) {
+      anchorsOf(behaviour).forEach((point, index) => {
+        const where = behaviour.kind === "route" ? `stop ${index}` : "post";
+        if (!footIsOnLand(map, point.x, point.y)) bad.push(`${id} ${where} off land`);
+        const block = blockingRect(map, point.x, point.y);
+        if (block) bad.push(`${id} ${where} inside "${block.kind}"`);
+      });
     }
     expect(bad).toEqual([]);
   });
@@ -227,17 +340,19 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
   // A radius the NPC can barely use is a placement mistake even though it cannot strand anyone:
   // it reads in play as someone shuffling on the spot. Sample the disc and require that a real
   // share of it is walkable, which is what actually distinguishes "works a tight corner" from
-  // "was placed against a wall by accident".
-  it("gives every post enough walkable room to wander in (edge case)", () => {
+  // "was placed against a wall by accident". Only wanderers have a disc; a station is meant to
+  // stand still and a route's freedom is checked by the routing test below.
+  it("gives every wanderer enough walkable room to use (edge case)", () => {
     const cramped = [];
-    for (const [id, post] of Object.entries(map.patrols)) {
+    for (const [id, behaviour] of Object.entries(map.behaviours)) {
+      if (behaviour.kind !== "wander") continue;
       let open = 0;
       const samples = 64;
       for (let i = 0; i < samples; i += 1) {
         const angle = (i / samples) * Math.PI * 2;
-        const distance = post.radius * (0.35 + (i % 3) * 0.325);
-        const x = post.home.x + Math.cos(angle) * distance;
-        const y = post.home.y + Math.sin(angle) * distance;
+        const distance = behaviour.radius * (0.35 + (i % 3) * 0.325);
+        const x = behaviour.home.x + Math.cos(angle) * distance;
+        const y = behaviour.home.y + Math.sin(angle) * distance;
         if (footIsOnLand(map, x, y) && !blockingRect(map, x, y)) open += 1;
       }
       if (open / samples < 0.3) cramped.push(`${id} ${Math.round((open / samples) * 100)}% open`);
@@ -245,12 +360,40 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     expect(cramped).toEqual([]);
   });
 
-  it("gives every NPC a post at the coordinates the NPC declares (edge case)", () => {
+  // Every route has to resolve to a walk, and every stop has to be somewhere the NPC actually
+  // arrives. buildCircuit() drops a leg it cannot path rather than failing — the right behaviour at
+  // runtime, and exactly the silent degradation that needs a test: a carpenter authored into a
+  // sealed barn yard would simply stand still forever with nothing in the console.
+  it("finds a real walk between every route's stops (edge case)", () => {
+    const grid = fieldNavGridFor(map);
+    const broken = [];
+    for (const [id, behaviour] of Object.entries(map.behaviours)) {
+      if (behaviour.kind !== "route") continue;
+      const circuit = buildCircuit(grid, behaviour.stops);
+      const stops = circuit.filter((point) => point.stop).length;
+      if (stops < behaviour.stops.length) {
+        broken.push(`${id} reached ${stops}/${behaviour.stops.length} stops`);
+      }
+      const offMap = circuit.filter((point) => !isFieldGroundStandable(map, point.x, point.y));
+      if (offMap.length > 0) broken.push(`${id} routed over ${offMap.length} unwalkable cells`);
+    }
+    expect(broken).toEqual([]);
+  });
+
+  it("keeps any two NPCs' ground apart, so the wrong one cannot answer (edge case)", () => {
+    expect(crowdedPairs(map.behaviours, fieldNavGridFor(map))).toEqual([]);
+  });
+
+  it("anchors every NPC's behaviour at the coordinates the NPC declares (edge case)", () => {
+    // A route may start anywhere along its circuit, so only its FIRST stop is the person's own
+    // post; a station's `at` is. Either way the content file and the behaviour table have to agree
+    // about where somebody is, because the NPC's declared x/y is what a source anchor reads before
+    // the first tick moves them.
     const mismatched = map.npcs
-      .filter((npc) => map.patrols[npc.id])
+      .filter((npc) => map.behaviours[npc.id])
       .filter((npc) => {
-        const { home } = map.patrols[npc.id];
-        return home.x !== npc.x || home.y !== npc.y;
+        const [anchor] = anchorsOf(map.behaviours[npc.id]);
+        return anchor.x !== npc.x || anchor.y !== npc.y;
       })
       .map((npc) => npc.id);
     expect(mismatched).toEqual([]);
@@ -403,40 +546,62 @@ describe("institute main hall coordinates", () => {
     expect(trapped).toEqual([]);
   });
 
-  it("stands every staff member on open floor at their own post (edge case)", () => {
-    // A post inside a rect means isHubNpcBlocked() refuses the very first step and the NPC never
+  const hallAnchors = (behaviour) =>
+    behaviour.kind === "route" ? behaviour.stops : [behaviour.at || behaviour.home];
+
+  it("stands every staff member on open floor everywhere they go (edge case)", () => {
+    // An anchor inside a rect means isHubNpcBlocked() refuses the very first step and the NPC never
     // leaves the spot. The field maps have had the equivalent assertion since Phase 52; the Main
-    // Hall's three routes were re-derived by hand every time the room was re-laid.
+    // Hall's three posts were re-derived by hand every time the room was re-laid.
     const bad = [];
-    for (const [id, post] of Object.entries(HUB_NPC_PATROLS)) {
-      if (!hall.canStandAt(post.home.x, post.home.y))
-        bad.push(`${id} at ${post.home.x},${post.home.y}`);
+    for (const [id, behaviour] of Object.entries(HUB_NPC_BEHAVIOURS)) {
+      for (const point of hallAnchors(behaviour)) {
+        if (!hall.canStandAt(point.x, point.y)) bad.push(`${id} at ${point.x},${point.y}`);
+      }
     }
     expect(bad).toEqual([]);
   });
 
-  // The hall is two narrow open bands between furniture, so a radius here uses much less of its
-  // disc than a field post does. A lower bar than the field's 30%, but still a bar: below it the
-  // staff member is pinned against a table rather than pacing an aisle.
-  it("gives every staff post usable floor to pace (edge case)", () => {
-    const cramped = [];
-    for (const [id, post] of Object.entries(HUB_NPC_PATROLS)) {
-      let open = 0;
-      const samples = 64;
-      for (let i = 0; i < samples; i += 1) {
-        const angle = (i / samples) * Math.PI * 2;
-        const distance = post.radius * (0.35 + (i % 3) * 0.325);
-        if (
-          hall.canStandAt(
-            post.home.x + Math.cos(angle) * distance,
-            post.home.y + Math.sin(angle) * distance
-          )
-        )
-          open += 1;
-      }
-      if (open / samples < 0.2) cramped.push(`${id} ${Math.round((open / samples) * 100)}% open`);
+  it("finds a real walk between every staff route's stops (edge case)", () => {
+    const broken = [];
+    for (const [id, behaviour] of Object.entries(HUB_NPC_BEHAVIOURS)) {
+      if (behaviour.kind !== "route") continue;
+      const circuit = buildCircuit(HUB_NAV_GRID, behaviour.stops);
+      const stops = circuit.filter((point) => point.stop).length;
+      if (stops < behaviour.stops.length)
+        broken.push(`${id} reached ${stops}/${behaviour.stops.length} stops`);
+      const offFloor = circuit.filter((point) => !isHubGroundStandable(point.x, point.y));
+      if (offFloor.length > 0) broken.push(`${id} routed over ${offFloor.length} blocked cells`);
     }
-    expect(cramped).toEqual([]);
+    expect(broken).toEqual([]);
+  });
+
+  it("keeps any two staff members' ground apart (edge case)", () => {
+    expect(crowdedPairs(HUB_NPC_BEHAVIOURS, HUB_NAV_GRID)).toEqual([]);
+  });
+
+  // The reading stools are `decor` and carry no collision, on purpose — the south aisle has no
+  // solid stamps in it, which is what keeps the room traversable end to end. That also means
+  // nothing stops a staff member standing on one, and before Phase 62 Julian did: his post at
+  // (15.2,8.9) put his foot box across the stool at column 14, which is the playtest screenshot.
+  // Blocking the stools would pinch the aisle to 0.56 tiles against a 0.5-tile foot box, so the
+  // people move instead — and this is the assertion that keeps them moved.
+  it("keeps every staff member off the furniture they are not standing behind (edge case)", () => {
+    const stools = cellsPainted(tmj, institutePalette.tiles.stool).concat(
+      cellsPainted(tmj, institutePalette.tiles.stoolAlt)
+    );
+    expect(stools.length).toBeGreaterThan(0);
+    const standing = [];
+    for (const [id, behaviour] of Object.entries(HUB_NPC_BEHAVIOURS)) {
+      for (const point of hallAnchors(behaviour)) {
+        const foot = hubFootBoxFor(point.x, point.y);
+        const hit = stools.find((cell) =>
+          rectsOverlap(foot, { x1: cell.col, y1: cell.row, x2: cell.col + 1, y2: cell.row + 1 })
+        );
+        if (hit) standing.push(`${id} on the stool at ${hit.col},${hit.row}`);
+      }
+    }
+    expect(standing).toEqual([]);
   });
 });
 

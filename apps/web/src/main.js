@@ -107,9 +107,21 @@ import commonCauseTmjRaw from "./content/maps/common-cause-field.tmj?raw";
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
 // ground-contact row only, so the player could walk onto roofs.
-import { CARIBBEAN_FIELD_BLOCKS } from "./content/maps/caribbean-field.blocks.js";
-import { RIVERBEND_FIELD_BLOCKS } from "./content/maps/riverbend-field.blocks.js";
-import { COMMON_CAUSE_FIELD_BLOCKS } from "./content/maps/common-cause-field.blocks.js";
+// The `*_ROADS` companions arrived in Phase 62 and, unlike `*_DOORS`, the running game reads them:
+// engine/npc-routing.js costs a road cell a quarter of open ground, which is what sends a routed
+// NPC down the high street rather than diagonally across the crop beds.
+import {
+  CARIBBEAN_FIELD_BLOCKS,
+  CARIBBEAN_FIELD_ROADS,
+} from "./content/maps/caribbean-field.blocks.js";
+import {
+  RIVERBEND_FIELD_BLOCKS,
+  RIVERBEND_FIELD_ROADS,
+} from "./content/maps/riverbend-field.blocks.js";
+import {
+  COMMON_CAUSE_FIELD_BLOCKS,
+  COMMON_CAUSE_FIELD_ROADS,
+} from "./content/maps/common-cause-field.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
 import {
@@ -208,7 +220,8 @@ import {
 } from "./engine/evaluator-requests.js";
 import { evaluateSubmission } from "./engine/evaluator-client.js";
 import { spriteDirection, spriteSheetStyle, walkCycleSeconds } from "./engine/sprite-animation.js";
-import { createWanderState, stepWander } from "./engine/npc-wander.js";
+import { createBehaviourState, stepBehaviour } from "./engine/npc-behaviour.js";
+import { buildCircuit, createNavGrid } from "./engine/npc-routing.js";
 
 const app = document.querySelector("#app");
 // Director intro scene reveal cards — lookup keys, not literal paths, so content stays
@@ -346,6 +359,12 @@ const resolveArchiveRoomTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/Medieval Tavern/Auto-tile-A4-walls-2.png", {
     eager: true,
     import: "default",
+  }),
+  // The Institute's seating, generated at the size a stool actually is rather than borrowed from a
+  // pack that draws every 1x1 prop 45px tall — see derived-objects.manifest.js and decision log 0045.
+  import.meta.glob("./assets/tilesets/derived/institute-furnishings.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderArchiveRoomTiledMap() {
@@ -391,8 +410,15 @@ const resolveInstituteHallTilesetImage = createTilesetImageResolver(
   // The brass compass, repacked down to 1x1 so it can sit on the Navigation Table — see
   // derived-objects.manifest.js. A sheet named in a palette but missing from this resolver is not a
   // missing tile: createTilesetImageResolver() throws, so renderTiledMap() rejects and the whole map
-  // draws as an empty frame. The visual-regression baseline is what caught that.
+  // draws as an empty frame. The visual-regression baseline is what caught that — twice now, the
+  // second time on the furnishings sheet below.
   import.meta.glob("./assets/tilesets/derived/institute-artifacts.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The Institute's seating, generated at the size a stool actually is rather than borrowed from a
+  // pack that draws every 1x1 prop 45px tall — see derived-objects.manifest.js and decision log 0045.
+  import.meta.glob("./assets/tilesets/derived/institute-furnishings.png", {
     eager: true,
     import: "default",
   })
@@ -670,8 +696,8 @@ const FIELD_NPCS = [
   },
   {
     id: "spanish-sailor",
-    x: 45.5,
-    y: 20.5,
+    x: 46.5,
+    y: 22.5,
     group: "spanish",
     name: "Spanish sailor",
     label: "Spanish sailor",
@@ -700,24 +726,53 @@ const FIELD_NPCS = [
     text: "Ink can make a voyage last longer than memory. Still, I choose words for the court, and those choices matter.",
   },
 ];
-// Where each person works, and how far they drift from it. `home` is the NPC's post — the same
-// coordinate the NPC declares — and `radius` bounds a wander, not a route: see
-// engine/npc-wander.js for why 21 hand-authored four-waypoint rectangles became two numbers each.
+// What each person is doing. Three kinds, defined in engine/npc-behaviour.js:
 //
-// A radius does not have to be clear of obstacles the way a waypoint did. isFieldNpcBlocked()
-// gates every step, so an over-generous radius makes someone pace a smaller area than the number
-// suggests; it cannot put them inside the sea or a hut.
-const FIELD_NPC_PATROLS = {
-  "taino-elder": { home: { x: 30.0, y: 13.5 }, radius: 1.8 },
-  // The conuco is a collision rect (20.0,12.0-24.0,14.0) directly south of her. She works its
-  // north edge and the wander simply cannot enter it.
-  "taino-gardener": { home: { x: 22.0, y: 10.4 }, radius: 1.6 },
-  // The beach beside the village canoe, whose rect ends at row 13.
-  "taino-fisher": { home: { x: 39.0, y: 14.2 }, radius: 1.8 },
-  "spanish-sailor": { home: { x: 45.5, y: 20.5 }, radius: 1.6 },
-  // The open ground north of the cartographer's table, which blocks its whole footprint.
-  columbus: { home: { x: 11.5, y: 15.4 }, radius: 1.5 },
-  "spanish-scribe": { home: { x: 42.5, y: 22.5 }, radius: 1.5 },
+//   station  stands at a post and looks around — someone whose whole job is to be somewhere
+//   route    walks a circuit of `stops`, the way between them pathfound by engine/npc-routing.js
+//   wander   a bounded disc around `home`, for someone with no particular errand
+//
+// A stop is a *place*, not a validated waypoint. The router snaps it to the nearest open cell and
+// finds a walk to it, and isFieldNpcBlocked() still gates every individual step, so an authored
+// coordinate a few tenths inside a stamp costs nobody anything. That is the property Phase 61
+// established when it deleted 21 hand-checked four-waypoint rectangles, and routes keep it.
+const FIELD_NPC_BEHAVIOURS = {
+  // The village-observation content describes her as the person others bring decisions to. Someone
+  // being consulted stays put.
+  "taino-elder": { kind: "station", at: { x: 30.0, y: 13.5 }, facing: "down" },
+  // The conuco is a collision rect (20.0,12.0-24.0,14.0) directly south of her. She works its north
+  // edge, back and forth along the rows, and cannot enter the bed itself.
+  "taino-gardener": {
+    kind: "route",
+    stops: [
+      { x: 22.0, y: 10.4 },
+      { x: 20.5, y: 10.5 },
+      { x: 23.5, y: 10.5 },
+    ],
+  },
+  // Between the beach beside the village canoe and the shore path south of it.
+  "taino-fisher": {
+    kind: "route",
+    stops: [
+      { x: 39.0, y: 14.2 },
+      { x: 41.5, y: 16.5 },
+    ],
+  },
+  // Moved south-east off the anchorage track in Phase 62: at (45.5,20.5) with a 1.6 radius his
+  // disc reached to within 0.4 tiles of the scribe's walk, close enough that the two were
+  // interchangeable to whoever was nearest.
+  "spanish-sailor": { kind: "wander", home: { x: 46.5, y: 22.5 }, radius: 1.4 },
+  // "I must write what will be useful to the sovereigns" — he is at the cartographer's table
+  // writing his account, so he stays at it.
+  columbus: { kind: "station", at: { x: 11.5, y: 15.4 }, facing: "down" },
+  // Up and down the track behind the anchorage, between the boats and the camp.
+  "spanish-scribe": {
+    kind: "route",
+    stops: [
+      { x: 42.5, y: 22.5 },
+      { x: 43.5, y: 19.5 },
+    ],
+  },
 };
 // Base walking speed for a field NPC, in tiles per second, against the player's FIELD_SPEED of
 // 3.65. The gap is the point: the player travels at a run and the settlement walks, which is what
@@ -725,15 +780,52 @@ const FIELD_NPC_PATROLS = {
 // tiles/s — a twentieth of the player — while their legs cycled eleven times a second, and the
 // result was the sliding-on-ice look this replaced.
 const FIELD_NPC_SPEED = 1.35;
-function buildFieldNpcRuntime(npcs, patrols) {
+/**
+ * The map's static walkability, as the router needs it.
+ *
+ * Static is the point: the player and the other NPCs are deliberately excluded, because a route is
+ * planned once when a map loads and reused for the visit. Baking in anything that moves would
+ * freeze one frame's arrangement of people into a permanent wall. The moving half is still handled
+ * — isFieldNpcBlocked() runs on every step — it just is not part of the plan.
+ */
+export function isFieldGroundStandable(map, x, y) {
+  if (!isNpcStandingOnLand(x, y, map)) return false;
+  const foot = fieldNpcFootBoxAt(x, y);
+  return !map.blocks.some((block) => rectsOverlap(foot, block));
+}
+/** Where the people who never move are standing — furniture, as far as the router is concerned. */
+export function stationedPosts(behaviours) {
+  return Object.values(behaviours)
+    .filter((behaviour) => behaviour.kind === "station")
+    .map((behaviour) => behaviour.at);
+}
+/** One nav grid per field map, built on first use and kept — the maps never change shape. */
+const fieldNavGrids = new Map();
+export function fieldNavGridFor(map) {
+  if (!fieldNavGrids.has(map.id)) {
+    fieldNavGrids.set(
+      map.id,
+      createNavGrid({
+        columns: FIELD_GRID.columns,
+        rows: FIELD_GRID.rows,
+        roads: map.roads,
+        occupied: stationedPosts(map.behaviours),
+        isStandable: (x, y) => isFieldGroundStandable(map, x, y),
+      })
+    );
+  }
+  return fieldNavGrids.get(map.id);
+}
+function buildFieldNpcRuntime(map) {
+  const grid = fieldNavGridFor(map);
   return Object.fromEntries(
-    npcs.map((npc, index) => {
-      const post = patrols[npc.id] || { home: { x: npc.x, y: npc.y }, radius: 0 };
+    map.npcs.map((npc, index) => {
+      const behaviour = map.behaviours[npc.id] || { kind: "station", at: { x: npc.x, y: npc.y } };
       return [
         npc.id,
-        createWanderState({
-          home: post.home,
-          radius: post.radius,
+        createBehaviourState({
+          ...behaviour,
+          waypoints: behaviour.kind === "route" ? buildCircuit(grid, behaviour.stops) : undefined,
           // A few percent either side of the base, so a street of people never falls into step.
           // Derived from the index rather than randomised so a reload looks the same as a reload.
           speed: FIELD_NPC_SPEED * (0.92 + ((index * 7) % 5) * 0.04),
@@ -743,21 +835,22 @@ function buildFieldNpcRuntime(npcs, patrols) {
     })
   );
 }
-let fieldNpcRuntime = buildFieldNpcRuntime(FIELD_NPCS, FIELD_NPC_PATROLS);
-let fieldNpcRuntimeMapId = "unit-01";
+// Built on first use rather than at module load, which it was until Phase 62: a runtime now needs
+// its map's nav grid and road cells, and FIELD_MAPS is declared further down this file.
+let fieldNpcRuntime = null;
+let fieldNpcRuntimeMapId = null;
 function ensureFieldNpcRuntime() {
   const map = activeFieldMap();
-  if (fieldNpcRuntimeMapId !== map.id) {
-    fieldNpcRuntime = buildFieldNpcRuntime(map.npcs, map.patrols);
-    fieldNpcRuntimeMapId = map.id;
-  }
+  if (fieldNpcRuntime && fieldNpcRuntimeMapId === map.id) return fieldNpcRuntime;
+  fieldNpcRuntime = buildFieldNpcRuntime(map);
+  fieldNpcRuntimeMapId = map.id;
   return fieldNpcRuntime;
 }
 const fieldHeldKeys = new Set();
 let fieldMoveFrame = null;
 let lastFieldMoveAt = 0;
 function fieldNpcState(npc) {
-  return fieldNpcRuntime[npc.id] || { x: npc.x, y: npc.y, walking: false, facing: "down" };
+  return ensureFieldNpcRuntime()[npc.id] || { x: npc.x, y: npc.y, walking: false, facing: "down" };
 }
 function fieldNpcFootBoxAt(x, y) {
   return { x1: x - 0.36, x2: x + 0.36, y1: y + 0.2, y2: y + 0.88 };
@@ -765,8 +858,7 @@ function fieldNpcFootBoxAt(x, y) {
 function isFieldNpcBlocked(id, x, y) {
   const map = activeFieldMap();
   const foot = fieldNpcFootBoxAt(x, y);
-  if (!isNpcStandingOnLand(x, y)) return true;
-  if (map.blocks.some((block) => rectsOverlap(foot, block))) return true;
+  if (!isFieldGroundStandable(map, x, y)) return true;
   const playerFoot = footBoxFor(fieldMovement.x, fieldMovement.y);
   if (rectsOverlap(foot, playerFoot)) return true;
   return map.npcs.some((other) => {
@@ -797,7 +889,7 @@ function updateFieldNpcs(now = performance.now()) {
     // Whoever the player is talking to stands still and keeps facing them. Their wander picks up
     // from wherever they stopped once the conversation closes.
     if (progress.activeFieldNpc === id) state.walking = false;
-    else stepWander(state, elapsed, (x, y) => isFieldNpcBlocked(id, x, y));
+    else stepBehaviour(state, elapsed, (x, y) => isFieldNpcBlocked(id, x, y));
 
     const node = nodes.get(id);
     if (!node) return;
@@ -965,8 +1057,8 @@ const UNIT2_FIELD_NPCS = [
     // American" is explicitly forbidden there. So these two stand in open ground with no props of
     // their own, which is a limitation of the tile library, not of the placement.
     id: "powhatan-man",
-    x: 10.5,
-    y: 9.5,
+    x: 11.0,
+    y: 7.0,
     group: "powhatan",
     name: "Powhatan man of Tsenacommacah",
     label: "Powhatan man",
@@ -984,22 +1076,92 @@ const UNIT2_FIELD_NPCS = [
     text: "The corn the strangers ate through the winter grew in our fields. Women plant it, tend it, and decide what may be spared. Remember that when you are told the trade ran only one way.",
   },
 ];
-const UNIT2_FIELD_NPC_PATROLS = {
-  "settlement-minister": { home: { x: 26.0, y: 11.5 }, radius: 1.6 },
-  "indentured-servant": { home: { x: 44.0, y: 16.0 }, radius: 1.6 },
-  "settlement-burgess": { home: { x: 30.0, y: 10.5 }, radius: 1.6 },
-  "settlement-goodwife": { home: { x: 31.5, y: 13.0 }, radius: 1.5 },
-  "river-fisher": { home: { x: 19.0, y: 23.0 }, radius: 1.8 },
-  // The dock is a long thin place to work, so he ranges further along it than anyone else in the
-  // settlement does around their post.
-  "wharf-clerk": { home: { x: 21.0, y: 20.0 }, radius: 2.4 },
-  // Boxed in on purpose: the barn ends at column 40 and the farm stores begin at column 43 on
-  // row 20, so his post is a gap two and a half tiles wide.
-  "settlement-carpenter": { home: { x: 41.0, y: 19.0 }, radius: 1.2 },
-  // Open river shore with nothing built on it, which is the one thing the northwest quadrant has
-  // going for it — they can range properly rather than shuffling in a doorway.
-  "powhatan-man": { home: { x: 10.5, y: 9.5 }, radius: 2.4 },
-  "powhatan-woman": { home: { x: 12.0, y: 11.5 }, radius: 2.4 },
+// Riverbend is the map the playtest note was written against, so it is the one authored in most
+// detail. Three roads run through the settlement — the high street along row 20, the village spine
+// down column 26, and the barn spur down column 40 — and a `route` costs road cells a quarter of
+// open ground, so anyone whose stops sit at either end of one of them walks it without being told.
+const UNIT2_FIELD_NPC_BEHAVIOURS = {
+  // At the meetinghouse door, which is what a minister is. He also carries `riverbend-charter`, so
+  // a player who was told to find him finds him where they were told.
+  "settlement-minister": { kind: "station", at: { x: 26.0, y: 11.5 }, facing: "down" },
+  // Working the pumpkin bed, plot(44,16)-(49,18). No road out here and none wanted: he is walking
+  // the rows, not going anywhere.
+  "indentured-servant": {
+    kind: "route",
+    stops: [
+      { x: 44.0, y: 16.0 },
+      { x: 48.5, y: 17.5 },
+    ],
+  },
+  // North-east up the road from the meetinghouse, not south down the spine past it. The spine is
+  // the obvious civic beat and it is the one he cannot have: it runs through the minister's post,
+  // so a burgess walking it spent half his time blocked against a stationary man and put himself
+  // inside interaction reach of him, which means a player who walked to the minister could be
+  // answered by the burgess.
+  "settlement-burgess": {
+    kind: "route",
+    stops: [
+      { x: 30.0, y: 10.5 },
+      { x: 34.5, y: 9.5 },
+    ],
+  },
+  // Her dooryard to the high street and back: the errand the playtest note asked for by name. The
+  // route leaves her door across open ground, joins the spine, and follows it down — because the
+  // spine is road and the grass either side of it is not.
+  "settlement-goodwife": {
+    kind: "route",
+    stops: [
+      { x: 31.5, y: 13.0 },
+      { x: 26.5, y: 19.5 },
+    ],
+  },
+  "river-fisher": { kind: "wander", home: { x: 19.0, y: 23.0 }, radius: 1.8 },
+  // A short beat east along the high street, bounded on three sides. West of column 20 the street
+  // is closed to anyone on foot: the dockside stores stand on row 21 and a 0.88-deep foot box
+  // standing on row 20 reaches into them. Below it is the dock, which belongs to the river fisher —
+  // a stop down there sat inside his wander disc, which is the Powhatan pair's defect again. And it
+  // stops short of the spine junction at column 26, because that is where the goodwife's route ends.
+  // He carries `riverbend-ledger` as well, so a short circuit is what a player sent to find him needs.
+  "wharf-clerk": {
+    kind: "route",
+    stops: [
+      { x: 21.0, y: 20.0 },
+      { x: 24.5, y: 20.5 },
+    ],
+  },
+  // The barn yard at the south end of the spur, and his bench by the farm stores at the north end.
+  "settlement-carpenter": {
+    kind: "route",
+    stops: [
+      { x: 41.0, y: 19.0 },
+      { x: 40.5, y: 26.5 },
+    ],
+  },
+  // The northwest quadrant is open river shore with nothing built on it, so these two have more
+  // room than anyone else in the settlement — and until Phase 62 they used it to walk through each
+  // other. Their posts are 2.5 tiles apart and both wandered a 2.4 radius, which is two discs
+  // almost entirely on top of one another; once they started moving continually they swapped places
+  // routinely, and nearestFieldInteraction() gave a player aiming for one of them the other. The
+  // e2e reachability spec caught it as "walked to the woman, the man answered", two runs in three.
+  //
+  // Separate beats fix it, and the dialogue says what each beat should be. He talks about canoes
+  // carrying corn and news between towns, so he works the north bank; she talks about planting and
+  // tending the corn itself, so she works the ground south of him. Six tiles apart at the nearest
+  // approach, against an interaction reach of 1.45.
+  "powhatan-man": {
+    kind: "route",
+    stops: [
+      { x: 11.0, y: 7.0 },
+      { x: 14.0, y: 5.5 },
+    ],
+  },
+  "powhatan-woman": {
+    kind: "route",
+    stops: [
+      { x: 12.0, y: 11.5 },
+      { x: 14.5, y: 12.5 },
+    ],
+  },
 };
 // All three anchored to the person who already talks about them: the minister says "read the charter
 // before you judge who benefits", the servant "seven years I owe for my passage", the clerk "ledgers
@@ -1104,13 +1266,24 @@ const UNIT3_FIELD_NPCS = [
     text: "My husband's away with the militia and the mending doesn't stop because Parliament's vexed us. Whatever new government they draft, I mean to see it remembers the women keeping the house together.",
   },
 ];
-const UNIT3_FIELD_NPC_PATROLS = {
-  "john-dickinson": { home: { x: 16.0, y: 10.5 }, radius: 1.6 },
-  "town-crier": { home: { x: 29.0, y: 13.5 }, radius: 1.6 },
-  "militia-recruiter": { home: { x: 31.0, y: 10.0 }, radius: 1.6 },
-  "free-tradesman": { home: { x: 29.0, y: 20.0 }, radius: 1.5 },
-  "loyalist-merchant": { home: { x: 27.0, y: 26.0 }, radius: 1.5 },
-  farmwife: { home: { x: 14.0, y: 23.0 }, radius: 1.6 },
+const UNIT3_FIELD_NPC_BEHAVIOURS = {
+  // Outside the print shop's door, where his record is anchored.
+  "john-dickinson": { kind: "station", at: { x: 16.0, y: 10.5 }, facing: "down" },
+  // Across the market square, which is cobbled wall to wall — a crier carries the news to where
+  // people are, and every cell of his route is road.
+  "town-crier": {
+    kind: "route",
+    stops: [
+      { x: 29.0, y: 13.5 },
+      { x: 22.5, y: 12.5 },
+      { x: 34.5, y: 12.5 },
+    ],
+  },
+  // "Muster on the green Tuesday next" — a recruiter stands at the muster point.
+  "militia-recruiter": { kind: "station", at: { x: 31.0, y: 10.0 }, facing: "down" },
+  "free-tradesman": { kind: "wander", home: { x: 29.0, y: 20.0 }, radius: 1.5 },
+  "loyalist-merchant": { kind: "wander", home: { x: 27.0, y: 26.0 }, radius: 1.5 },
+  farmwife: { kind: "wander", home: { x: 14.0, y: 23.0 }, radius: 1.6 },
 };
 // One person, six objects — and that split is a historical constraint, not a design preference.
 //
@@ -1196,8 +1369,9 @@ export const FIELD_MAPS = {
     recall: { x: 22.0, y: 24.0 },
     isLand: isCaribbeanLand,
     blocks: CARIBBEAN_FIELD_BLOCKS,
+    roads: CARIBBEAN_FIELD_ROADS,
     npcs: FIELD_NPCS,
-    patrols: FIELD_NPC_PATROLS,
+    behaviours: FIELD_NPC_BEHAVIOURS,
     sourcePoints: FIELD_SOURCE_POINTS,
     musicScene: "island",
     worldMarkup: caribbeanWorldMarkup,
@@ -1208,8 +1382,9 @@ export const FIELD_MAPS = {
     recall: { x: 24.0, y: 19.5 },
     isLand: isRiverbendLand,
     blocks: RIVERBEND_FIELD_BLOCKS,
+    roads: RIVERBEND_FIELD_ROADS,
     npcs: UNIT2_FIELD_NPCS,
-    patrols: UNIT2_FIELD_NPC_PATROLS,
+    behaviours: UNIT2_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT2_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: riverbendWorldMarkup,
@@ -1220,8 +1395,9 @@ export const FIELD_MAPS = {
     recall: { x: 24.0, y: 16.0 },
     isLand: isCommonCauseLand,
     blocks: COMMON_CAUSE_FIELD_BLOCKS,
+    roads: COMMON_CAUSE_FIELD_ROADS,
     npcs: UNIT3_FIELD_NPCS,
-    patrols: UNIT3_FIELD_NPC_PATROLS,
+    behaviours: UNIT3_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT3_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: commonCauseWorldMarkup,
@@ -1445,31 +1621,57 @@ function instituteRecallSpawn() {
   return [HUB_TARGETS.table.x, HUB_TARGETS.table.y + 0.6, "up"];
 }
 let hubDialogueId = null;
-// Each staff member's post in the Main Hall, and how far they drift from it — see
-// FIELD_NPC_PATROLS above and engine/npc-wander.js.
+// What each staff member is doing in the Main Hall — see FIELD_NPC_BEHAVIOURS above and
+// engine/npc-behaviour.js for the three kinds.
 //
-// The room gives them less to work with than the field maps do: only two bands of the hall are
-// open floor, y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the south aisle), so a radius of 1.2
-// spends part of its disc against furniture. That is fine — the sampler rejects those points and
-// tries again — and it is why the three of them read as pacing a corridor rather than milling
-// about a room, which is what an archive floor should look like anyway.
-export const HUB_NPC_PATROLS = {
+// Two of the three are stationed rather than wandering, and that is the room, not a preference:
+// only two bands of the hall are open floor, y 4.06-5.56 (the cross-aisle) and y 8.06-9.56 (the
+// south aisle), so a disc large enough to be worth walking spends most of itself against
+// furniture. An archivist at the stacks and a director greeting arrivals are both doing something
+// standing still anyway, and Julian gets the south aisle, which is a corridor and therefore a
+// route.
+//
+// Every post also had to move clear of a reading stool. The stools are `decor` and carry no
+// collision — the generator's south aisle deliberately has no solid stamps in it — so before
+// Phase 62 Julian's post at (15.2,8.9) put his foot box across the stool at column 14, and the
+// playtest screenshot is him standing on it. Moving the people is the fix rather than blocking the
+// stools: a 1x1 `base` block covers [row+0.4, row+1], which against this aisle would leave a
+// 0.56-tile gap for a 0.5-tile foot box at four columns.
+export const HUB_NPC_BEHAVIOURS = {
   // Greeting the player in the open floor in front of the foyer entrance, west of the runner rug.
-  director: { home: { x: 9.6, y: 8.6 }, radius: 1.2 },
-  // Working the record stacks from the cross-aisle below them.
-  amani: { home: { x: 7.6, y: 4.6 }, radius: 1.2 },
-  // In the south aisle short of the Navigation Table dais, clear of the player's approach to it.
-  julian: { home: { x: 15.2, y: 8.9 }, radius: 1.2 },
+  // Stationed because the tutorial tour walks the player to him and he cannot be elsewhere.
+  director: { kind: "station", at: { x: 9.6, y: 8.6 }, facing: "down" },
+  // Working the record stacks from the cross-aisle below them — moved east from column 7.6, which
+  // was on top of a stool, to below the shelf run at columns 9-10.
+  amani: { kind: "station", at: { x: 10.0, y: 4.6 }, facing: "up" },
+  // The south aisle end to end, between the foyer runner and the Navigation Table dais, on row 9
+  // rather than row 8 so the circuit passes south of the stools instead of through them.
+  julian: {
+    kind: "route",
+    stops: [
+      { x: 11.5, y: 9.4 },
+      { x: 18.5, y: 9.4 },
+    ],
+  },
 };
 // A shade slower than the field's 1.35: this is an indoor walking pace on a stone floor between
 // furniture, not someone crossing a settlement.
 const HUB_NPC_SPEED = 1.15;
+// The Main Hall's shape never changes, so its nav grid is built once. No `roads` — an interior has
+// floors, and with every cell costing the same the router just takes the shortest walk.
+export const HUB_NAV_GRID = createNavGrid({
+  columns: HUB_GRID.columns,
+  rows: HUB_GRID.rows,
+  occupied: stationedPosts(HUB_NPC_BEHAVIOURS),
+  isStandable: (x, y) => isHubGroundStandable(x, y),
+});
 const hubNpcRuntime = Object.fromEntries(
-  Object.entries(HUB_NPC_PATROLS).map(([id, post], index) => [
+  Object.entries(HUB_NPC_BEHAVIOURS).map(([id, behaviour], index) => [
     id,
-    createWanderState({
-      home: post.home,
-      radius: post.radius,
+    createBehaviourState({
+      ...behaviour,
+      waypoints:
+        behaviour.kind === "route" ? buildCircuit(HUB_NAV_GRID, behaviour.stops) : undefined,
       speed: HUB_NPC_SPEED * (0.94 + index * 0.05),
       seed: id,
     }),
@@ -1490,6 +1692,19 @@ export function hubFootBoxFor(x, y) {
 }
 function hubRectBlocked(foot) {
   return activeHubBlocks().some((block) => rectsOverlap(foot, block));
+}
+/**
+ * The Main Hall's static walkability, for the router.
+ *
+ * Pinned to INSTITUTE_HALL_BLOCKS rather than activeHubBlocks(): the three staff exist only in the
+ * Main Hall, and the grid is built once at module load, when the player may well be standing in the
+ * Archive Room next door. Exported for the coordinate test, which asserts every hub stop lands on
+ * open floor.
+ */
+export function isHubGroundStandable(x, y) {
+  if (x < 0.6 || y < 0.8 || x > HUB_GRID.columns - 1.2 || y > HUB_GRID.rows - 1.2) return false;
+  const foot = hubFootBoxFor(x, y);
+  return !INSTITUTE_HALL_BLOCKS.some((block) => rectsOverlap(foot, block));
 }
 function isHubNpcBlocked(id, x, y) {
   const foot = hubFootBoxFor(x, y);
@@ -1521,7 +1736,7 @@ function updateInstituteNpcs(now = performance.now()) {
     // tour — the Director cannot wander off mid-sentence.
     if (hubDialogueId === id || (id === "director" && isTutorialTourActive()))
       state.walking = false;
-    else stepWander(state, elapsed, (x, y) => isHubNpcBlocked(id, x, y));
+    else stepBehaviour(state, elapsed, (x, y) => isHubNpcBlocked(id, x, y));
 
     const node = nodes.get(id);
     if (!node) return;
@@ -7243,7 +7458,10 @@ export function isCaribbeanLand(x, y) {
   const southSpit = ellipse(x, y, 22.0, 29.0, 7.0, 4.4);
   return mainBeach || westCove || eastPoint || northVillage || southSpit;
 }
-function isNpcStandingOnLand(x, y) {
+// `map` is a parameter rather than a call to activeFieldMap() because the nav grid for a map is
+// built before the player travels to it — the router asks "is this cell standable on unit-02?"
+// while unit-01 is still the active map.
+function isNpcStandingOnLand(x, y, map = activeFieldMap()) {
   const foot = { x1: x - 0.3, x2: x + 0.3, y1: y + 0.36, y2: y + 0.86 };
   const checks = [
     [foot.x1, foot.y1],
@@ -7252,7 +7470,7 @@ function isNpcStandingOnLand(x, y) {
     [foot.x2, foot.y2],
     [(foot.x1 + foot.x2) / 2, foot.y2],
   ];
-  return checks.every(([px, py]) => activeFieldMap().isLand(px, py));
+  return checks.every(([px, py]) => map.isLand(px, py));
 }
 function npcFootBox(npc) {
   const state = fieldNpcState(npc);

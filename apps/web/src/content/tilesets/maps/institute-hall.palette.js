@@ -35,7 +35,7 @@
 // and tests/unit/tile-footprints.test.js fails the build if one drifts from the pixels.
 
 import { CANONICAL, tile } from "../canonical-palette.js";
-import { InstituteArtifacts } from "../derived-objects.coords.js";
+import { InstituteArtifacts, InstituteFurnishings } from "../derived-objects.coords.js";
 
 export default {
   id: "institute-hall",
@@ -54,6 +54,7 @@ export default {
     // Appended last, deliberately: firstgid is assigned in this order, so a new sheet anywhere
     // earlier would renumber every GID already committed to institute-hall.tmj.
     { path: "derived/institute-artifacts.png", name: "institute-artifacts" },
+    { path: "derived/institute-furnishings.png", name: "institute-furnishings" },
   ],
 
   tiles: {
@@ -110,12 +111,14 @@ export default {
     intakeTable: tile("Medieval Tavern/tile-B-01.png", 4, 8, { h: 2, w: 4 }),
     /** Backless bench, 2 rows x 4 cols. [measured] */
     bench: tile("Medieval Tavern/tile-B-01.png", 0, 8, { h: 2, w: 4 }),
-    /** Low plank bench, 1 row x 3 cols. [measured] */
-    lowBench: tile("Medieval Tavern/tile-B-05.png", 12, 0, { w: 3 }),
     /** Round side table. [measured] */
     roundTable: tile("Medieval Tavern/tile-B-01.png", 8, 12, { h: 2, w: 2 }),
-    stool: tile("Medieval Tavern/tile-B-01.png", 12, 8),
-    stoolAlt: tile("Medieval Tavern/tile-B-01.png", 12, 12),
+    /** Seating, generated for this game rather than borrowed — see derived-objects.manifest.js.
+     *  The pack's own stool is painted 45px tall, exactly a character's standing body; these are
+     *  19px and 13px, which is what a stool and a bench are next to a person. [derived] */
+    lowBench: { ...InstituteFurnishings.lowBench },
+    stool: { ...InstituteFurnishings.stool },
+    stoolAlt: { ...InstituteFurnishings.stoolAlt },
 
     // --- Institute artifacts, from Island survival/5 ---------------------------------------------
     /**

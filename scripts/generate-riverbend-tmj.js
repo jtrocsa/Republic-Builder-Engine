@@ -305,7 +305,10 @@ for (let row = 0; row < HEIGHT; row += 1) {
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
-  map.toBlocksModule("RIVERBEND_FIELD_BLOCKS", "scripts/generate-riverbend-tmj.js", { doors })
+  map.toBlocksModule("RIVERBEND_FIELD_BLOCKS", "scripts/generate-riverbend-tmj.js", {
+    doors,
+    roads: roads.cells,
+  })
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
 console.log(`  ${map.blocks.length} collision rects`);

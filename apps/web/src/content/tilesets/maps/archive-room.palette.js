@@ -42,6 +42,7 @@
 //   npm run assets:label -- "Medieval Tavern/tile-B-03.png"
 
 import { CANONICAL, tile } from "../canonical-palette.js";
+import { InstituteFurnishings } from "../derived-objects.coords.js";
 
 export default {
   id: "archive-room",
@@ -57,6 +58,9 @@ export default {
     { path: "Medieval Tavern/tile-B-03.png", name: "medieval-tavern-b03" },
     { path: "Medieval Tavern/tile-B-05.png", name: "medieval-tavern-b05" },
     { path: "Medieval Tavern/Auto-tile-A4-walls-2.png", name: "medieval-tavern-walls-2" },
+    // Appended last, deliberately: firstgid is assigned in this order, so a new sheet anywhere
+    // earlier would renumber every GID already committed to archive-room.tmj.
+    { path: "derived/institute-furnishings.png", name: "institute-furnishings" },
   ],
 
   tiles: {
@@ -116,10 +120,12 @@ export default {
     /** Round side table. Note this is tile-B-01's, not tile-B-03 (10,6) — that one has a roast
      *  dinner painted on it, which is the "no overtly tavern-specific props" rule. [measured] */
     roundTable: tile("Medieval Tavern/tile-B-01.png", 8, 12, { h: 2, w: 2 }),
-    /** Low plank bench, 1 row x 3 cols. [measured] */
-    lowBench: tile("Medieval Tavern/tile-B-05.png", 12, 0, { w: 3 }),
-    stool: tile("Medieval Tavern/tile-B-01.png", 12, 8),
-    stoolAlt: tile("Medieval Tavern/tile-B-01.png", 12, 12),
+    /** Seating, generated for this game rather than borrowed — see derived-objects.manifest.js.
+     *  The pack's own stool is painted 45px tall, exactly a character's standing body; these are
+     *  19px and 13px, which is what a stool and a bench are next to a person. [derived] */
+    lowBench: { ...InstituteFurnishings.lowBench },
+    stool: { ...InstituteFurnishings.stool },
+    stoolAlt: { ...InstituteFurnishings.stoolAlt },
     /** Stone hearth with a lit fire. [measured] */
     fireplace: tile("Medieval Tavern/tile-B-03.png", 10, 14, { h: 2, w: 2 }),
 

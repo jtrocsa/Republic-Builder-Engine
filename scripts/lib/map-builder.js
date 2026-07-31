@@ -286,8 +286,15 @@ export class MapBuilder {
    * exists so tests/unit/map-path-network.test.js can assert the property this whole pipeline is for
    * — that every door a generator declared has road within reach of it — against exactly the cells
    * the generator used, rather than against a guess about which collision rects are buildings.
+   *
+   * `roads` is emitted as a third, and unlike `doors` the running game *does* read it: engine/
+   * npc-routing.js costs a road cell a quarter of what it costs to cross open ground, which is what
+   * sends a routed NPC down the high street instead of diagonally over the crop beds. Membership
+   * has to come from the network's own record rather than from the ground tile — Riverbend paves its
+   * roads in the same shore sand as its riverbank, so reading it back off the tiles would file the
+   * whole beach as road. RoadNetwork was already keeping that record for the spur router.
    */
-  toBlocksModule(mapId, generatorPath, { doors } = {}) {
+  toBlocksModule(mapId, generatorPath, { doors, roads } = {}) {
     const sorted = [...this.blocks].sort(
       (a, b) => a.y1 - b.y1 || a.x1 - b.x1 || a.kind.localeCompare(b.kind)
     );
@@ -319,6 +326,31 @@ export class MapBuilder {
       lines.push("// Every one of these must have road within reach; see the test named above.");
       lines.push(`export const ${mapId.replace(/_BLOCKS$/, "_DOORS")} = [`);
       for (const door of sortedDoors) lines.push(`  { col: ${door.col}, row: ${door.row} },`);
+      lines.push("];");
+    }
+    if (roads) {
+      // [col, row] pairs rather than objects, eight to a line: this is the largest of the three
+      // exports by an order of magnitude, and a hundred `{ col: n, row: n }` literals per screen
+      // makes a layout diff unreadable.
+      const cells = [...roads]
+        .map((key) => key.split(",").map(Number))
+        .sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+      lines.push("");
+      lines.push(
+        "// Every cell the road network owns — the authored trunk plus the spurs the router"
+      );
+      lines.push(
+        "// laid to each door. Read at runtime by engine/npc-routing.js, which prefers these"
+      );
+      lines.push("// cells so a routed NPC walks the road rather than cutting across the fields.");
+      lines.push(`export const ${mapId.replace(/_BLOCKS$/, "_ROADS")} = [`);
+      for (let index = 0; index < cells.length; index += 8) {
+        const row = cells
+          .slice(index, index + 8)
+          .map(([col, cellRow]) => `[${col}, ${cellRow}]`)
+          .join(", ");
+        lines.push(`  ${row},`);
+      }
       lines.push("];");
     }
     lines.push("");

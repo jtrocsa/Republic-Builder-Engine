@@ -25,23 +25,41 @@
      cast look like it belongs to the world rather than composited over it:
      no resampling, no half-doubled pixels, no shimmer on a moving sprite.
 
-     It is also the size the world's own art asks for. Measured out of the
-     shipped tilesets, doorways are 22-31px, one-story cottages 95-103px and
-     trees ~140px. The cast used to render at 83px — a body of 67px, over
-     twice the height of every door it walked through and half the height of
-     a mature oak. At 56px the body is 45px: still readable, and finally in
-     proportion to the buildings.
+     It is also the size the world's own art asks for. Measured as painted
+     alpha bounds out of the shipped tilesets: dwellings are 94-183px and
+     mature trees 129-142px. The cast used to render at 83px — a body of
+     67px, which is 71% the height of the smallest cottage on any map and
+     half the height of an oak. At 56px the body is 45px: a quarter to a
+     half of a house and a third of a tree, which is what a person is.
+
+     (These are the big volumetric references, and they are the ones that
+     settle the cast's size. The packs' small props are a separate matter and
+     do not scale with anything — every 1x1 object in them is drawn to fill
+     its 48px tile whatever the object is, which is why the Institute's
+     stools had to be replaced rather than measured against. See decision log
+     0045.)
 
      --cast-foot is how far below a character's world anchor its feet are
      drawn. It is a world-space offset, so it scales with --tile and NOT with
      --cast-h, and its value per surface is that surface's collision foot-box
      centre (engine/sprite-animation.js FOOT_ANCHOR) rather than a number
-     tuned by eye — see .hub-npc for what happened when it was the latter. */
+     tuned by eye — see .hub-npc for what happened when it was the latter.
+
+     --cast-label-top is where a character's name pill hangs. Deriving it
+     from --cast-foot is the whole point: the label then sits a fixed 8px
+     below the *feet*, and because --cast-foot differs per surface the same
+     expression puts it below the sprite in the field (+35.8px from the
+     anchor) and in the hub (+17.1px) without either surface knowing about
+     the other. Written against the button's own box instead, as it was until
+     Phase 62, it tracked the hit area — so the field's 55x79 button put the
+     pill across everyone's boots while the hub's 48x56 one happened to clear
+     them, and no amount of nudging one fixed the other. */
   --tile: 48px;
   --cast-h: 56px;
   --cast-w: calc(var(--cast-h) * 48 / 56);
   --cast-ground-offset: calc(var(--cast-h) * 11 / 28);
   --cast-foot: calc(var(--tile) * 0.58);
+  --cast-label-top: calc(50% + var(--cast-foot) + 8px);
 
   /* Base channels — one alpha ramp instead of the ~157 hand-written
      rgba(239, 204, 122, …) literals scattered through this file. */
@@ -4080,9 +4098,12 @@ dd {
   cursor: pointer;
 }
 
+/* `top: 98%` until Phase 62 — right by luck rather than by construction. 98% of a 56px box put the
+   pill 2px under the sole; the same declaration on the field's 79px button would have put it 4px
+   past the bottom of the map tile. Both surfaces now share --cast-label-top. */
 .hub-npc span:not(.character-sprite):not(.cast-shadow) {
   position: absolute;
-  top: 98%;
+  top: var(--cast-label-top);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -4772,10 +4793,16 @@ dd {
 .field-npc--spanish i {
   background: linear-gradient(#e6d6b6 0 25%, #4f7f88 25% 68%, #5a3a28 68%);
 }
+/* The name pill under a field NPC. Its `top` is the one shared with `.hub-npc` below — see the
+   comment on --cast-label-top in :root for why one expression serves both surfaces. Consolidated
+   from six chronologically-layered `top` redeclarations (70/82/74/64px, a narrow-viewport 56px, and
+   four per-character 63px overrides), all of which measured from the *button's* box rather than
+   from the character, which is how the field's label came to sit across everyone's boots while the
+   Institute's sat below them. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
   position: absolute;
   left: 50%;
-  top: 70px;
+  top: var(--cast-label-top);
   transform: translateX(-50%);
   white-space: nowrap;
   padding: 4px 6px;
@@ -5054,8 +5081,8 @@ dd {
 .field-npc i {
   display: none !important;
 }
+/* This rule's `top: 82px !important` is gone with the other five — see --cast-label-top. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
-  top: 82px !important;
   background: rgba(6, 35, 48, 0.92) !important;
 }
 .field-npc:hover,
@@ -5838,8 +5865,8 @@ dd {
   transform: translate(-50%, -53%) !important;
 }
 
+/* `top: 74px !important` removed here too — see --cast-label-top. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
-  top: 74px !important;
   font-size: 8.5px !important;
   padding: 3px 6px !important;
   max-width: 118px;
@@ -6117,9 +6144,9 @@ dd {
     width: 42px !important;
     height: 60px !important;
   }
-  .field-npc span:not(.character-sprite):not(.cast-shadow) {
-    top: 56px !important;
-  }
+  /* No narrow-viewport `top` for the label either. --cast-label-top measures 50% of whatever box
+     the button happens to be, so it lands 2px under the sprite's sole at 42x60 exactly as it does
+     at 55x79 — which is the property a fixed pixel offset per breakpoint could never have. */
   /* No narrow-viewport scale-down for .source-signal--world any more: at 30px it is already the
      smallest thing on the map, and shrinking it further made the glyph unreadable. */
 }
@@ -6782,8 +6809,10 @@ dd {
   line-height: 1.1 !important;
   text-shadow: 0 1px 0 rgba(var(--c-black-rgb), 0.45) !important;
 }
+/* `top: 64px !important` was the winner of the six, and the one that put the pill across the boots
+   — it measured +24.5px from the anchor against a sprite whose sole is at +27.8px. Gone with the
+   rest; see --cast-label-top. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
-  top: 64px !important;
   font-size: 11px !important;
   padding: 4px 7px !important;
   max-width: 128px !important;
@@ -7360,19 +7389,10 @@ html {
   font-size: 9.5px !important;
 }
 
-/* Move field labels away from one another now that dialogue is anchored to speakers. */
-.field-npc--taino-elder span {
-  top: 63px !important;
-}
-.field-npc--taino-fisher span {
-  top: 63px !important;
-}
-.field-npc--spanish-scribe span {
-  top: 63px !important;
-}
-.field-npc--spanish-sailor span {
-  top: 63px !important;
-}
+/* Four per-character `top: 63px !important` rules stood here, under the heading "move field labels
+   away from one another". They moved four of the six Caribbean labels 1px — against a base of 64px
+   — which cannot have separated anything; whatever crowding prompted them was fixed by something
+   else. All four are gone, and a label's height is one expression for the whole cast now. */
 
 /* Archive staff now patrol like field NPCs, but gently. */
 .hub-npc {
@@ -7380,18 +7400,11 @@ html {
     left 0.12s linear,
     top 0.12s linear;
 }
-.hub-npc.is-walking-npc::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  width: 28px;
-  height: 8px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: rgba(var(--c-black-rgb), 0.18);
-  z-index: -1;
-}
+/* A `.hub-npc.is-walking-npc::after` ellipse stood here — a second, walk-only shadow predating
+   `.cast-shadow`. Since Phase 61 gave hub NPCs the real contact shadow, this drew a second blob on
+   top of it, and at `bottom: 4px` it sat 15px below the sole rather than under it: a smudge that
+   detached from the character whenever they moved and vanished when they stopped. One shadow, always
+   on, anchored to --cast-foot. */
 
 /* "Preservation Case belongs to the shelf: label above the bookshelf, not covering people" — the
    intent of the third `.hub-trophy` layer, and now how every hub object works by construction:

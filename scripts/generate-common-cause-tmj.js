@@ -305,6 +305,7 @@ writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("COMMON_CAUSE_FIELD_BLOCKS", "scripts/generate-common-cause-tmj.js", {
     doors,
+    roads: roads.cells,
   })
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);

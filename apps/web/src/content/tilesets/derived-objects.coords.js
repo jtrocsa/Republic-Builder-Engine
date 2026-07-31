@@ -50,3 +50,10 @@ export const TownCivic = {
 export const InstituteArtifacts = {
   compassSmall: tile("derived/institute-artifacts.png", 0, 0, { h: 1, w: 1 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const InstituteFurnishings = {
+  stool: tile("derived/institute-furnishings.png", 0, 0, { h: 1, w: 1 }),
+  stoolAlt: tile("derived/institute-furnishings.png", 0, 1, { h: 1, w: 1 }),
+  lowBench: tile("derived/institute-furnishings.png", 0, 2, { h: 1, w: 3 }),
+};
