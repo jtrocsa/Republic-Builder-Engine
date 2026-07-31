@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "maps:build": "node scripts/generate-caribbean-tmj.js && node scripts/generate-riverbend-tmj.js && node scripts/generate-common-cause-tmj.js && node scripts/generate-canal-crossroads-tmj.js && node scripts/generate-institute-hall-tmj.js && node scripts/generate-archive-room-tmj.js && node scripts/generate-hallway-tmj.js",
+    "maps:build": "node scripts/generate-caribbean-tmj.js && node scripts/generate-riverbend-tmj.js && node scripts/generate-common-cause-tmj.js && node scripts/generate-canal-crossroads-tmj.js && node scripts/generate-canal-print-shop-tmj.js && node scripts/generate-canal-boarding-house-tmj.js && node scripts/generate-institute-hall-tmj.js && node scripts/generate-archive-room-tmj.js && node scripts/generate-hallway-tmj.js",
     "assets:audit": "node scripts/assets/audit.js",
     "assets:build-characters": "node scripts/assets/build-character-sheets.js",
     "assets:contact-sheet": "node scripts/assets/sprite-contact-sheet.js",

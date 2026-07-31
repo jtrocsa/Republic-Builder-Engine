@@ -240,7 +240,7 @@ withDoor(50, 27, T.tollgateHouse, "tollgate house");
 // notices posted over each other, which is the whole design: reform was contested. Its x/y in
 // UNIT4_FIELD_SOURCE_POINTS sits on this stamp's front edge. These two move together or not at all.
 map.stamp(49, 11, T.noticeBoard, "solid", "reform notice board");
-map.stamp(45, 12, T.documentTable, "solid", "subscription table");
+map.stamp(45, 12, T.subscriptionBoard, "solid", "subscription board");
 
 // --- market, street furniture, and the square --------------------------------------------------
 // The market is on Market Street, not on the quay. An earlier pass put the stalls down among the

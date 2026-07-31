@@ -483,6 +483,52 @@ export const CHARACTERS = [
     walkGroup: "canal-mule-driver-walk8",
   },
 
+  // ---- Unit 4 interiors · the printing office and the boardinghouse (Phase 66) -----------------
+  //
+  // Four characters who exist because two rooms opened. None of them carries a prop: the Phase 2 run
+  // report found that a shovel, a newspaper and an apron all failed to survive rotation, so every
+  // description below is clothing and build only.
+  //
+  // No `idleGroup` on any of them, deliberately. Breathing idles are a partial rollout — five of the
+  // twenty-nine characters have one — and the two people already stationed in these rooms, Josiah
+  // Pike and Bridget Cavanagh, do not. One breathing person in a room of three still is worse than
+  // three still people, so these match their neighbours rather than the ceiling.
+  {
+    key: "canal-journeyman-printer",
+    stem: "chronicle-sprites/field/npc-canal-journeyman-printer",
+    name: "Canal Journeyman Printer",
+    id: "36e81c42-4650-4205-bc3e-1416fa5afc2b",
+    frames: 8,
+    walkGroup: "printer-walk",
+  },
+  {
+    key: "canal-printers-devil",
+    stem: "chronicle-sprites/field/npc-canal-printers-devil",
+    name: "Canal Printer's Devil",
+    // Thirteen, and generated as a boy rather than a youth even though the build normalizes every
+    // body to the same 45px height. The costume is what carries the age here — a short jacket and
+    // loose trousers rather than a man's waistcoat — since the silhouette cannot.
+    id: "5fe54441-c6c2-4494-bfad-ec8d97b39f81",
+    frames: 8,
+    walkGroup: "devil-walk",
+  },
+  {
+    key: "canal-temperance-reformer",
+    stem: "chronicle-sprites/field/npc-canal-temperance-reformer",
+    name: "Canal Temperance Reformer",
+    id: "13d162bc-03ef-41ef-8848-9fa04f95f30c",
+    frames: 8,
+    walkGroup: "reformer-walk",
+  },
+  {
+    key: "canal-boat-woman",
+    stem: "chronicle-sprites/field/npc-canal-boat-woman",
+    name: "Canal Boat Family Woman",
+    id: "a97fba23-e0a7-4d0c-a240-a023e00eea9e",
+    frames: 8,
+    walkGroup: "boatwoman-walk",
+  },
+
   // ---- Unit 5 · Richmond, Virginia, 1864 -------------------------------------------------------
   {
     key: "richmond-dock-laborer",

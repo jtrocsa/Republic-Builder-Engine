@@ -42,7 +42,7 @@
 // `Steampunk` remains a prop quarry only: the lock and the cargo barge, and nothing else. Every
 // gear, airship, mecha, automobile and brass fitting on that sheet stays where it is.
 
-import { FarmBuildings, FarmTrees, TownCivic } from "../derived-objects.coords.js";
+import { CanalWorks, FarmBuildings, FarmTrees, TownCivic } from "../derived-objects.coords.js";
 import { CANONICAL, tile } from "../canonical-palette.js";
 
 export default {
@@ -75,6 +75,10 @@ export default {
     { path: "derived/farm-trees.png", name: "derived-farm-trees" },
     { path: "derived/farm-buildings.png", name: "derived-farm-buildings" },
     { path: "derived/town-civic.png", name: "derived-town-civic" },
+    // Appended last, deliberately: firstgid is assigned in this order, so a new sheet anywhere
+    // earlier would renumber every GID already committed to canal-crossroads-field.tmj. Only the
+    // notice board is taken from here; the rest of this sheet dresses the two interiors.
+    { path: "derived/canal-works.png", name: "derived-canal-works" },
   ],
 
   tiles: {
@@ -202,13 +206,30 @@ export default {
     fenceRail: tile("Medieval Fantasy Town/3.png", 0, 3, { h: 1, w: 2 }),
 
     // --- street furniture and market ------------------------------------------------------------
-    /** Where the temperance pledge and the anti-abolition warning go up against each other. */
-    noticeBoard: tile("Medieval Fantasy Town/2.png", 6, 14, { h: 2, w: 2 }),
+    /**
+     * Where the temperance pledge and the anti-abolition warning go up against each other — this
+     * map's one object-anchored record, and the design the plan calls its best.
+     *
+     * Commissioned, and replacing `Medieval Fantasy Town/2.png` (6,14), which is a fantasy quest
+     * board: one clean parchment in a carved frame. The record it anchors is *layered* — notices
+     * posted over each other in the same week by people arguing — so a board that shows one tidy
+     * document was contradicting the evidence standing on it. This one is nothing but overlapping
+     * handbills. [derived, 1 col x 2 rows]
+     */
+    noticeBoard: { ...CanalWorks.noticeBoard },
     townWell: tile("Medieval Fantasy Town/2.png", 6, 8, { h: 2, w: 2 }),
     bench: tile("Medieval Fantasy Town/2.png", 11, 12, { h: 1, w: 2 }),
     signpost: tile("Medieval Fantasy Town/2.png", 8, 14, { h: 2, w: 1 }),
-    /** Trestle table strewn with open documents — what an object-anchored record sits on. */
-    documentTable: tile("Medieval Fantasy Town/2.png", 12, 10, { h: 2, w: 2 }),
+    /**
+     * A second, wider posting board, framed and glazed. Named `documentTable` until the
+     * commissioned board above landed beside it and the render showed what it actually draws: not a
+     * trestle table strewn with documents but a notice board carrying a dozen printed bills. Two
+     * boards four tiles apart is right for this square — a subscription board that the meeting hall
+     * keeps and an open board that anyone may paste to are different things, and the difference is
+     * the district's argument — but calling one of them a table was going to mislead the next
+     * reader who placed something against it.
+     */
+    subscriptionBoard: tile("Medieval Fantasy Town/2.png", 12, 10, { h: 2, w: 2 }),
     stallProduce: tile("Medieval Fantasy Town/2.png", 4, 8, { h: 2, w: 2 }),
     stallDryGoods: tile("Medieval Fantasy Town/2.png", 6, 6, { h: 2, w: 2 }),
     stallButcher: tile("Medieval Fantasy Town/2.png", 4, 0, { h: 2, w: 2 }),

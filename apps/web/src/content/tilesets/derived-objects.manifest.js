@@ -115,4 +115,43 @@ export const DERIVED_OBJECTS = [
       { name: "lowBench", box: [48, 14, 180, 27] },
     ],
   },
+  {
+    // Unit 4's commissioned props — the second batch of art made for this game rather than borrowed,
+    // after the Institute's seating above. Every one of these is a measured library gap, not a
+    // preference. What was actually searched for and not found, sheet by sheet:
+    //
+    //   press        the nearest thing anywhere is `19th Century European City/tile-B-04` (10,11),
+    //                which is a writing desk with a quill on it
+    //   typeCase     nothing in any pack is a compositor's case
+    //   stove        every hearth in the library is a masonry fireplace; an 1845 shop is heated by
+    //                a cast-iron box stove, and B-02 (8,14) — the first candidate — turned out to
+    //                render as a small wall dresser
+    //   paperStack   B-04 (12,6) was tried and reads unmistakably as stacked travelling luggage
+    //   ropeBed      no bed exists in any pack. `Living room` is a modern kitchen pack and
+    //                `Medieval Tavern` has none, which Phase 0 already recorded
+    //   washTub      no laundry anywhere, and a boardinghouse ran on taking in washing
+    //   noticeBoard  the outdoor square currently uses Medieval Fantasy Town (6,14), a fantasy
+    //                quest board, for this map's one object-anchored record
+    //
+    // Scale is the canvas, exactly as with the Institute's seating — but read the other way round.
+    // A hand press is drawn 102px against the cast's 45px body, which sounds like the stool mistake
+    // inverted until you measure what it stands beside: this pack paints a 6ft wardrobe at ~90px and
+    // a bookcase the same, so its furniture runs about 2x a body whatever its real height. A press
+    // two tiles wide and three tall belongs to that family and would look shrunken at the true ratio.
+    //
+    // Cut by explicit box: reports/_review/compose-commission.mjs lays the generated objects out
+    // bottom-aligned with an 8px gutter and prints these boxes, so the layout is known rather than
+    // rediscovered by a flood fill.
+    from: "Chronicle Commissions/canal-crossroads.png",
+    out: "canal-works.png",
+    objects: [
+      { name: "press", box: [8, 0, 86, 102] },
+      { name: "typeCase", box: [94, 35, 174, 102] },
+      { name: "stove", box: [182, 26, 234, 102] },
+      { name: "paperStack", box: [242, 41, 310, 102] },
+      { name: "ropeBed", box: [318, 12, 374, 102] },
+      { name: "washTub", box: [382, 17, 462, 102] },
+      { name: "noticeBoard", box: [470, 24, 516, 102] },
+    ],
+  },
 ];

@@ -105,6 +105,8 @@ import instituteHallTmjRaw from "./content/maps/institute-hall.tmj?raw";
 import hallwayTmjRaw from "./content/maps/hallway.tmj?raw";
 import commonCauseTmjRaw from "./content/maps/common-cause-field.tmj?raw";
 import canalCrossroadsTmjRaw from "./content/maps/canal-crossroads-field.tmj?raw";
+import canalPrintShopTmjRaw from "./content/maps/canal-print-shop.tmj?raw";
+import canalBoardingHouseTmjRaw from "./content/maps/canal-boarding-house.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
@@ -128,6 +130,11 @@ import {
   CANAL_CROSSROADS_FIELD_BLOCKS,
   CANAL_CROSSROADS_FIELD_ROADS,
 } from "./content/maps/canal-crossroads-field.blocks.js";
+// The two rooms that map opens into. No `*_ROADS` companion: a route is pathfound over road cells
+// discounted 4:1, and nothing in a twenty-tile room is far enough from anything for a road to mean
+// what it means outdoors.
+import { CANAL_PRINT_SHOP_BLOCKS } from "./content/maps/canal-print-shop.blocks.js";
+import { CANAL_BOARDING_HOUSE_BLOCKS } from "./content/maps/canal-boarding-house.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
 import { HALLWAY_BLOCKS } from "./content/maps/hallway.blocks.js";
@@ -567,6 +574,13 @@ const resolveCanalCrossroadsTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/derived/town-civic.png", {
     eager: true,
     import: "default",
+  }),
+  // The Reform Square notice board. Adding a sheet to a palette means adding its glob here too —
+  // createTilesetImageResolver() throws on a missing one and the whole map renders as an empty
+  // frame, which has now happened twice.
+  import.meta.glob("./assets/tilesets/derived/canal-works.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderCanalCrossroadsTiledMap() {
@@ -574,6 +588,53 @@ function renderCanalCrossroadsTiledMap() {
     "canalCrossroadsTiledCanvas",
     canalCrossroadsTmj,
     resolveCanalCrossroadsTilesetImage
+  );
+}
+
+// The two Canal Crossroads interiors. One resolver serves both: they name four sheets between them
+// and three of the four are shared, so a resolver per room would only duplicate globs. Every glob is
+// an exact file — never a `/**` — because an unscoped one shipped 117 MB of unused art once already,
+// and because createTilesetImageResolver() throws on a missing sheet and the whole room then renders
+// as an empty frame. That has happened twice.
+//
+// Both `19th Century European City` sheets are new to the bundle here; the Dock sheet and
+// `derived/canal-works.png` are already carried by the outdoor map above, so they cost nothing.
+const canalPrintShopTmj = JSON.parse(canalPrintShopTmjRaw);
+const canalBoardingHouseTmj = JSON.parse(canalBoardingHouseTmjRaw);
+const resolveCanalInteriorTilesetImage = createTilesetImageResolver(
+  // Floors, plaster and brick walls, doors, sash windows, bookcases, the editor's desk and safe.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Tables, chairs, dressers, cupboards, the boarding table and the keeper's counter.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-02.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Barrels, crates and grain sacks — already bundled by the outdoor map.
+  import.meta.glob("./assets/tilesets/19th Centruy European Dock/tile-B-06.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The commissioned props: press, type case, stove, paper, bed, wash tub, notice board.
+  import.meta.glob("./assets/tilesets/derived/canal-works.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderCanalPrintShopTiledMap() {
+  renderTiledMapWithOverlay(
+    "canalPrintShopTiledCanvas",
+    canalPrintShopTmj,
+    resolveCanalInteriorTilesetImage
+  );
+}
+function renderCanalBoardingHouseTiledMap() {
+  renderTiledMapWithOverlay(
+    "canalBoardingHouseTiledCanvas",
+    canalBoardingHouseTmj,
+    resolveCanalInteriorTilesetImage
   );
 }
 const waldseemuller = new URL("./assets/documents/source-waldseemuller-1507.jpg", import.meta.url)
@@ -728,6 +789,11 @@ const CHARACTER_SHEETS = {
   "german-cooper": characterSheet(`${FIELD}/npc-german-cooper`, 9),
   "canal-mule-driver": characterSheet(`${FIELD}/npc-canal-mule-driver`, 9),
   "revival-preacher": characterSheet(`${FIELD}/npc-revival-preacher`, 9),
+  // Unit 4 interiors. Four people who exist because two doors opened.
+  "canal-journeyman-printer": characterSheet(`${FIELD}/npc-canal-journeyman-printer`, 9),
+  "canal-printers-devil": characterSheet(`${FIELD}/npc-canal-printers-devil`, 9),
+  "canal-temperance-reformer": characterSheet(`${FIELD}/npc-canal-temperance-reformer`, 9),
+  "canal-boat-woman": characterSheet(`${FIELD}/npc-canal-boat-woman`, 9),
   // Unit 5 · Richmond, Virginia, 1864.
   "richmond-dock-laborer": characterSheet(`${FIELD}/npc-richmond-dock-laborer`, 9),
   "slave-trade-clerk": characterSheet(`${FIELD}/npc-slave-trade-clerk`, 9),
@@ -1747,24 +1813,20 @@ const UNIT4_FIELD_NPCS = [
     text: "Every barrel of flour that leaves this basin leaves in something I made. I came from Württemberg in '39, and my brother writes that half the village is coming after. There is work here for any man who can raise a stave.",
   },
   {
+    // Three tiles east of his own door, not on it. He stood at (32.0, 8.3) until the printing
+    // office became a room you can walk into: the doorstep marker sits at (32.0, 8.0), and
+    // nearestFieldInteraction() answers with whatever is closest, so an NPC a tenth of a tile from
+    // a door makes that door unreachable — the player gets Pike every time, from every approach.
+    // The same edit was needed at the boardinghouse, and it is the one thing to check first when
+    // adding any future interior: a door is an interaction competing with its neighbours.
     id: "jacksonian-editor",
-    x: 32.0,
+    x: 35.0,
     y: 8.3,
     group: "market",
     name: "Josiah Pike",
     label: "Newspaper editor",
     sprite: "jacksonian-editor",
     text: "General Jackson broke the Monster Bank and the Republic did not fall down. What we have now is a free bank, chartered under our own state law, and if it fails the noteholders are secured against its bonds. That is the difference between a bank and a moneyed aristocracy, and I print it weekly.",
-  },
-  {
-    id: "canal-boardinghouse-keeper",
-    x: 24.0,
-    y: 24.2,
-    group: "quarter",
-    name: "Bridget Cavanagh",
-    label: "Boardinghouse keeper",
-    sprite: "canal-boardinghouse-keeper",
-    text: "Fourteen boarders upstairs and half of them on the line at any hour, so the beds never cool. The temperance men come to lecture me about the bar. They might ask instead what a woman is to live on when the boats stop in November.",
   },
   {
     id: "haudenosaunee-diplomat",
@@ -1841,12 +1903,7 @@ const UNIT4_FIELD_NPC_BEHAVIOURS = {
   },
   "textile-mill-worker": { kind: "wander", home: { x: 10.5, y: 14.3 }, radius: 1.2 },
   "german-cooper": { kind: "station", at: { x: 14.5, y: 13.0 }, facing: "down" },
-  "jacksonian-editor": { kind: "station", at: { x: 32.0, y: 8.3 }, facing: "down" },
-  "canal-boardinghouse-keeper": {
-    kind: "station",
-    at: { x: 24.0, y: 24.2 },
-    facing: "down",
-  },
+  "jacksonian-editor": { kind: "station", at: { x: 35.0, y: 8.3 }, facing: "down" },
   "haudenosaunee-diplomat": { kind: "station", at: { x: 22.0, y: 12.3 }, facing: "down" },
   // The farm lane, tollgate to the quarter — a load going to the canal, which is the whole point of
   // the district.
@@ -1884,7 +1941,10 @@ const UNIT4_FIELD_SOURCE_POINTS = {
     kind: "Source",
   },
   "canal-reform-notices": {
-    x: 50.0,
+    // The commissioned board is one tile wide where the fantasy one it replaced was two, so this
+    // moved with it: the marker belongs on the front edge of the stamp at col 49, not half a tile
+    // out into the square beside it.
+    x: 49.5,
     y: 13.2,
     anchor: { object: "Reform notice board" },
     label: "Reform notices",
@@ -1914,6 +1974,117 @@ export function isCanalCrossroadsLand(x, y) {
 }
 function canalCrossroadsWorldMarkup() {
   return `<canvas class="field-world-art" id="canalCrossroadsTiledCanvas" role="img" aria-label="Top-down Erie Canal boomtown: a stone-lined canal with a working lock and a plank bridge, a basin of moored cargo barges and paved wharves, a water-powered flour mill, a market street of brick shopfronts and a free bank, a reform square with a church and meeting hall, terraced immigrant housing, and a farm edge on the turnpike"></canvas><canvas class="field-world-overlay" id="canalCrossroadsTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+// ---- Canal Crossroads' two interiors -------------------------------------------------------------
+//
+// Attached to FIELD_MAPS["unit-04"] further down the file, not inline in the literal — see the
+// temporal-dead-zone note at the field-interiors block.
+//
+// Every coordinate below is chosen against the furniture its generator stamps, and each generator's
+// header says so in the other direction too. A stamp may be restyled but not moved without
+// re-checking these, and the interior suite in tests/unit/field-map-coordinates.test.js flood-fills
+// each room from its entry cell to prove nobody is standing inside a wall and the way out is
+// reachable from where the player comes in.
+//
+// **Both rooms open south**, because both buildings front the street from the north side of it.
+// Entry sits at y = 11.1 rather than flush against the threshold: footBoxFor() runs 0.78 tiles below
+// a character's anchor, the south wall's rect starts at y = 12, and a player spawned any lower than
+// 11.22 arrives already blocked — which reads as the room freezing on entry, and shipped once
+// already on the Institute's Main Hall.
+
+const UNIT4_PRINT_SHOP_NPCS = [
+  {
+    id: "canal-journeyman-printer",
+    // South of the press, in the open row below it. He is the one who actually pulls the sheets,
+    // which is why the job book is his and not the editor's — a journeyman sets what he is paid to
+    // set and has no stake in whose politics it is, and that is the whole point of the record.
+    x: 2.5,
+    y: 5.5,
+    group: "market",
+    name: "Amos Wheeler",
+    label: "Journeyman printer",
+    sprite: "canal-journeyman-printer",
+    text: "Mr. Pike's paper goes out Thursday and it pays my wages, but it is not what keeps this shop. The job work does — auction bills, canal company schedules, a temperance pledge one week and a tavern-keeper's answer to it the next. I set them all. The order book is on the case there, and it will tell you more about this town than anything printed in the paper.",
+  },
+  {
+    id: "canal-printers-devil",
+    x: 8.5,
+    y: 5.8,
+    group: "market",
+    name: "Ned Pryor",
+    label: "Printer's devil",
+    sprite: "canal-printers-devil",
+    text: "I ink the forme and I pull the paper off the tympan and I wash the type at night, and I have three years to run before I am a journeyman. It is longer hours than the mill and it is a trade at the end of it, which the mill is not. Mind your sleeve on the ink.",
+  },
+];
+const UNIT4_PRINT_SHOP_BEHAVIOURS = {
+  "canal-journeyman-printer": { kind: "station", at: { x: 2.5, y: 5.5 }, facing: "up" },
+  // A small disc in the open cross-aisle between the two compositor's cases, which is where an
+  // apprentice fetching type would actually be. Every step is still gated by isFieldNpcBlocked, so
+  // the disc overlapping the cases' rects costs him nothing but the cells he cannot enter.
+  "canal-printers-devil": { kind: "wander", home: { x: 8.5, y: 5.8 }, radius: 1.2 },
+};
+const UNIT4_PRINT_SHOP_SOURCE_POINTS = {
+  "canal-job-book": {
+    anchor: { npc: "canal-journeyman-printer" },
+    label: "Job-work order book",
+    kind: "Source",
+  },
+};
+function canalPrintShopWorldMarkup() {
+  return `<canvas class="field-world-art" id="canalPrintShopTiledCanvas" role="img" aria-label="Interior of an 1845 printing office: an iron hand press against the north wall under sash windows, two sloped compositor's cases of lead type, stacked bundles of printing paper, a cast-iron stove, and the editor's desk on parquet in the east corner with a safe behind it"></canvas><canvas class="field-world-overlay" id="canalPrintShopTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+const UNIT4_BOARDING_HOUSE_NPCS = [
+  {
+    id: "canal-boardinghouse-keeper",
+    // Moved indoors from the outdoor map, where she stood on her own doorstep at (24.0, 24.2) —
+    // a tenth of a tile from where the door marker now is, which would have made her house
+    // impossible to enter. Her line was always one delivered inside her own bar.
+    x: 18.5,
+    y: 9.6,
+    group: "quarter",
+    name: "Bridget Cavanagh",
+    label: "Boardinghouse keeper",
+    sprite: "canal-boardinghouse-keeper",
+    text: "Fourteen boarders and half of them on the line at any hour, so the beds never cool. The temperance men come to lecture me about the bar. They might ask instead what a woman is to live on when the boats stop in November. The register is on the counter — count the names against the beds before you tell me what I ought to charge.",
+  },
+  {
+    id: "canal-temperance-reformer",
+    x: 7.5,
+    y: 9.6,
+    group: "reform",
+    name: "Prudence Wickham",
+    label: "Temperance visitor",
+    sprite: "canal-temperance-reformer",
+    text: "I have signed eleven men in this house and I will come back for the rest. Do not tell me it is only a glass. I have sat with the wives on this lane and I have seen a fortnight's wages go across that counter in a night. The pledge is not a punishment. It is the only thing any of them owns that a contractor cannot take back.",
+  },
+  {
+    id: "canal-boat-woman",
+    x: 10.5,
+    y: 5.5,
+    group: "quarter",
+    name: "Margaret Dooley",
+    label: "Boat family, takes in washing",
+    sprite: "canal-boat-woman",
+    text: "We work the boat as a family — my husband at the tiller, my eldest on the towpath with the mules, and me cooking in a cabin you could not stand upright in. When the canal freezes we come ashore, and I take in washing until the ice goes out. Nobody writes that down as work, but it is what feeds us four months of the year.",
+  },
+];
+const UNIT4_BOARDING_HOUSE_BEHAVIOURS = {
+  "canal-boardinghouse-keeper": { kind: "station", at: { x: 18.5, y: 9.6 }, facing: "up" },
+  "canal-temperance-reformer": { kind: "station", at: { x: 7.5, y: 9.6 }, facing: "up" },
+  "canal-boat-woman": { kind: "station", at: { x: 10.5, y: 5.5 }, facing: "up" },
+};
+const UNIT4_BOARDING_HOUSE_SOURCE_POINTS = {
+  "canal-house-register": {
+    anchor: { npc: "canal-boardinghouse-keeper" },
+    label: "Boardinghouse register",
+    kind: "Source",
+  },
+};
+function canalBoardingHouseWorldMarkup() {
+  return `<canvas class="field-world-art" id="canalBoardingHouseTiledCanvas" role="img" aria-label="Interior of an 1845 canal boardinghouse: three plain rope beds in a curtained sleeping alcove behind a partition, a flagged kitchen end with a stove, wash tub and crockery dresser, and a common room with two long boarding tables and the keeper's counter"></canvas><canvas class="field-world-overlay" id="canalBoardingHouseTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
 
 export const FIELD_MAPS = {
@@ -2137,6 +2308,45 @@ export const ARCHIVE_ROOM_BLOCK_RECTS = ARCHIVE_ROOM_BLOCKS;
 //    the app down on boot, not a lint warning. The same hazard is recorded on the field boot guard.
 // 2. An interior is deliberately the same shape as an outdoor map, which is what lets
 //    activeFieldMap() hand back either one and leave every consumer untouched. Keep it that way.
+//
+// Canal Crossroads' two rooms, the first ever declared. `musicScene` is `settlement` on both, the
+// same as the town outside: an interior is a room in that town, not a change of place, and stepping
+// through a door should not restart the score.
+FIELD_MAPS["unit-04"].interiors = {
+  "canal-print-shop": {
+    id: "canal-print-shop",
+    grid: { columns: 20, rows: 14, tile: 48 },
+    blocks: CANAL_PRINT_SHOP_BLOCKS,
+    roads: [],
+    npcs: UNIT4_PRINT_SHOP_NPCS,
+    behaviours: UNIT4_PRINT_SHOP_BEHAVIOURS,
+    sourcePoints: UNIT4_PRINT_SHOP_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: canalPrintShopWorldMarkup,
+    entry: { x: 10.0, y: 11.1, facing: "up" },
+    exit: { x: 10.0, y: 12.1 },
+    // The doorstep on Market Street. generate-canal-crossroads-tmj.js stamps the printing office at
+    // (31,6) two wide and two tall, so doorCellOf() puts its door cell at (32,8) — the first row of
+    // the street. Josiah Pike was moved three tiles east of this point for it to be usable at all.
+    door: { x: 32.0, y: 8.0, label: "Printing office" },
+  },
+  "canal-boarding-house": {
+    id: "canal-boarding-house",
+    grid: { columns: 22, rows: 14, tile: 48 },
+    blocks: CANAL_BOARDING_HOUSE_BLOCKS,
+    roads: [],
+    npcs: UNIT4_BOARDING_HOUSE_NPCS,
+    behaviours: UNIT4_BOARDING_HOUSE_BEHAVIOURS,
+    sourcePoints: UNIT4_BOARDING_HOUSE_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: canalBoardingHouseWorldMarkup,
+    entry: { x: 11.0, y: 11.1, facing: "up" },
+    exit: { x: 11.0, y: 12.1 },
+    // The tavern is stamped at (23,22) two by two, so its door cell is (24,24).
+    door: { x: 24.0, y: 24.0, label: "Boardinghouse" },
+  },
+};
+
 // Both coordinates are chosen against the furniture the generator stamps, and the generator's header
 // names them as load-bearing in the other direction too. Each sits on the *face* of its object; the
 // player stands roughly 0.6 tiles clear, which is inside targetReach() and outside the rect.
@@ -9597,6 +9807,8 @@ function render() {
       if (activeFieldMap().id === "unit-01") renderCaribbeanTiledMap();
       if (activeFieldMap().id === "unit-03") renderCommonCauseTiledMap();
       if (activeFieldMap().id === "unit-04") renderCanalCrossroadsTiledMap();
+      if (activeFieldMap().id === "canal-print-shop") renderCanalPrintShopTiledMap();
+      if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
     });
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {

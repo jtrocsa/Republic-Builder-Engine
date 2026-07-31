@@ -57,3 +57,14 @@ export const InstituteFurnishings = {
   stoolAlt: tile("derived/institute-furnishings.png", 0, 1, { h: 1, w: 1 }),
   lowBench: tile("derived/institute-furnishings.png", 0, 2, { h: 1, w: 3 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const CanalWorks = {
+  press: tile("derived/canal-works.png", 0, 0, { h: 3, w: 2 }),
+  typeCase: tile("derived/canal-works.png", 0, 2, { h: 2, w: 2 }),
+  stove: tile("derived/canal-works.png", 0, 4, { h: 2, w: 2 }),
+  paperStack: tile("derived/canal-works.png", 0, 6, { h: 2, w: 2 }),
+  ropeBed: tile("derived/canal-works.png", 0, 8, { h: 2, w: 2 }),
+  washTub: tile("derived/canal-works.png", 0, 10, { h: 2, w: 2 }),
+  noticeBoard: tile("derived/canal-works.png", 0, 12, { h: 2, w: 1 }),
+};
