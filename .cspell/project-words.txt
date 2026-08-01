@@ -68,6 +68,7 @@ chronotravel
 Chronotraveling
 Cinzel
 cleanroom
+Cofer
 collidable
 Colligan
 Comeau's
@@ -136,6 +137,7 @@ gsap
 Guanahaní
 guanín
 Haudenosaunee
+headwrap
 headright
 Hernán
 hipp
@@ -180,6 +182,7 @@ lerping
 librsvg
 libtiled
 libvips
+longcase
 longcoat
 longenough
 López

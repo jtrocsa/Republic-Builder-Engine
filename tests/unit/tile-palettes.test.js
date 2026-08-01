@@ -25,6 +25,8 @@ import riverbend from "../../apps/web/src/content/tilesets/maps/riverbend-field.
 import commonCause from "../../apps/web/src/content/tilesets/maps/common-cause-field.palette.js";
 import canalCrossroads from "../../apps/web/src/content/tilesets/maps/canal-crossroads-field.palette.js";
 import richmond from "../../apps/web/src/content/tilesets/maps/richmond-field.palette.js";
+import richmondCountingRoom from "../../apps/web/src/content/tilesets/maps/richmond-counting-room.palette.js";
+import richmondHospitalWard from "../../apps/web/src/content/tilesets/maps/richmond-hospital-ward.palette.js";
 import canalPrintShop from "../../apps/web/src/content/tilesets/maps/canal-print-shop.palette.js";
 import canalBoardingHouse from "../../apps/web/src/content/tilesets/maps/canal-boarding-house.palette.js";
 import archiveRoom from "../../apps/web/src/content/tilesets/maps/archive-room.palette.js";
@@ -44,6 +46,8 @@ const MAP_PALETTES = [
   canalPrintShop,
   canalBoardingHouse,
   richmond,
+  richmondCountingRoom,
+  richmondHospitalWard,
   archiveRoom,
   hallway,
   instituteHall,

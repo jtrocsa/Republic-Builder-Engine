@@ -119,6 +119,8 @@ import canalCrossroadsTmjRaw from "./content/maps/canal-crossroads-field.tmj?raw
 import canalPrintShopTmjRaw from "./content/maps/canal-print-shop.tmj?raw";
 import canalBoardingHouseTmjRaw from "./content/maps/canal-boarding-house.tmj?raw";
 import richmondTmjRaw from "./content/maps/richmond-field.tmj?raw";
+import richmondCountingRoomTmjRaw from "./content/maps/richmond-counting-room.tmj?raw";
+import richmondHospitalWardTmjRaw from "./content/maps/richmond-hospital-ward.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
@@ -148,6 +150,8 @@ import { RICHMOND_FIELD_BLOCKS, RICHMOND_FIELD_ROADS } from "./content/maps/rich
 // what it means outdoors.
 import { CANAL_PRINT_SHOP_BLOCKS } from "./content/maps/canal-print-shop.blocks.js";
 import { CANAL_BOARDING_HOUSE_BLOCKS } from "./content/maps/canal-boarding-house.blocks.js";
+import { RICHMOND_COUNTING_ROOM_BLOCKS } from "./content/maps/richmond-counting-room.blocks.js";
+import { RICHMOND_HOSPITAL_WARD_BLOCKS } from "./content/maps/richmond-hospital-ward.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
 import { HALLWAY_BLOCKS } from "./content/maps/hallway.blocks.js";
@@ -715,6 +719,45 @@ const resolveRichmondTilesetImage = createTilesetImageResolver(
 function renderRichmondTiledMap() {
   renderTiledMapWithOverlay("richmondTiledCanvas", richmondTmj, resolveRichmondTilesetImage);
 }
+
+// Richmond's two rooms. One resolver serves both, as at Canal Crossroads, and every sheet either
+// room names is already in the bundle: the two `19th Century European City` interior sheets come in
+// with the printing office and the boardinghouse, and derived/civil-war-works.png with the outdoor
+// map above. Three globs, zero bytes added.
+const richmondCountingRoomTmj = JSON.parse(richmondCountingRoomTmjRaw);
+const richmondHospitalWardTmj = JSON.parse(richmondHospitalWardTmjRaw);
+const resolveRichmondInteriorTilesetImage = createTilesetImageResolver(
+  // Floors, wainscot, whitewash, brick, both doors, sash windows, the trader's and matron's desks,
+  // the safe, the ledger presses, the linen presses and the medicine cabinet.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The clerks' table, the ward's work table, the bedside tables, the store cupboard and the shelf.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-02.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The commissioned cot, and nothing else from that sheet in either room.
+  import.meta.glob("./assets/tilesets/derived/civil-war-works.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderRichmondCountingRoomTiledMap() {
+  renderTiledMapWithOverlay(
+    "richmondCountingRoomTiledCanvas",
+    richmondCountingRoomTmj,
+    resolveRichmondInteriorTilesetImage
+  );
+}
+function renderRichmondHospitalWardTiledMap() {
+  renderTiledMapWithOverlay(
+    "richmondHospitalWardTiledCanvas",
+    richmondHospitalWardTmj,
+    resolveRichmondInteriorTilesetImage
+  );
+}
 const waldseemuller = new URL("./assets/documents/source-waldseemuller-1507.jpg", import.meta.url)
   .href;
 
@@ -885,6 +928,11 @@ const CHARACTER_SHEETS = {
   "richmond-refugee-woman": characterSheet(`${FIELD}/npc-richmond-refugee-woman`, 9),
   "richmond-relief-society-woman": characterSheet(`${FIELD}/npc-richmond-relief-society-woman`, 9),
   "richmond-government-messenger": characterSheet(`${FIELD}/npc-richmond-government-messenger`, 9),
+  // Unit 5 interiors. Three people who exist because two doors opened — and Jane Ferris, who was
+  // already here and only moved indoors.
+  "richmond-bookkeeper": characterSheet(`${FIELD}/npc-richmond-bookkeeper`, 9),
+  "richmond-hired-out-man": characterSheet(`${FIELD}/npc-richmond-hired-out-man`, 9),
+  "richmond-ward-nurse": characterSheet(`${FIELD}/npc-richmond-ward-nurse`, 9),
   // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six
   // keep the placeholder art Unit 3 already used, rebuilt into the same strip format. Giving them
   // their own keys is the point: without it, upgrading `columbus` to real 1492 art would silently
@@ -2258,16 +2306,11 @@ const UNIT5_FIELD_NPCS = [
     sprite: "richmond-seamstress",
     text: "My name is Charlotte Vaughan. I am hired out to the Bureau by the woman who owns me, and the wages for my week are paid to her. Fourteen shirts, and the cloth counted out to me and counted back. What is mine is the sewing I do after dark, because nobody has thought to ask for it yet. I am keeping every dollar of it, and I do not intend to be in this city when this is finished.",
   },
-  {
-    id: "richmond-hospital-worker",
-    x: 42.5,
-    y: 8.4,
-    group: "hospital",
-    name: "Jane Ferris",
-    label: "Hospital matron",
-    sprite: "richmond-hospital-worker",
-    text: "Chimborazo is a hundred and fifty buildings on this hill and I keep the register for one of them. Name, regiment, date admitted, date discharged — and a last column I will not read out to you. Before the war a lady of this city did not work. The surgeons could not run a ward without us now and they know it, and there will be an argument about that when the men come home.",
-  },
+  // Jane Ferris used to stand here, on Broad Street outside her own ward door, and Phase 8 moved her
+  // inside it — the same move the boardinghouse keeper made at Canal Crossroads and for the same
+  // reason. She is a matron; a matron is in her ward. Her line was always one delivered standing over
+  // the register, and the register is the record this map anchors to her, which cannot be read from
+  // the street. See UNIT5_HOSPITAL_WARD_NPCS.
   {
     id: "confederate-private",
     x: 43.5,
@@ -2329,7 +2372,6 @@ const UNIT5_FIELD_NPC_BEHAVIOURS = {
   "richmond-refugee-woman": { kind: "wander", home: { x: 10.5, y: 4.6 }, radius: 1.1 },
   "richmond-free-black-barber": { kind: "station", at: { x: 19.0, y: 12.4 }, facing: "down" },
   "richmond-seamstress": { kind: "station", at: { x: 26.0, y: 16.0 }, facing: "down" },
-  "richmond-hospital-worker": { kind: "station", at: { x: 42.5, y: 8.4 }, facing: "down" },
   "confederate-private": { kind: "station", at: { x: 43.5, y: 4.6 }, facing: "down" },
   "tredegar-ironworker": { kind: "station", at: { x: 4.0, y: 22.4 }, facing: "down" },
   // Two and a half tiles east of the counting room's own door rather than on it. A door is an
@@ -2379,6 +2421,115 @@ const UNIT5_FIELD_SOURCE_POINTS = {
     kind: "Source",
   },
 };
+
+// ---- Richmond's two interiors --------------------------------------------------------------------
+//
+// Attached to FIELD_MAPS["unit-05"] further down the file, not inline in the literal — see the
+// temporal-dead-zone note at the field-interiors block.
+//
+// Both rooms open south, because both buildings front their street from the north side of it, and
+// both entries sit at y = 11.1 for the reason the Canal Crossroads block records at length:
+// footBoxFor() runs 0.78 tiles below a character's anchor and the south wall's rect starts at y = 12,
+// so a player spawned any lower arrives already blocked and the room reads as frozen on entry.
+//
+// **The register rule is the load-bearing constraint on both of these rooms**, and it is stricter
+// here than anywhere else in the game. Nathan Purcell and Delia Marsh are both enslaved. Both are
+// named, both speak in the first person, both say plainly what is being done to them and what they
+// intend to do about it, and neither is explained by the white person standing across the room from
+// them. Nobody in either room is written as scenery. See the decision log, and the two palette
+// headers for how the same rule governed the furniture.
+
+const UNIT5_COUNTING_ROOM_NPCS = [
+  {
+    id: "richmond-bookkeeper",
+    // At the west end of the clerks' table, which the generator stamps at (2,7) four columns wide.
+    // He stands on its south face, in the open aisle, so a player reading over his shoulder is
+    // standing where a caller would stand.
+    //
+    // y is 9.0 and not 9.4 because a body's collision is its feet: footBoxFor() runs y+0.40 to
+    // y+0.78, so at 9.4 he occupies row 10 — which is the rank of waiting chairs — and the interior
+    // traversal test says so by name. Every coordinate in this block is chosen against the foot box,
+    // not the anchor.
+    x: 3.0,
+    y: 9.0,
+    group: "shockoe",
+    name: "Lemuel Cofer",
+    label: "Book-keeper",
+    sprite: "richmond-bookkeeper",
+    text: "Twenty-two years I have kept this book, and I will tell you what has changed in it. It is not the sales — those have all but stopped, there being nowhere south to send anybody with the river shut. It is the hires. Column after column of them, a year at a time, and half of those to the government: the Nitre Bureau, the hospitals, Tredegar. We do not sell people to the Confederacy. We rent them to it. The commission is two and a half per centum either way and the book does not distinguish.",
+  },
+  {
+    id: "richmond-hired-out-man",
+    // Beside the three chairs against the west wall, not on one — they run cols 1-3 across rows
+    // 10-11, and his foot box sits at col 4, clear of them. He is in the outer office because that
+    // is as far into this building as a person being hired is brought.
+    x: 4.5,
+    y: 10.6,
+    group: "shockoe",
+    name: "Nathan Purcell",
+    label: "Hired to the works",
+    sprite: "richmond-hired-out-man",
+    text: "My name is Nathan Purcell. I have been stood in this room since first light waiting on a paper that says which works I go to, and the man who owns me is not here — he is in Charlotte County and the letter came instead. There is a wage set on my year and it is paid to him. I know the figure. I asked, and the clerk read it out to me because he did not think it signified. It signifies. I am going to the ironworks, and the ironworks is on the river, and the river runs two ways.",
+  },
+];
+const UNIT5_COUNTING_ROOM_BEHAVIOURS = {
+  "richmond-bookkeeper": { kind: "station", at: { x: 3.0, y: 9.0 }, facing: "up" },
+  "richmond-hired-out-man": { kind: "station", at: { x: 4.5, y: 10.6 }, facing: "up" },
+};
+const UNIT5_COUNTING_ROOM_SOURCE_POINTS = {
+  "richmond-trader-day-book": {
+    anchor: { npc: "richmond-bookkeeper" },
+    label: "Commission house day book",
+    kind: "Source",
+  },
+};
+function richmondCountingRoomWorldMarkup() {
+  return `<canvas class="field-world-art" id="richmondCountingRoomTiledCanvas" role="img" aria-label="Interior of an 1864 Richmond commission house: a panelled office with a long clerks' writing table and three plain chairs against the wall of the outer half, and beyond a change in the floor, the trader's own end with a writing desk, an iron safe, shelves of bound ledgers and a longcase clock"></canvas><canvas class="field-world-overlay" id="richmondCountingRoomTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+const UNIT5_HOSPITAL_WARD_NPCS = [
+  {
+    id: "richmond-hospital-worker",
+    // At the matron's desk, which the generator stamps at (16,6). She stands on its south face, in
+    // the open aisle, with the register within reach — this room's record anchors to her.
+    x: 17.0,
+    y: 8.4,
+    group: "hospital",
+    name: "Jane Ferris",
+    label: "Hospital matron",
+    sprite: "richmond-hospital-worker",
+    text: "Chimborazo is a hundred and fifty buildings on this hill and I keep the register for one of them. Name, regiment, date admitted, date discharged — and a last column I will not read out to you. Before the war a lady of this city did not work. The surgeons could not run a ward without us now and they know it, and there will be an argument about that when the men come home.",
+  },
+  {
+    id: "richmond-ward-nurse",
+    // At the west end, by the linen press and the medicine cabinet, which is where the work she is
+    // describing is actually done.
+    x: 4.0,
+    y: 8.4,
+    group: "hospital",
+    name: "Delia Marsh",
+    label: "Hired to the hospital",
+    sprite: "richmond-ward-nurse",
+    text: "Delia Marsh. I am hired to this hospital by the year and I have never seen a dollar of what I am worth to it — that goes to the woman in Hanover County who signed the paper. I do the washing, and the beds, and the feeding of men who cannot feed themselves, and at night I do the watching, because the matron cannot be here at two in the morning and I can. There is nothing in that book about me. Ask her, she will tell you the same. Now. You are the one writing things down that keep. Delia Marsh, hired to this ward, Hanover County. Put that somewhere it will not be lost, because the register will not, and one day somebody is going to want to know who was in this room.",
+  },
+];
+const UNIT5_HOSPITAL_WARD_BEHAVIOURS = {
+  "richmond-hospital-worker": { kind: "station", at: { x: 17.0, y: 8.4 }, facing: "up" },
+  // A small disc in the open south aisle between the cots and the presses, which is where a woman
+  // working a ward would be. Every step is still gated by isFieldNpcBlocked, so the disc overlapping
+  // the presses' rects costs her nothing but the cells she cannot enter.
+  "richmond-ward-nurse": { kind: "wander", home: { x: 4.0, y: 8.6 }, radius: 1.2 },
+};
+const UNIT5_HOSPITAL_WARD_SOURCE_POINTS = {
+  "richmond-ward-register": {
+    anchor: { npc: "richmond-hospital-worker" },
+    label: "Ward register page",
+    kind: "Source",
+  },
+};
+function richmondHospitalWardWorldMarkup() {
+  return `<canvas class="field-world-art" id="richmondHospitalWardTiledCanvas" role="img" aria-label="Interior of a Chimborazo Hospital ward, 1864: a long whitewashed room with sash windows down both walls, two ranks of empty made-up camp cots with a small table between each pair, and in the middle a work table, a linen press, a glazed medicine cabinet and the matron's desk with the ward register open on it"></canvas><canvas class="field-world-overlay" id="richmondHospitalWardTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
 // Two bodies of water and one drawn cliff, and only the water is in here: the bluff is a run of solid
 // retaining-wall rects in richmond-field.blocks.js, not a term in this predicate. That is what makes
 // it a real constraint rather than a painted one, and it is why the only two ways down the hill are
@@ -2699,6 +2850,53 @@ FIELD_MAPS["unit-04"].interiors = {
     exit: { x: 11.0, y: 12.1 },
     // The tavern is stamped at (23,22) two by two, so its door cell is (24,24).
     door: { x: 24.0, y: 24.0, label: "Boardinghouse" },
+  },
+};
+
+// Richmond's two rooms. `musicScene` is `settlement` on both, matching the city outside them for the
+// reason Canal Crossroads recorded: an interior is a room in that place, not a change of place, and
+// walking through a door should not restart the score. It is the right call here for a second reason
+// — a music sting on entering the counting room would editorialise a room whose entire design is that
+// it does not.
+const RICHMOND_COUNTING_ROOM_GRID = { columns: 18, rows: 14, tile: 48 };
+const RICHMOND_HOSPITAL_WARD_GRID = { columns: 24, rows: 14, tile: 48 };
+FIELD_MAPS["unit-05"].interiors = {
+  "richmond-counting-room": {
+    id: "richmond-counting-room",
+    grid: RICHMOND_COUNTING_ROOM_GRID,
+    isLand: interiorGround(RICHMOND_COUNTING_ROOM_GRID),
+    blocks: RICHMOND_COUNTING_ROOM_BLOCKS,
+    roads: [],
+    npcs: UNIT5_COUNTING_ROOM_NPCS,
+    behaviours: UNIT5_COUNTING_ROOM_BEHAVIOURS,
+    sourcePoints: UNIT5_COUNTING_ROOM_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: richmondCountingRoomWorldMarkup,
+    entry: { x: 9.0, y: 11.1, facing: "up" },
+    exit: { x: 9.0, y: 12.1 },
+    // The doorstep on Lower Street. generate-richmond-tmj.js stamps the counting room at (32,20) two
+    // wide and two tall, so doorCellOf() puts its door cell at (33,22) — the first row of the street.
+    // Ambrose Kell was already standing two and a half tiles east of this point, which is why he did
+    // not have to move for it.
+    door: { x: 33.0, y: 22.0, label: "Counting room" },
+  },
+  "richmond-hospital-ward": {
+    id: "richmond-hospital-ward",
+    grid: RICHMOND_HOSPITAL_WARD_GRID,
+    isLand: interiorGround(RICHMOND_HOSPITAL_WARD_GRID),
+    blocks: RICHMOND_HOSPITAL_WARD_BLOCKS,
+    roads: [],
+    npcs: UNIT5_HOSPITAL_WARD_NPCS,
+    behaviours: UNIT5_HOSPITAL_WARD_BEHAVIOURS,
+    sourcePoints: UNIT5_HOSPITAL_WARD_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: richmondHospitalWardWorldMarkup,
+    entry: { x: 12.0, y: 11.1, facing: "up" },
+    exit: { x: 12.0, y: 12.1 },
+    // The ward is stamped at (38,4) four by four, so its door cell is (40,8) — the first row of Broad
+    // Street. Jane Ferris used to stand at (42.5, 8.4), two and a half tiles east of here; she is
+    // inside now, and nothing else on that stretch of pavement is within reach of this marker.
+    door: { x: 40.0, y: 8.0, label: "Chimborazo ward" },
   },
 };
 
@@ -10218,6 +10416,8 @@ function render() {
       if (activeFieldMap().id === "unit-05") renderRichmondTiledMap();
       if (activeFieldMap().id === "canal-print-shop") renderCanalPrintShopTiledMap();
       if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
+      if (activeFieldMap().id === "richmond-counting-room") renderRichmondCountingRoomTiledMap();
+      if (activeFieldMap().id === "richmond-hospital-ward") renderRichmondHospitalWardTiledMap();
     });
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {

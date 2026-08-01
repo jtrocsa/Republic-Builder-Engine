@@ -644,6 +644,54 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "richmond-government-messenger-walk8",
   },
+
+  // ---- Unit 5 interiors · the counting room and the Chimborazo ward (Phase 67) ------------------
+  //
+  // Three characters, not four: Jane Ferris was already in the cast and only walked indoors, because
+  // a matron belongs in her ward and her line was always delivered standing over the register.
+  //
+  // No props on any of them, per the Phase 2 run report's finding that a shovel, a newspaper and an
+  // apron all failed to survive rotation. No `idleGroup` either, matching their neighbours rather
+  // than the ceiling — the same call the Unit 4 interiors made and for the same reason.
+  {
+    key: "richmond-bookkeeper",
+    stem: "chronicle-sprites/field/npc-richmond-bookkeeper",
+    name: "Richmond Commission House Book-keeper",
+    // Deliberately not sinister. The whole design of the counting room is that it is an ordinary
+    // well-kept commercial office, and the man who keeps its books has to look like what he is: an
+    // elderly clerk in a shabby tailcoat and spectacles who has done the same job for twenty-two
+    // years. A theatrical villain here would let a student off the hook.
+    id: "a15633ec-55b6-4074-bf43-0222ec95fd30",
+    frames: 8,
+    walkGroup: "bookkeeper-walk8",
+  },
+  {
+    key: "richmond-hired-out-man",
+    stem: "chronicle-sprites/field/npc-richmond-hired-out-man",
+    name: "Richmond Man Hired Out to the Works",
+    // Three rolls, and the two rejected ones are worth recording because they are the same failure
+    // from opposite ends. "Coarse brown homespun shirt" returned a collared work shirt with two
+    // chest pockets and a leather belt — 20th-century workwear, the same defect that sent
+    // `richmond-refugee-woman` back in bib overalls. "Loose collarless pullover shirt" returned a
+    // sleeveless singlet, which is worse: on this character, in this room, bare arms are precisely
+    // the exploitative image the brief bars. What worked was describing coverage rather than cut —
+    // "a long sleeved shirt that covers both arms to the wrist and buttons at the throat."
+    id: "d657e021-6ead-4df9-8223-d891a4d1edf9",
+    frames: 8,
+    walkGroup: "hired-out-man-walk8",
+  },
+  {
+    key: "richmond-ward-nurse",
+    stem: "chronicle-sprites/field/npc-richmond-ward-nurse",
+    name: "Richmond Hospital Ward Nurse",
+    // Chimborazo's nursing, laundry and cooking were done in large part by enslaved and free Black
+    // women, many of them hired to the hospital by the year with the wage paid to whoever owned
+    // them. It is one of the least-carried facts about Confederate hospitals and this map's ward
+    // exists partly to carry it. Dark calico, long white apron, headwrap; first roll, no re-rolls.
+    id: "bca54bcf-f040-4b1d-97fd-a151cbe8ec81",
+    frames: 8,
+    walkGroup: "ward-nurse-walk8",
+  },
 ];
 
 /**
