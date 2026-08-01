@@ -24,6 +24,7 @@
 // Output: reports/field-guide/chronicle-field-guide.html  (gitignored)
 
 import { Buffer } from "node:buffer";
+import { execFileSync } from "node:child_process";
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -265,10 +266,15 @@ function extractFromMainJs(laneArrays) {
   out.fieldMaps = readNamed(source, "FIELD_MAPS");
   out.fieldCopy = readNamed(source, "FIELD_COPY");
   out.lanes = readNamed(source, "RECONSTRUCTION_LANES", laneArrays);
-  out.interiors = {
-    "unit-04": readAssigned(source, 'FIELD_MAPS["unit-04"].interiors'),
-    "unit-05": readAssigned(source, 'FIELD_MAPS["unit-05"].interiors'),
-  };
+  // Discovered, not listed. An interior is attached after the FIELD_MAPS literal rather than inside
+  // it (a room's blocks const is declared further down main.js, and reading one from the literal is
+  // a temporal-dead-zone ReferenceError), so each unit that has rooms has its own assignment line.
+  // Naming the two that exist today would mean a sixth unit's rooms silently not appearing in the
+  // guide, which is the one failure mode a generated document cannot afford.
+  out.interiors = {};
+  for (const match of source.matchAll(/\nFIELD_MAPS\["(unit-\d+)"\]\.interiors = /g)) {
+    out.interiors[match[1]] = readAssigned(source, `FIELD_MAPS["${match[1]}"].interiors`);
+  }
   return out;
 }
 
@@ -308,7 +314,12 @@ async function snapshotImage(name, width, quality) {
 
 // ── tier 1 + assembly ──────────────────────────────────────────────────────────────────────────
 
-/** Which .tmj paints each unit's outdoor map. Interiors carry their own id, which is their file. */
+/**
+ * Which .tmj paints each unit's outdoor map. Interiors carry their own id, which is their file.
+ *
+ * This and SURFACE_NAMES below are the two lists a new unit's map has to join. Both are read through
+ * must() rather than indexed directly, so a missing entry names itself and the list to add it to.
+ */
 const OUTDOOR_TMJ = {
   "unit-01": "caribbean-field",
   "unit-02": "riverbend-field",
@@ -329,6 +340,22 @@ const SURFACE_NAMES = {
   "richmond-counting-room": "Franklin Street counting room",
   "richmond-hospital-ward": "A Chimborazo ward",
 };
+
+/**
+ * Reads a key that must be there, and says which list to add it to when it isn't.
+ *
+ * This document's whole value is that it can be trusted after the game changes under it, so every
+ * hand-kept lookup in this file goes through here. A `|| "—"` fallback would keep the build green
+ * and quietly publish a guide that omits a map, mislabels a mission, or leaves a task type blank.
+ */
+function must(table, key, listName) {
+  if (!(key in table)) {
+    throw new Error(
+      `${listName} has no entry for "${key}" — add one in scripts/build-field-guide.js`
+    );
+  }
+  return table[key];
+}
 
 const esc = (value) =>
   String(value ?? "")
@@ -505,52 +532,61 @@ function recordTable(entries) {
 
 // ── quest descriptions ─────────────────────────────────────────────────────────────────────────
 
-const QUEST_TYPE_NAMES = {
-  mcq: "Multiple choice",
-  sequencing: "Sequencing",
-  "evidence-organizing": "Evidence sorting",
-  hipp: "HIPP source analysis",
-  saq: "Short answer (SAQ)",
-  dbq: "Document-based question (DBQ)",
+/**
+ * Every task type the game can put in front of a student.
+ *
+ * One entry per type, holding all three things the guide says about it: what to call it, how to
+ * describe the particular quest's shape, and what the student actually does. A seventh type is one
+ * entry here and one screenshot in part 6 — and until it has one, the build stops and says so,
+ * rather than printing an em dash where the explanation should be.
+ */
+const QUEST_TYPES = {
+  mcq: {
+    name: "Multiple choice",
+    shape: (quest) => `${quest.choices.length} choices`,
+    steps: "Choose one, submit, then read the explanation.",
+  },
+  sequencing: {
+    name: "Sequencing",
+    shape: (quest) => `${quest.items.length} events to put in causal order`,
+    steps:
+      "Move each event up or down until the chain reads cause → effect. Order is graded, not the dates.",
+  },
+  "evidence-organizing": {
+    name: "Evidence sorting",
+    shape: (quest) =>
+      `${quest.sources.length} cards to sort into ${quest.slots.length} categories, then a written reflection`,
+    steps:
+      "Drag every card into a category — more than one card can share a category — then write the reflection before submitting.",
+  },
+  hipp: {
+    name: "HIPP source analysis",
+    shape: (quest) => `one document, ${quest.hippPrompts.length} HIPP dimensions to analyse`,
+    steps:
+      "For each dimension, pick the option that explains how it shapes the argument, not the one that merely names it.",
+  },
+  saq: {
+    name: "Short answer (SAQ)",
+    shape: (quest) =>
+      `${quest.prompts.length} short-answer parts${quest.stimulus ? " on a shared stimulus" : ""}`,
+    steps:
+      "Answer each part in a few sentences. The AI evaluator returns formative feedback only — a teacher enters the grade.",
+  },
+  dbq: {
+    name: "Document-based question (DBQ)",
+    shape: (quest) => `${quest.documents.length} documents, one essay`,
+    steps:
+      "Read every document, then write one essay to the College Board rubric. Formative feedback only.",
+  },
 };
 
-function questShape(type, quest) {
-  if (!quest) return "content not found";
-  switch (type) {
-    case "sequencing":
-      return `${quest.items.length} events to put in causal order`;
-    case "evidence-organizing":
-      return `${quest.sources.length} cards to sort into ${quest.slots.length} categories, then a written reflection`;
-    case "hipp":
-      return `one document, ${quest.hippPrompts.length} HIPP dimensions to analyse`;
-    case "mcq":
-      return `${quest.choices.length} choices`;
-    case "saq":
-      return `${quest.prompts.length} short-answer parts${quest.stimulus ? " on a shared stimulus" : ""}`;
-    case "dbq":
-      return `${quest.documents.length} documents, one essay`;
-    default:
-      return "—";
-  }
-}
+const questTypeName = (type) => must(QUEST_TYPES, type, "QUEST_TYPES").name;
+const questSteps = (type) => must(QUEST_TYPES, type, "QUEST_TYPES").steps;
 
-function questSteps(type) {
-  switch (type) {
-    case "sequencing":
-      return "Move each event up or down until the chain reads cause → effect. Order is graded, not the dates.";
-    case "evidence-organizing":
-      return "Drag every card into a category — more than one card can share a category — then write the reflection before submitting.";
-    case "hipp":
-      return "For each dimension, pick the option that explains how it shapes the argument, not the one that merely names it.";
-    case "mcq":
-      return "Choose one, submit, then read the explanation.";
-    case "saq":
-      return "Answer each part in a few sentences. The AI evaluator returns formative feedback only — a teacher enters the grade.";
-    case "dbq":
-      return "Read every document, then write one essay to the College Board rubric. Formative feedback only.";
-    default:
-      return "";
-  }
+function questShape(type, quest) {
+  const entry = must(QUEST_TYPES, type, "QUEST_TYPES");
+  if (!quest) throw new Error(`quest content not found for a ${type} slot`);
+  return entry.shape(quest);
 }
 
 // ── page ───────────────────────────────────────────────────────────────────────────────────────
@@ -824,7 +860,7 @@ function unitSection(unit, index, data) {
         challenge.questType === "saq"
           ? `<ul class="saq-parts">${(quest?.prompts || []).map((prompt) => `<li>${esc(prompt)}</li>`).join("")}</ul>`
           : `<p>${esc(quest?.prompt || "—")}</p>`;
-      return `<article class="challenge"><p class="case-kicker">${esc(QUEST_TYPE_NAMES[challenge.questType])}</p><p class="challenge-shape">${esc(questShape(challenge.questType, quest))}</p>${body}</article>`;
+      return `<article class="challenge"><p class="case-kicker">${esc(questTypeName(challenge.questType))}</p><p class="challenge-shape">${esc(questShape(challenge.questType, quest))}</p>${body}</article>`;
     })
     .join("");
 
@@ -918,7 +954,7 @@ function missionCaseSection(entry, index, data) {
   const type = challenge?.questType;
   return `<article class="case" id="${esc(entry.id)}">
     <div class="case-head"><span class="case-kicker">Case ${index + 1} · mission</span><h3>${esc(entry.title)}</h3></div>
-    <div class="case-meta"><span><b>${esc(entry.location)}</b></span><span>Key concepts <b>${entry.ced.keyConcepts.join(", ")}</b></span><span>Themes <b>${entry.ced.themes.join(", ")}</b></span><span>${esc(QUEST_TYPE_NAMES[type] || "—")}</span><span><code>${esc(entry.id)}</code></span></div>
+    <div class="case-meta"><span><b>${esc(entry.location)}</b></span><span>Key concepts <b>${entry.ced.keyConcepts.join(", ")}</b></span><span>Themes <b>${entry.ced.themes.join(", ")}</b></span><span>${esc(questTypeName(type))}</span><span><code>${esc(entry.id)}</code></span></div>
     <p class="question">${esc(entry.question || entry.summary)}</p>
     <p>${esc(entry.summary)}</p>
     <h4>What the screen asks</h4>
@@ -1051,7 +1087,7 @@ async function main() {
       // Every interactable gets a numbered pin, matching the table beside it row for row.
       pins: Object.values(targets).map((target) => ({ x: target.x, y: target.y })),
       doors: [],
-      spawn: ROOM_SPAWNS[key],
+      spawn: must(ROOM_SPAWNS, key, "ROOM_SPAWNS"),
       recall: null,
     };
   }
@@ -1060,7 +1096,7 @@ async function main() {
   for (const unitId of UNIT_IDS) {
     const unit = campaigns[unitId];
     const fieldCase = unit.cases.find((entry) => entry.route === "field");
-    const outdoorId = OUTDOOR_TMJ[unitId];
+    const outdoorId = must(OUTDOOR_TMJ, unitId, "OUTDOOR_TMJ");
     const interiors = mainJs.interiors[unitId] || {};
     const sources = sourcesByCase[fieldCase.id] || [];
     const sourceTitle = (id) => sources.find((source) => source.id === id);
@@ -1084,7 +1120,7 @@ async function main() {
       return {
         kind,
         id,
-        name: SURFACE_NAMES[id] || id,
+        name: must(SURFACE_NAMES, id, "SURFACE_NAMES"),
         image,
         npcs,
         behaviours,
@@ -1167,6 +1203,19 @@ async function main() {
   );
   const totalCast = Object.values(mainJs.npcs).reduce((sum, list) => sum + list.length, 0);
 
+  // Stamped so a copy of this page can be told apart from a newer one at a glance. The commit is
+  // the more useful half — it says exactly which state of the game the page describes.
+  const buildStamp = new Date().toISOString().slice(0, 10);
+  let buildCommit = "not a git checkout";
+  try {
+    buildCommit = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    // A tarball export has no git metadata; the date alone still dates the page.
+  }
+
   const html = `<title>Chronicle Field Guide</title>
 ${styles()}
 <div class="layout">
@@ -1184,7 +1233,7 @@ ${styles()}
       <li><a href="#progression"><span class="n">7</span>Progression</a></li>
       <li><a href="#open"><span class="n">—</span>Open items</a></li>
     </ol></nav>
-    <p class="rail-foot">Generated from the repository by <code>scripts/build-field-guide.js</code>. Every name, coordinate and prompt on this page is read out of the content modules, <code>main.js</code> and the <code>.tmj</code> maps at build time.</p>
+    <p class="rail-foot">Every name, coordinate and prompt on this page is read out of the content modules, <code>main.js</code> and the <code>.tmj</code> maps at build time — nothing here is transcribed by hand. Rebuild with <code>npm run docs:field-guide</code>.<br><br>Built ${esc(buildStamp)} · commit <code>${esc(buildCommit)}</code></p>
   </aside>
   <main>
     <header class="masthead">
