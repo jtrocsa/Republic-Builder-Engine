@@ -45,6 +45,7 @@ import {
 } from "../../apps/web/src/main.js";
 import { buildCircuit, findRoute } from "../../apps/web/src/engine/npc-routing.js";
 import institutePalette from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
+import richmondPalette from "../../apps/web/src/content/tilesets/maps/richmond-field.palette.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -149,6 +150,7 @@ const TMJ_BY_UNIT = {
   "unit-02": "riverbend-field.tmj",
   "unit-03": "common-cause-field.tmj",
   "unit-04": "canal-crossroads-field.tmj",
+  "unit-05": "richmond-field.tmj",
 };
 
 function loadTmj(file) {
@@ -498,6 +500,173 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
       })
       .map((block) => block.kind);
     expect(afloat).toEqual([]);
+  });
+});
+
+// --- Richmond's bluff and its crossings ------------------------------------------------------------
+// The one map whose central design claim is a *negative* one: that the upper city and the bottom are
+// separated by a drop with exactly two ways down it, and that the water has exactly three ways over
+// it. Every assertion above is satisfied by a map with no bluff at all, so the constraint that makes
+// this map what it is would be the one thing nothing checked.
+//
+// It also cross-checks the two hand-duplicated copies of `isRichmondLand()` — main.js's and
+// scripts/generate-richmond-tmj.js's (decision log 0036) — the only way a test can, which is through
+// the artifact: the generator's copy decided which cells got painted water, main.js's copy decides
+// which cells the player may stand on, and the crossings are exactly where those two disagree on
+// purpose. If either copy drifts, a bridge lands where the mask refuses to go or the mask opens over
+// open water, and both show up here.
+describe("richmond bluff and crossings", () => {
+  const map = FIELD_MAPS["unit-05"];
+  const tmj = loadTmj(TMJ_BY_UNIT["unit-05"]);
+  const ground = tmj.layers.find((layer) => layer.name === "ground");
+
+  /** Every gid a palette entry's footprint can paint, against this map's own tileset ordering. */
+  function gidsOf(entry) {
+    const tileset = tmj.tilesets.find((set) =>
+      String(set.image).replace(/\\/g, "/").endsWith(`assets/tilesets/${entry.sheet}`)
+    );
+    const gids = new Set();
+    for (let row = 0; row < (entry.h ?? 1); row += 1) {
+      for (let col = 0; col < (entry.w ?? 1); col += 1) {
+        gids.add(tileset.firstgid + (entry.row + row) * tileset.columns + (entry.col + col));
+      }
+    }
+    return gids;
+  }
+  const waterGids = new Set([
+    ...gidsOf(richmondPalette.tiles.water),
+    ...gidsOf(richmondPalette.tiles.waterCanal),
+  ]);
+  const deckCells = new Set(
+    cellsPainted(tmj, richmondPalette.tiles.plankDeck).map(({ col, row }) => `${col},${row}`)
+  );
+
+  const STEP = 0.2;
+  const at = (i) => Number((i * STEP).toFixed(4));
+  /** Flood fill from the spawn with the real foot box, optionally with extra rects sealing a gap. */
+  function reachableFrom(extraBlocks = []) {
+    const blocks = [...map.blocks, ...extraBlocks];
+    const open = (x, y) =>
+      footIsOnLand(map, x, y) && !blocks.some((b) => rectsOverlap(footBoxFor(x, y), b));
+    const key = (i, j) => `${i},${j}`;
+    const start = [Math.round(map.spawn.x / STEP), Math.round(map.spawn.y / STEP)];
+    const reached = new Set();
+    if (!open(at(start[0]), at(start[1]))) return reached;
+    reached.add(key(...start));
+    const queue = [start];
+    while (queue.length) {
+      const [i, j] = queue.pop();
+      for (const [di, dj] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        if (reached.has(key(i + di, j + dj))) continue;
+        if (!open(at(i + di), at(j + dj))) continue;
+        reached.add(key(i + di, j + dj));
+        queue.push([i + di, j + dj]);
+      }
+    }
+    return reached;
+  }
+  const canStand = (reached, x, y) =>
+    reached.has(`${Math.round(x / STEP)},${Math.round(y / STEP)}`);
+
+  // A point in each half, well clear of the wall, that a walk has to be able to arrive at.
+  const IN_THE_BOTTOM = [
+    ["Tredegar's gate", 5.0, 22.6],
+    ["Shockoe's warehouse street", 35.0, 22.6],
+    ["the dock quay", 20.0, 31.0],
+  ];
+
+  it("lets the player walk from the upper city down into the bottom (normal case)", () => {
+    const reached = reachableFrom();
+    const unreachable = IN_THE_BOTTOM.filter(([, x, y]) => !canStand(reached, x, y)).map(
+      ([name]) => name
+    );
+    expect(unreachable).toEqual([]);
+  });
+
+  it("seals no open ground off from the spawn (edge case)", () => {
+    // The bluff makes this map far easier to strand somebody on than the others: a run of solid wall
+    // with two gaps in it is one furniture move away from a run of solid wall with one.
+    const reached = reachableFrom();
+    const stranded = [];
+    for (let i = 0; i <= Math.round(FIELD_GRID.columns / STEP); i += 1) {
+      for (let j = 0; j <= Math.round(FIELD_GRID.rows / STEP); j += 1) {
+        if (!footIsOnLand(map, at(i), at(j))) continue;
+        if (map.blocks.some((b) => rectsOverlap(footBoxFor(at(i), at(j)), b))) continue;
+        if (!reached.has(`${i},${j}`)) stranded.push([at(i), at(j)]);
+      }
+    }
+    expect(pocketSummary(stranded)).toBe("none");
+  });
+
+  it("drops to the bottom at cols 22-23 and 40-41 and nowhere else (edge case)", () => {
+    // Wall up both descents and the two halves must come apart. If a third way down ever opens —
+    // a shortened wall segment, a building moved off the line — this is what notices.
+    const sealed = [
+      { x1: 21.5, y1: 16.5, x2: 24.5, y2: 18.5, kind: "test seal, west descent" },
+      { x1: 39.5, y1: 16.5, x2: 42.5, y2: 18.5, kind: "test seal, east descent" },
+    ];
+    const reached = reachableFrom(sealed);
+    const stillReachable = IN_THE_BOTTOM.filter(([, x, y]) => canStand(reached, x, y)).map(
+      ([name]) => name
+    );
+    expect(stillReachable).toEqual([]);
+  });
+
+  it("stands the player over water only where a bridge is drawn (edge case)", () => {
+    // The cross-check between the two copies of the predicate. Painted water plus a land mask that
+    // says "stand here" is a player walking on the James, unless a deck was stamped there.
+    const walkingOnWater = [];
+    for (let row = 0; row < ground.height; row += 1) {
+      for (let col = 0; col < ground.width; col += 1) {
+        if (!waterGids.has(ground.data[row * ground.width + col])) continue;
+        if (!map.isLand(col + 0.5, row + 0.5)) continue;
+        if (deckCells.has(`${col},${row}`)) continue;
+        walkingOnWater.push(`(${col},${row})`);
+      }
+    }
+    expect(walkingOnWater).toEqual([]);
+  });
+
+  it("joins every span of drawn deck to ground the mask opens (normal case)", () => {
+    // The converse, and the one that catches a bridge drawn a column off its own mask: decking the
+    // player cannot reach is scenery, and scenery over a river reads as a bug.
+    //
+    // Stated as "touches walkable ground" rather than "is itself walkable", because Mayo's Bridge
+    // runs off the south edge on purpose — its last span is at row 35, past the mask's own y > 34.5
+    // limit, so that the road out of the city reads as continuing rather than as stopping in
+    // mid-river. What must never happen is a span that touches nothing.
+    expect(deckCells.size).toBeGreaterThan(0);
+    const stranded = [...deckCells].filter((cell) => {
+      const [col, row] = cell.split(",").map(Number);
+      for (const [dc, dr] of [
+        [0, 0],
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+      ]) {
+        if (map.isLand(col + dc + 0.5, row + dr + 0.5)) return false;
+      }
+      return true;
+    });
+    expect(stranded).toEqual([]);
+  });
+
+  it("keeps Mayo's Bridge walkable end to end, off the south edge (normal case)", () => {
+    // The bridge is the way out of the city and it runs past the mask's own southern limit, so it is
+    // walked rather than sampled at a point: every step from the quay to the edge has to hold.
+    const reached = reachableFrom();
+    const walked = [];
+    for (let y = 30.0; y <= 33.4; y += 0.2) {
+      if (canStand(reached, 32.0, y)) walked.push(y);
+    }
+    expect(walked.length, "no walkable span of Mayo's Bridge").toBeGreaterThan(12);
+    expect(Math.max(...walked)).toBeGreaterThan(33.0);
   });
 });
 

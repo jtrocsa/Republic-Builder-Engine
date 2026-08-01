@@ -24,6 +24,7 @@ import caribbean from "../../apps/web/src/content/tilesets/maps/caribbean-field.
 import riverbend from "../../apps/web/src/content/tilesets/maps/riverbend-field.palette.js";
 import commonCause from "../../apps/web/src/content/tilesets/maps/common-cause-field.palette.js";
 import canalCrossroads from "../../apps/web/src/content/tilesets/maps/canal-crossroads-field.palette.js";
+import richmond from "../../apps/web/src/content/tilesets/maps/richmond-field.palette.js";
 import canalPrintShop from "../../apps/web/src/content/tilesets/maps/canal-print-shop.palette.js";
 import canalBoardingHouse from "../../apps/web/src/content/tilesets/maps/canal-boarding-house.palette.js";
 import archiveRoom from "../../apps/web/src/content/tilesets/maps/archive-room.palette.js";
@@ -42,6 +43,7 @@ const MAP_PALETTES = [
   canalCrossroads,
   canalPrintShop,
   canalBoardingHouse,
+  richmond,
   archiveRoom,
   hallway,
   instituteHall,

@@ -50,9 +50,9 @@ boatshed
 boatwoman
 bohio
 Bohío
+bohío's
 bohios
 bohíos
-bohío's
 Bosman
 Bosman's
 Bundlephobia
@@ -116,11 +116,11 @@ flipbook
 footgun
 freedmens
 freedpeople
-freedpeoples
 freedpeople's
-frise
+freedpeoples
 Frethorne
 Frethorne's
+frise
 frontmatter
 fulltext
 Gast
@@ -128,6 +128,7 @@ Genericity
 Gerardus
 Ginés
 globbers
+Gowrie
 gradeable
 Grimké
 gsap
@@ -160,6 +161,7 @@ kase
 kastsen
 kayahr
 kekht
+Kell
 Keppler
 Keppler's
 keyup
@@ -181,6 +183,7 @@ longcoat
 longenough
 López
 Lucayan
+Mansarded
 Mapbox
 Mapbox's
 mapbuilder
@@ -189,6 +192,7 @@ Maren
 María
 maxlength
 maxrects
+Mayos
 mcculloch
 Mcpjson
 Meehan
@@ -266,6 +270,7 @@ retagged
 retile
 revertable
 rgba
+Richmonder
 Riis
 Ringmann
 Riverbend
@@ -286,6 +291,7 @@ screenshotting
 seedable
 sepulveda
 Sepúlveda
+Shockoe
 shortcutting
 sidepanel
 simurai
@@ -319,8 +325,8 @@ tilelayer
 Tilemap
 Tilemaps
 tileset
-tilesets
 tileset's
+tilesets
 tilesheet
 tilesheets
 tilewidth
@@ -369,17 +375,17 @@ viewbox
 Waldseem
 waldseemuller
 Waldseemüller
-Waldseemüller’s
 Waldseemüller's
+Waldseemüller’s
 WASD
 waterskins
 Wayfinding
 wilsons
 Wirt
 Wirt's
-Württemberg
 workadventure
 Workstream
 workstreams
+Württemberg
 Yeardley
 Zboray
