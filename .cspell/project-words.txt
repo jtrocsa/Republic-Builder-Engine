@@ -1,17 +1,17 @@
-﻿# Chronicle project dictionary - cSpell
 #
-# Domain vocabulary that is correct but absent from standard dictionaries:
-# APUSH people/places/terms, game and engine jargon, tileset and asset-pipeline
-# names, npm packages cited in the tooling audit, and coined code identifiers.
 #
-# Three "misspellings" below are deliberate - they are real names on disk or
-# upstream, and correcting them would break resolution:
+#
+#   Capenter   PixelLab's own spelling; see scripts/assets/character-manifest.js
 #   Centruy    apps/web/src/assets/tilesets/"19th Centruy European Dock"
 #   Labratory  apps/web/src/assets/tilesets/"Labratory"
-#   Capenter   PixelLab's own spelling; see scripts/assets/character-manifest.js
-#
+# APUSH people/places/terms, game and engine jargon, tileset and asset-pipeline
 # Archaic spellings quoted from primary sources live in source-quotations.txt.
+﻿# Chronicle project dictionary - cSpell
+# Domain vocabulary that is correct but absent from standard dictionaries:
+# names, npm packages cited in the tooling audit, and coined code identifiers.
 # One word per line. The editor's "Add to dictionary" quick-fix appends here.
+# Three "misspellings" below are deliberate - they are real names on disk or
+# upstream, and correcting them would break resolution:
 AABB
 ABCDEFGHJKLMNPQRSTUVWXYZ
 actfl
@@ -44,6 +44,7 @@ autotiler
 Autry
 Bartolomé
 Baselined
+batata
 Benavente
 Bernal
 blitter
@@ -76,8 +77,8 @@ Comeau's
 commoncause
 componentized
 compressionlevel
-conuco
 Consolas
+conuco
 conuco's
 Cortés
 Cortés's
@@ -139,8 +140,8 @@ gsap
 Guanahaní
 guanín
 Haudenosaunee
-headwrap
 headright
+headwrap
 Hernán
 hipp
 HIPP's
@@ -177,11 +178,10 @@ Korematsu
 labelledby
 Labratory
 Lanczos
-Leitner
 lede
+Leitner
 León
 lerp
-Segoe
 lerped
 lerping
 librsvg
@@ -198,13 +198,13 @@ Mapbox's
 mapbuilder
 mapeditor
 Maren
-Maurie
-McInnis
 María
+Maurie
 maxlength
 maxrects
 Mayos
 mcculloch
+McInnis
 Mcpjson
 Meehan
 Midori
@@ -305,6 +305,7 @@ Schoology
 screenshotted
 screenshotting
 seedable
+Segoe
 sepulveda
 Sepúlveda
 Shockoe
@@ -405,4 +406,5 @@ Workstream
 workstreams
 Württemberg
 Yeardley
+yuca
 Zboray

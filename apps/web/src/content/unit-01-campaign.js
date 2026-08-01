@@ -111,7 +111,7 @@ export const CASE_001_SOURCES = [
     date: "1991 exhibition text",
     record: "1492: An Ongoing Voyage, Library of Congress",
     visual: "context",
-    activityRoute: "village-activity",
+    activityRoute: "interview",
     // Investigation Challenge (Phase A of the Investigation/Archive Challenge
     // plan's catalog-expansion pass) — gates this source's sourceReader()
     // worksheet behind a pre-reveal prediction quest
@@ -141,7 +141,7 @@ export const CASE_001_SOURCES = [
     date: "1493",
     record: "Letter to Rafael Sánchez, written after the first voyage",
     visual: "letter",
-    activityRoute: "columbus-activity",
+    activityRoute: "discrepancy",
     excerpt:
       "“They are so ingenuous and free with all they have, that no one would believe it without seeing it.”",
     prompt: "How do the creator and intended audience shape what this letter emphasizes?",
@@ -161,7 +161,7 @@ export const CASE_001_SOURCES = [
     date: "1507",
     record: "Printed world map; Library of Congress Geography and Map Division",
     visual: "map",
-    activityRoute: "map-jigsaw",
+    activityRoute: "assembly",
     // Investigation Challenge (Phase A of the Investigation/Archive Challenge
     // plan's catalog-expansion pass) — gates this source's sourceReader()
     // worksheet behind a pre-reveal prediction quest

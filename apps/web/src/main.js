@@ -97,6 +97,21 @@ import {
   UNIT_05_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-05-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
+// The activity engines (Phase 68, decision log 0051). These four replaced the three
+// hand-written activity screens that were each welded to one source id. The registry knows no
+// history; everything a mission says lives in content/activities/.
+import {
+  ACTIVITY_ENGINE_KEYS,
+  actOnActivity,
+  activityOutcome,
+  defaultActivityState,
+  isActivityComplete,
+  isActivityEngine,
+  interviewHasAsked,
+  renderActivity,
+  renderActivityInline,
+} from "./engine/activities/index.js";
+import { UNIT_01_ACTIVITIES } from "./content/activities/unit-01-activities.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
@@ -155,7 +170,10 @@ import {
   CANAL_CROSSROADS_FIELD_BLOCKS,
   CANAL_CROSSROADS_FIELD_ROADS,
 } from "./content/maps/canal-crossroads-field.blocks.js";
-import { RICHMOND_FIELD_BLOCKS, RICHMOND_FIELD_ROADS } from "./content/maps/richmond-field.blocks.js";
+import {
+  RICHMOND_FIELD_BLOCKS,
+  RICHMOND_FIELD_ROADS,
+} from "./content/maps/richmond-field.blocks.js";
 // The two rooms that map opens into. No `*_ROADS` companion: a route is pathfound over road cells
 // discounted 4:1, and nothing in a twenty-tile room is far enough from anything for a road to mean
 // what it means outdoors.
@@ -1341,42 +1359,10 @@ const FIELD_SOURCE_POINTS = {
     kind: "Puzzle",
   },
 };
-const VILLAGE_OBSERVATIONS = [
-  {
-    id: "elder",
-    title: "Community elder",
-    scene:
-      "The elder listens while two villagers point toward a shoreline path and a garden worker. Decisions appear to move through a recognized leader, not a random crowd.",
-    note: "Leadership and social organization existed before Europeans arrived.",
-  },
-  {
-    id: "bohio",
-    title: "Bohío homes",
-    scene:
-      "Rounded houses, shared work areas, and stored goods show that this is an occupied community with family life and repeated daily routines.",
-    note: "Homes and settlement patterns contradict the idea of an empty island.",
-  },
-  {
-    id: "garden",
-    title: "Garden and canoe work",
-    scene:
-      "A garden worker and canoe worker move between cultivated land and the shore, connecting food, travel, labor, and local exchange.",
-    note: "Food production and shoreline activity show skill, work, and exchange.",
-  },
-];
-const MAP_PIECES = [
-  { id: "p1", label: "Map piece", col: 0, row: 0 },
-  { id: "p2", label: "Map piece", col: 1, row: 0 },
-  { id: "p3", label: "Map piece", col: 2, row: 0 },
-  { id: "p4", label: "Map piece", col: 3, row: 0 },
-  { id: "p5", label: "Map piece", col: 4, row: 0 },
-  { id: "p6", label: "Map piece", col: 0, row: 1 },
-  { id: "p7", label: "Map piece", col: 1, row: 1 },
-  { id: "p8", label: "Map piece", col: 2, row: 1 },
-  { id: "p9", label: "Map piece", col: 3, row: 1 },
-  { id: "p10", label: "Map piece", col: 4, row: 1 },
-];
-const MAP_TRAY_ORDER = ["p7", "p2", "p10", "p4", "p1", "p9", "p3", "p6", "p5", "p8"];
+// VILLAGE_OBSERVATIONS, MAP_PIECES and MAP_TRAY_ORDER used to live here — the hardcoded content
+// of the three welded activity screens. All three are now authored content in
+// content/activities/unit-01-activities.js, where the slots, fragments and tray order belong to
+// the mission rather than to the engine. See docs/decision-log/0051.
 
 // ---- Unit 2 field: Riverbend Settlement ----
 const UNIT2_FIELD_NPCS = [
@@ -3361,9 +3347,12 @@ const VALID_SCREENS = new Set([
   "archive",
   "travel",
   "field",
-  "village-activity",
-  "columbus-activity",
-  "map-jigsaw",
+  // One screen id per activity engine (interview / assembly / discrepancy / trace), spread from
+  // the registry so adding a fifth engine cannot forget this list. These replaced the three
+  // hand-written screen ids — village-activity, columbus-activity, map-jigsaw — which were each
+  // welded to a single source. A save left on one of those now falls through to the check below
+  // and resumes in the field, with the record itself untouched in progress.caseEvidence.
+  ...ACTIVITY_ENGINE_KEYS,
   "practice-check",
   "mini-games",
   "source",
@@ -3845,7 +3834,9 @@ function sceneForMusic() {
   if (
     progress.currentScreen === "institute" ||
     progress.currentScreen === "archive" ||
-    progress.currentScreen === "map-jigsaw" ||
+    // Every activity engine, not just the jigsaw this line used to name: all four are desk work
+    // on a record, and they share the Archive's track for the same reason it did.
+    isActivityEngine(progress.currentScreen) ||
     progress.currentScreen === "mini-games"
   )
     return "archive";
@@ -9330,18 +9321,65 @@ function runFieldMovementLoop(now) {
   updateFieldPlayer();
   fieldMoveFrame = window.requestAnimationFrame(runFieldMovementLoop);
 }
+// Every unit's activities in one flat lookup keyed by source id, the same shape as the quest
+// lookups above. A source with no entry here falls through to sourceReader() exactly as the 21
+// sources in Units 2-5 always have.
+const ACTIVITIES_BY_SOURCE = { ...UNIT_01_ACTIVITIES };
+
+function activityFor(sourceId) {
+  return ACTIVITIES_BY_SOURCE[sourceId] || null;
+}
+
+// Assets an activity's content refers to by opaque key. The engines never name a path: Vite needs
+// `new URL(..., import.meta.url)` at the call site, and engine/activities/ has to stay liftable
+// into another subject's pack.
+const ACTIVITY_IMAGES = { "waldseemuller-1507": waldseemuller };
+
 function ensureSourceActivity(sourceId) {
   progress.sourceActivities ??= {};
-  progress.sourceActivities[sourceId] ??= {
-    observed: [],
-    choice: null,
-    placed: {},
-    completed: false,
-  };
-  return progress.sourceActivities[sourceId];
+  const entry = (progress.sourceActivities[sourceId] ??= { state: null, completed: false });
+  const activity = activityFor(sourceId);
+  // Also the migration path off the three retired screens: their saves carry
+  // {observed, choice, placed} and no `state`, so an activity in flight restarts here. Secured
+  // evidence lives in progress.caseEvidence and is not touched by any of this.
+  if (activity && (!entry.state || typeof entry.state !== "object")) {
+    entry.state = defaultActivityState(activity.kind);
+  }
+  return entry;
 }
+
+// The tokens a DISCREPANCY observation's `requires` is matched against: every question this player
+// actually put to somebody, in any interview they have run. This is the whole cause-and-effect
+// mechanism — two students audit the same letter holding different evidence because they asked
+// different people, without one atom of the record changing.
+function interviewTokens() {
+  const tokens = [];
+  Object.entries(progress.sourceActivities || {}).forEach(([sourceId, entry]) => {
+    if (activityFor(sourceId)?.kind !== "interview") return;
+    Object.entries(entry?.state?.asked || {}).forEach(([speakerId, questions]) => {
+      (Array.isArray(questions) ? questions : []).forEach((questionId) => {
+        tokens.push(`asked:${speakerId}:${questionId}`);
+      });
+    });
+  });
+  return tokens;
+}
+
+// What each engine needs from the running game that it cannot know itself. Kept as plain data so
+// render() stays a pure function of (content, state, data).
+function activityContext(activity) {
+  if (activity.kind === "assembly") return { images: ACTIVITY_IMAGES };
+  if (activity.kind === "discrepancy") return { holds: interviewTokens() };
+  return {};
+}
+
 function sourceActivityRoute(sourceId) {
-  return sourceById(sourceId)?.activityRoute || "source";
+  const route = sourceById(sourceId)?.activityRoute;
+  // An activityRoute naming an engine we hold no content for degrades to the reader rather than to
+  // an empty activity screen. validate-content.js checks the two agree for shipped content, so
+  // this only catches a swapped-in source that brought a route but no activity with it.
+  if (route && isActivityEngine(route) && !activityFor(sourceId)) return "source";
+  return route || "source";
 }
 // Investigation Challenge gate: a source with investigationMode set must have its
 // gating quest graded complete before sourceEntryScreen() will route into sourceReader().
@@ -9656,6 +9694,15 @@ function fieldDialogueBubble() {
   const state = fieldNpcState(npc);
   const grid = activeFieldGrid();
   const x = state.x * grid.tile;
+  const interview = fieldInterviewPanel(npc.id);
+  // The ambient line is what tells you a person is worth asking, so it stays — until they have
+  // actually answered something, at which point it has done its job and the answer takes its place.
+  // Keeping both stacked a name, three lines of ambient text, an answer and four question chips
+  // into one bubble, which is taller than the field viewport can show above *or* below a speaker.
+  const line = interview.answering ? "" : `<p>${esc(npc.text)}</p>`;
+  // Rendered above the speaker; placeFieldDialogueBubble() may flip it under them after layout, if
+  // it does not fit. The speaker's own grid y travels on the element so that pass can recompute
+  // both positions without re-deriving anything.
   const y = (state.y - 1.18) * grid.tile;
   const edgeClass =
     x < 260
@@ -9674,7 +9721,79 @@ function fieldDialogueBubble() {
       : availability === "secured"
         ? `<button class="btn btn-outline field-speech-bubble__record" data-action="open-source" data-source="${carried.id}" data-origin="field">✓ ${esc(point.label)} — reopen</button>`
         : "";
-  return `<aside class="field-speech-bubble${edgeClass}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><b>${esc(npc.name)}</b><p>${esc(npc.text)}</p>${record}</aside>`;
+  return `<aside class="field-speech-bubble${edgeClass}" data-speaker-y="${state.y.toFixed(3)}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><b>${esc(npc.name)}</b>${line}${interview.markup}${record}</aside>`;
+}
+
+/**
+ * An INTERVIEW is put to people where they stand, so its question chips render inside the field
+ * dialogue bubble rather than on a screen. This is the only consumer of the registry's optional
+ * renderInline slot.
+ *
+ * The NPC's own standing line stays above the chips deliberately — it is the thing that tells a
+ * player this person is worth asking, and replacing it with a question menu would turn the cast
+ * back into buttons.
+ */
+function fieldInterviewPanel(npcId) {
+  const live = liveFieldInterview();
+  if (!live) return { markup: "", answering: false };
+  const markup = renderActivityInline("interview", live.activity, live.state, npcId);
+  if (!markup) return { markup: "", answering: false };
+  return {
+    // Wrapped with the source id so handleActivityAction() can resolve which activity this chip
+    // belongs to without the engine — which knows nothing about sources — having to emit it.
+    markup: `<div class="field-interview-panel" data-activity-source="${esc(live.source.id)}">${markup}</div>`,
+    answering: interviewHasAsked(live.activity, live.state, npcId),
+  };
+}
+
+/**
+ * The interview the player currently has open on this map, if any: an interview activity on one of
+ * this case's sources whose state has actually been created — which happens when they open the
+ * record that briefs the questions, and not before. Until then the cast has nothing to be asked.
+ */
+/**
+ * Flips the dialogue bubble under its speaker when there is no room above it.
+ *
+ * Measured rather than estimated, because the bubble's height is whatever the speaker has to say
+ * plus — once an interview is running — four question chips and an answer, which is roughly double.
+ * An estimate that is a little low silently reintroduces the clipping this exists to remove.
+ *
+ * The world scrolls under a fixed frame, so "no room" means the bubble's top is above the field
+ * viewport's top, not the page's. Reads layout and writes one class and one `top`; it never touches
+ * fieldCamera, which stays a pure function of player position. Safe to run once per render because
+ * the bubble is only created by a render, and moving closes it.
+ */
+function placeFieldDialogueBubble() {
+  const bubble = document.querySelector(".field-speech-bubble");
+  const viewport = document.getElementById("caseFieldMap");
+  if (!bubble || !viewport) return;
+  const speakerY = Number.parseFloat(bubble.dataset.speakerY);
+  if (!Number.isFinite(speakerY)) return;
+  const tile = activeFieldGrid().tile;
+  const BELOW = "field-speech-bubble--below";
+  bubble.classList.remove(BELOW);
+  bubble.style.top = `${((speakerY - 1.18) * tile).toFixed(1)}px`;
+  const clearance = bubble.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+  if (clearance >= 8) return;
+  bubble.classList.add(BELOW);
+  bubble.style.top = `${((speakerY + 0.95) * tile).toFixed(1)}px`;
+}
+
+/** Display name for an NPC id, across every surface of the active unit's map. */
+function fieldNpcName(npcId) {
+  const outdoor = activeFieldOutdoorMap();
+  const rooms = (outdoor.interiors || []).flatMap((room) => room.npcs || []);
+  return [...outdoor.npcs, ...rooms].find((npc) => npc.id === npcId)?.name || "";
+}
+
+function liveFieldInterview() {
+  for (const source of sourcesForCase(activeFieldCaseId())) {
+    const activity = activityFor(source.id);
+    if (activity?.kind !== "interview") continue;
+    const state = progress.sourceActivities?.[source.id]?.state;
+    if (state?.asked) return { source, activity, state };
+  }
+  return null;
 }
 function recallBeacon() {
   // Outdoors only. Recalling to the Archive from inside a building would strand the return
@@ -9776,69 +9895,134 @@ function fieldScreen() {
   return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
-function villageSceneMarkup(active, observed) {
-  const isElder = active.id === "elder";
-  const isBohio = active.id === "bohio";
-  const figures = isElder
-    ? `<img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--elder"><img src="${sheetFor("caribbean-man").portrait}" alt="" class="scene-person scene-person--listener scene-person--left"><img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--listener scene-person--right">`
-    : isBohio
-      ? `<div class="scene-bohio scene-bohio--large"><span></span></div><div class="scene-bohio scene-bohio--small"><span></span></div><img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--family scene-person--one"><img src="${sheetFor("caribbean-man").portrait}" alt="" class="scene-person scene-person--family scene-person--two">`
-      : `<div class="scene-garden-rows"></div><div class="scene-canoe-close"></div><img src="${sheetFor("caribbean-woman").portrait}" alt="" class="scene-person scene-person--worker"><img src="${sheetFor("caribbean-man").portrait}" alt="" class="scene-person scene-person--canoe">`;
-  return `<div class="village-scene village-scene--focused village-scene--${esc(active.id)}"><div class="scene-sunpatch"></div>${figures}<div class="scene-dialogue"><b>${esc(active.title)}</b><p>${esc(active.scene)}</p><span>${esc(active.note)}</span></div></div>`;
+// Human-facing name for each engine, used in the activity screen's eyebrow. The engine keys
+// themselves are machine strings (screen ids, content's `activityRoute`); these are what a
+// student reads.
+const ACTIVITY_ENGINE_LABELS = {
+  interview: "The Interview",
+  assembly: "The Reconstruction",
+  discrepancy: "The Audit",
+  trace: "The Trace",
+};
+
+// One mark per engine, so an activity says what kind of thing it is before a student reads a word
+// of it. Inline SVG rather than PNG assets, matching DIRECTOR_REVEAL_ICONS above and the cursor in
+// global.css — the project's established convention for small UI chrome, and the reason there is no
+// icon-asset pipeline to add four files to.
+const ACTIVITY_ENGINE_ICONS = {
+  // Two people talking: what one says depends on what you asked.
+  interview: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.6h8.4a1 1 0 0 1 1 1v4.3a1 1 0 0 1-1 1H6L3.3 12V9.9h-.8a1 1 0 0 1-1-1V4.6a1 1 0 0 1 1-1Z"/><path d="M14.3 7.4h2.9a1.1 1.1 0 0 1 1.1 1.1v4.4a1.1 1.1 0 0 1-1.1 1.1h-.5v2.3l-2.6-2.3h-1.6a1.1 1.1 0 0 1-1.1-1.1v-1.1"/></svg>`,
+  // Three pieces placed, one slot still open.
+  assembly: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.6" width="6.6" height="6.6" rx="1"/><rect x="2" y="11" width="6.6" height="6.6" rx="1"/><rect x="11.4" y="11" width="6.6" height="6.6" rx="1"/><rect x="11.4" y="2.6" width="6.6" height="6.6" rx="1" stroke-dasharray="2 2"/></svg>`,
+  // Two columns of the same account, one of them short.
+  discrepancy: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.6" width="15.2" height="14.8" rx="1.2"/><path d="M10 2.6v14.8"/><path d="M4.8 6.9h3M4.8 10.4h3M4.8 13.9h3"/><path d="M12.4 6.9h2.9M12.4 10.4h1.5"/></svg>`,
+  // One thing, followed through the places it passes.
+  trace: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="3.9" cy="14.6" r="1.9"/><circle cx="10" cy="5.7" r="1.9"/><circle cx="16.1" cy="13.1" r="1.9"/><path d="M5 13 8.8 7.4M11.3 7.1l3.6 4.4"/></svg>`,
+};
+
+// One host screen for every activity engine — the screen id *is* the engine key. Which record the
+// activity is about comes from progress.activeActivitySourceId, persisted for exactly this
+// reason: the three screens this replaced only survived a reload by hardcoding one source apiece
+// (mapJigsawScreen() opened, literally, with sourceById("waldseemuller-map")).
+function activityScreen(kind) {
+  const sourceId = progress.activeActivitySourceId || openSourceId;
+  const source = sourceId ? sourceById(sourceId) : null;
+  const activity = source ? activityFor(source.id) : null;
+  // A save can outlive its content — a teacher swapping the source out of a slot, or a screen id
+  // that no longer matches the activity behind it. Land in the field rather than throwing into
+  // render()'s recovery path, which resets the whole case.
+  if (!source || !activity || activity.kind !== kind) {
+    progress.currentScreen = "field";
+    save();
+    return `${chrome()}<main class="shell"><section class="empty-state"><h1>Nothing open</h1><p>That activity is no longer in your hands. Walk back to the record to pick it up again.</p><button class="btn btn-gold" data-action="field">Back to the field →</button></section></main>`;
+  }
+  // Restores the module-local id after a reload, so the source reader this hands off to still
+  // knows what it is opening.
+  openSourceId = source.id;
+  const entry = ensureSourceActivity(source.id);
+  const complete = isActivityComplete(kind, activity, entry.state);
+  const activeCase = caseById(activeFieldCaseId());
+  const kicker = `${ACTIVITY_ENGINE_ICONS[kind] || ""}<span>${esc(
+    [activeCase ? caseNumberLabel(activeCase) : "", ACTIVITY_ENGINE_LABELS[kind]]
+      .filter(Boolean)
+      .join(" · ")
+  )}</span>`;
+  const board = renderActivity(kind, activity, entry.state, activityContext(activity));
+  // The line that starts the activity, in the voice of whoever says it. Rendered by the host rather
+  // than the engine because it belongs in the copy column, which the engine has no view of.
+  const briefing = activity.briefing
+    ? `<blockquote class="activity-briefing"><p>${esc(activity.briefing.line)}</p><cite>${esc(fieldNpcName(activity.briefing.speaker))}</cite></blockquote>`
+    : "";
+  const footer = complete
+    ? `<p class="activity-feedback success">Record stabilized.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${esc(source.id)}">Open ${esc(source.title)} →</button>`
+    : "";
+  // The board and the footer share the shell's right-hand column, so they are wrapped rather than
+  // being two more children of a two-column grid.
+  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p>${esc(activity.intro)}</p>${briefing}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
 }
 
-function villageActivityScreen() {
-  const source = sourceById("taino-context");
-  const activity = ensureSourceActivity(source.id);
-  const observed = new Set(activity.observed || []);
-  const activeId =
-    activity.activeObservation ||
-    VILLAGE_OBSERVATIONS.find((item) => !observed.has(item.id))?.id ||
-    VILLAGE_OBSERVATIONS[0].id;
-  const active =
-    VILLAGE_OBSERVATIONS.find((item) => item.id === activeId) || VILLAGE_OBSERVATIONS[0];
-  const complete = VILLAGE_OBSERVATIONS.every((item) => observed.has(item.id));
-  const cards = VILLAGE_OBSERVATIONS.map(
-    (item) =>
-      `<button class="investigation-card ${observed.has(item.id) ? "is-complete" : ""} ${active.id === item.id ? "is-active" : ""}" data-action="observe-village" data-observe="${item.id}"><b>${esc(item.title)}</b><span>${esc(item.scene)}</span><i>${observed.has(item.id) ? "Observation saved ✓" : "Investigate scene"}</i></button>`
-  ).join("");
-  return `${chrome()}<main class="shell activity-shell village-investigation-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Village Investigation</h1><p>The island is already inhabited. Gather three field observations from the village, then compare your notes with the context record.</p><div class="activity-rule"><b>Goal:</b> investigate each scene, preserve the observations, then open the context record and write your own interpretation.</div></section><section class="activity-board village-board">${villageSceneMarkup(active, observed)}<div class="investigation-grid">${cards}</div>${complete ? `<p class="activity-feedback success">Village record stabilized. You observed leadership, settlement, cultivated work, and shoreline activity before opening the secondary context note.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open context record →</button>` : `<p class="activity-feedback">${observed.size}/3 field scenes investigated. Select a scene card to preserve what you observed.</p>`}</section></main>`;
+// One dispatch point for every control an engine renders. Deliberately on its own
+// `data-activity-action` attribute rather than main.js's global `data-action`: the engines use
+// short generic verbs (place, file, select, log) that would have to be globally unique across
+// every screen in the game if they shared that namespace.
+function handleActivityAction(control, overrides = {}) {
+  const sourceId =
+    control.closest("[data-activity-source]")?.dataset.activitySource ||
+    progress.activeActivitySourceId ||
+    openSourceId;
+  const activity = sourceId ? activityFor(sourceId) : null;
+  if (!activity) return;
+  const entry = ensureSourceActivity(sourceId);
+  // `overrides` is how the drop handler says "place" over a slot button whose own verb is "lift".
+  const data = { ...control.dataset, ...overrides };
+  const next = actOnActivity(activity.kind, activity, entry.state, {
+    type: data.activityAction,
+    speaker: data.speaker,
+    question: data.question,
+    board: data.board,
+    slot: data.slot,
+    fragment: data.fragment,
+    claim: data.claim,
+    verdict: data.verdict,
+    gap: data.gap,
+    leg: data.leg,
+    effect: data.effect,
+    option: data.option,
+  });
+  // Every engine's reducer returns the state object unchanged for an action it refuses (out of
+  // range, gated, unknown). Re-rendering on those would flicker the screen and, on the field,
+  // close the dialogue bubble the player is reading.
+  if (next === entry.state) return;
+  entry.state = next;
+  recordActivityOutcomes(activity, entry.state);
+  playQuestSfx(sourceId);
+  save();
+  render();
 }
 
-function columbusActivityScreen() {
-  const source = sourceById("columbus-letter");
-  const activity = ensureSourceActivity(source.id);
-  const selected = activity.choice;
-  const choiceText =
-    selected === "audience"
-      ? "Correct. POV is shaped by audience and purpose: Columbus emphasizes what would matter to Spanish sponsors and officials."
-      : selected
-        ? "Reconsider the speaker’s audience and purpose. A primary source is evidence, but it is not automatically neutral."
-        : "";
-  return `${chrome()}<main class="shell activity-shell spanish-encounter-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Spanish Camp Source Encounter</h1><p>The dialogue below is dramatized and historically grounded. Use it to think about point of view before opening the actual letter excerpt.</p><div class="camp-dialogue quote-dialogue"><img src="${sheetFor("columbus").portrait}" alt=""><div><b>Christopher Columbus</b><p>“The sovereigns will want to know what this voyage can bring them: land, souls, trade, and another crossing.”</p></div></div><div class="camp-dialogue quote-dialogue"><img src="${sheetFor("spanish-sailor").portrait}" alt=""><div><b>Spanish scribe</b><p>“Then the account must persuade as well as record. We write for the court, not only for ourselves.”</p></div></div></section><section class="activity-board"><h2>POV checkpoint</h2><p>Which statement best explains how point of view should shape a Chronicler’s reading of Columbus’s 1493 letter?</p><div class="choice-stack"><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="audience" ${selected === "audience" ? "checked" : ""}> Columbus’s claims should be read alongside his audience and purpose because he was reporting to Spanish officials whose support mattered.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="neutral" ${selected === "neutral" ? "checked" : ""}> The letter should be treated as neutral because firsthand accounts do not contain assumptions or motives.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="taino" ${selected === "taino" ? "checked" : ""}> The letter mainly reveals the point of view of Taíno communities because it records their exact words.</label><label><input type="radio" name="columbus-choice" data-action="columbus-choose" value="map" ${selected === "map" ? "checked" : ""}> The letter is best used as a map source because it shows later European geographic labeling.</label></div>${choiceText ? `<p class="activity-feedback ${selected === "audience" ? "success" : "error"}">${esc(choiceText)}</p>` : ""}${selected === "audience" ? `<button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open Columbus letter →</button>` : ""}</section></main>`;
-}
-
-function mapJigsawScreen() {
-  const source = sourceById("waldseemuller-map");
-  const activity = ensureSourceActivity(source.id);
-  activity.placed ??= {};
-  const complete = MAP_PIECES.every((piece) => activity.placed[piece.id] === piece.id);
-  const placedIds = new Set(Object.values(activity.placed));
-  const slots = MAP_PIECES.map((piece) => {
-    const placed = activity.placed[piece.id];
-    const pieceInfo = MAP_PIECES.find((p) => p.id === placed);
-    return `<div class="map-slot map-slot--${piece.id} ${placed ? "has-piece" : ""}" data-map-slot="${piece.id}">${pieceInfo ? `<div class="map-piece map-piece--${pieceInfo.id}" draggable="true" data-map-piece="${pieceInfo.id}"><span>${esc(pieceInfo.label)}</span></div>` : `<span></span>`}</div>`;
-  }).join("");
-  const trayPieces = MAP_TRAY_ORDER.map((id) => MAP_PIECES.find((piece) => piece.id === id))
-    .filter(Boolean)
-    .filter((piece) => !placedIds.has(piece.id));
-  const tray = trayPieces
-    .map(
-      (piece) =>
-        `<div class="map-piece map-piece--${piece.id}" draggable="true" data-map-piece="${piece.id}"><span>${esc(piece.label)}</span></div>`
-    )
-    .join("");
-  return `${chrome()}<main class="shell activity-shell activity-shell--wide"><section class="activity-copy"><button class="back-link" data-action="field">← Back to Caribbean field</button><p class="kicker">Case 1.01 interaction</p><h1>Map Puzzle</h1><p>Rebuild the Waldseemüller world map. The outside stays straight, while the inner seam lines show how the pieces connect.</p><div class="activity-rule"><b>Goal:</b> reconstruct the map, then decide what kind of historical evidence this visual source can and cannot provide.</div></section><section class="activity-board jigsaw-board jigsaw-board--ten"><div class="jigsaw-grid jigsaw-grid--ten">${slots}</div><div class="piece-tray piece-tray--ten">${tray || "<p>All fragments placed.</p>"}</div>${complete ? `<p class="activity-feedback success">Map reconstructed. This source is useful for changing European geographic knowledge, not for direct evidence of Taíno daily life.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${source.id}">Open map source →</button>` : `<p class="activity-feedback">Drag the upright map pieces into the board. Match the image, straight outer border, and inner puzzle seams.</p>`}</section></main>`;
+// The activity twin of recordSkillOutcomes(). Activities report the same
+// { key, skillCategory, correct } shape quest types do, so the mastery record needs no new
+// concepts — only a second door into it.
+function recordActivityOutcomes(activity, state) {
+  if (isPreviewingContent()) return;
+  activityOutcome(activity.kind, activity, state).skillOutcomes.forEach((outcome) => {
+    if (!outcome.skillCategory) return;
+    const correct = !!outcome.correct;
+    const existing = progress.skillMastery[outcome.key];
+    if (
+      existing &&
+      existing.skillCategory === outcome.skillCategory &&
+      existing.correct === correct
+    ) {
+      return;
+    }
+    progress.skillMastery[outcome.key] = {
+      skillCategory: outcome.skillCategory,
+      correct,
+      questType: activity.kind,
+      updatedAt: new Date().toISOString(),
+    };
+  });
 }
 
 function practiceCheckScreen() {
@@ -10330,7 +10514,14 @@ function render() {
   if (progress.currentHubRoom !== "hallway") stopHallwayScene();
   let html;
   try {
-    switch (progress.currentScreen) {
+    // Any registered activity engine renders through the one host screen, and the screen id *is*
+    // the engine key. Resolved into a sentinel ahead of the switch because a `case` label can't be
+    // computed — this way adding a fifth engine needs no edit here at all.
+    const activityEngine = isActivityEngine(progress.currentScreen) ? progress.currentScreen : null;
+    switch (activityEngine ? "activity" : progress.currentScreen) {
+      case "activity":
+        html = activityScreen(activityEngine);
+        break;
       case "intro-welcome":
         html = introWelcomeScreen();
         break;
@@ -10363,15 +10554,6 @@ function render() {
         break;
       case "field":
         html = fieldScreen();
-        break;
-      case "village-activity":
-        html = villageActivityScreen();
-        break;
-      case "columbus-activity":
-        html = columbusActivityScreen();
-        break;
-      case "map-jigsaw":
-        html = mapJigsawScreen();
         break;
       case "practice-check":
         if (!progress.settings.miniGamesEnabled || !PRACTICE_CHECK_QUESTS[activeFieldCaseId()]) {
@@ -10457,6 +10639,7 @@ function render() {
     window.requestAnimationFrame(() => {
       updateFieldPlayer();
       updateFieldNpcs();
+      placeFieldDialogueBubble();
       // Keyed off the active *surface* id, so an interior paints its own canvases rather than the
       // outdoor map's. This is still the one genuinely hard-coded per-map switch in the field
       // runtime — a new map or room adds a line here.
@@ -11105,6 +11288,9 @@ function handleFieldClick(target, action) {
     }
     sourceOrigin = "field";
     ensureSourceActivity(openSourceId);
+    // Persisted alongside the module-local id so a reload inside an activity resumes in the right
+    // one. openSourceId cannot do that job by itself — it dies with the page.
+    progress.activeActivitySourceId = openSourceId;
     playQuestSfx(openSourceId);
     progress.currentScreen = sourceEntryScreen(openSourceId);
     save();
@@ -11116,6 +11302,7 @@ function handleFieldClick(target, action) {
     openSourceId = target.dataset.source;
     sourceOrigin = "field";
     ensureSourceActivity(openSourceId).completed = true;
+    progress.activeActivitySourceId = null;
     progress.currentScreen = "source";
     save();
     render();
@@ -11127,24 +11314,10 @@ function handleFieldClick(target, action) {
     render();
     return true;
   }
-  if (action === "observe-village") {
-    playQuestSfx("taino-context");
-    const a = ensureSourceActivity("taino-context");
-    a.observed ??= [];
-    a.activeObservation = target.dataset.observe;
-    if (!a.observed.includes(target.dataset.observe)) a.observed.push(target.dataset.observe);
-    save();
-    render();
-    return true;
-  }
-  if (action === "columbus-choose") {
-    playQuestSfx("columbus-letter");
-    const a = ensureSourceActivity("columbus-letter");
-    a.choice = target.value;
-    save();
-    render();
-    return true;
-  }
+  // "observe-village" and "columbus-choose" used to live here — the two bespoke actions of two
+  // welded activity screens. Activity controls now go through handleActivityAction() on their own
+  // data-activity-action attribute, so their verbs no longer have to be unique across every screen
+  // in the game.
   return false;
 }
 
@@ -11153,10 +11326,11 @@ function handleSourceReaderClick(target, action) {
     openSourceId = target.dataset.source;
     sourceOrigin = "field";
     // Re-resolve via sourceEntryScreen() rather than hardcoding "source": a
-    // source can carry both investigationMode and a bespoke activityRoute
-    // (e.g. taino-context's village-activity, waldseemuller-map's map-jigsaw)
-    // — the Investigation Challenge gates entry, it doesn't replace the
-    // bespoke mini-game that source still has.
+    // source can carry both investigationMode and an activityRoute (e.g.
+    // taino-context's interview, waldseemuller-map's assembly) — the
+    // Investigation Challenge gates entry, it doesn't replace the activity
+    // that source still has waiting behind it.
+    progress.activeActivitySourceId = openSourceId;
     progress.currentScreen = sourceEntryScreen(openSourceId);
     save();
     render();
@@ -12004,6 +12178,17 @@ function handleAppClick(event) {
     updateMiniGameUi();
     return;
   }
+  // Activity-engine controls, on their own attribute for the same reason the drag listeners are
+  // separate: the engines use short generic verbs (place, file, select, log) that would otherwise
+  // have to be unique across every data-action in the game. Checked before that dispatch because
+  // INTERVIEW's question chips render inside the field dialogue bubble, on the field screen.
+  const activityControl = event.target.closest("[data-activity-action]");
+  if (activityControl) {
+    event.preventDefault();
+    activityControl.blur?.();
+    handleActivityAction(activityControl);
+    return;
+  }
   const target = event.target.closest("[data-action]");
   if (!target) {
     if (progress.currentScreen === "field" && progress.activeFieldNpc) {
@@ -12251,9 +12436,11 @@ function handleAppInput(event) {
 }
 
 function handleAppDragstart(event) {
-  const mapPiece = event.target.closest("[data-map-piece]");
-  if (mapPiece) {
-    event.dataTransfer.setData("text/map-piece", mapPiece.dataset.mapPiece);
+  // Drag is an accelerator over ASSEMBLY's select-then-place path, not the only way in: the same
+  // fragment buttons work from a keyboard, which the ten-piece jigsaw this replaced never did.
+  const activityFragment = event.target.closest("[data-activity-fragment]");
+  if (activityFragment) {
+    event.dataTransfer.setData("text/activity-fragment", activityFragment.dataset.activityFragment);
     event.dataTransfer.effectAllowed = "move";
     return;
   }
@@ -12280,11 +12467,11 @@ function handleAppDragstart(event) {
 }
 
 function handleAppDragover(event) {
-  const mapSlot = event.target.closest("[data-map-slot]");
+  const activitySlot = event.target.closest("[data-activity-slot]");
   const sequenceItem = event.target.closest("[data-sequence-item]");
   const evidenceSlot = event.target.closest("[data-evidence-slot]");
   const cargoHold = event.target.closest("[data-cargo-hold]");
-  const dropTarget = mapSlot || sequenceItem || evidenceSlot || cargoHold;
+  const dropTarget = activitySlot || sequenceItem || evidenceSlot || cargoHold;
   if (dropTarget) {
     event.preventDefault();
     dropTarget.classList.add("is-over");
@@ -12292,7 +12479,7 @@ function handleAppDragover(event) {
 }
 
 function handleAppDragleave(event) {
-  event.target.closest("[data-map-slot]")?.classList.remove("is-over");
+  event.target.closest("[data-activity-slot]")?.classList.remove("is-over");
   event.target.closest("[data-sequence-item]")?.classList.remove("is-over");
   event.target.closest("[data-evidence-slot]")?.classList.remove("is-over");
   event.target.closest("[data-cargo-hold]")?.classList.remove("is-over");
@@ -12342,19 +12529,16 @@ function handleAppDrop(event) {
     applyEvidencePlacement(questId, sourceId, evidenceSlot.dataset.evidenceSlot);
     return;
   }
-  const mapSlot = event.target.closest("[data-map-slot]");
-  if (mapSlot) {
+  const activitySlot = event.target.closest("[data-activity-slot]");
+  if (activitySlot) {
     event.preventDefault();
-    const pieceId = event.dataTransfer.getData("text/map-piece");
-    if (!pieceId) return;
-    const a = ensureSourceActivity("waldseemuller-map");
-    a.placed ??= {};
-    Object.keys(a.placed).forEach((slot) => {
-      if (a.placed[slot] === pieceId) delete a.placed[slot];
-    });
-    a.placed[mapSlot.dataset.mapSlot] = pieceId;
-    save();
-    render();
+    activitySlot.classList.remove("is-over");
+    const fragmentId = event.dataTransfer.getData("text/activity-fragment");
+    if (!fragmentId) return;
+    // A filled slot's own button says "lift"; a drop onto it means "place", so the verb is
+    // overridden here rather than encoded twice in the markup. The board comes from the slot, so
+    // a fragment dragged across boards simply doesn't resolve and the reducer no-ops.
+    handleActivityAction(activitySlot, { activityAction: "place", fragment: fragmentId });
   }
 }
 
@@ -12487,6 +12671,7 @@ function handleWindowKeydown(event) {
           }
           sourceOrigin = "field";
           ensureSourceActivity(openSourceId);
+          progress.activeActivitySourceId = openSourceId;
           playQuestSfx(openSourceId);
           progress.currentScreen = hasEvidence(activeFieldCaseId(), openSourceId)
             ? "source"

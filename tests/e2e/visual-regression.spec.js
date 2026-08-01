@@ -176,7 +176,10 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("travel-transition"));
   });
 
-  test("field: Caribbean, village activity, Columbus encounter, map jigsaw", async ({ page }) => {
+  // Phase 68 replaced the three welded activity screens (village-activity, columbus-activity,
+  // map-jigsaw) with one host screen and four content-driven engines, so the three baselines this
+  // test used to take are now the interview, the audit and the reconstruction.
+  test("field: Caribbean, interview, audit, reconstruction", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "field",
       activeCaseId: "case-001",
@@ -191,17 +194,31 @@ test.describe("Gameplay visual-regression baselines", () => {
     await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
     await expect(page).toHaveScreenshot(snap("field-caribbean"));
 
-    await setScreen(page, { currentScreen: "village-activity", activeCaseId: "case-001" });
-    await expect(page.locator(".village-investigation-shell")).toBeVisible();
-    await expect(page).toHaveScreenshot(snap("village-activity"));
+    // Each activity screen resolves its record from progress.activeActivitySourceId, so seeding it
+    // alongside the screen id is what opens the right one.
+    await setScreen(page, {
+      currentScreen: "interview",
+      activeCaseId: "case-001",
+      activeActivitySourceId: "taino-context",
+    });
+    await expect(page.locator(".activity-board--interview")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("activity-interview"));
 
-    await setScreen(page, { currentScreen: "columbus-activity", activeCaseId: "case-001" });
-    await expect(page.locator(".spanish-encounter-shell")).toBeVisible();
-    await expect(page).toHaveScreenshot(snap("columbus-activity"));
+    await setScreen(page, {
+      currentScreen: "discrepancy",
+      activeCaseId: "case-001",
+      activeActivitySourceId: "columbus-letter",
+    });
+    await expect(page.locator(".activity-board--discrepancy")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("activity-discrepancy"));
 
-    await setScreen(page, { currentScreen: "map-jigsaw", activeCaseId: "case-001" });
-    await expect(page.locator(".jigsaw-board")).toBeVisible();
-    await expect(page).toHaveScreenshot(snap("map-jigsaw"));
+    await setScreen(page, {
+      currentScreen: "assembly",
+      activeCaseId: "case-001",
+      activeActivitySourceId: "waldseemuller-map",
+    });
+    await expect(page.locator(".activity-board--assembly")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("activity-assembly"));
   });
 
   // Banked in Phase 53. The Caribbean was the only field map with a baseline, so the Riverbend and
@@ -374,12 +391,34 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("practice-check-graded"));
   });
 
-  test("investigation challenge, village activity completion, and source reader", async ({
-    page,
-  }) => {
+  test("investigation challenge, interview completion, and source reader", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "field",
       tutorial: { step: "complete", completed: true, skipped: false },
+      // The interview's coverage bar is four questions across five people, which is a walk around
+      // the island rather than three clicks on one screen. It is banked as gameplay in
+      // activity-engines.spec.js; here the asking is seeded so this test stays about the two
+      // screenshots it takes.
+      //
+      // Deliberately not the elder: this test walks to her and clicks the record button in her
+      // speech bubble, and seeding her as already-asked swaps her ambient line for an answer and
+      // adds four question chips, making that bubble tall enough to be a flaky click target under
+      // parallel workers. The other five satisfy the bar on their own.
+      sourceActivities: {
+        "taino-context": {
+          state: {
+            asked: {
+              "taino-gardener": ["grows"],
+              "taino-fisher": ["trade"],
+              "taino-child": ["gold"],
+              columbus: ["decides"],
+              "spanish-scribe": ["decides"],
+            },
+            filed: null,
+          },
+          completed: false,
+        },
+      },
     });
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
@@ -402,12 +441,10 @@ test.describe("Gameplay visual-regression baselines", () => {
     await quest.locator('input[type="radio"][value="0"]').check();
     await page.locator('[data-action="investigation-continue"]').click();
 
-    // Lands on village-activity (taino-context's bespoke activityRoute). Complete all 3
-    // observations for real, then open the context record to reach the source reader.
-    await expect(page.locator(".village-investigation-shell")).toBeVisible();
-    for (const observeId of ["elder", "garden", "bohio"]) {
-      await page.locator(`[data-action="observe-village"][data-observe="${observeId}"]`).click();
-    }
+    // Lands on the interview (taino-context's activityRoute). With the coverage bar already met by
+    // the seed, filing the record is the one move left before the source reader opens.
+    await expect(page.locator(".activity-board--interview")).toBeVisible();
+    await page.locator('.activity-closer [data-option="questions"]').click();
     const openSourceButton = page.locator('[data-action="open-activity-source"]');
     await expect(openSourceButton).toBeVisible();
     await openSourceButton.click();

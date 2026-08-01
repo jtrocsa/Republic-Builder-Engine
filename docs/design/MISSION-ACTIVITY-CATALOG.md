@@ -8,6 +8,13 @@ variety rule is binding on new units; §6 is the retrofit list for the five that
 Companion ADR: `docs/decision-log/0050-mission-activity-catalog.md` records _why_ the two rules in
 §1 and §2 exist. This file is the catalog itself.
 
+> **Phase 68 built four of these.** `engine/activities/` now holds four subject-agnostic activity
+> engines with Zod content contracts — `interview` (Group A), `assembly` (B1), `discrepancy` (a
+> B3/B4 hybrid) and `trace` (B5) — behind one host screen, replacing the three welded screens §0
+> below describes. Unit 1's Caribbean runs three of them; `trace` has no content yet. See
+> `docs/decision-log/0051-activity-engines.md`. The rest of this document is still the queue: §4's
+> unbuilt entries are unbuilt, and §5's variety rule is unchanged.
+
 ---
 
 ## 0. Why this document exists
@@ -22,17 +29,20 @@ nothing to say beyond one line each, and nothing they say depends on anything th
 
 The measured state, verified against source on 2026-08-01:
 
-| Layer                        | What actually exists                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Rubric-scored quest types    | 6 — `mcq`, `sequencing`, `evidence-organizing`, `hipp`, `saq`, `dbq` (`quest-types/index.js`)                                                          |
-| Bespoke map activities       | **3, Unit 1 only** — `village-activity`, `columbus-activity`, `map-jigsaw`                                                                             |
-| `activityRoute` in Units 2–5 | `null` on every source, all 21 of them                                                                                                                 |
-| Field NPCs                   | **70 flat `text:` strings.** No branching, no state, no reaction to what the player carries                                                            |
-| Mini-games                   | 2, real and reachable — `cargo-sorting`, `storm-navigation` (see §4 Group D; the "unwired" note in decision log `0028` describes Phase 9 and is stale) |
-| Shared closer                | Reconstruction Table — the same drag-record-to-lane on all five maps                                                                                   |
+| Layer                        | What actually exists                                                                                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rubric-scored quest types    | 6 — `mcq`, `sequencing`, `evidence-organizing`, `hipp`, `saq`, `dbq` (`quest-types/index.js`)                                                               |
+| Bespoke map activities       | ~~**3, Unit 1 only** — `village-activity`, `columbus-activity`, `map-jigsaw`~~ **Replaced in Phase 68** by 4 content-driven engines in `engine/activities/` |
+| `activityRoute` in Units 2–5 | `null` on every source, all 21 of them — **still true.** The engines exist; nobody has authored activities for those units yet                              |
+| Field NPCs                   | **70 flat `text:` strings** — still true as _ambient_ dialogue. INTERVIEW adds its questions on top from activity content, without touching the tables      |
+| Mini-games                   | 2, real and reachable — `cargo-sorting`, `storm-navigation` (see §4 Group D; the "unwired" note in decision log `0028` describes Phase 9 and is stale)      |
+| Shared closer                | Reconstruction Table — the same drag-record-to-lane on all five maps                                                                                        |
 
-The three bespoke activities are each hardcoded to one source id — `mapJigsawScreen()` opens with
-`sourceById("waldseemuller-map")`. None of the three is reachable from any unit but the first.
+Each of the three bespoke activities _was_ hardcoded to one source id — `mapJigsawScreen()` opened
+with `sourceById("waldseemuller-map")`, so none of them was reachable from any unit but the first.
+That welding is what Phase 68 removed; the row above is kept because it is the reason this document
+exists, and because "the activity takes its source as a parameter" is the property that must not be
+given back.
 
 **The gap this catalog fills:** there is no vocabulary for "what kind of thing a mission is," so
 every new mission defaults to the one shape that already exists. §4 is that vocabulary.
@@ -365,17 +375,19 @@ map attached.
 
 Ordered by payoff per unit of work. None of this is scheduled; it is the queue to draw from.
 
-| #   | Change                                                                          | Group | Cost |
-| --- | ------------------------------------------------------------------------------- | ----- | ---- |
-| 1   | Generalize `map-jigsaw` off `waldseemuller-map` so any unit can use it          | B1    | S    |
-| 2   | Fix the pre-solved sequencing quests in Units 2–4 (author them out of order)    | C2    | S    |
-| 3   | Case 1.02 "Atlantic Route Puzzle" → an actual route plot                        | B5    | M    |
-| 4   | Units 4/5's composite documents → fillable forms with an omission question      | B3    | M    |
-| 5   | Unit 5's "who the record counted" lane → a real tally against the ward register | B4    | M    |
-| 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    |
+| #   | Change                                                                          | Group | Cost | Status                  |
+| --- | ------------------------------------------------------------------------------- | ----- | ---- | ----------------------- |
+| 1   | Generalize `map-jigsaw` off `waldseemuller-map` so any unit can use it          | B1    | S    | **Done** (Phase 68)     |
+| 2   | Fix the pre-solved sequencing quests in Units 2–4 (author them out of order)    | C2    | S    | Open                    |
+| 3   | Case 1.02 "Atlantic Route Puzzle" → an actual route plot                        | B5    | M    | Engine done, no content |
+| 4   | Units 4/5's composite documents → fillable forms with an omission question      | B3    | M    | Open                    |
+| 5   | Unit 5's "who the record counted" lane → a real tally against the ward register | B4    | M    | Open                    |
+| 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    | Open                    |
 
-Items 1 and 2 are small enough to do in a single pass and would measurably widen what Units 2–5 ask
-of a student without any new engine capability.
+**The shape of the remaining work changed in Phase 68.** Items 1 and 3 were engine problems and the
+engines now exist — `assembly` takes any image and any grid, `trace` takes any chain of nodes. What
+is left on those rows is authored content, not code. Item 2 is unchanged and still the cheapest real
+win in this table.
 
 ---
 

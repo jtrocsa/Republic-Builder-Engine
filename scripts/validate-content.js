@@ -41,12 +41,66 @@ import {
 import { SaqQuestListSchema } from "../apps/web/src/quest-types/history/saq-quest.js";
 import { DbqQuestListSchema } from "../apps/web/src/quest-types/history/dbq-quest.js";
 import { QUEST_TYPES } from "../apps/web/src/quest-types/index.js";
+import { ActivityMapSchema, isActivityEngine } from "../apps/web/src/engine/activities/index.js";
 import {
   buildPrimarySourcesSchema,
   buildVisualSourcesSchema,
   UnitMetaSchema,
 } from "../apps/web/src/content/schemas/primary-source-library.schema.js";
 import { PRIMARY_SOURCE_LIBRARY_UNITS } from "../apps/web/src/content/primary-source-library/index.js";
+
+const ACTIVITY_ROUTE_GROUP = "cross-reference: activity routes match activity kinds";
+
+/**
+ * The two halves of an activity have to agree. A source's `activityRoute` is the screen main.js
+ * routes to; the activity's own `kind` is the engine that renders there. No schema can catch a
+ * mismatch because the two live in different files — and the symptom is a student sent to a screen
+ * that immediately bounces them back to the field.
+ *
+ * Also checks the reverse direction: an activity keyed to a source id that does not exist is
+ * content nobody can ever reach.
+ */
+function checkActivityRoutes(content) {
+  const errors = [];
+  ["unit01", "unit02", "unit03", "unit04", "unit05"].forEach((key) => {
+    const unit = content[key] || {};
+    const activities = unit.activities || {};
+    const sources = unit.sources || [];
+    const sourceIds = new Set(sources.map((source) => source.id));
+
+    sources.forEach((source) => {
+      const route = source.activityRoute;
+      const activity = activities[source.id];
+      if (route && isActivityEngine(route) && !activity) {
+        errors.push({
+          group: ACTIVITY_ROUTE_GROUP,
+          id: source.id,
+          path: `${key}.sources`,
+          message: `activityRoute is "${route}" but no activity is authored for this source.`,
+        });
+      }
+      if (activity && activity.kind !== route) {
+        errors.push({
+          group: ACTIVITY_ROUTE_GROUP,
+          id: source.id,
+          path: `${key}.sources`,
+          message: `activityRoute is ${JSON.stringify(route ?? null)} but its activity is kind "${activity.kind}" — these name the same engine and must match.`,
+        });
+      }
+    });
+
+    Object.keys(activities).forEach((sourceId) => {
+      if (sourceIds.has(sourceId)) return;
+      errors.push({
+        group: ACTIVITY_ROUTE_GROUP,
+        id: sourceId,
+        path: `${key}.activities`,
+        message: `keyed to a source that is not in this unit — the activity is unreachable.`,
+      });
+    });
+  });
+  return errors;
+}
 
 function main() {
   const content = loadChronicleContent();
@@ -59,6 +113,13 @@ function main() {
       "unit-01-campaign.js: CASE_001_SOURCES",
       buildSourcesSchema({}),
       content.unit01.sources
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-01-activities.js: UNIT_01_ACTIVITIES",
+      ActivityMapSchema,
+      content.unit01.activities
     )
   );
   results.push(runSchema("unit-01-campaign.js: REVIEW", ReviewSchema, content.unit01.review));
@@ -523,6 +584,7 @@ function main() {
     "cross-reference: hipp alternate references",
     "cross-reference: primary source library ids",
     "cross-reference: primary source library visual ids",
+    "cross-reference: activity routes match activity kinds",
   ];
 
   // Every quest id, grouped by QUEST_TYPES key, across all three units — the resolution set
@@ -867,6 +929,7 @@ function main() {
         items: visualSources,
       }))
     ),
+    ...checkActivityRoutes(content),
   ];
 
   const allErrors = results.flatMap((result) => result.errors).concat(crossFileErrors);

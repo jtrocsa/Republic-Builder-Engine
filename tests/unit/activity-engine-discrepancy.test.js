@@ -1,0 +1,235 @@
+// DISCREPANCY's second question — "is that gap an error or a design?" — is the
+// whole engine, and it must never be shown for a claim whose verdict the player
+// has not yet landed, because seeing it asked is itself the answer to the first
+// question. That gating is pinned here, along with the observation column's
+// `requires` token, which is how one player's earlier work changes what they
+// have to audit with.
+import { describe, expect, it } from "vitest";
+import {
+  DiscrepancyActivitySchema,
+  actDiscrepancy,
+  claimStatus,
+  defaultDiscrepancyState,
+  discrepancyOutcome,
+  discrepancySettled,
+  isDiscrepancyComplete,
+  renderDiscrepancy,
+} from "../../apps/web/src/engine/activities/discrepancy.js";
+
+const activity = () => ({
+  kind: "discrepancy",
+  id: "test-discrepancy",
+  title: "The letter",
+  intro: "Check it.",
+  record: { label: "A letter home", attribution: "The captain, 1493" },
+  verdicts: [
+    { id: "supported", label: "Supported" },
+    { id: "contradicted", label: "Contradicted" },
+    { id: "cannot", label: "Cannot tell" },
+  ],
+  gapRequiredFor: "contradicted",
+  gapKinds: [
+    { id: "error", label: "An error" },
+    { id: "design", label: "A design" },
+  ],
+  claims: [
+    {
+      id: "harbours",
+      text: "The harbours are deep and safe.",
+      verdict: "supported",
+      gap: null,
+      why: "You walked the anchorage yourself.",
+    },
+    {
+      id: "empty",
+      text: "The land lies empty and unworked.",
+      verdict: "contradicted",
+      gap: "design",
+      why: "He needed unclaimed land more than he needed an accurate one.",
+    },
+  ],
+  observed: [
+    { id: "anchorage", text: "Deep water at the point.", requires: null },
+    { id: "conuco", text: "Cassava in worked rows.", from: "Gardener", requires: "asked:grows" },
+  ],
+  closer: {
+    prompt: "File it.",
+    skillCategory: "sourcing",
+    options: [
+      { id: "purpose", text: "Written to persuade", correct: true, why: "Right." },
+      {
+        id: "mistake",
+        text: "An honest mistake",
+        correct: false,
+        why: "He says otherwise himself.",
+      },
+    ],
+  },
+});
+
+const settled = () => {
+  const a = activity();
+  let state = defaultDiscrepancyState();
+  state = actDiscrepancy(a, state, { type: "verdict", claim: "harbours", verdict: "supported" });
+  state = actDiscrepancy(a, state, { type: "verdict", claim: "empty", verdict: "contradicted" });
+  state = actDiscrepancy(a, state, { type: "gap", claim: "empty", gap: "design" });
+  return state;
+};
+
+describe("DiscrepancyActivitySchema", () => {
+  it("accepts a well-formed audit (normal case)", () => {
+    expect(DiscrepancyActivitySchema.safeParse(activity()).success).toBe(true);
+  });
+
+  it("rejects a claim whose verdict was never authored (edge case)", () => {
+    const broken = activity();
+    broken.claims[0].verdict = "maybe";
+    const result = DiscrepancyActivitySchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes('unknown verdict "maybe"'))).toBe(
+      true
+    );
+  });
+
+  it("rejects a failing claim with no gap kind (boundary case)", () => {
+    const broken = activity();
+    broken.claims[1].gap = null;
+    const result = DiscrepancyActivitySchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("requires a gap kind"))).toBe(true);
+  });
+
+  it("rejects a gap kind on a claim that will never be asked for one (edge case)", () => {
+    // Authored but unreachable content is worse than missing content: it reads
+    // as done and never appears.
+    const broken = activity();
+    broken.claims[0].gap = "error";
+    const result = DiscrepancyActivitySchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("never asks for one"))).toBe(true);
+  });
+
+  it("rejects a gapRequiredFor that is not one of the verdicts (edge case)", () => {
+    const broken = activity();
+    broken.gapRequiredFor = "wrong";
+    const result = DiscrepancyActivitySchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(
+      result.error.issues.some((i) => i.message.includes("not one of the authored verdicts"))
+    ).toBe(true);
+  });
+});
+
+describe("claimStatus — when the gap question opens", () => {
+  it("stays shut while the verdict is wrong (regression case)", () => {
+    // Showing "error or design?" for a claim the player marked supported would
+    // tell them their verdict was wrong before they earned it.
+    const state = actDiscrepancy(activity(), defaultDiscrepancyState(), {
+      type: "verdict",
+      claim: "empty",
+      verdict: "supported",
+    });
+    const status = claimStatus(activity(), activity().claims[1], state);
+    expect(status.verdictRight).toBe(false);
+    expect(status.gapOpen).toBe(false);
+  });
+
+  it("opens once the failing verdict is landed (normal case)", () => {
+    const state = actDiscrepancy(activity(), defaultDiscrepancyState(), {
+      type: "verdict",
+      claim: "empty",
+      verdict: "contradicted",
+    });
+    expect(claimStatus(activity(), activity().claims[1], state).gapOpen).toBe(true);
+  });
+
+  it("never opens for a claim whose right verdict does not call for one (boundary case)", () => {
+    const state = actDiscrepancy(activity(), defaultDiscrepancyState(), {
+      type: "verdict",
+      claim: "harbours",
+      verdict: "supported",
+    });
+    const status = claimStatus(activity(), activity().claims[0], state);
+    expect(status.gapOpen).toBe(false);
+    expect(status.settled).toBe(true);
+  });
+});
+
+describe("actDiscrepancy", () => {
+  it("changing a verdict abandons the gap chosen under the old one (regression case)", () => {
+    // Otherwise a stale answer survives to a question no longer on screen and
+    // the claim reads as settled the moment the verdict is re-landed.
+    let state = settled();
+    expect(state.gaps.empty).toBe("design");
+    state = actDiscrepancy(activity(), state, {
+      type: "verdict",
+      claim: "empty",
+      verdict: "cannot",
+    });
+    expect(state.gaps.empty).toBeUndefined();
+  });
+
+  it("ignores a gap answer for a claim whose gap question is shut (regression case)", () => {
+    const before = defaultDiscrepancyState();
+    const after = actDiscrepancy(activity(), before, {
+      type: "gap",
+      claim: "empty",
+      gap: "design",
+    });
+    expect(after).toBe(before);
+  });
+
+  it("refuses to file until every claim is settled (boundary case)", () => {
+    const partial = actDiscrepancy(activity(), defaultDiscrepancyState(), {
+      type: "verdict",
+      claim: "harbours",
+      verdict: "supported",
+    });
+    expect(actDiscrepancy(activity(), partial, { type: "file", option: "purpose" }).filed).toBe(
+      null
+    );
+    expect(discrepancySettled(activity(), settled())).toBe(true);
+    expect(actDiscrepancy(activity(), settled(), { type: "file", option: "purpose" }).filed).toBe(
+      "purpose"
+    );
+  });
+});
+
+describe("isDiscrepancyComplete / discrepancyOutcome", () => {
+  it("needs every claim settled and a correctly filed closer (boundary case)", () => {
+    const state = settled();
+    expect(isDiscrepancyComplete(activity(), state)).toBe(false);
+    const right = actDiscrepancy(activity(), state, { type: "file", option: "purpose" });
+    expect(isDiscrepancyComplete(activity(), right)).toBe(true);
+    expect(discrepancyOutcome(activity(), right).findings).toHaveLength(2);
+  });
+});
+
+describe("renderDiscrepancy — the observation column", () => {
+  it("hides an observation whose token the player does not hold (normal case)", () => {
+    const markup = renderDiscrepancy(activity(), defaultDiscrepancyState(), { holds: [] });
+    expect(markup).toContain("You did not gather this.");
+    expect(markup).not.toContain("Cassava in worked rows.");
+  });
+
+  it("shows it once the token is held (normal case)", () => {
+    // This is the cause-and-effect hook: what the player asked elsewhere
+    // changes what they can audit the record against.
+    const markup = renderDiscrepancy(activity(), defaultDiscrepancyState(), {
+      holds: ["asked:grows"],
+    });
+    expect(markup).toContain("Cassava in worked rows.");
+  });
+
+  it("always shows an observation with no token (boundary case)", () => {
+    expect(renderDiscrepancy(activity(), defaultDiscrepancyState())).toContain(
+      "Deep water at the point."
+    );
+  });
+
+  it("withholds a claim's `why` until it is settled (normal case)", () => {
+    const before = renderDiscrepancy(activity(), defaultDiscrepancyState());
+    expect(before).not.toContain("He needed unclaimed land");
+    expect(renderDiscrepancy(activity(), settled())).toContain("He needed unclaimed land");
+  });
+});

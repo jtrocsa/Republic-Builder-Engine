@@ -22,7 +22,7 @@ export const CASE_001_SOURCE_ALTERNATES = [
       date: "1991 exhibition text",
       record: "1492: An Ongoing Voyage, Library of Congress",
       visual: "context",
-      activityRoute: "village-activity",
+      activityRoute: "interview",
       investigationMode: "mcq",
       investigationQuestId: "case-001-investigation-mcq-taino-origins",
       excerpt:

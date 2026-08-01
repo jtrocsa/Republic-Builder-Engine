@@ -34,7 +34,7 @@ const validSource = {
   date: "1991",
   record: "1492: An Ongoing Voyage",
   visual: "context",
-  activityRoute: "village-activity",
+  activityRoute: "interview",
   excerpt: "Villages were governed by chieftains.",
   prompt: "What does this establish about Caribbean societies?",
   feedback: "Useful context, not a Taíno-authored primary source.",

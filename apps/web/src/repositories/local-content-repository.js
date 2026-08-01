@@ -18,6 +18,7 @@ import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
 import * as unit04Quests from "../content/quests/unit-04-quests.js";
 import * as unit05Quests from "../content/quests/unit-05-quests.js";
+import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -31,6 +32,9 @@ export function loadChronicleContent() {
       brand: unit01Campaign.BRAND,
       unit: unit01Campaign.UNIT_01,
       sources: unit01Campaign.CASE_001_SOURCES,
+      // Activity content for the four engines in engine/activities/, keyed by the source id each
+      // one opens from. Only Unit 1 has any yet.
+      activities: UNIT_01_ACTIVITIES,
       review: unit01Campaign.REVIEW,
       mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
       evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,

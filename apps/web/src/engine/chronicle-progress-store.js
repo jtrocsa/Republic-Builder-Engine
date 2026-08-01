@@ -28,7 +28,12 @@ export const DEFAULT_PROGRESS = {
   unitComplete: false,
   hubNotice: "",
   fieldNotice: "",
+  // Per-source activity state: { [sourceId]: { state, completed } }, where `state` belongs to
+  // whichever activity engine that source routes to (engine/activities/). A scalar sibling below
+  // remembers which one is open, because main.js's openSourceId is module-local and dies on
+  // reload — the three screens this replaced only resumed by hardcoding one source apiece.
   sourceActivities: {},
+  activeActivitySourceId: null,
   archiveChallenges: {},
   submissions: {},
   activityState: {},

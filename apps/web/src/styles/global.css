@@ -5280,140 +5280,11 @@ dd {
     serif;
   letter-spacing: 0.04em;
 }
-.activity-rule {
-  margin-top: 20px;
-  padding: 16px 18px;
-  border-left: 3px solid #edcf7a;
-  background: rgba(255, 255, 255, 0.05);
-  line-height: 1.55;
-  color: #f4dfae;
-}
 .activity-board h2 {
   font-family: "Cinzel", serif;
   color: var(--cream);
   margin-top: 0;
-}
-.village-scene {
-  position: relative;
-  min-height: 250px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.25);
-  border-radius: 20px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(166, 200, 111, 0.45) 0 4px, transparent 5px),
-    linear-gradient(140deg, #6e9b61, #4f7e5e);
-  background-size:
-    42px 42px,
-    auto;
-  margin-bottom: 20px;
-}
-.mini-hut {
-  left: 46%;
-  top: 88px;
-  transform: translateX(-50%) scale(0.78);
-  position: absolute !important;
-}
-.mini-garden {
-  position: absolute;
-  left: 7%;
-  top: 28px;
-  width: 190px;
-  height: 88px;
-  border-radius: 18px;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(77, 114, 53, 0.75) 0 11px,
-    rgba(128, 161, 83, 0.75) 11px 24px
-  );
-  border: 2px solid rgba(49, 89, 46, 0.6);
-}
-.mini-canoe {
-  position: absolute;
-  right: 6%;
-  bottom: 46px;
-  width: 168px;
-  height: 32px;
-  border-radius: 50%;
-  background: #6d3f22;
-  border: 4px solid #332015;
-  transform: rotate(-12deg);
-}
-.mini-person {
-  position: absolute;
-  width: 70px;
-  height: 105px;
-  object-fit: contain;
-  filter: drop-shadow(0 7px 4px rgba(var(--c-black-rgb), 0.25));
-}
-.mini-person.elder {
-  left: 62%;
-  top: 110px;
-}
-.mini-person.gardener {
-  left: 18%;
-  top: 74px;
-}
-.investigation-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.investigation-card {
-  border: 1px solid rgba(var(--c-gold-rgb), 0.24);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.055);
-  padding: 16px;
-  color: #dff1ef;
-  text-align: left;
-  cursor: pointer;
-  min-height: 170px;
-}
-.investigation-card b {
-  display: block;
-  color: #ffdf91;
-  font-family: "Cinzel", serif;
-  margin-bottom: 8px;
-}
-.investigation-card span {
-  display: block;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-.investigation-card i {
-  display: block;
-  margin-top: 14px;
-  font-style: normal;
-  color: #9adfdd;
-  font-weight: 700;
-}
-.investigation-card.is-complete {
-  background: rgba(77, 170, 132, 0.18);
-  border-color: rgba(112, 228, 188, 0.55);
-}
-.camp-dialogue {
-  display: grid;
-  grid-template-columns: 76px 1fr;
-  gap: 16px;
-  margin: 15px 0;
-  padding: 14px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.2);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
-}
-.camp-dialogue img {
-  width: 76px;
-  height: 110px;
-  object-fit: contain;
-}
-.camp-dialogue b {
-  color: #ffdf91;
-  font-family: "Cinzel", serif;
-}
-.camp-dialogue p {
-  margin: 0.25em 0 0;
-  font-size: 0.92rem;
-}
-/* The Spanish-camp POV checkpoint's options. Its markup predates `.choice` and is a bare
+} /* The Spanish-camp POV checkpoint's options. Its markup predates `.choice` and is a bare
    `<label><input> text`, so it can't share that class without touching the one screen it belongs to —
    but it is multiple choice on a mission screen, so it gets the same size, spacing, hover and
    selected treatment. Anything less makes one mission look like a different app. */
@@ -5421,43 +5292,6 @@ dd {
   display: grid;
   gap: 10px;
   margin: 18px 0;
-}
-.choice-stack label {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.22);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #e4f0ee;
-  font-size: 1rem;
-  line-height: 1.55;
-  cursor: pointer;
-  transition:
-    border-color 140ms ease,
-    background 140ms ease;
-}
-.choice-stack label:hover {
-  border-color: rgba(var(--c-gold-rgb), 0.5);
-  background: rgba(255, 255, 255, 0.085);
-}
-.choice-stack label:focus-within {
-  border-color: var(--gold);
-  outline: 2px solid rgba(var(--c-gold-rgb), 0.38);
-  outline-offset: 2px;
-}
-.choice-stack label:has(input:checked) {
-  border-color: var(--gold);
-  background: rgba(var(--c-gold-rgb), 0.13);
-  color: #fff6e0;
-}
-.choice-stack input {
-  flex: none;
-  width: 17px;
-  height: 17px;
-  margin: 4px 0 0;
-  accent-color: #e0b45b;
 }
 .quest-practice-item {
   margin-bottom: 26px;
@@ -5517,6 +5351,704 @@ dd {
   background: rgba(178, 75, 75, 0.16);
   border: 1px solid rgba(232, 124, 124, 0.42);
   color: #ffe3de;
+}
+
+/* ============================================================
+   Activity engines (Phase 68)
+   Styling for engine/activities/ — INTERVIEW, ASSEMBLY, DISCREPANCY, TRACE — hosted by
+   activityScreen() in main.js. Written in place under the .activity-* chassis above rather than as
+   an override layer, which is how the three competing styles this replaced came to exist.
+
+   `--activity-grain` is the hook the generated board material fills. It defaults to `none`, so
+   every rule below is complete without art and gains depth when art is present.
+   ============================================================ */
+/* Scoped to the activity host's own shell by its data attribute, not to `.activity-shell` — that
+   class is shared with the Archive Challenges shell, the practice check and non-map missions, and
+   an unscoped `align-items` here unstretched all three of their left-hand panels. */
+.activity-shell[data-activity-source] {
+  --activity-grain: none;
+  --activity-edge: rgba(var(--c-gold-rgb), 0.3);
+  /* The copy column is short and the board is long. Stretching them to match left the left-hand
+     panel as a tall empty box on all three Unit 1 activities. */
+  align-items: start;
+}
+/* Screen-reader-only. Used by the interview notebook, where a cell nobody asked has to be silent
+   visually and legible to a reader. There was no such utility in this file before. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+/* The engine's mark sits with the eyebrow, so an activity announces what kind of thing it is
+   before a student reads a word of it. */
+.kicker--activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kicker--activity svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  opacity: 0.85;
+}
+/* The line that opens an activity, in the voice of whoever says it. */
+.activity-briefing {
+  margin: 20px 0 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--c-border-gold);
+  border-radius: 0 var(--c-radius-md) var(--c-radius-md) 0;
+  background: rgba(var(--c-black-rgb), 0.24);
+}
+.activity-briefing p {
+  margin: 0;
+  font-family: "Spectral", serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+.activity-briefing cite {
+  display: block;
+  margin-top: 8px;
+  font-family: "Cinzel", serif;
+  font-size: 0.72rem;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.activity-stage {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-width: 0;
+}
+/* Scoped by the host's data attribute for the same reason align-items above is: `.activity-board`
+   is shared with the practice check, the Archive Challenges shell and non-map missions, and giving
+   it `display: grid` unscoped re-laid every quest list in the game — 22px of gap between every
+   item, accumulating down the page. */
+.activity-shell[data-activity-source] .activity-board {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  background-image:
+    var(--activity-grain), linear-gradient(180deg, rgba(9, 55, 71, 0.88), rgba(6, 31, 43, 0.92));
+  background-blend-mode: soft-light, normal;
+  box-shadow:
+    inset 0 1px 0 rgba(var(--c-white-rgb), 0.06),
+    0 24px 48px rgba(var(--c-black-rgb), 0.23);
+}
+.activity-shell[data-activity-source] .activity-board h3 {
+  margin: 0;
+  font-family: "Cinzel", serif;
+  font-size: 1.02rem;
+  letter-spacing: 0.03em;
+  color: var(--gold-soft);
+}
+.activity-note {
+  margin: 0.35em 0 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--c-text-muted);
+}
+.activity-progress {
+  padding: 10px 14px;
+  border: 1px solid var(--activity-edge);
+  border-radius: var(--c-radius-pill);
+  background: rgba(var(--c-black-rgb), 0.22);
+}
+.activity-progress p {
+  margin: 0;
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+  color: var(--c-text-secondary);
+}
+.activity-progress b {
+  color: var(--gold-soft);
+  font-variant-numeric: tabular-nums;
+}
+/* Wide content scrolls inside its own box; the page body never moves sideways. */
+.activity-scroller {
+  overflow-x: auto;
+  margin: 0 -6px;
+  padding: 0 6px;
+}
+.activity-why {
+  margin: 0;
+  padding: 11px 14px;
+  border-left: 3px solid var(--activity-edge);
+  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
+  background: rgba(var(--c-black-rgb), 0.2);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
+.activity-why.is-correct {
+  border-left-color: var(--c-success);
+  background: rgba(70, 165, 124, 0.14);
+  color: #dfffee;
+}
+.activity-why.is-wrong {
+  border-left-color: var(--c-error);
+  background: rgba(178, 75, 75, 0.14);
+  color: #ffe3de;
+}
+.activity-why.is-locked {
+  font-style: italic;
+}
+
+/* --- the closer: the one graded moment every engine ends on --- */
+.activity-closer {
+  display: grid;
+  gap: 13px;
+  padding: 20px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.44);
+  border-radius: var(--c-radius-lg);
+  background: rgba(var(--c-black-rgb), 0.26);
+  box-shadow: inset 0 1px 0 rgba(var(--c-white-rgb), 0.05);
+}
+.activity-closer.is-locked {
+  opacity: 0.62;
+  border-color: var(--c-border-subtle);
+}
+.activity-closer__prompt {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+.activity-closer__options {
+  display: grid;
+  gap: 9px;
+}
+.activity-option {
+  padding: 13px 16px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-md);
+  background: rgba(var(--c-white-rgb), 0.05);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--c-dur-fast) ease,
+    background var(--c-dur-fast) ease;
+}
+.activity-option:hover:not(:disabled),
+.activity-option:focus-visible {
+  border-color: var(--c-border-gold);
+  background: rgba(var(--c-gold-rgb), 0.1);
+}
+.activity-option:disabled {
+  cursor: not-allowed;
+}
+.activity-option.is-correct {
+  border-color: var(--c-success);
+  background: rgba(70, 165, 124, 0.2);
+}
+.activity-option.is-wrong {
+  border-color: var(--c-error);
+  background: rgba(178, 75, 75, 0.18);
+}
+.activity-footer {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.activity-footer .activity-feedback {
+  margin-top: 0;
+  width: 100%;
+}
+
+/* --- INTERVIEW: the notebook --- */
+.interview-notebook {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.82rem;
+}
+.interview-notebook th,
+.interview-notebook td {
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--c-border-subtle);
+  vertical-align: top;
+  text-align: left;
+}
+.interview-notebook thead th {
+  font-family: "Cinzel", serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  border-bottom-color: var(--activity-edge);
+  min-width: 148px;
+}
+.interview-notebook tbody th {
+  min-width: 132px;
+  color: var(--c-text);
+  font-weight: 400;
+}
+.interview-notebook tbody th b {
+  display: block;
+  font-size: 0.86rem;
+}
+.interview-notebook tbody th small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+}
+.interview-notebook td {
+  line-height: 1.5;
+  color: var(--c-text-secondary);
+}
+/* A cell you never asked reads as absence, not as an empty box — the whole mission is about what
+   a record leaves out. */
+.interview-notebook td.is-unasked {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 5px,
+    rgba(var(--c-white-rgb), 0.05) 5px 6px
+  );
+}
+.interview-notebook td.is-flat {
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+.interview-notebook td.is-useful {
+  box-shadow: inset 3px 0 0 var(--c-gold);
+  background: rgba(var(--c-gold-rgb), 0.07);
+  color: var(--c-text);
+}
+
+/* --- INTERVIEW, out on the map: question chips inside the field dialogue bubble --- */
+.field-speech-bubble:has(.field-interview) {
+  width: 404px;
+}
+.field-interview-panel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--c-gold-rgb), 0.28);
+}
+.field-interview__answer {
+  margin: 0 0 9px;
+  padding: 9px 11px;
+  border-left: 2px solid var(--c-border-subtle);
+  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
+  background: rgba(var(--c-black-rgb), 0.26);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--c-text-secondary);
+}
+.field-interview__answer.is-useful {
+  border-left-color: var(--c-gold);
+  background: rgba(var(--c-gold-rgb), 0.1);
+  color: var(--c-text);
+}
+/* Two columns, not a wrapping row: four stacked chips made the bubble tall enough to be clipped by
+   the top of the field viewport, and the flip alone shouldn't have to carry that. */
+.field-interview__questions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.field-interview__q {
+  padding: 6px 11px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-pill);
+  background: rgba(var(--c-white-rgb), 0.06);
+  color: var(--c-text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.field-interview__q:hover,
+.field-interview__q:focus-visible {
+  border-color: var(--c-border-gold);
+  color: var(--c-text);
+}
+.field-interview__q.is-asked {
+  border-style: dashed;
+  color: var(--c-text-muted);
+}
+.field-interview__q.is-showing {
+  border-style: solid;
+  border-color: var(--c-gold);
+  background: rgba(var(--c-gold-rgb), 0.16);
+  color: var(--c-text);
+}
+
+/* --- ASSEMBLY: boards, slots, tray --- */
+.activity-assembly-board {
+  display: grid;
+  gap: 14px;
+}
+.activity-slots {
+  display: grid;
+  gap: 8px;
+}
+.activity-assembly-board--image .activity-slots {
+  /* Grid and picture shape all come from the board itself as inline custom properties, so a board
+     of any size needs no CSS of its own — the ten-piece jigsaw this replaced hardcoded five columns
+     and one aspect ratio. The aspect goes on the whole board and the rows share the height, which
+     is what makes the tiles the shape the picture was actually cut into. */
+  grid-template-columns: repeat(var(--assembly-columns, 2), 1fr);
+  grid-template-rows: repeat(var(--assembly-rows, 1), 1fr);
+  aspect-ratio: var(--assembly-aspect, 1.55);
+  padding: 10px;
+  border: 1px solid var(--activity-edge);
+  border-radius: var(--c-radius-lg);
+  background: rgba(var(--c-black-rgb), 0.3);
+}
+.activity-assembly-board--label .activity-slots {
+  grid-template-columns: 1fr;
+}
+.activity-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px dashed rgba(var(--c-gold-rgb), 0.4);
+  border-radius: var(--c-radius-md);
+  background-color: rgba(var(--c-white-rgb), 0.04);
+  background-repeat: no-repeat;
+  color: var(--c-text-muted);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+}
+.activity-assembly-board--label .activity-slot {
+  min-height: 58px;
+  gap: 6px;
+  justify-items: start;
+  justify-content: start;
+  grid-auto-flow: row;
+  text-align: left;
+}
+.activity-slot.is-over {
+  outline: 3px solid rgba(86, 216, 231, 0.5);
+  outline-offset: -3px;
+}
+.activity-slot.is-filled {
+  border-style: solid;
+}
+.activity-slot.is-right {
+  border-color: rgba(var(--c-gold-rgb), 0.7);
+}
+.activity-slot.is-wrong {
+  border-color: var(--c-error);
+}
+.activity-slot__hint {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-align: center;
+}
+.activity-slot__label {
+  padding: 5px 9px;
+  border-radius: var(--c-radius-pill);
+  background: rgba(4, 27, 38, 0.84);
+  color: #ffe8a8;
+  font:
+    700 0.68rem "Cinzel",
+    serif;
+}
+.activity-assembly-board--label .activity-slot__label {
+  font-size: 0.8rem;
+}
+.activity-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+/* An image board's tray holds tiles cut from the same picture, so they get the same shape as the
+   slots they belong in — tile aspect is the picture's aspect times rows over columns. A tray of
+   uniformly square thumbnails is guesswork; a tray of correctly-shaped ones is a puzzle. */
+.activity-assembly-board--image .activity-tray {
+  display: grid;
+  grid-template-columns: repeat(var(--assembly-columns, 2), 1fr);
+}
+.activity-assembly-board--image .activity-fragment {
+  aspect-ratio: calc(
+    var(--assembly-aspect, 1.55) * var(--assembly-rows, 1) / var(--assembly-columns, 2)
+  );
+  min-height: 0;
+}
+.activity-fragment {
+  flex: 1 1 128px;
+  min-height: 74px;
+  display: grid;
+  place-items: center;
+  padding: 9px;
+  border: 2px solid rgba(var(--c-gold-rgb), 0.5);
+  border-radius: var(--c-radius-md);
+  background-color: rgba(var(--c-white-rgb), 0.05);
+  background-repeat: no-repeat;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: center;
+  cursor: grab;
+  box-shadow: 0 10px 20px rgba(var(--c-black-rgb), 0.24);
+}
+.activity-fragment:active {
+  cursor: grabbing;
+}
+.activity-fragment.is-selected {
+  border-color: var(--c-gold);
+  box-shadow:
+    0 0 0 3px rgba(var(--c-gold-rgb), 0.3),
+    0 10px 20px rgba(var(--c-black-rgb), 0.24);
+}
+.activity-fragment span {
+  padding: 4px 8px;
+  border-radius: var(--c-radius-pill);
+  background: rgba(4, 27, 38, 0.82);
+  color: #ffe8a8;
+  font:
+    700 0.68rem "Cinzel",
+    serif;
+}
+/* The engine's best teaching moment: why a wrongly placed fragment looked like it fitted. */
+.activity-misread {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--c-error);
+  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
+  background: rgba(178, 75, 75, 0.13);
+  list-style: none;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: #ffe3de;
+}
+.activity-misread b {
+  color: var(--gold-soft);
+}
+.activity-misread i {
+  color: var(--c-text-muted);
+  font-style: normal;
+}
+.activity-misread span {
+  display: block;
+  margin-top: 2px;
+}
+
+/* --- DISCREPANCY: record against observation --- */
+.activity-audit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.activity-attribution {
+  margin: 0.3em 0 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: var(--c-text-muted);
+}
+.activity-claims {
+  display: grid;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: claim;
+}
+.activity-claim {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--c-radius-md);
+  background: rgba(var(--c-black-rgb), 0.2);
+}
+.activity-claim.is-settled {
+  border-color: rgba(var(--c-gold-rgb), 0.4);
+}
+.activity-claim blockquote {
+  margin: 0;
+  padding-left: 13px;
+  border-left: 2px solid var(--activity-edge);
+  font-family: "Spectral", serif;
+  font-size: 0.96rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+.activity-claim__verdicts,
+.activity-gap__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.activity-verdict,
+.activity-gap-kind,
+.activity-effect {
+  padding: 7px 13px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-pill);
+  background: rgba(var(--c-white-rgb), 0.05);
+  color: var(--c-text-secondary);
+  font: inherit;
+  font-size: 0.79rem;
+  cursor: pointer;
+  transition:
+    border-color var(--c-dur-fast) ease,
+    background var(--c-dur-fast) ease;
+}
+.activity-verdict:hover,
+.activity-gap-kind:hover,
+.activity-effect:hover,
+.activity-verdict:focus-visible,
+.activity-gap-kind:focus-visible,
+.activity-effect:focus-visible {
+  border-color: var(--c-border-gold);
+  color: var(--c-text);
+}
+.activity-verdict.is-correct,
+.activity-gap-kind.is-correct,
+.activity-effect.is-correct {
+  border-color: var(--c-success);
+  background: rgba(70, 165, 124, 0.2);
+  color: #dfffee;
+}
+.activity-verdict.is-wrong,
+.activity-gap-kind.is-wrong,
+.activity-effect.is-wrong {
+  border-color: var(--c-error);
+  background: rgba(178, 75, 75, 0.18);
+  color: #ffe3de;
+}
+.activity-gap {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--activity-edge);
+  border-radius: var(--c-radius-md);
+  background: rgba(var(--c-gold-rgb), 0.06);
+}
+.activity-gap p {
+  margin: 0;
+  font-family: "Cinzel", serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--gold-soft);
+}
+.activity-observations {
+  display: grid;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.activity-observation {
+  padding: 11px 13px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--c-radius-md);
+  background: rgba(var(--c-white-rgb), 0.04);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--c-text-secondary);
+}
+.activity-observation cite {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.74rem;
+  font-style: normal;
+  letter-spacing: 0.03em;
+  color: var(--c-text-muted);
+}
+/* Evidence this player never gathered. Shown as a hole rather than hidden, because knowing the
+   audit could have been better armed is part of the lesson. */
+.activity-observation.is-missing {
+  border-style: dashed;
+  background: none;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+/* --- TRACE: the chain --- */
+.activity-subject h3 {
+  font-size: 1.1rem;
+}
+.activity-legs {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.activity-leg {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--c-radius-md);
+  background: rgba(var(--c-black-rgb), 0.2);
+}
+.activity-leg.is-logged {
+  border-color: rgba(var(--c-gold-rgb), 0.4);
+}
+.activity-leg h4 {
+  margin: 0;
+  font-family: "Cinzel", serif;
+  font-size: 0.92rem;
+  color: var(--c-text);
+}
+.activity-leg__route {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.activity-leg__arrow {
+  color: var(--c-text-muted);
+}
+.activity-leg__facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.activity-leg__facts dt {
+  font-family: "Cinzel", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.activity-leg__facts dd {
+  margin: 0;
+  color: var(--c-text-secondary);
+}
+.activity-leg__ledger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* The shell itself already collapses to one column at 1180px further down; only the audit's own
+   two-column split needs its own breakpoint. */
+@media (max-width: 1080px) {
+  .activity-audit {
+    grid-template-columns: 1fr;
+  }
 }
 .quest-section-heading {
   font-family: "Cinzel", serif;
@@ -5817,66 +6349,6 @@ dd {
     padding: 10px 12px;
   }
 }
-.jigsaw-board {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-.jigsaw-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  width: min(620px, 100%);
-  aspect-ratio: 1.55/1;
-  margin: 0 auto;
-  padding: 10px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.36);
-  border-radius: 18px;
-  background: #0a3141;
-}
-.map-slot {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-height: 160px;
-  border: 1px dashed rgba(var(--c-gold-rgb), 0.45);
-  border-radius: 12px;
-  color: #accbd0;
-  background: rgba(255, 255, 255, 0.04);
-  overflow: hidden;
-}
-.map-slot.is-over {
-  outline: 3px solid rgba(86, 216, 231, 0.5);
-}
-.map-piece {
-  width: 100%;
-  height: 100%;
-  min-height: 130px;
-  border: 2px solid rgba(var(--c-gold-rgb), 0.55);
-  border-radius: 10px;
-  background-image: var(--map-piece-image);
-  background-size: 200% 200%;
-  cursor: grab;
-  box-shadow: 0 12px 22px rgba(var(--c-black-rgb), 0.24);
-  position: relative;
-}
-.map-piece:active {
-  cursor: grabbing;
-}
-.map-piece span {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  right: 8px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  background: rgba(4, 27, 38, 0.82);
-  color: #ffe8a8;
-  font:
-    700 0.68rem "Cinzel",
-    serif;
-  text-align: center;
-}
 .map-piece--nw {
   background-position: 0% 0%;
 }
@@ -5889,19 +6361,7 @@ dd {
 .map-piece--se {
   background-position: 100% 100%;
 }
-.piece-tray {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.piece-tray .map-piece {
-  min-height: 95px;
-}
 .reader-shell {
-  --map-piece-image: url("../assets/documents/source-waldseemuller-1507.jpg");
-}
-.activity-shell {
-  --map-piece-image: url("../assets/documents/source-waldseemuller-1507.jpg");
 }
 @media (max-width: 1180px) {
   .case-field--living {
@@ -5912,12 +6372,6 @@ dd {
   }
   .activity-shell {
     grid-template-columns: 1fr;
-  }
-  .investigation-grid {
-    grid-template-columns: 1fr;
-  }
-  .piece-tray {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -5974,10 +6428,6 @@ dd {
   width: min(1440px, calc(100% - 42px));
   grid-template-columns: minmax(250px, 0.45fr) minmax(740px, 1.6fr);
 }
-.village-investigation-shell .activity-copy h1,
-.spanish-encounter-shell .activity-copy h1 {
-  font-size: clamp(2.2rem, 3.6vw, 4.4rem);
-}
 .village-scene--animated {
   min-height: 330px;
   background:
@@ -5986,79 +6436,7 @@ dd {
   background-size:
     42px 42px,
     auto;
-}
-.village-scene--animated .mini-person {
-  width: 52px;
-  height: 78px;
-}
-.village-scene--animated .mini-person.elder {
-  left: 58%;
-  top: 124px;
-}
-.village-scene--animated .mini-person.gardener {
-  left: 18%;
-  top: 78px;
-}
-.village-scene--animated .mini-person.fisher {
-  right: 13%;
-  bottom: 58px;
-}
-.scene-dialogue {
-  position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 22px;
-  padding: 16px 18px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.35);
-  border-radius: 18px;
-  background: rgba(4, 31, 43, 0.88);
-  box-shadow: 0 18px 30px rgba(var(--c-black-rgb), 0.23);
-}
-.scene-dialogue b {
-  display: block;
-  color: #ffe39a;
-  font:
-    700 0.95rem "Cinzel",
-    serif;
-  margin-bottom: 5px;
-}
-.scene-dialogue p {
-  margin: 0 0 6px;
-  color: #e5f4f1;
-  line-height: 1.45;
-}
-.scene-dialogue span {
-  display: block;
-  color: #9ee2df;
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-.investigation-card {
-  min-height: 190px;
-}
-.investigation-card.is-active {
-  outline: 2px solid rgba(118, 230, 238, 0.66);
-  box-shadow: 0 0 0 5px rgba(118, 230, 238, 0.08);
-}
-.quote-dialogue p {
-  font-family: "Spectral", serif;
-  font-size: 1.1rem !important;
-  color: #f4ead0 !important;
-}
-.quote-dialogue p::before,
-.quote-dialogue p::after {
-  color: #f5d981;
-}
-.spanish-encounter-shell .activity-copy > p:first-of-type {
-  max-width: 74ch;
-}
-.choice-stack label {
-  font-size: 1rem;
-}
-.choice-stack input {
-  margin-top: 4px;
-}
-/* Ten-piece map reconstruction puzzle */
+} /* Ten-piece map reconstruction puzzle */
 .jigsaw-board--ten {
   gap: 18px;
 }
@@ -6074,13 +6452,6 @@ dd {
   border: 1px solid rgba(var(--c-gold-rgb), 0.36);
   border-radius: 18px;
   background: #0a3141;
-}
-.jigsaw-grid--ten .map-slot {
-  min-height: 126px;
-  border-radius: 10px;
-  background-image:
-    linear-gradient(rgba(10, 49, 65, 0.78), rgba(10, 49, 65, 0.78)), var(--map-piece-image);
-  background-size: 500% 200%;
 }
 .map-slot--p1 {
   background-position: 0% 0%;
@@ -6111,19 +6482,6 @@ dd {
 }
 .map-slot--p10 {
   background-position: 100% 100%;
-}
-.jigsaw-grid--ten .map-slot > span {
-  font-size: 0.85rem;
-  color: rgba(200, 224, 222, 0.7);
-}
-.map-slot.has-piece {
-  background-image: none;
-}
-.map-piece {
-  background-size: 500% 200% !important;
-  min-height: 110px !important;
-  border-radius: 10px !important;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
 }
 .map-piece--p1 {
   background-position: 0% 0%;
@@ -6195,14 +6553,6 @@ dd {
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
 }
-.piece-tray--ten .map-piece {
-  min-height: 92px !important;
-}
-.map-piece span {
-  font-size: 0.57rem !important;
-  padding: 4px 6px !important;
-  background: rgba(4, 27, 38, 0.72) !important;
-}
 @media (max-width: 1180px) {
   .activity-shell--wide {
     grid-template-columns: 1fr;
@@ -6213,9 +6563,6 @@ dd {
   }
   .piece-tray--ten {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .piece-tray--ten .map-piece {
-    min-height: 120px !important;
   }
   .case-field--living .field-intro h1 {
     max-width: 100%;
@@ -6315,24 +6662,6 @@ dd {
     radial-gradient(circle at 72% 36%, rgba(239, 209, 128, 0.18), transparent 23%),
     radial-gradient(circle at 56% 100%, rgba(30, 94, 102, 0.24), transparent 28%);
 }
-.scene-sunpatch {
-  position: absolute;
-  left: 7%;
-  top: 8%;
-  width: 35%;
-  height: 38%;
-  border-radius: 50%;
-  background: rgba(236, 201, 121, 0.1);
-  filter: blur(2px);
-}
-.scene-person {
-  position: absolute;
-  width: auto;
-  height: calc(86px * 56 / 45);
-  object-fit: contain;
-  filter: drop-shadow(0 9px 5px rgba(var(--c-black-rgb), 0.28));
-  z-index: 3;
-}
 .scene-person--elder {
   left: 48%;
   top: 28%;
@@ -6362,24 +6691,6 @@ dd {
   right: 24%;
   top: 48%;
 }
-.scene-bohio {
-  position: absolute;
-  border: 4px solid rgba(105, 66, 34, 0.72);
-  border-radius: 50% 50% 18px 18px;
-  background: linear-gradient(#dfc27c 0 44%, #b6793d 45% 100%);
-  box-shadow: 0 11px 0 rgba(var(--c-black-rgb), 0.12);
-  z-index: 2;
-}
-.scene-bohio span {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 22px;
-  height: 34px;
-  background: #5e351e;
-  border-radius: 14px 14px 0 0;
-  transform: translateX(-50%);
-}
 .scene-bohio--large {
   left: 34%;
   top: 13%;
@@ -6391,51 +6702,7 @@ dd {
   top: 26%;
   width: 135px;
   height: 96px;
-}
-.scene-garden-rows {
-  position: absolute;
-  left: 7%;
-  top: 15%;
-  width: 260px;
-  height: 132px;
-  border-radius: 22px;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(62, 115, 48, 0.85) 0 16px,
-    rgba(136, 170, 86, 0.85) 16px 32px
-  );
-  border: 3px solid rgba(55, 92, 48, 0.65);
-  box-shadow: 0 13px 0 rgba(var(--c-black-rgb), 0.11);
-}
-.scene-canoe-close {
-  position: absolute;
-  right: 10%;
-  top: 32%;
-  width: 250px;
-  height: 48px;
-  border-radius: 50%;
-  background: #744220;
-  border: 6px solid #332013;
-  transform: rotate(-10deg);
-  box-shadow: 0 11px 0 rgba(var(--c-black-rgb), 0.12);
-}
-.village-scene--elder .scene-dialogue,
-.village-scene--bohio .scene-dialogue,
-.village-scene--garden .scene-dialogue {
-  left: 28px;
-  right: 28px;
-  bottom: 24px;
-}
-.village-investigation-shell .activity-copy p {
-  max-width: 34ch;
-}
-.investigation-card {
-  min-height: 158px;
-}
-.investigation-card span {
-  font-size: 0.86rem;
-}
-/* Cleaner, non-ghosted jigsaw board */
+} /* Cleaner, non-ghosted jigsaw board */
 .activity-shell--wide {
   grid-template-columns: minmax(230px, 0.38fr) minmax(740px, 1.62fr);
 }
@@ -6451,35 +6718,9 @@ dd {
   gap: 8px;
   background: linear-gradient(150deg, rgba(8, 43, 58, 0.96), rgba(4, 27, 40, 0.96));
 }
-.jigsaw-grid--ten .map-slot {
-  min-height: 112px;
-  background: rgba(255, 255, 255, 0.035) !important;
-  border: 1px dashed rgba(var(--c-gold-rgb), 0.52);
-}
-.jigsaw-grid--ten .map-slot > span {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: rgba(201, 224, 224, 0.56);
-}
-.map-slot.has-piece {
-  background: transparent !important;
-}
-.map-piece {
-  background-image: var(--map-piece-image) !important;
-  box-shadow:
-    0 12px 22px rgba(var(--c-black-rgb), 0.24),
-    inset 0 0 0 1px rgba(255, 240, 184, 0.2);
-}
-.jigsaw-grid--ten .map-piece {
-  min-height: 100% !important;
-}
 .piece-tray--ten {
   grid-template-columns: repeat(5, minmax(112px, 1fr));
   align-items: stretch;
-}
-.piece-tray--ten .map-piece {
-  min-height: 82px !important;
 }
 .map-piece--p1 {
   clip-path: polygon(0 0, 84% 0, 100% 16%, 100% 100%, 0 100%);
@@ -6550,11 +6791,6 @@ dd {
 .map-piece--p10 {
   clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 16%, 16% 0);
 }
-.map-piece span {
-  bottom: 6px !important;
-  left: 7px !important;
-  right: 7px !important;
-}
 @media (max-width: 1180px) {
   .activity-shell--wide {
     grid-template-columns: 1fr;
@@ -6565,9 +6801,6 @@ dd {
   }
   .piece-tray--ten {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .piece-tray--ten .map-piece {
-    min-height: 110px !important;
   }
   .village-scene--focused {
     min-height: 330px;
@@ -6699,44 +6932,6 @@ dd {
   box-shadow:
     inset 0 0 0 1px rgba(var(--c-gold-rgb), 0.28),
     inset 0 0 40px rgba(var(--c-black-rgb), 0.24) !important;
-}
-.jigsaw-grid--ten .map-slot {
-  border: 1px solid rgba(var(--c-gold-rgb), 0.18) !important;
-  border-radius: 0 !important;
-  background: rgba(255, 255, 255, 0.025) !important;
-  overflow: visible !important;
-  min-height: 132px !important;
-}
-.jigsaw-grid--ten .map-slot::before {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  background-image: var(--map-piece-image);
-  background-size: 500% 200%;
-  opacity: 0.12;
-  filter: sepia(0.35) contrast(1.08);
-  clip-path: inherit;
-}
-.jigsaw-grid--ten .map-slot > span {
-  font-size: 0 !important;
-}
-.map-piece {
-  border: 2px solid rgba(var(--c-gold-rgb), 0.64) !important;
-  border-radius: 0 !important;
-  box-shadow:
-    0 10px 19px rgba(var(--c-black-rgb), 0.28),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-  filter: sepia(0.2) contrast(1.05) !important;
-}
-.map-piece span {
-  opacity: 0 !important;
-}
-.map-piece:hover span,
-.map-piece:focus-visible span {
-  opacity: 1 !important;
-}
-.piece-tray--ten .map-piece {
-  min-height: 72px !important;
 }
 .map-piece--p1,
 .map-slot--p1::before {
@@ -6936,27 +7131,6 @@ dd {
   background-repeat: no-repeat;
   mix-blend-mode: multiply;
 }
-.jigsaw-grid--ten .map-slot {
-  overflow: hidden !important;
-  min-height: 0 !important;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.35) !important;
-  background: rgba(255, 255, 255, 0.025) !important;
-}
-.jigsaw-grid--ten .map-slot::before {
-  clip-path: none !important;
-  inset: 0 !important;
-  opacity: 0.1 !important;
-}
-.map-piece,
-.jigsaw-grid--ten .map-piece,
-.piece-tray--ten .map-piece {
-  clip-path: none !important;
-  border-radius: 0 !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  width: 100% !important;
-  background-size: 500% 200% !important;
-}
 .piece-tray--ten {
   display: grid !important;
   grid-template-columns: repeat(5, minmax(92px, 1fr)) !important;
@@ -6965,11 +7139,6 @@ dd {
   width: min(820px, 100%) !important;
   margin: 0 auto !important;
 }
-.piece-tray--ten .map-piece {
-  aspect-ratio: 0.62/1 !important;
-  height: auto !important;
-  min-height: 150px !important;
-}
 .activity-feedback {
   font-size: 16px !important;
   line-height: 1.45 !important;
@@ -6977,9 +7146,6 @@ dd {
 @media (max-width: 1180px) {
   .piece-tray--ten {
     grid-template-columns: repeat(5, minmax(70px, 1fr)) !important;
-  }
-  .piece-tray--ten .map-piece {
-    min-height: 118px !important;
   }
   .activity-shell--wide {
     grid-template-columns: 1fr !important;
@@ -7046,32 +7212,9 @@ html {
   background: linear-gradient(145deg, #0a3342, #041e2b) !important;
   border: 1px solid rgba(var(--c-gold-rgb), 0.55) !important;
 }
-.jigsaw-grid--ten .map-slot {
-  border: 1px solid rgba(var(--c-gold-rgb), 0.42) !important;
-  outline: 0 !important;
-}
-.map-piece,
-.jigsaw-grid--ten .map-piece,
-.piece-tray--ten .map-piece {
-  clip-path: none !important;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.78) !important;
-}
 .piece-tray--ten {
   grid-template-columns: repeat(5, minmax(90px, 1fr)) !important;
 }
-.piece-tray--ten .map-piece {
-  aspect-ratio: 0.62/1 !important;
-  min-height: 154px !important;
-  background-size: 500% 200% !important;
-}
-.jigsaw-grid--ten .map-piece {
-  aspect-ratio: auto !important;
-}
-.map-piece:hover,
-.map-piece:focus-visible {
-  filter: sepia(0.12) contrast(1.08) brightness(1.08) !important;
-}
-
 /* -------------------------------------------------------------------------
    Milestone 3.4.11 · dialogue anchoring, preservation case UI, and field map cleanup
    ------------------------------------------------------------------------- */
@@ -7406,6 +7549,26 @@ html {
 }
 .field-speech-bubble--right-edge::after {
   left: 84%;
+}
+/* Flipped under the speaker when there is no room above — see fieldDialogueBubble(). Declared after
+   the edge modifiers so it wins on vertical placement, with compound selectors to keep the
+   horizontal nudge each edge case needs. */
+.field-speech-bubble--below {
+  transform: translate(-50%, 0);
+}
+.field-speech-bubble--below::after {
+  top: -12px;
+  bottom: auto;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 2px solid rgba(var(--c-gold-rgb), 0.66);
+  border-top: 2px solid rgba(var(--c-gold-rgb), 0.66);
+}
+.field-speech-bubble--below.field-speech-bubble--left-edge {
+  transform: translate(-12%, 0);
+}
+.field-speech-bubble--below.field-speech-bubble--right-edge {
+  transform: translate(-88%, 0);
 }
 .field-speech-bubble b {
   display: block;

@@ -52,11 +52,13 @@ test.describe("Investigation Challenge", () => {
 
     await continueButton.click();
 
-    // taino-context has a bespoke activityRoute ("village-activity") — sourceEntryScreen()
-    // re-resolves it rather than hardcoding "source", so completing the Investigation
-    // Challenge here lands on that mini-game screen, not a plain sourceReader() worksheet.
+    // taino-context has an activityRoute ("interview") — sourceEntryScreen() re-resolves it rather
+    // than hardcoding "source", so completing the Investigation Challenge here lands on that
+    // activity, not a plain sourceReader() worksheet. The gate and the activity are two separate
+    // things stacked on one record, and this is what proves the second still runs after the first.
     const afterContinue = await readProgress(page);
-    expect(afterContinue.currentScreen).toBe("village-activity");
+    expect(afterContinue.currentScreen).toBe("interview");
+    expect(afterContinue.activeActivitySourceId).toBe("taino-context");
     expect(afterContinue.questResponses["case-001-investigation-mcq-taino-origins"]).toEqual({
       selected: "0",
     });
