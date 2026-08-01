@@ -8,6 +8,7 @@ import {
 } from "./content/unit-02-campaign.js";
 import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
 import { UNIT_04, CASE_010_SOURCES, CASE_010_LANES } from "./content/unit-04-campaign.js";
+import { UNIT_05, CASE_013_SOURCES, CASE_013_LANES } from "./content/unit-05-campaign.js";
 import { CED_THEME_LABEL } from "./content/ced-taxonomy.js";
 import { skillsForQuestSlots } from "./engine/ced-alignment.js";
 import {
@@ -85,6 +86,16 @@ import {
   UNIT_04_ARCHIVE_SAQ_QUESTS,
   UNIT_04_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-04-quests.js";
+import {
+  UNIT_05_MCQ_QUESTS,
+  UNIT_05_SEQUENCING_QUESTS,
+  UNIT_05_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_05_SOURCE_ANALYSIS_QUESTS,
+  UNIT_05_ARCHIVE_SEQUENCING_QUESTS,
+  UNIT_05_ARCHIVE_EVIDENCE_QUESTS,
+  UNIT_05_ARCHIVE_SAQ_QUESTS,
+  UNIT_05_ARCHIVE_DBQ_QUESTS,
+} from "./content/quests/unit-05-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -3842,12 +3853,13 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04];
+const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05];
 const UNIT_SOURCES = {
   "case-001": CASE_001_SOURCES,
   "case-004": CASE_004_SOURCES,
   "case-007": CASE_007_SOURCES,
   "case-010": CASE_010_SOURCES,
+  "case-013": CASE_013_SOURCES,
 };
 const PRACTICE_CHECK_QUESTS = {
   "case-001": {
@@ -3874,6 +3886,12 @@ const PRACTICE_CHECK_QUESTS = {
     evidenceOrganizing: UNIT_04_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_04_SOURCE_ANALYSIS_QUESTS,
   },
+  "case-013": {
+    mcq: UNIT_05_MCQ_QUESTS,
+    sequencing: UNIT_05_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_05_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_05_SOURCE_ANALYSIS_QUESTS,
+  },
 };
 // Quest content for both kinds of authored challenge, resolved by
 // (questType, questId): a case's own `archiveChallenge` pointer — which
@@ -3889,11 +3907,13 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
     ...UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
     ...UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
+    ...UNIT_05_ARCHIVE_EVIDENCE_QUESTS,
   ],
   sequencing: [
     ...UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
     ...UNIT_02_ARCHIVE_SEQUENCING_QUESTS,
     ...UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
+    ...UNIT_05_ARCHIVE_SEQUENCING_QUESTS,
   ],
   mcq: [...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS, ...UNIT_03_ARCHIVE_MCQ_QUESTS],
   saq: [
@@ -3901,8 +3921,13 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_02_ARCHIVE_SAQ_QUESTS,
     ...UNIT_03_ARCHIVE_SAQ_QUESTS,
     ...UNIT_04_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_05_ARCHIVE_SAQ_QUESTS,
   ],
-  dbq: [...UNIT_03_ARCHIVE_DBQ_QUESTS, ...UNIT_04_ARCHIVE_DBQ_QUESTS],
+  dbq: [
+    ...UNIT_03_ARCHIVE_DBQ_QUESTS,
+    ...UNIT_04_ARCHIVE_DBQ_QUESTS,
+    ...UNIT_05_ARCHIVE_DBQ_QUESTS,
+  ],
   // Unit 4's case-012 is the first mission in the game whose quest is a hipp — see the header of
   // content/quests/unit-04-quests.js. Missions resolve through this same table, so the type needed
   // a key here as well as in INVESTIGATION_QUESTS_BY_TYPE below.
@@ -3957,7 +3982,8 @@ export const sourceById = (id) => {
     CASE_001_SOURCES.find((item) => item.id === id) ||
     CASE_004_SOURCES.find((item) => item.id === id) ||
     CASE_007_SOURCES.find((item) => item.id === id) ||
-    CASE_010_SOURCES.find((item) => item.id === id);
+    CASE_010_SOURCES.find((item) => item.id === id) ||
+    CASE_013_SOURCES.find((item) => item.id === id);
   return official ? resolveSourceSlot(official) : undefined;
 };
 // Author Mode unlocks every unit/case for design navigation without touching the save.
@@ -4549,10 +4575,10 @@ ${nextUnit ? `<button class="btn btn-outline" data-action="advance-classroom-uni
 // activityRoute/reconstruction authoring, tracked as a followup). See
 // docs/content-guide/primary-source-library.md.
 
-// UNITS[unitNumber - 1] relies on UNITS = [UNIT_01, UNIT_02, UNIT_03] being
-// ordered/numbered the same way primary-source-library's units 1-9 are —
-// true today (Period 1/2/3 both places), and simplest to keep true rather
-// than adding a lookup table for 3 entries.
+// UNITS[unitNumber - 1] relies on UNITS being ordered/numbered the same way
+// primary-source-library's units 1-9 are — true today for all five shipped
+// units (Periods 1-5 in both places), and simplest to keep true rather than
+// adding a lookup table.
 function lockedSourcesForUnitNumber(unitNumber) {
   const unit = UNITS[unitNumber - 1];
   if (!unit) return [];
@@ -9571,13 +9597,24 @@ export function fieldObjectives(caseId, sources, points, npcNameFor, evidence = 
 }
 function fieldObjectiveTracker() {
   const caseId = activeFieldCaseId();
-  const map = activeFieldMap();
-  const rows = fieldObjectives(
-    caseId,
-    sourcesForCase(caseId),
-    map.sourcePoints,
-    (npcId) => map.npcs.find((npc) => npc.id === npcId)?.name
-  );
+  // Every surface of this unit's map, not the one the player happens to be standing on. The
+  // checklist is deliberately the same six rows wherever you are — it is what tells a player there
+  // is anything behind a door at all — so it has to be able to name a person who is in another
+  // room. Read off the active surface alone, `points[source.id]` came back empty for every record
+  // that lives elsewhere and `where` fell all the way through to `source.title`, which is the one
+  // outcome fieldObjectives()'s own comment rules out: standing in the Chimborazo ward, a player
+  // was told to go and find "Ward Register, Chimborazo Hospital" rather than Jane Ferris, who was
+  // four tiles away. Unit 4 shipped with the same defect across two surfaces; Richmond has three.
+  const surfaces = [activeFieldOutdoorMap(), ...fieldInteriors()];
+  const points = Object.assign({}, ...surfaces.map((surface) => surface.sourcePoints || {}));
+  const npcNameFor = (npcId) => {
+    for (const surface of surfaces) {
+      const npc = (surface.npcs || []).find((candidate) => candidate.id === npcId);
+      if (npc) return npc.name;
+    }
+    return undefined;
+  };
+  const rows = fieldObjectives(caseId, sourcesForCase(caseId), points, npcNameFor);
   if (rows.length === 0) return "";
   const secured = rows.filter((row) => row.availability === "secured").length;
   const collapsed = progress.settings?.trackerCollapsed === true;
@@ -9712,9 +9749,9 @@ const FIELD_COPY = {
   },
   "unit-05": {
     intro:
-      "You arrive on Franklin Street, in a capital under siege conditions and swollen to three times the people it was built for. The government quarter is uphill; the ironworks, the warehouse district and the dock are down the bluff behind you. Four records are out in the city — a War Department requisition, the market's price board, the Tredegar payroll, and a labourer's pass at the dock.",
+      "You arrive on Franklin Street, in a capital under siege conditions and swollen to three times the people it was built for. The government quarter is uphill; the ironworks, the warehouse district and the dock are down the bluff behind you. Four records are out in the city — a War Department requisition, the market's price board, the Tredegar payroll, and a labourer's pass at the dock — and two more are behind doors: the commission house on Franklin Street, and a Chimborazo ward on the hill.",
     progressHint:
-      "Four records: the impressment requisition, the price and ration notices, the Tredegar payroll, and the labourer's pass.",
+      "Six records: the impressment requisition, the price and ration notices, the Tredegar payroll, the labourer's pass, the commission house day book, and the ward register.",
   },
 };
 function fieldScreen() {
@@ -10202,6 +10239,20 @@ const RECONSTRUCTION_LANES = {
         "A record of what the new economy demanded from the people whose labour ran it.",
       "what-people-did-about-it":
         "A record of someone organizing, arguing, or profiting in response to the change.",
+    }[lane.id],
+  })),
+  // Unit 5's lanes ask what a *document* is doing rather than what a topic is, which suits a
+  // district whose evidence is almost entirely administrative — a requisition, a payroll, a price
+  // board, a day book, a register and a pass are all forms designed to be filed and forgotten.
+  "case-013": CASE_013_LANES.map((lane) => ({
+    ...lane,
+    hint: {
+      "what-the-government-took":
+        "A record of the Confederate state requiring labour, material or service from people who could not refuse.",
+      "what-the-market-did":
+        "A record of what wartime scarcity and a failing currency did to prices, wages and trade.",
+      "who-the-record-counted":
+        "A record that defines a person by what a bureaucracy wrote down — and raises the question of who is missing from it.",
     }[lane.id],
   })),
 };

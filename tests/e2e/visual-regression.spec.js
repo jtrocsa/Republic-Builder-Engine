@@ -279,6 +279,36 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("field-canal-boarding-house"));
   });
 
+  // Three more for Unit 5, on the same argument. Richmond adds two things Canal Crossroads did not
+  // have: a bluff drawn as a solid run of retaining wall, which only a picture will show as a
+  // continuous line rather than a dotted one, and a ward 24 tiles wide — the only interior in the
+  // game whose floor is wider than the frame it is drawn in, so its baseline is also the only one
+  // that proves a horizontally-scrolled room draws to its edges.
+  test("field: Richmond and both of its rooms (Unit 5)", async ({ page }) => {
+    const seed = {
+      currentScreen: "field",
+      activeCaseId: "case-013",
+      unlocked: ["case-001", "case-013"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    };
+    await seedProgress(page, seed);
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "richmondTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-richmond"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "richmond-counting-room" });
+    await waitForTiledCanvas(page, "richmondCountingRoomTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-richmond-counting-room"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "richmond-hospital-ward" });
+    await waitForTiledCanvas(page, "richmondHospitalWardTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-richmond-hospital-ward"));
+  });
+
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({
     page,
   }) => {

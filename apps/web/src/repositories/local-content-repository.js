@@ -12,10 +12,12 @@ import * as unit01Campaign from "../content/unit-01-campaign.js";
 import * as unit02Campaign from "../content/unit-02-campaign.js";
 import * as unit03Campaign from "../content/unit-03-campaign.js";
 import * as unit04Campaign from "../content/unit-04-campaign.js";
+import * as unit05Campaign from "../content/unit-05-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
 import * as unit04Quests from "../content/quests/unit-04-quests.js";
+import * as unit05Quests from "../content/quests/unit-05-quests.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -94,6 +96,22 @@ export function loadChronicleContent() {
       archiveSourceAnalysisQuests: unit04Quests.UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
       archiveSaqQuests: unit04Quests.UNIT_04_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit04Quests.UNIT_04_ARCHIVE_DBQ_QUESTS,
+    },
+    // Unit 5 carries no investigation quests either, for the same reason Unit 4 does not. Its two
+    // missions are a sequencing and an evidence-organizing, so it has an archiveEvidenceQuests key
+    // where Unit 4 has archiveSourceAnalysisQuests.
+    unit05: {
+      unit: unit05Campaign.UNIT_05,
+      sources: unit05Campaign.CASE_013_SOURCES,
+      lanes: unit05Campaign.CASE_013_LANES,
+      mcqQuests: unit05Quests.UNIT_05_MCQ_QUESTS,
+      evidenceOrganizingQuests: unit05Quests.UNIT_05_EVIDENCE_ORGANIZING_QUESTS,
+      sequencingQuests: unit05Quests.UNIT_05_SEQUENCING_QUESTS,
+      sourceAnalysisQuests: unit05Quests.UNIT_05_SOURCE_ANALYSIS_QUESTS,
+      archiveSequencingQuests: unit05Quests.UNIT_05_ARCHIVE_SEQUENCING_QUESTS,
+      archiveEvidenceQuests: unit05Quests.UNIT_05_ARCHIVE_EVIDENCE_QUESTS,
+      archiveSaqQuests: unit05Quests.UNIT_05_ARCHIVE_SAQ_QUESTS,
+      archiveDbqQuests: unit05Quests.UNIT_05_ARCHIVE_DBQ_QUESTS,
     },
   };
 }

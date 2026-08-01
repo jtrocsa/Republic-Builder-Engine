@@ -31,6 +31,10 @@ export const UNIT_MAP_VIEW = {
   // north-america box, so this unit adds no view of its own — which is the point of the box being a
   // reusable framing rather than one per unit.
   "unit-04": "north-america",
+  // Unit 5's three cases are Richmond (37.5N, 77.4W), Washington (38.9N, 77.0W) and the former
+  // Confederacy at large, pinned at Charleston (32.8N, 79.9W). All three sit inside the same box,
+  // so this unit adds no view of its own either.
+  "unit-05": "north-america",
 };
 
 export const DEFAULT_MAP_VIEW = "atlantic-wide";

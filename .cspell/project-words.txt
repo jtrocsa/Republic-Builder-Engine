@@ -156,6 +156,7 @@ imagewidth
 inkjs
 inspectable
 interactable
+Ironmaker
 Iztapalapan
 jsprite
 jtrocsa
@@ -193,6 +194,8 @@ Mapbox's
 mapbuilder
 mapeditor
 Maren
+Maurie
+McInnis
 María
 maxlength
 maxrects
@@ -200,6 +203,7 @@ Mayos
 mcculloch
 Mcpjson
 Meehan
+Midori
 minigames
 mislinking
 Motolinía
@@ -238,9 +242,11 @@ papaparse
 pasteable
 PATCO
 pathed
+pathfind
 pathfinds
 pathfound
 pathing
+Pember
 Pinkertons
 pixellab
 playtest
@@ -374,6 +380,7 @@ upserted
 Upserts
 usct
 valuenow
+Varon
 versionable
 Vietnamization
 viewbox
