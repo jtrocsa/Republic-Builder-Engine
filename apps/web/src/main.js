@@ -702,6 +702,14 @@ const resolveRichmondTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/derived/civil-war-works.png", {
     eager: true,
     import: "default",
+  }),
+  // Nine objects repacked off `war ruins` sheets 21 and 22 — the house taken down for the line and
+  // its salvage, the chevaux-de-frise, the laboratory on Brown's Island, the woodpile, two stripped
+  // trees. Not one of them is bomb damage; see the palette's header note 1 for why an 1864 city
+  // that does not burn until 1865 has ruins on it at all.
+  import.meta.glob("./assets/tilesets/derived/richmond-ruins.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderRichmondTiledMap() {

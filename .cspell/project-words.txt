@@ -123,6 +123,7 @@ Frethorne's
 frise
 frontmatter
 fulltext
+gabions
 Gast
 Genericity
 Gerardus
@@ -271,6 +272,7 @@ retile
 revertable
 rgba
 Richmonder
+Richmonders
 Riis
 Ringmann
 Riverbend

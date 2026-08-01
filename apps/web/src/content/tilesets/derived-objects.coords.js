@@ -78,3 +78,15 @@ export const CivilWarWorks = {
   supplyWagon: tile("derived/civil-war-works.png", 0, 11, { h: 2, w: 2 }),
   hospitalCot: tile("derived/civil-war-works.png", 0, 13, { h: 2, w: 1 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const RichmondRuins = {
+  ruinTimberHouse: tile("derived/richmond-ruins.png", 0, 0, { h: 2, w: 4 }),
+  ruinStoneShell: tile("derived/richmond-ruins.png", 0, 4, { h: 2, w: 4 }),
+  brickSalvage: tile("derived/richmond-ruins.png", 0, 8, { h: 2, w: 2 }),
+  rubbleStone: tile("derived/richmond-ruins.png", 0, 10, { h: 2, w: 2 }),
+  timberStack: tile("derived/richmond-ruins.png", 0, 12, { h: 2, w: 2 }),
+  deadTree: tile("derived/richmond-ruins.png", 0, 14, { h: 2, w: 2 }),
+  deadTreeSmall: tile("derived/richmond-ruins.png", 2, 0, { h: 2, w: 2 }),
+  cordwood: tile("derived/richmond-ruins.png", 2, 2, { h: 1, w: 1 }),
+};

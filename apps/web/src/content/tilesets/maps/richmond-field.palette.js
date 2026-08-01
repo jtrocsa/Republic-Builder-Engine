@@ -5,14 +5,42 @@
 // Five decisions here were made against the art rather than from the plan, and each one changed
 // what the map is.
 //
-// 1. **There is no rubble on this map, and `war ruins` is not in the sheet list.** The plan named
-//    that pack for "rubble piles, collapsed brick walls, cracked paving." It is wrong by a year.
-//    Richmond burned on 3 April 1865, in the evacuation fire its own government set; in 1864 the
-//    city is intact, overcrowded and overbuilt — its problem is that there is too much of it
-//    standing and too many people in it, not too little. A ruined 1864 Richmond would be the same
-//    class of error as staging the Bread Riot live, which was April 1863. What reads as war here is
-//    what the war actually put in the streets: impressment, ration queues, a price board written
-//    over, ordnance stacked under guard, and a hospital on the hill.
+// 1. **This city is not a ruined city, and `war ruins` is on the sheet list anyway.** Both halves
+//    of that matter, and the second half is a correction to an earlier draft of this file.
+//
+//    Richmond does not burn until 3 April 1865, in the evacuation fire its own government sets. In
+//    1864 it is intact, overcrowded and overbuilt — its problem is that there is too much of it
+//    standing and too many people in it. A shelled, rubble-strewn 1864 Richmond would be the same
+//    class of error as staging the Bread Riot live, which was April 1863. So there is no bomb
+//    damage anywhere on this map and there is nothing burnt inside the city limits.
+//
+//    But "no bomb damage" is not the same claim as "no ruins," and reading the pack properly is
+//    what separated them. The catalog had `war ruins` sampled at 4 sheets of 27 and written off as
+//    contemporary urban decay — concrete blocks, modern cars, graffiti — which sheets 1, 10, 20 and
+//    25 genuinely are. Sheets 21 and 22 were among the twenty-one nobody had opened, and they are
+//    timber, brick and stone cut-outs with nothing datable in them. Nine objects come off those two
+//    sheets through `derived/richmond-ruins.png`, and every one of them is placed where the record
+//    puts it rather than where a ruin would look good:
+//
+//      - The **cleared field of fire** at the north-east margin. The intermediate defence line
+//        needed open ground in front of it, so the houses standing there came down and the woodlots
+//        with them. A pulled-down house is not a shelled one — the frame is dismantled and lying,
+//        the walls are stubs, and the brick and timber are stacked beside it, because both were
+//        scarce enough to be worth carrying away. That is what `ruinTimberHouse`, `brickSalvage`,
+//        `timberStack` and the two dead trees are doing up there, and it is the one place on the
+//        map where the war has physically taken buildings away.
+//      - **Brown's Island**, in the falls below Tredegar: the Confederate States Laboratory, wrecked
+//        by the cartridge explosion of 13 March 1863. Roughly forty-five workers died, most of them
+//        girls and young women, several as young as nine, many Irish immigrants from the Bottom.
+//        `ruinStoneShell` is that building. It stands across water and cannot be reached, which is
+//        the point: the player sees it from the quay and has to ask.
+//      - **Firewood.** `cordwood` is not a ruin and is the most loaded object of the nine. Wood
+//        passed $30 a cord in the winter of 1863-64 against a pre-war $4, and Richmond families
+//        burned furniture and fence rails. A guarded stack beside the relief society says more about
+//        the civilian city than rubble ever would.
+//
+//    What otherwise reads as war here is what the war actually put in the streets: impressment,
+//    ration queues, a price board written over, ordnance stacked under guard, a hospital on the hill.
 //
 // 2. **The falls of the James are painted on the ground layer, not stamped over the water.** The
 //    Dock pack's rocks at rows 6-7 carry their own water, painted in the same blue as this map's
@@ -48,7 +76,13 @@
 // library draws one; nothing here would use it if it did. See docs/decision-log for the register
 // rules governing Shockoe Bottom, Tredegar and the dock.
 
-import { CanalWorks, CivilWarWorks, FarmBuildings, FarmTrees } from "../derived-objects.coords.js";
+import {
+  CanalWorks,
+  CivilWarWorks,
+  FarmBuildings,
+  FarmTrees,
+  RichmondRuins,
+} from "../derived-objects.coords.js";
 import { CANONICAL, tile } from "../canonical-palette.js";
 
 export default {
@@ -84,6 +118,7 @@ export default {
     // Appended last, deliberately: firstgid is assigned in this order, so a new sheet anywhere
     // earlier would renumber every GID already committed to richmond-field.tmj.
     { path: "derived/civil-war-works.png", name: "derived-civil-war-works" },
+    { path: "derived/richmond-ruins.png", name: "derived-richmond-ruins" },
   ],
 
   tiles: {
@@ -269,6 +304,41 @@ export default {
     checkpointHut: FarmBuildings.houseBrown,
     /** A chain slung between iron posts — the checkpoint's bar, and the ordnance yard's line. */
     chainPosts: tile("19th Centruy European Dock/tile-B-06.png", 14, 10, { h: 1, w: 2 }),
+    /**
+     * A house taken down, not knocked down. Frame dismantled and stacked askew, roof boards lying
+     * where they were pulled, one wall still standing to about waist height.
+     *
+     * The distinction is the whole reason ruins appear on an 1864 map at all — see header note 1.
+     * These stand only outside the line, on the ground cleared for a field of fire, and the salvage
+     * stacked beside them is why: brick and seasoned timber in Richmond that winter were worth
+     * carting into the city, and the army was pulling houses down anyway.
+     */
+    ruinTimberHouse: RichmondRuins.ruinTimberHouse,
+    /**
+     * A roofless masonry shell, two walls standing, the render gone off the stone.
+     *
+     * Stamped exactly once, on Brown's Island in the falls: the Confederate States Laboratory,
+     * wrecked by the cartridge explosion of 13 March 1863. It is `decor` on water and stands where
+     * no route can reach it, which is deliberate — this is a thing the player looks at across the
+     * river from the quay, not a thing they walk up to. See header note 1 for who died in it.
+     */
+    ruinStoneShell: RichmondRuins.ruinStoneShell,
+    /** Salvaged brick, stacked square for carting. Bricks were scarcer than the ground they lay on. */
+    brickSalvage: RichmondRuins.brickSalvage,
+    /** Broken stone and a splintered beam — what a chimney stack comes down as. */
+    rubbleStone: RichmondRuins.rubbleStone,
+    /** Sawn boards off a pulled-down house, stacked flat. Bound for the works, or for a stove. */
+    timberStack: RichmondRuins.timberStack,
+    /**
+     * Cut cordwood, stacked. Not a ruin, and the most historically loaded object on the map:
+     * firewood passed $30 a cord in the winter of 1863-64 against a pre-war $4, and Richmond
+     * families were burning furniture and fence rails. It stands under guard by the relief society,
+     * which is where a stack of it would have had to stand.
+     */
+    cordwood: RichmondRuins.cordwood,
+    /** Lopped bare. The woodlots outside the line went for fuel, gabions and field of fire alike. */
+    deadTree: RichmondRuins.deadTree,
+    deadTreeSmall: RichmondRuins.deadTreeSmall,
 
     // --- the river and the canal's working plant ---------------------------------------------------
     /** Flat-decked cargo barge with a deck derrick. Moored, so `decor`: nothing to collide with. */

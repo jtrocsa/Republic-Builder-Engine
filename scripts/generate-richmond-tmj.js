@@ -253,9 +253,14 @@ withDoor(32, 6, T.mansionStone, "requisitioned house");
 withDoor(35, 6, T.chapel, "chapel");
 // Hospital and government stores, cols 38-53. The rail depot is NOT up here — see the palette's note
 // on the locomotive; it is in the bottom, where Richmond's depots were.
+//
+// The commissary store moved west to col 45 and the surgeon's quarters went down to the second range,
+// to clear rows 4-5 at cols 49-52 for the pulled-down house on the works. Both moves are improvements
+// on their own terms: a commissary store belongs against the road out that its wagons use, and a
+// surgeon lodging in a Franklin Street house is what the Chimborazo staff actually did — the hospital
+// had matrons' quarters but its surgeons boarded in town.
 withDoor(38, 4, T.hospitalWard, "a Chimborazo ward");
-withDoor(46, 6, T.depotOffice, "surgeon's quarters");
-withDoor(49, 5, T.warehouse, "commissary store");
+withDoor(45, 4, T.warehouse, "commissary store");
 
 // --- second range (doors on Franklin Street) ---
 withDoor(3, 10, T.terraceLong, "terrace housing");
@@ -266,6 +271,7 @@ withDoor(25, 10, T.officeBrick, "government office");
 withDoor(28, 10, T.terraceBrick, "terrace housing");
 withDoor(34, 10, T.townhouseBrickAlt, "dwelling");
 withDoor(37, 10, T.chapel, "chapel");
+withDoor(39, 10, T.depotOffice, "surgeon's quarters");
 withDoor(43, 10, T.terraceLong, "terrace housing");
 withDoor(48, 10, T.townhouseBrick, "dwelling");
 withDoor(51, 10, T.depotOffice, "railroad office");
@@ -334,7 +340,16 @@ const CITY_EDGE = [
   [50, 1, T.abatis, "solid", "abatis"],
   [45, 3, T.rampart, "solid", "earthwork"],
   [50, 3, T.rampart, "solid", "earthwork"],
-  [52, 5, T.fieldGun, "solid", "field gun"],
+  // The one place on this map where the war has physically taken a building away — and it took it
+  // away rather than knocking it down, which is the distinction the whole ruin decision rests on.
+  // See the palette's header note 1. A line needs open ground in front of it, so the houses standing
+  // on it came down; the frame is dismantled and lying, the walls are stubs, and nothing here is
+  // burnt or shelled, because Richmond does not burn until April 1865.
+  [49, 4, T.ruinTimberHouse, "solid", "house taken down for the line"],
+  // The house's own brick, stacked square for carting. This is the half of the demolition the word
+  // "ruin" hides: brick and seasoned timber in Richmond that winter were worth taking away, so a
+  // house pulled down for a field of fire left a tidy pile beside it rather than a scattered one.
+  [49, 6, T.brickSalvage, "solid", "brick off the house"],
   // Across the road itself, and `decor` on purpose: the bar is a thing you are stopped at and talk
   // your way past, not a wall. A solid stamp here would make the checkpoint a dead end.
   [42, 3, T.chainPosts, "decor", "checkpoint bar"],
@@ -372,6 +387,16 @@ const FURNITURE = [
   [33, 2, T.wallTent, "solid", "hospital tent"],
   [37, 2, T.wallTent, "solid", "hospital tent"],
   [36, 2, T.hospitalCot, "solid", "hospital cot"],
+  // The relief society's woodpile, in the churchyard and stacked where it can be watched. Firewood
+  // in Richmond passed $30 a cord in the winter of 1863-64 against a pre-war $4, and families were
+  // burning furniture and fence rails; a guarded stack of it beside a church says more about the
+  // civilian city than any amount of rubble would. `richmond-relief-society-woman` stands three
+  // tiles east of it on Broad Street, which is close enough to read as hers.
+  // Cols 3-4 and not 4-5: at 4-5 the two stacks close the only way out of the two cells of
+  // churchyard behind the refugee tent at (2,3), and the traversal test says so by name. Col 5 is
+  // that pocket's drain to Broad Street and has to stay open.
+  [3, 5, T.cordwood, "solid", "relief society woodpile"],
+  [4, 5, T.cordwood, "solid", "relief society woodpile"],
   [13, 3, T.marketBarrow, "decor", "market barrow"],
   [26, 2, T.bench, "decor", "bench"],
   [30, 2, T.benchAlt, "decor", "bench"],
@@ -389,7 +414,16 @@ for (const [col, row, entry, solidity, label] of FURNITURE) {
 // --- Tredegar's yard, and the dock's ------------------------------------------------------------------
 // Bar iron out of the mill, guns out of the ordnance shop, and freight moving through both. This is
 // where the map says what the works is for without a line of dialogue.
+// Row 18 is the strip between the foot of the retaining wall and the first range of roofs, and the
+// four stamps that open this list all sit in it. None of them is a ruin. Tredegar was *building*
+// through 1864 — new sheds, a second rolling mill — and a stack of brick, a stack of boards and a
+// heap of foundation stone are what a works under expansion has lying in its yard. The gun on the
+// same row is finished, not wrecked, and stands where the depot could take it.
 const YARD = [
+  [19, 18, T.brickSalvage, "solid", "brick for the new shed"],
+  [24, 18, T.rubbleStone, "solid", "foundation stone"],
+  [33, 18, T.fieldGun, "solid", "gun for the front"],
+  [46, 18, T.timberStack, "solid", "sawn boards"],
   [2, 24, T.fieldGun, "solid", "finished gun"],
   [7, 25, T.plankStack, "solid", "bar iron"],
   [19, 24, T.crate, "solid", "ordnance crate"],
@@ -417,6 +451,17 @@ map.stamp(40, 31, T.dockCrane, "solid", "loading derrick");
 map.stamp(18, 28, T.cargoBarge, "decor", "canal barge");
 map.stamp(42, 28, T.cargoBarge, "decor", "canal barge");
 map.stamp(26, 33, T.rowboat, "decor", "skiff");
+
+// Brown's Island, in the falls below Tredegar: the Confederate States Laboratory, wrecked by the
+// cartridge explosion of 13 March 1863. Around forty-five workers were killed, most of them girls
+// and young women, several as young as nine, many of them Irish immigrants out of the Bottom.
+//
+// It stands on water the land mask has already closed, so it is `decor` and no route can reach it —
+// which is the placement, not a limitation of it. This is a thing the player sees across the river
+// from the quay and has to ask about; walking up to it and pressing E would make it an exhibit. It
+// is also the only building on this map that is a ruin, and the reason ruins are on an 1864 map at
+// all is that this one is a year old and the city around it is not damaged in the slightest.
+map.stamp(6, 33, T.ruinStoneShell, "decor", "the laboratory on Brown's Island");
 
 const QUAY_EDGE = [
   [6, T.bollard],
@@ -459,6 +504,12 @@ const SHADE_TREES = [
   [23, 1, T.treeBirch],
   [31, 1, T.treeBirch],
   [22, 4, T.treeBirch],
+  // Two stripped ones, standing among the living. Richmond took its own trees for fuel through the
+  // last two winters of the war — Capitol Square's were guarded for exactly that reason — so a
+  // lopped bare trunk in a street of leafed ones is the same fact the woodpile in the churchyard is,
+  // said the other way round. They keep `base` solidity like every other tree here.
+  [13, 4, T.deadTree],
+  [20, 4, T.deadTreeSmall],
 ];
 for (const [col, row, entry] of SHADE_TREES) map.stamp(col, row, entry, "base", "shade tree");
 

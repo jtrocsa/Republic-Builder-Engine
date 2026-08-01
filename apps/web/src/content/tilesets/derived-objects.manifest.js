@@ -198,4 +198,60 @@ export const DERIVED_OBJECTS = [
       { name: "hospitalCot", box: [518, 0, 562, 78] },
     ],
   },
+  {
+    // `war ruins`, read properly. The catalog had it sampled at 4 sheets of 27 and written off as
+    // contemporary urban decay — concrete apartment blocks, modern cars, graffiti — and on that
+    // reading Richmond 1864 excluded the pack outright, because the city does not burn until
+    // April 1865 and a ruined 1864 Richmond is the wrong year by one.
+    //
+    // Sheets 21 and 22 were among the 21 never opened, and they are a different pack from the one
+    // the catalog describes: cut-outs on transparency, roughly half of each sheet, drawn as
+    // timber, brick and stone rather than concrete. Nothing in the set below carries a date.
+    //
+    // What they are for is the point. **None of this is bomb damage** — 1864 Richmond has no such
+    // thing. Every object here is something Richmonders did to their own city, and each is placed
+    // on the map only where the record puts it:
+    //
+    //   ruinTimberHouse   the intermediate defence line needed a clear field of fire, so the
+    //   ruinStoneShell    houses standing in it came down and the woodlots with them. A pulled-
+    //   deadTree          down house is not a shelled one: the frame is dismantled and lying,
+    //   deadTreeSmall     the walls are stubs, and the material is stacked beside it, because
+    //   brickSalvage      brick and timber were scarce enough to be worth carrying away.
+    //   timberStack
+    //   rubbleStone
+    //
+    // One object was cut here after it was packed, and the reason is worth keeping. Sheet 21
+    // (10,14) looked in the grid render like crossed timbers on a shadow — which is precisely the
+    // shape the note above says the abandoned chevaux-de-frise should have been generated as, and
+    // finding it already drawn was too neat to doubt. Rendered into the map and cropped at 5x it is
+    // a **fallen telegraph pole**: what read as shadow is four snapped wires hanging off two
+    // crossarms. The catalog even lists "utility poles with wires" among this pack's contents. So
+    // the chevaux-de-frise still does not exist in this library, and the earlier conclusion stands
+    // unchanged. The general lesson is the one this map has now learned four times: the labelled
+    // grid tells you where a sprite is, and only the render tells you what it is.
+    //
+    //   cordwood          not a ruin at all, and the most historically loaded object in the set.
+    //                     Firewood in Richmond passed $30 a cord in the winter of 1863-64 against
+    //                     a pre-war $4, and families burned furniture and fence rails. A guarded
+    //                     stack of it beside the relief society says more about the civilian city
+    //                     than any amount of rubble would.
+    //
+    // `ruinStoneShell` carries one further job: on Brown's Island, in the falls below Tredegar,
+    // it is the Confederate States Laboratory, wrecked by the cartridge explosion of 13 March
+    // 1863. About forty-five workers died, most of them girls and young women, several as young
+    // as nine, many of them Irish immigrants from the Bottom. It is across water and unreachable
+    // on purpose — the player sees it from the quay and asks what it is.
+    from: "war ruins/21.png",
+    out: "richmond-ruins.png",
+    objects: [
+      { name: "ruinTimberHouse", seed: [8, 1], limit: { height: 3, width: 5 } },
+      { name: "ruinStoneShell", seed: [8, 5], limit: { height: 3, width: 5 } },
+      { name: "brickSalvage", seed: [6, 2], limit: { height: 3, width: 3 } },
+      { name: "rubbleStone", seed: [6, 0], limit: { height: 3, width: 3 } },
+      { name: "timberStack", seed: [6, 10], limit: { height: 3, width: 3 } },
+      { name: "deadTree", seed: [2, 8], limit: { height: 3, width: 3 } },
+      { name: "deadTreeSmall", seed: [4, 0], limit: { height: 3, width: 3 } },
+      { name: "cordwood", from: "war ruins/22.png", seed: [11, 14], limit: { height: 3, width: 3 } },
+    ],
+  },
 ];
