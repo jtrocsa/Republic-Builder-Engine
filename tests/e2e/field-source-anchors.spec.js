@@ -27,16 +27,20 @@ test.describe("Field source anchors", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    // All three of this case's records are NPC-anchored, so the map carries three badges and no
-    // world markers whatsoever.
-    await expect(page.locator(".npc-source-badge")).toHaveCount(3);
+    // All three of this case's records are NPC-anchored, so the map carries badges and no world
+    // markers whatsoever — but only two badges are lit on arrival. Since Phase 70 the servant's
+    // letter carries `requiresSourceId: "riverbend-charter"`, because the DISCREPANCY it opens
+    // builds its evidence column out of the charter interview's logged answers and would otherwise
+    // open with nothing in it. A locked record shows no badge (fieldNpcButton reads the same
+    // sourceAvailability() the world markers and the Mission Tracker do).
+    await expect(page.locator(".npc-source-badge")).toHaveCount(2);
     await expect(page.locator(".source-signal--world")).toHaveCount(0);
     const carriers = await page.evaluate(() =>
       [...document.querySelectorAll(".npc-source-badge")]
         .map((el) => el.closest(".field-npc")?.dataset.npc)
         .sort()
     );
-    expect(carriers).toEqual(["indentured-servant", "settlement-minister", "wharf-clerk"]);
+    expect(carriers).toEqual(["settlement-minister", "wharf-clerk"]);
 
     // Spawn is (26,18); the minister stands at (26,11.5) straight up the village spine.
     await walkToNpc(page, "settlement-minister");

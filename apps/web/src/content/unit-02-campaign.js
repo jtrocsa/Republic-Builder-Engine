@@ -121,7 +121,10 @@ export const CASE_004_SOURCES = [
     date: "1618",
     record: "Company instructions establishing the headright system, Virginia",
     visual: "context",
-    activityRoute: null,
+    // INTERVIEW — "By Whose Head". Four questions put to eight people at
+    // Riverbend about a grant that counts heads, one useful answer apiece. See
+    // content/activities/unit-02-activities.js and decision log 0053.
+    activityRoute: "interview",
     excerpt:
       "The Virginia Company instructed its governor to grant fifty acres of land to every person transported into the colony at his own charge, and fifty acres more for every servant he brought and settled there — a policy meant to draw settlers by tying land ownership to the number of people, free or bound, a planter could bring across the Atlantic.",
     prompt:
@@ -141,7 +144,12 @@ export const CASE_004_SOURCES = [
     date: "1623",
     record: "Personal letter from an indentured servant in Virginia",
     visual: "letter",
-    activityRoute: null,
+    // DISCREPANCY — "Nothing to be Gotten". Frethorne audited against what the
+    // interview logged, which is why this record is gated behind the charter:
+    // the evidence column is built from interviewTokens() and an ungated route
+    // here would open the audit with nothing in it.
+    activityRoute: "discrepancy",
+    requiresSourceId: "riverbend-charter",
     excerpt:
       "“I have nothing to comfort me, nor is there nothing to be gotten here but sickness and death, except that one had money to lay out in some things for profit … People cry out day and night — Oh, that they were in England without their limbs — and would not care to lose any limb to be in England again, yea, though they beg from door to door.”",
     prompt:
@@ -161,13 +169,23 @@ export const CASE_004_SOURCES = [
     date: "1630",
     record: "Representative cargo account, Chesapeake tobacco trade",
     visual: "context",
-    activityRoute: null,
-    // Investigation Challenge (Phase A of the Investigation/Archive Challenge
-    // plan's catalog-expansion pass) — gates this source's sourceReader()
-    // worksheet behind a pre-reveal prediction quest
-    // (UNIT_02_INVESTIGATION_EVIDENCE_QUESTS).
-    investigationMode: "evidence-organizing",
-    investigationQuestId: "case-004-investigation-evidence-riverbend-ledger",
+    // TRACE — "One Hogshead". The engine's first shipped content anywhere.
+    //
+    // This record used to carry an Investigation Challenge
+    // (investigationMode: "evidence-organizing" +
+    // "case-004-investigation-evidence-riverbend-ledger") gating its
+    // sourceReader() worksheet behind a pre-reveal prediction quest. It was
+    // removed for the same reason taino-context's was in Phase 69: the gate
+    // asks a player to predict the sourcing of a worksheet that no longer
+    // exists, and the activity's own howItWorks panel does the job the gate was
+    // reaching for. The quest itself is left in unit-02-quests.js, unreferenced.
+    activityRoute: "trace",
+    // Four legs of a chain, then a naming, then a filing, is already three acts
+    // of reading — a paragraph box after them is a fourth ending. Same call as
+    // waldseemuller-map in Phase 69 (decision log 0052 §9); the charter and the
+    // letter keep their written reading and the Archive Evaluator.
+    readerQuestType: "mcq",
+    readerQuestIds: ["case-004-reader-mcq-ledger-silence", "case-004-reader-mcq-ledger-credit"],
     excerpt:
       "Received of the ship Speedwell: fourteen hogsheads of tobacco, casked and weighed as within noted. Delivered in return: three pieces of Kentish cloth, two dozen iron hoes, six dozen knives, and sundry other English wares, per the planters' order at the landing.",
     prompt:

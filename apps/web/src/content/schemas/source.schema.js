@@ -44,6 +44,22 @@ export function buildSourceSchema({ reconstructionIds } = {}) {
     // case.archiveChallenge.questType above.
     investigationMode: z.string().min(1).nullable().default(null),
     investigationQuestId: z.string().min(1).nullable().default(null),
+    // Availability gating, read by sourceAvailability() in main.js: this record
+    // stays locked until the named record of the same case is secured. Added in
+    // Phase 70 to express case-001's shape as data — it had been a literal
+    // `caseId === "case-001"` branch, one of the engine/content-boundary
+    // violations CLAUDE.md names — so that Unit 2 could gate Frethorne's audit
+    // behind the interview it reads its evidence out of, without a second one.
+    //
+    // `.optional()` rather than `.nullable().default(null)`: runSchema()
+    // discards result.data, so a Zod default never reaches the running game and
+    // every consumer has to read these defensively anyway. See decision log 0053.
+    requiresSourceId: z.string().min(1).optional(),
+    // Swaps sourceReader()'s prompt + textarea + Archive Evaluator for a set of
+    // quests of the named type (decision log 0052 §9). Opt-in per source;
+    // cross-referenced against the unit's quest arrays by validate-content.js.
+    readerQuestType: z.string().min(1).optional(),
+    readerQuestIds: z.array(z.string().min(1)).min(1).optional(),
   });
 }
 

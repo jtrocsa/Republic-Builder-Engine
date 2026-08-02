@@ -56,6 +56,7 @@ import {
 } from "./content/quests/unit-01-quests.js";
 import {
   UNIT_02_MCQ_QUESTS,
+  UNIT_02_READER_MCQ_QUESTS,
   UNIT_02_SEQUENCING_QUESTS,
   UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
   UNIT_02_SOURCE_ANALYSIS_QUESTS,
@@ -114,6 +115,7 @@ import {
   renderActivityInline,
 } from "./engine/activities/index.js";
 import { UNIT_01_ACTIVITIES } from "./content/activities/unit-01-activities.js";
+import { UNIT_02_ACTIVITIES } from "./content/activities/unit-02-activities.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
@@ -3953,10 +3955,13 @@ function investigationQuestFor(questType, questId) {
 // record whose activity has already done the thinking. A source that carries
 // readerQuestType/readerQuestIds answers a short set of multiple-choice items instead of
 // writing a paragraph, because "file the record" followed by a paragraph box is two endings
-// for one activity — see docs/decision-log/0052. Opt-in per source; the other 23 records in
+// for one activity — see docs/decision-log/0052. Opt-in per source; the other 22 records in
 // the game are untouched and keep the Archive Evaluator.
+//
+// One flat pool per quest type across all units, the same shape as the quest lookups above —
+// readerQuestsFor() resolves by id, and ids are globally unique (validate:content enforces it).
 const READER_QUESTS_BY_TYPE = {
-  mcq: UNIT_01_READER_MCQ_QUESTS,
+  mcq: [...UNIT_01_READER_MCQ_QUESTS, ...UNIT_02_READER_MCQ_QUESTS],
 };
 function readerQuestsFor(source) {
   const questType = source?.readerQuestType;
@@ -9343,9 +9348,9 @@ function runFieldMovementLoop(now) {
   fieldMoveFrame = window.requestAnimationFrame(runFieldMovementLoop);
 }
 // Every unit's activities in one flat lookup keyed by source id, the same shape as the quest
-// lookups above. A source with no entry here falls through to sourceReader() exactly as the 21
-// sources in Units 2-5 always have.
-const ACTIVITIES_BY_SOURCE = { ...UNIT_01_ACTIVITIES };
+// lookups above. A source with no entry here falls through to sourceReader() exactly as the 18
+// remaining sources in Units 3-5 still do.
+const ACTIVITIES_BY_SOURCE = { ...UNIT_01_ACTIVITIES, ...UNIT_02_ACTIVITIES };
 
 function activityFor(sourceId) {
   return ACTIVITIES_BY_SOURCE[sourceId] || null;
@@ -9594,18 +9599,29 @@ function fieldTooFarNotice(label) {
 /**
  * Whether a record can be pursued yet: `"secured"`, `"available"`, or `"locked"`.
  *
- * The one gate that exists is Case 1.01's: nothing but the village observation is reachable until the
- * village has been observed. That rule used to live inline inside `fieldSourceSignal()` as an early
- * `return ""`, so it was the marker's private business — and Phase 56's objective tracker would have
- * had to re-derive it and could then disagree with the world about what is locked. One function, two
- * readers.
+ * The rule used to live inline inside `fieldSourceSignal()` as an early `return ""`, so it was the
+ * marker's private business — and Phase 56's objective tracker would have had to re-derive it and
+ * could then disagree with the world about what is locked. One function, two readers.
+ *
+ * Since Phase 70 the gate is **content, not a case-id literal**. A source may declare
+ * `requiresSourceId`, naming a record of its own case that must be secured first; until then it is
+ * locked. Case 1.01's two later records carry it (nothing but the village is reachable until the
+ * village has been observed) and so does Riverbend's Frethorne letter, whose DISCREPANCY builds its
+ * evidence column out of the charter interview's logged answers and opens empty without it.
+ *
+ * This replaced a literal `caseId === "case-001"` branch. Adding a second hard-coded case id here
+ * was the alternative, and it is one of the engine/content-boundary violations CLAUDE.md names —
+ * so the second consumer paid to make it data instead. See decision log 0053.
  *
  * Exported for tests/unit, per CLAUDE.md's export-in-place rule.
  */
 export function sourceAvailability(caseId, sourceId, evidence = hasEvidence) {
   if (evidence(caseId, sourceId)) return "secured";
-  if (caseId === "case-001" && sourceId !== "taino-context") {
-    return evidence("case-001", "taino-context") ? "available" : "locked";
+  const requires = sourceById(sourceId)?.requiresSourceId;
+  // A record naming itself would lock its own key and strand the case, which is the one failure
+  // mode this shape has that the old literal did not.
+  if (requires && requires !== sourceId) {
+    return evidence(caseId, requires) ? "available" : "locked";
   }
   return "available";
 }

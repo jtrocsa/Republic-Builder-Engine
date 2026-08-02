@@ -142,6 +142,11 @@ export const CASE_001_SOURCES = [
     record: "Letter to Rafael Sánchez, written after the first voyage",
     visual: "letter",
     activityRoute: "discrepancy",
+    // Nothing but the village observation is reachable until the village has been observed. That
+    // rule shipped as a `caseId === "case-001"` literal inside sourceAvailability() until Phase 70,
+    // when Riverbend needed the same gate and the second consumer paid to make it content. Same
+    // behaviour, stated where the record is. See decision log 0053.
+    requiresSourceId: "taino-context",
     excerpt:
       "“They are so ingenuous and free with all they have, that no one would believe it without seeing it.”",
     prompt: "How do the creator and intended audience shape what this letter emphasizes?",
@@ -162,6 +167,8 @@ export const CASE_001_SOURCES = [
     record: "Printed world map; Library of Congress Geography and Map Division",
     visual: "map",
     activityRoute: "assembly",
+    // See columbus-letter above: Case 1.01's ordering gate, expressed as content in Phase 70.
+    requiresSourceId: "taino-context",
     // Investigation Challenge (Phase A of the Investigation/Archive Challenge
     // plan's catalog-expansion pass) — gates this source's sourceReader()
     // worksheet behind a pre-reveal prediction quest

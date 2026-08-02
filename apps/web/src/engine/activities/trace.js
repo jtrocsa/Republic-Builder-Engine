@@ -13,9 +13,14 @@
 // knowing which legs the record actually covers.
 //
 // No content ships against this engine in Unit 1 — the Caribbean map runs
-// INTERVIEW, ASSEMBLY and DISCREPANCY. Its first mission is Canal Crossroads.
-// It is built now because the four contracts were specified together and the
-// registry's shape is only proven by more than one member.
+// INTERVIEW, ASSEMBLY and DISCREPANCY. It was built ahead of any content
+// because the four contracts were specified together and the registry's shape
+// is only proven by more than one member.
+//
+// Its first mission is Riverbend's wharf ledger ("One Hogshead",
+// content/activities/unit-02-activities.js), as of Phase 70. This comment used
+// to name Canal Crossroads, which the owner reassigned — see decision log 0053
+// §2. Unit 4 keeps its own trace for whenever that map is authored.
 //
 // Transfers as: a supply chain or migration (geography), a circulatory or water
 // cycle (biology), an algorithm's state (computing).

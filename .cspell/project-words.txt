@@ -31,6 +31,7 @@ arrowleft
 arrowright
 arrowup
 Aseprite
+askable
 astar
 atlased
 atlasing
@@ -359,11 +360,13 @@ trackside
 Treehouse
 Tsenacommacah
 tweening
+unaskable
 unbuildable
 unclassed
 unclickable
 uncompletable
 unconfigured
+unearnable
 unenterable
 unflipped
 ungated

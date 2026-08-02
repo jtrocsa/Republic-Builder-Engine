@@ -11,7 +11,7 @@ Companion ADR: `docs/decision-log/0050-mission-activity-catalog.md` records _why
 > **Phase 68 built four of these.** `engine/activities/` now holds four subject-agnostic activity
 > engines with Zod content contracts — `interview` (Group A), `assembly` (B1), `discrepancy` (a
 > B3/B4 hybrid) and `trace` (B5) — behind one host screen, replacing the three welded screens §0
-> below describes. Unit 1's Caribbean runs three of them; `trace` has no content yet. See
+> below describes. Unit 1's Caribbean runs three of them; `trace` had no content until Phase 70. See
 > `docs/decision-log/0051-activity-engines.md`. The rest of this document is still the queue: §4's
 > unbuilt entries are unbuilt, and §5's variety rule is unchanged.
 >
@@ -27,6 +27,20 @@ Companion ADR: `docs/decision-log/0050-mission-activity-catalog.md` records _why
 > — and **a record the player is asked to audit or reconstruct arrives with its own context and its
 > full text first**, not as a list of claims from a stranger. See
 > `docs/decision-log/0052-making-the-missions-legible.md`.
+>
+> **Phase 70 authored the second unit and gave §5's variety rule its first real test.** Riverbend
+> (case-004) runs INTERVIEW, DISCREPANCY and **TRACE** — the fourth engine's first content anywhere,
+> moved here from Canal Crossroads by the owner. ASSEMBLY was the engine dropped, because repeating
+> all three of Unit 1's would have been the same mission with different nouns, which is what §5 rule 2
+> exists to prevent. The working refinement, and the thing to carry into Units 3–5: **rule 2 binds at
+> the level of the question, not only the engine.** Two units may both run an INTERVIEW provided they
+> ask different things with it — Unit 1's puts four topical questions to seven people, Unit 2's puts
+> the same civic question set to eight and lets the answers stratify by legal status. Two units
+> running the same engine to ask the same shape of question is the failure the rule names.
+>
+> §6 row 7 is now **enforced** rather than merely stated: `tests/unit/activity-content.test.js` fails
+> on an authored activity with no `howItWorks` or no `terms`, and on four other authoring rules
+> besides. See `docs/decision-log/0053-riverbend-on-the-engines.md`.
 
 ---
 
@@ -46,7 +60,7 @@ The measured state, verified against source on 2026-08-01:
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rubric-scored quest types    | 6 — `mcq`, `sequencing`, `evidence-organizing`, `hipp`, `saq`, `dbq` (`quest-types/index.js`)                                                               |
 | Bespoke map activities       | ~~**3, Unit 1 only** — `village-activity`, `columbus-activity`, `map-jigsaw`~~ **Replaced in Phase 68** by 4 content-driven engines in `engine/activities/` |
-| `activityRoute` in Units 2–5 | `null` on every source, all 21 of them — **still true.** The engines exist; nobody has authored activities for those units yet                              |
+| `activityRoute` in Units 3–5 | `null` on 18 of the 21 — Phase 70 authored Riverbend's three. Each remaining unit has exactly one field case, so the queue is three maps                    |
 | Field NPCs                   | **70 flat `text:` strings** — still true as _ambient_ dialogue. INTERVIEW adds its questions on top from activity content, without touching the tables      |
 | Mini-games                   | 2, real and reachable — `cargo-sorting`, `storm-navigation` (see §4 Group D; the "unwired" note in decision log `0028` describes Phase 9 and is stale)      |
 | Shared closer                | Reconstruction Table — the same drag-record-to-lane on all five maps                                                                                        |
@@ -388,23 +402,30 @@ map attached.
 
 Ordered by payoff per unit of work. None of this is scheduled; it is the queue to draw from.
 
-| #   | Change                                                                          | Group | Cost | Status                  |
-| --- | ------------------------------------------------------------------------------- | ----- | ---- | ----------------------- |
-| 1   | Generalize `map-jigsaw` off `waldseemuller-map` so any unit can use it          | B1    | S    | **Done** (Phase 68)     |
-| 2   | Fix the pre-solved sequencing quests in Units 2–4 (author them out of order)    | C2    | S    | Open                    |
-| 3   | Case 1.02 "Atlantic Route Puzzle" → an actual route plot                        | B5    | M    | Engine done, no content |
-| 4   | Units 4/5's composite documents → fillable forms with an omission question      | B3    | M    | Open                    |
-| 5   | Unit 5's "who the record counted" lane → a real tally against the ward register | B4    | M    | Open                    |
-| 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    | Open                    |
-| 7   | `howItWorks` + `terms` on every activity authored from here on                  | —     | S    | **Rule** (Phase 69)     |
+| #   | Change                                                                          | Group | Cost | Status                                           |
+| --- | ------------------------------------------------------------------------------- | ----- | ---- | ------------------------------------------------ |
+| 1   | Generalize `map-jigsaw` off `waldseemuller-map` so any unit can use it          | B1    | S    | **Done** (Phase 68)                              |
+| 2   | Fix the pre-solved sequencing quests in Units 3–4 (author them out of order)    | C2    | S    | Open — 4 left of 5                               |
+| 3   | Case 1.02 "Atlantic Route Puzzle" → an actual route plot                        | B5    | M    | Engine done, no content                          |
+| 4   | Units 4/5's composite documents → fillable forms with an omission question      | B3    | M    | Open                                             |
+| 5   | Unit 5's "who the record counted" lane → a real tally against the ward register | B4    | M    | Open                                             |
+| 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    | Open                                             |
+| 7   | `howItWorks` + `terms` on every activity authored from here on                  | —     | S    | **Rule** (Phase 69), enforced by test (Phase 70) |
+| 8   | Author activities on Units 3–5's three field maps (18 records)                  | —     | L    | Open — the standing queue                        |
 
 **The shape of the remaining work changed in Phase 68.** Items 1 and 3 were engine problems and the
 engines now exist — `assembly` takes any image and any grid, `trace` takes any chain of nodes. What
-is left on those rows is authored content, not code. Item 2 is unchanged and still the cheapest real
-win in this table.
+is left on those rows is authored content, not code. Phase 70 took one of Item 2's five, because it
+already had the file open; the remaining four are still the cheapest real win in this table.
 
 Item 7 is not a task but a standing condition on the rest, added after Phase 69's playtest: an
-activity shipped without it is a mechanic a student has to reverse-engineer. It costs five sentences.
+activity shipped without it is a mechanic a student has to reverse-engineer. It costs five sentences,
+and since Phase 70 `tests/unit/activity-content.test.js` fails if it is skipped.
+
+Item 8 is the queue Phases 68–70 leave behind, and the realistic budget from Riverbend is **~700
+lines of prose-heavy content per map** plus five registration edits. Note that only a field case can
+carry an activity: the ten non-map cases declare no `sources` at all, and reaching one from
+`missionScreen()` needs a path nobody has built.
 
 ---
 

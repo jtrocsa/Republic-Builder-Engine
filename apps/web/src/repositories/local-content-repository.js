@@ -19,6 +19,7 @@ import * as unit03Quests from "../content/quests/unit-03-quests.js";
 import * as unit04Quests from "../content/quests/unit-04-quests.js";
 import * as unit05Quests from "../content/quests/unit-05-quests.js";
 import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js";
+import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -33,7 +34,7 @@ export function loadChronicleContent() {
       unit: unit01Campaign.UNIT_01,
       sources: unit01Campaign.CASE_001_SOURCES,
       // Activity content for the four engines in engine/activities/, keyed by the source id each
-      // one opens from. Only Unit 1 has any yet.
+      // one opens from. Units 1 and 2 have theirs; 3-5 still route every source to the reader.
       activities: UNIT_01_ACTIVITIES,
       review: unit01Campaign.REVIEW,
       mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
@@ -60,8 +61,10 @@ export function loadChronicleContent() {
       unit: unit02Campaign.UNIT_02,
       sources: unit02Campaign.CASE_004_SOURCES,
       lanes: unit02Campaign.CASE_004_LANES,
+      activities: UNIT_02_ACTIVITIES,
       review: unit02Campaign.UNIT_02_REVIEW,
       mcqQuests: unit02Quests.UNIT_02_MCQ_QUESTS,
+      readerMcqQuests: unit02Quests.UNIT_02_READER_MCQ_QUESTS,
       evidenceOrganizingQuests: unit02Quests.UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit02Quests.UNIT_02_SEQUENCING_QUESTS,
       sourceAnalysisQuests: unit02Quests.UNIT_02_SOURCE_ANALYSIS_QUESTS,

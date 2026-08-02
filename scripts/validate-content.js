@@ -279,10 +279,24 @@ function main() {
     )
   );
   results.push(
+    runSchema(
+      "unit-02-activities.js: UNIT_02_ACTIVITIES",
+      ActivityMapSchema,
+      content.unit02.activities
+    )
+  );
+  results.push(
     runSchema("unit-02-campaign.js: UNIT_02_REVIEW", ReviewSchema, content.unit02.review)
   );
   results.push(
     runSchema("unit-02-quests.js: UNIT_02_MCQ_QUESTS", McqQuestListSchema, content.unit02.mcqQuests)
+  );
+  results.push(
+    runSchema(
+      "unit-02-quests.js: UNIT_02_READER_MCQ_QUESTS",
+      McqQuestListSchema,
+      content.unit02.readerMcqQuests
+    )
   );
   results.push(
     runSchema(
@@ -624,6 +638,10 @@ function main() {
       {
         source: "unit-01-quests.js:UNIT_01_READER_MCQ_QUESTS",
         items: content.unit01.readerMcqQuests,
+      },
+      {
+        source: "unit-02-quests.js:UNIT_02_READER_MCQ_QUESTS",
+        items: content.unit02.readerMcqQuests,
       },
       {
         source: "unit-02-quests.js:UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS",

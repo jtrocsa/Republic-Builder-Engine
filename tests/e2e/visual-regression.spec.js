@@ -60,6 +60,20 @@ function snap(name, extra = {}) {
   return { animations: "disabled", ...extra, name: `${name}.png` };
 }
 
+// Riverbend's interview with all eight accounts taken — one useful answer from each of the eight
+// people, which is what `requires.useful: 8` asks for. Used by two tests below: it is what makes the
+// charter's record openable, and what fills the notebook the interview screen is baselined on.
+const RIVERBEND_ACCOUNTS = {
+  "settlement-minister": ["land"],
+  "settlement-burgess": ["voice"],
+  "wharf-clerk": ["passage"],
+  "indentured-servant": ["owed"],
+  "angolan-laborer": ["owed"],
+  "settlement-goodwife": ["voice"],
+  "powhatan-man": ["land"],
+  "powhatan-woman": ["voice"],
+};
+
 // Tiled maps (Caribbean field, Archive Room, Riverbend, hallway, Common Cause) draw via
 // engine/tiled-map-loader.js's renderTiledMap(), which is async (it awaits image decode before
 // the first ctx.drawImage) — its main.js wrapper (e.g. renderCaribbeanTiledMap()) marks
@@ -244,6 +258,47 @@ test.describe("Gameplay visual-regression baselines", () => {
     await waitForTiledCanvas(page, "riverbendTiledCanvas");
     await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
     await expect(page).toHaveScreenshot(snap("field-riverbend"));
+
+    // Riverbend's three missions (Phase 70). Two of the three engines are shared with Case 1.01 and
+    // are baselined there already — what these add is the *content's* layout: an eight-row notebook
+    // in two panels, a five-claim audit whose record leads with four paragraphs of the letter, and
+    // TRACE, whose renderer had shipped for two phases with no content to draw.
+    await setScreen(page, {
+      currentScreen: "interview",
+      activeCaseId: "case-004",
+      activeActivitySourceId: "riverbend-charter",
+      sourceActivities: {
+        "riverbend-charter": {
+          state: { asked: RIVERBEND_ACCOUNTS, logged: RIVERBEND_ACCOUNTS, filed: null },
+          completed: false,
+        },
+      },
+    });
+    await expect(page.locator(".activity-board--interview")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("activity-interview-riverbend"));
+
+    await setScreen(page, {
+      currentScreen: "discrepancy",
+      activeCaseId: "case-004",
+      activeActivitySourceId: "riverbend-letter",
+      caseEvidence: { "case-004": ["riverbend-charter"] },
+      sourceActivities: {
+        "riverbend-charter": {
+          state: { asked: RIVERBEND_ACCOUNTS, logged: RIVERBEND_ACCOUNTS, filed: "by-the-head" },
+          completed: true,
+        },
+      },
+    });
+    await expect(page.locator(".activity-board--discrepancy")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("activity-discrepancy-riverbend"));
+
+    await setScreen(page, {
+      currentScreen: "trace",
+      activeCaseId: "case-004",
+      activeActivitySourceId: "riverbend-ledger",
+    });
+    await expect(page.locator(".activity-board--trace")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("activity-trace"));
   });
 
   test("field: Philadelphia gathering ground (Unit 3)", async ({ page }) => {
@@ -537,25 +592,39 @@ test.describe("Gameplay visual-regression baselines", () => {
     // captioned "Secondary context record" and footed "Background evidence, not a Taíno-authored
     // primary source". Its `record` is also one of the longest in the content, so it is the masthead's
     // layout case: a value that has to wrap beside its label.
+    //
+    // Reached through the record's own activity since Phase 70: the charter opens Riverbend's
+    // INTERVIEW, and the reader is what its footer offers once the record is filed. Seeded rather
+    // than walked, for the same reason as the multiple-choice variant above — the masthead is what
+    // is under test, not the route to it.
     await seedProgress(page, {
-      currentScreen: "field",
+      currentScreen: "interview",
       activeCaseId: "case-004",
       unlocked: ["case-001", "case-004"],
+      activeActivitySourceId: "riverbend-charter",
       tutorial: { step: "complete", completed: true, skipped: false },
+      sourceActivities: {
+        "riverbend-charter": {
+          state: {
+            asked: RIVERBEND_ACCOUNTS,
+            logged: RIVERBEND_ACCOUNTS,
+            filed: "by-the-head",
+          },
+          completed: false,
+        },
+      },
     });
     await loadSeededSave(page);
-    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await page.locator('[data-action="open-activity-source"]').click();
 
-    // The charter is carried by the settlement minister — same route as
-    // tests/e2e/field-source-anchors.spec.js walks.
-    await walkToNpc(page, "settlement-minister");
-    await page.keyboard.press("e");
-    await page
-      .locator(
-        '.field-speech-bubble [data-action="start-source-activity"][data-source="riverbend-charter"]'
-      )
-      .click();
     await expect(page.locator(".reader-shell")).toBeVisible();
+    await expect(page.locator("#sourceResponse")).toBeVisible();
+    // The button that opens the record sits at the foot of a long activity page, and a screen
+    // change does not reset the document's scroll — so arriving this way lands mid-page with the
+    // chrome bar and the back link above the fold. That is pre-existing and shared with the
+    // multiple-choice route above; this baseline is of the masthead, so start it where the masthead
+    // is rather than re-recording this baseline around a scroll offset.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page).toHaveScreenshot(snap("source-reader-primary-prose"));
   });
 

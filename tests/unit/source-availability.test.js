@@ -40,12 +40,44 @@ describe("sourceAvailability", () => {
     expect(sourceAvailability("case-001", "taino-context", done)).toBe("secured");
   });
 
-  it("gates nothing on any other case (edge case)", () => {
-    // Only Case 1.01 has a within-case order. Every other case's records are all reachable on
-    // arrival, and a stray gate there would strand a student with no way to make progress.
+  it("gates nothing that does not ask to be gated (edge case)", () => {
+    // Most records are reachable on arrival, and a stray gate would strand a student with no way to
+    // make progress. Both records named here are the first thing a player reaches on their map.
     for (const caseId of ["case-004", "case-007"]) {
       expect(sourceAvailability(caseId, "riverbend-charter", secured())).toBe("available");
       expect(sourceAvailability(caseId, "commoncause-henry-speech", secured())).toBe("available");
     }
+  });
+
+  // Phase 70 replaced the `caseId === "case-001"` literal above with a `requiresSourceId` field the
+  // record itself carries, because Riverbend needed the same gate and a second hard-coded case id
+  // would have deepened one of the engine/content-boundary violations CLAUDE.md names. The four
+  // cases above are the proof that Case 1.01's behaviour is unchanged by that; these are the second
+  // consumer. See decision log 0053.
+
+  it("locks Frethorne's audit until the charter interview is secured (normal case)", () => {
+    // The DISCREPANCY on riverbend-letter builds its evidence column out of interviewTokens(), so
+    // reaching it first opens an audit with nothing to audit against.
+    expect(sourceAvailability("case-004", "riverbend-letter", secured())).toBe("locked");
+    expect(sourceAvailability("case-004", "riverbend-letter", secured("riverbend-charter"))).toBe(
+      "available"
+    );
+  });
+
+  it("leaves Riverbend's other two records open from the start (edge case)", () => {
+    // Unlike Case 1.01, Riverbend gates only the record that needs the evidence. The ledger's TRACE
+    // works cold — a player who walks to the wharf first is not stopped, they simply get less out
+    // of its first leg.
+    const none = secured();
+    expect(sourceAvailability("case-004", "riverbend-charter", none)).toBe("available");
+    expect(sourceAvailability("case-004", "riverbend-ledger", none)).toBe("available");
+  });
+
+  it("reports a gated record the player already holds as secured (edge case)", () => {
+    // Order matters inside the function: the secured check runs before the gate, so a save that
+    // somehow holds the letter without the charter still reads as secured rather than locked.
+    expect(sourceAvailability("case-004", "riverbend-letter", secured("riverbend-letter"))).toBe(
+      "secured"
+    );
   });
 });

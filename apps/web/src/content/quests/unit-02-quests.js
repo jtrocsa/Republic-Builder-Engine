@@ -111,7 +111,23 @@ export const UNIT_02_SEQUENCING_QUESTS = [
     id: "case-004-sequencing-headright-to-trade",
     prompt:
       "Arrange these Case 4 developments in the order that reflects how each one caused or enabled the next — not simply the order the dates occurred in.",
+    // Item array is deliberately NOT authored in already-correct order — see
+    // renderSequencingQuest()'s own doc comment in
+    // quest-types/generic/sequencing-quest.js: the array's authored order is
+    // what renders before the player makes any move, so an already-sorted array
+    // hands the player the answer and grades them correct for touching nothing.
+    // `position` (not array order) is the real answer key.
+    //
+    // This quest shipped sorted 0,1,2 from Phase A until Phase 70 — one of the
+    // five counted in ARCHITECTURE-QUICKREF §5 and MISSION-ACTIVITY-CATALOG §6
+    // row 2. Four remain, in Units 3 and 4.
     items: [
+      {
+        id: "wharf-ledger-export-economy",
+        label:
+          "The labor that servants like Frethorne performed produces the hogsheads of tobacco recorded leaving the wharf in exchange for English cloth and tools",
+        position: 2,
+      },
       {
         id: "headright-enables-recruitment",
         label:
@@ -124,16 +140,56 @@ export const UNIT_02_SEQUENCING_QUESTS = [
           "Recruited under that incentive, Richard Frethorne's 1623 letter describes the hunger, sickness, and fear indentured servants actually faced in Virginia",
         position: 1,
       },
-      {
-        id: "wharf-ledger-export-economy",
-        label:
-          "The labor that servants like Frethorne performed produces the hogsheads of tobacco recorded leaving the wharf in exchange for English cloth and tools",
-        position: 2,
-      },
     ],
     explanation:
       "The headright system's land-per-person incentive is what drove planters to recruit bound labor in the first place; Frethorne's letter shows the human reality of the labor that incentive produced; and the labor performed by servants like Frethorne is precisely what filled the hogsheads recorded leaving the wharf in the ledger — completing the chain from land policy to lived labor to export economy.",
     skillCategory: "Causation",
+  },
+];
+
+// Reader questions for riverbend-ledger, which since Phase 70 opens the TRACE
+// "One Hogshead" rather than a worksheet. A source carrying readerQuestType /
+// readerQuestIds has sourceReader()'s prompt + textarea + Archive Evaluator
+// replaced by these, and answering both correctly is what unlocks Institute
+// Context and "Secure in Codex" — the same thing submitting a written reading
+// does on a prose record. See decision log 0052 §9 for why (four legs, a
+// naming and a filing is already three acts of reading) and 0053 for this
+// record.
+//
+// Both questions are deliberately about what the account can and cannot carry,
+// not a restatement of the trace's closer. The first is the trace's own first
+// leg asked in the other direction; the second is the consignment mechanism,
+// which the legs establish but never name.
+export const UNIT_02_READER_MCQ_QUESTS = [
+  {
+    id: "case-004-reader-mcq-ledger-silence",
+    prompt:
+      "You have just traced a hogshead from the rows to London and back. A classmate cites this wharf account as evidence that enslaved and indentured labor produced Virginia's tobacco. What is wrong with the citation?",
+    choices: [
+      "The claim is true but this record cannot establish it — the account opens at the landing with the casks already made, and names no one who worked",
+      "The claim is false for 1630, since Virginia's tobacco was grown by wage laborers until later in the century",
+      "The claim is unsupported because account books were kept by merchants, who had no reason to record accurate information",
+      "The claim is unsupported because a single representative entry can never be evidence of anything general",
+    ],
+    answer: 0,
+    explanation:
+      "Being right about the world and wrong about the evidence is the most comfortable mistake in this discipline. The labor is amply documented — in musters, patents, servants' letters, and the testimony you gathered in the fields — but not here. A wharf account begins where the labor ends, and a historian is answerable for which record a claim rests on.",
+    skillCategory: "Sourcing",
+  },
+  {
+    id: "case-004-reader-mcq-ledger-credit",
+    prompt:
+      "Fourteen hogsheads leave the landing and cloth, hoes and knives come back — no coin appears anywhere in the entry. What does that pattern indicate about how Chesapeake planters were paid?",
+    choices: [
+      "They were credited on a London merchant's books at a price set months later, and spent that credit on goods the merchant chose and shipped",
+      "They were paid in kind at the landing because the colony had banned the use of coin in local transactions",
+      "They bartered directly with the ship's master, who set prices at the wharf before the cargo sailed",
+      "They were paid in coin on delivery in London and used it to buy English goods on their own account",
+    ],
+    answer: 0,
+    explanation:
+      "This is the consignment system, and it is why Chesapeake planters ran chronically in debt to English merchants in good years as well as bad. The planter carried the risk across the ocean, learned his price months after parting with the crop, and received it as a figure on someone else's books — spendable only on what that merchant sent back.",
+    skillCategory: "Economic Systems",
   },
 ];
 
@@ -327,6 +383,15 @@ export const UNIT_02_ARCHIVE_CHALLENGE_QUESTS = [
 // citation: "no single verbatim entry is quoted here"), modeled on the
 // invoice/cargo-account pattern documented throughout Kingsbury's Records of
 // the Virginia Company of London.
+//
+// UNREFERENCED as of Phase 70. riverbend-ledger dropped its investigationMode
+// when it took the TRACE, for the same reason taino-context dropped its gate in
+// Phase 69: the challenge asks a player to predict the sourcing of a worksheet
+// that no longer opens, and the activity's own howItWorks panel does what the
+// gate was reaching for. Kept rather than deleted — it is a valid, cited
+// evidence-organizing quest and it remains available as a teacher-swappable
+// alternate, which is the same call Unit 1 made for its retired investigation
+// MCQs. Deleting it would mean churning three registration sites for nothing.
 export const UNIT_02_INVESTIGATION_EVIDENCE_QUESTS = [
   {
     id: "case-004-investigation-evidence-riverbend-ledger",
