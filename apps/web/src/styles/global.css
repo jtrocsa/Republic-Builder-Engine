@@ -4675,36 +4675,62 @@ dd {
 .field-tracker__row.is-locked {
   color: #7b9599;
 }
-/* The tracker's second block: the mission you have open, and the way back into its notebook without
-   walking across the island to the person who handed it to you. */
-.field-tracker__mission {
-  margin-top: 10px;
-  padding-top: 9px;
-  border-top: 1px solid rgba(var(--c-gold-rgb), 0.22);
-}
-.field-tracker__mission-name {
-  margin: 0;
+/* The row for the mission in flight. It carries the mission's own name rather than the person who
+   handed it over, which is why there is no separate name heading below any more — Phase 71 merged
+   the two blocks after the panel was found printing the same mission twice. */
+.field-tracker__row.is-tracked span {
   font-family: "Cinzel", serif;
-  font-size: 0.64rem;
-  letter-spacing: 0.05em;
-  line-height: 1.35;
-  color: var(--gold-soft);
+  font-size: 0.63rem;
+  letter-spacing: 0.03em;
+}
+/* How far along that mission is, and the way back into its notebook without walking across the
+   island to the person who handed it to you. */
+.field-tracker__mission {
+  /* Matches the 11px inset the toggle, the key line and the row list all use. Without it this block
+     inherited the body's zero padding and ran edge-to-edge inside the panel, which is how the
+     notebook button came to be the only full-bleed control in the game. */
+  padding: 0 11px 10px;
 }
 .field-tracker__progress {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin: 5px 0 0;
+  margin: 0;
   font-size: 0.64rem;
+  line-height: 1.35;
   color: #cfe6ea;
 }
+/* One value, not two. This was `<b>2</b> of 7` — three flex children under space-between, so a
+   232px panel put a gap either side of the number and the line read as three separate things. */
 .field-tracker__progress b {
+  flex: none;
   color: #ffeaa7;
   font-variant-numeric: tabular-nums;
 }
 .field-tracker__progress.is-done {
   color: #9fd8ab;
+}
+.field-tracker__bar {
+  height: 6px;
+  margin-top: 6px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.3);
+  border-radius: var(--c-radius-pill);
+  background: rgba(var(--c-black-rgb), 0.4);
+  overflow: hidden;
+}
+.field-tracker__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--c-gold-rgb), 0.65), var(--c-gold));
+  box-shadow: 0 0 6px rgba(var(--c-gold-rgb), 0.45);
+  transition: width 0.35s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .field-tracker__bar i {
+    transition: none;
+  }
 }
 .field-tracker__open {
   width: 100%;
@@ -5540,6 +5566,191 @@ dd {
   font-size: 0.86rem;
   line-height: 1.5;
   color: var(--c-text-secondary);
+}
+/* ---------------------------------------------------------------------------
+   Mission Instructions (Phase 71) — the hand-off screen a record opens on, once
+   ---------------------------------------------------------------------------
+   Phase 69 put `howItWorks` in the activity's copy column, beside the board it was meant to explain,
+   and a player already looking at the board does not read it. This is the same content given its own
+   beat and framed as the hand-off it always was in fiction: whoever gave you the job, their portrait,
+   and what they want done.
+
+   Its own root class rather than `.activity-shell`, which is shared with the practice check, the
+   Archive Challenges shell and non-map missions — the folder's standing lesson (ADR 0051) is that a
+   layout rule put on those classes re-lays four screens, not one.
+
+   The giver column is the narrow one on purpose: a portrait plate is a fixed object and the
+   instructions are what the player is here to read. */
+.mission-brief {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.44fr) minmax(420px, 1fr);
+  gap: 28px;
+  align-items: start;
+  width: min(1020px, calc(100% - 42px));
+  margin: 0 auto;
+  padding: 40px 0;
+}
+.mission-brief__from,
+.mission-brief__body {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(9, 55, 71, 0.88), rgba(6, 31, 43, 0.92));
+  box-shadow: 0 24px 48px rgba(var(--c-black-rgb), 0.23);
+  padding: 30px;
+  min-width: 0;
+}
+.mission-brief__giver {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin: 0;
+  text-align: center;
+}
+/* The character's own committed portrait PNG, drawn at 2x with nearest-neighbour so it stays pixel
+   art rather than becoming a smudge — the same treatment the identity screen gives the two
+   Chronicler portraits. */
+.mission-brief__portrait {
+  width: 128px;
+  height: auto;
+  image-rendering: pixelated;
+  border: 1px solid var(--c-border-gold);
+  border-radius: 18px;
+  background: radial-gradient(
+    circle at 50% 38%,
+    rgba(var(--c-gold-rgb), 0.18),
+    rgba(4, 24, 34, 0.9)
+  );
+  padding: 10px;
+}
+/* Tier 3: a record nobody is holding. The engine's own mark stands in for a face, at the same size
+   and in the same plate, so the column does not collapse when a mission has no giver. */
+.mission-brief__mark {
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 128px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 18px;
+  background: rgba(4, 24, 34, 0.6);
+  color: var(--gold-soft);
+}
+.mission-brief__mark svg {
+  width: 52px;
+  height: 52px;
+}
+.mission-brief__giver figcaption {
+  display: grid;
+  gap: 4px;
+}
+.mission-brief__giver figcaption b {
+  font-family: "Cinzel", serif;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  color: var(--gold-soft);
+}
+.mission-brief__giver figcaption span {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--c-text-muted);
+}
+.mission-brief__giver blockquote {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border-subtle);
+}
+.mission-brief__giver blockquote p {
+  margin: 0;
+  font-family: "Spectral", Georgia, serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
+.mission-brief__body h1 {
+  margin: 0.15em 0 0.25em;
+  font-size: clamp(1.9rem, 3.4vw, 3rem);
+  line-height: 1.02;
+  overflow-wrap: break-word;
+}
+.mission-brief__intro {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #d7eef1;
+}
+.mission-brief__steps,
+.mission-brief__terms {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--c-border-subtle);
+}
+.mission-brief__steps h2,
+.mission-brief__terms h2 {
+  margin: 0 0 12px;
+  font-family: "Cinzel", serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.mission-brief__steps ol {
+  display: grid;
+  gap: 11px;
+  margin: 0;
+  padding-left: 1.3em;
+}
+.mission-brief__steps li {
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--c-text);
+}
+.mission-brief__steps li::marker {
+  color: var(--gold-soft);
+  font-weight: 700;
+}
+.mission-brief__note {
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--c-text-muted);
+}
+.mission-brief__terms dl {
+  display: grid;
+  gap: 4px 10px;
+  margin: 0;
+  grid-template-columns: auto 1fr;
+}
+.mission-brief__terms dt {
+  font-family: "Cinzel", serif;
+  font-size: 0.78rem;
+  color: var(--gold-soft);
+  white-space: nowrap;
+}
+.mission-brief__terms dd {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--c-text-secondary);
+}
+/* Sits in the giver's column beside the plate rather than at the foot of the instructions — see
+   missionInstructionsScreen()'s comment: at 1366x768 anything under the glossary is off-screen, and
+   a continue button a player has to scroll to find reads as a screen that has hung. */
+.mission-brief__begin {
+  width: 100%;
+  margin-top: 20px;
+}
+/* One column below the two-column threshold, giver first — the point of the screen is that somebody
+   handed this to you, so their plate stays above the fold on a narrow viewport. */
+@media (max-width: 860px) {
+  .mission-brief {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .mission-brief__from,
+  .mission-brief__body {
+    padding: 24px;
+  }
 }
 .activity-stage {
   display: grid;

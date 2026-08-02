@@ -46,8 +46,26 @@ export function escapeHtml(value) {
 export const HowItWorksSchema = z.object({
   steps: z
     .array(z.string().min(1))
-    .min(2, "howItWorks needs at least two steps, or it is a sentence and belongs in the intro"),
+    .min(2, "howItWorks needs at least two steps, or it is a sentence and belongs in the intro")
+    // Capped, and the cap is the interesting half. The first six authored activities ran to five and
+    // six steps apiece and the owner stopped reading them — a wall of instructions is the same
+    // failure as no instructions, arrived at from the other side. Three steps and a note is the
+    // shipped shape: what you do, what to expect back, and what the mission is asking for.
+    .max(4, "howItWorks is capped at four steps — condense, or move the detail into the note"),
   note: z.string().min(1).optional(),
+});
+
+/**
+ * Who handed this record to the player, and the line they handed it over with.
+ *
+ * Shared rather than INTERVIEW's alone (where it started) because the Mission Instructions screen
+ * opens on the giver's own profile — their portrait, their name, their words — and a mission with
+ * no giver opens on a plate with nobody on it. `speaker` is an opaque id the host resolves against
+ * whatever cast it has; this folder never learns what an NPC is.
+ */
+export const BriefingSchema = z.object({
+  speaker: z.string().min(1, "briefing.speaker is required"),
+  line: z.string().min(1, "briefing.line is required"),
 });
 
 /**
@@ -79,6 +97,11 @@ export const COMMON_ACTIVITY_FIELDS = {
   id: z.string().min(1, "activity.id is required"),
   title: z.string().min(1, "activity.title is required"),
   intro: z.string().min(1, "activity.intro is required"),
+  // Moved here verbatim from interview.js, `.nullable().default(null)` and all, so the two
+  // interviews that already author one validate exactly as they did. Absent, null and present are
+  // all accepted; the host reads it defensively either way, because runSchema() discards the parsed
+  // output and content reaches the game as the raw imported object.
+  briefing: BriefingSchema.nullable().default(null),
   howItWorks: HowItWorksSchema.optional(),
   terms: TermsSchema.optional(),
 };

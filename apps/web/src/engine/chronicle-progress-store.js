@@ -28,10 +28,12 @@ export const DEFAULT_PROGRESS = {
   unitComplete: false,
   hubNotice: "",
   fieldNotice: "",
-  // Per-source activity state: { [sourceId]: { state, completed } }, where `state` belongs to
-  // whichever activity engine that source routes to (engine/activities/). A scalar sibling below
+  // Per-source activity state: { [sourceId]: { state, completed, briefed } }, where `state` belongs
+  // to whichever activity engine that source routes to (engine/activities/). A scalar sibling below
   // remembers which one is open, because main.js's openSourceId is module-local and dies on
   // reload — the three screens this replaced only resumed by hardcoding one source apiece.
+  // `briefed` is whether the Mission Instructions screen has been cleared for that record; it is
+  // absent on pre-Phase-71 saves, which is why it is read as falsy rather than merged in here.
   sourceActivities: {},
   activeActivitySourceId: null,
   archiveChallenges: {},

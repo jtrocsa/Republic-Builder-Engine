@@ -32,6 +32,32 @@ export async function loadSeededSave(page) {
   await page.getByRole("button", { name: "Load Save" }).click();
 }
 
+/**
+ * A `sourceActivities` entry for a record whose Mission Instructions screen has already been
+ * cleared.
+ *
+ * Since Phase 71 an activity opens on that screen the first time, so any test that seeds its way
+ * straight onto a board has to say it has been past it. `ensureSourceActivity()` fills in `state`
+ * from the engine's own default, so the flag on its own is enough — merge extra keys in where a
+ * test also needs seeded engine state.
+ */
+export const briefed = (...sourceIds) =>
+  Object.fromEntries(sourceIds.map((id) => [id, { briefed: true }]));
+
+/**
+ * Clears the Mission Instructions screen, if this record is opening on it.
+ *
+ * Since Phase 71 a record shows its instructions once before its board, gated on a `briefed` flag
+ * on that record's `progress.sourceActivities` entry. A spec seeding that entry can simply write
+ * `briefed: true` and skip the screen; a spec that walks up to a record cold cannot, because the
+ * entry does not exist until the activity starts. This is for the second kind, and it is a no-op
+ * for the first — so it is safe to call on any path into an activity.
+ */
+export async function beginMission(page) {
+  const begin = page.locator('[data-action="mission-briefed"]');
+  if (await begin.isVisible().catch(() => false)) await begin.click();
+}
+
 export async function readProgress(page) {
   return page.evaluate(
     (key) => JSON.parse(window.localStorage.getItem(key) || "null"),

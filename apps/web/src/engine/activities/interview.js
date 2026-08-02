@@ -69,15 +69,8 @@ export const InterviewActivitySchema = z
   .object({
     ...COMMON_ACTIVITY_FIELDS,
     kind: z.literal("interview"),
-    // Who hands the player the questions, and the line they hand them over
-    // with. Optional: an activity can simply open with them.
-    briefing: z
-      .object({
-        speaker: z.string().min(1),
-        line: z.string().min(1),
-      })
-      .nullable()
-      .default(null),
+    // `briefing` used to be declared here. It is in COMMON_ACTIVITY_FIELDS as of Phase 71, because
+    // the Mission Instructions screen opens on the giver's profile and every engine needs one.
     questions: z
       .array(
         z.object({
@@ -275,6 +268,9 @@ export function actInterview(activity, state = defaultInterviewState(), action =
     // Logging something never heard would let a player fill the notebook from
     // the closer screen, where the answers are not even on offer.
     if (!questionId || !asked.includes(questionId)) return state;
+    // A fallback is the speaker having nothing for you; the UI offers no control for it, and this
+    // is the same rule stated where it is enforceable rather than only where it is drawn.
+    if (!interviewAnswer(speaker, questionId).authored) return state;
     const logged = loggedFor(state, speaker.id);
     if (logged.includes(questionId)) return state;
     return { ...state, logged: { ...state.logged, [speaker.id]: [...logged, questionId] } };
@@ -319,7 +315,16 @@ export function interviewAnswer(speaker, questionId) {
   // .default({}): validate-content.js discards the parsed output and content
   // reaches the game as the raw imported object, so a schema default is
   // documentation, never a runtime guarantee.
-  return (speaker.answers || {})[questionId] || { text: speaker.fallback, useful: false };
+  //
+  // `authored` distinguishes a real answer from the speaker's fallback, which
+  // matters now that authored grids are deliberately sparse: a fallback is a
+  // stage direction ("She turns back to the row she was working"), not testimony,
+  // so there is nothing in it to write down. Both the log control and the reducer
+  // key off this.
+  const authored = (speaker.answers || {})[questionId];
+  return authored
+    ? { text: authored.text, useful: authored.useful === true, authored: true }
+    : { text: speaker.fallback, useful: false, authored: false };
 }
 
 /**
@@ -356,11 +361,12 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
   // The log control is the only thing on this panel that changes what the player
   // is carrying, so it says so in both states rather than disappearing once
   // taken — a control that vanishes reads as a control that failed.
-  const keep = !answer
-    ? ""
-    : logged.includes(showing)
-      ? `<p class="field-interview__logged">✓ In your notebook</p>`
-      : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Log this response</button>`;
+  const keep =
+    !answer || !answer.authored
+      ? ""
+      : logged.includes(showing)
+        ? `<p class="field-interview__logged">✓ In your notebook</p>`
+        : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Log this response</button>`;
   return `<div class="field-interview">
   ${
     answer

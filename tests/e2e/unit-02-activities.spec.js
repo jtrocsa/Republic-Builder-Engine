@@ -12,7 +12,13 @@
 //      produces — a badge that is not lit, and a person who cannot hand over what they carry.
 //   3. The INTERVIEW's bar is eight, and the Mission Tracker has to say so on a second map.
 import { expect, test } from "@playwright/test";
-import { loadSeededSave, readProgress, seedProgress, walkToNpc } from "./helpers/progress-seed.js";
+import {
+  briefed,
+  loadSeededSave,
+  readProgress,
+  seedProgress,
+  walkToNpc,
+} from "./helpers/progress-seed.js";
 
 const CASE_004 = {
   activeCaseId: "case-004",
@@ -38,6 +44,7 @@ const LOGGED_THREE = {
       filed: null,
     },
     completed: false,
+    briefed: true,
   },
 };
 
@@ -55,6 +62,7 @@ test.describe("TRACE, on its first mission", () => {
       ...CASE_004,
       currentScreen: "trace",
       activeActivitySourceId: "riverbend-ledger",
+      sourceActivities: briefed("riverbend-ledger"),
     });
     await loadSeededSave(page);
 
@@ -98,7 +106,11 @@ test.describe("TRACE, on its first mission", () => {
       ...CASE_004,
       currentScreen: "field",
       sourceActivities: {
-        "riverbend-ledger": { state: { ledger: { curing: "not-established" } }, completed: false },
+        "riverbend-ledger": {
+          state: { ledger: { curing: "not-established" } },
+          completed: false,
+          briefed: true,
+        },
       },
     });
     await loadSeededSave(page);
@@ -106,8 +118,13 @@ test.describe("TRACE, on its first mission", () => {
 
     const tracker = page.locator(".field-tracker");
     await expect(tracker).toContainText("Mission Tracker");
-    await expect(tracker.locator(".field-tracker__mission-name")).toHaveText("One Hogshead");
+    // The mission's name is on its own record row now, not in a heading below it — Phase 71 merged
+    // the tracker's two blocks after the panel was found printing the same name twice.
+    await expect(tracker.locator(".field-tracker__row.is-tracked")).toHaveText("✦One Hogshead");
+    // And a TRACE reports no ratio, because a chain is not a count: no progress line, and therefore
+    // no bar either.
     await expect(tracker.locator(".field-tracker__progress")).toHaveCount(0);
+    await expect(tracker.locator(".field-tracker__bar")).toHaveCount(0);
 
     await tracker.locator('[data-action="open-activity-notebook"]').click();
     await expect(page.locator(".activity-board--trace")).toBeVisible();
@@ -166,6 +183,7 @@ test.describe("Riverbend's one gate", () => {
       currentScreen: "discrepancy",
       activeActivitySourceId: "riverbend-letter",
       caseEvidence: { "case-004": ["riverbend-charter"] },
+      sourceActivities: briefed("riverbend-letter"),
     });
     await loadSeededSave(page);
 
@@ -201,7 +219,7 @@ test.describe("INTERVIEW, at Riverbend", () => {
 
     // Three of eight, in one number — the Phase 69 rule, on a second map.
     await expect(page.locator(".field-tracker__progress")).toContainText("Accounts secured");
-    await expect(page.locator(".field-tracker__progress b")).toHaveText("3");
+    await expect(page.locator(".field-tracker__progress b")).toHaveText("3/8");
 
     expect(await walkToNpc(page, "settlement-burgess")).toBe(true);
     await page.locator('[data-npc="settlement-burgess"]').click();
@@ -216,7 +234,7 @@ test.describe("INTERVIEW, at Riverbend", () => {
 
     await bubble.locator(".field-interview__log").click();
     await expect(bubble.locator(".field-interview__logged")).toContainText("In your notebook");
-    await expect(page.locator(".field-tracker__progress b")).toHaveText("4");
+    await expect(page.locator(".field-tracker__progress b")).toHaveText("4/8");
   });
 
   test("the audit's evidence column holds only what this player logged", async ({ page }) => {
@@ -225,7 +243,7 @@ test.describe("INTERVIEW, at Riverbend", () => {
       currentScreen: "discrepancy",
       activeActivitySourceId: "riverbend-letter",
       caseEvidence: { "case-004": ["riverbend-charter"] },
-      sourceActivities: LOGGED_THREE,
+      sourceActivities: { ...LOGGED_THREE, ...briefed("riverbend-letter") },
     });
     await loadSeededSave(page);
 

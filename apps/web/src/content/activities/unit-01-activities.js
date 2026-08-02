@@ -25,18 +25,24 @@
 
 // ---- M1.A - "The Question Nobody Asked" (INTERVIEW, taino-context) ------------------------------
 //
-// Four questions, seven speakers, twenty-eight answers, and exactly seven of
-// them useful — one per person. Everyone on the island knows one thing worth
-// having and will not volunteer it, so the mission is finding which question
-// reaches which person. That is also the completion bar: `requires.useful: 7`,
-// one account from each of the seven, which replaced a "4 questions / 5 people"
-// pair a player read as a contradiction rather than as a goal.
+// Four questions, seven speakers, and exactly seven useful answers — one per
+// person. Everyone on the island knows one thing worth having and will not
+// volunteer it, so the mission is finding which question reaches which person.
+// That is also the completion bar: `requires.useful: 7`, one account from each
+// of the seven, which replaced a "4 questions / 5 people" pair a player read as
+// a contradiction rather than as a goal.
 //
-// The other twenty-one answers are not filler and are not punishments. Each one
-// either sends you to the person who does know, or declines in that speaker's
-// own voice — because the lesson is that a flat answer is a real answer, and
-// that the Spanish account is short for reasons that have nothing to do with
-// anybody hiding anything.
+// **The grid is deliberately sparse — 21 of 28 cells, three per speaker.** It
+// shipped full in Phase 68 and every person had a paragraph for every question,
+// which made asking everyone everything the dominant strategy and reading a
+// person's position pointless. Each speaker now carries one useful answer, two
+// short deflections that mostly name who to ask instead, and one question left
+// unauthored so their `fallback` finally fires — those 7 lines were written in
+// Phase 68 and, until Phase 71, not one of them could ever be reached.
+//
+// Three flat answers are load-bearing and were trimmed rather than cut:
+// `columbus:grows`, `columbus:decides` and `taino-elder:gold` key the audit's
+// three optional observations, which is what still rewards a thorough player.
 //
 // The child's line is the hook and it already ships as his standing dialogue
 // ("Nobody asks me what grows here, and I could tell them"). Until now nothing
@@ -49,13 +55,11 @@ const QUESTION_NOBODY_ASKED = {
     "Four questions, and everyone on this island will answer only the one you actually put to them. What comes back is not a record of the island. It is a record of what you thought to ask.",
   howItWorks: {
     steps: [
-      "Walk up to anyone on the island and put any of the four questions to them. There are no wrong people to ask.",
-      "Most answers will be short. That is not a dead end — a person who cannot help you will usually tell you who can.",
-      "Every one of the seven people here knows one thing worth writing down, and only one question reaches it. Find theirs.",
-      "When an answer is worth keeping, press Log this response. Only logged answers go in your notebook.",
-      "Come back here whenever you like — the Mission Tracker on the map opens this notebook from anywhere.",
+      "You may ask any question to any person. Consider their position.",
+      "Most people will send you elsewhere. When someone gives you something worth keeping, press Log this response.",
+      "Seven people, seven accounts — one from each. That is the whole mission.",
     ],
-    note: "What you log is what you will be holding when you audit Columbus's letter at the chart table. A question you never asked is a line of that letter you will have no way to check.",
+    note: "What you log is what you carry into Columbus's letter at the chart table. A question you never asked is a line of it you have no way to check.",
   },
   briefing: {
     speaker: "taino-child",
@@ -99,18 +103,15 @@ const QUESTION_NOBODY_ASKED = {
       group: "taino",
       fallback: "She waits, and does not fill the silence for you.",
       answers: {
+        // Kept because the audit keys an optional observation off it. Trimmed, not cut — see this
+        // file's header on which three flat answers are load-bearing.
         gold: {
-          text: "The yellow metal? We beat it thin and wear it. It is given away when giving it away is the right thing to do. You are not the first to ask that before asking anything else.",
+          text: "We beat it thin and wear it, and give it away when giving is the right thing to do. You asked that one first.",
         },
-        grows: {
-          text: "Ask the woman working the mounds. Her hands are in it; I only say when the planting begins.",
-        },
+        grows: { text: "Her hands are in the mounds, not mine. Ask her." },
         decides: {
           text: "A cacique — the one who speaks for the village — speaks for this one, and I am consulted before he does. Nothing is settled here until the people who will have to carry it have said their part.",
           useful: true,
-        },
-        trade: {
-          text: "Canoes go out, canoes come back. Ask the man who keeps them; he has been where they go and I have not.",
         },
       },
     },
@@ -121,18 +122,13 @@ const QUESTION_NOBODY_ASKED = {
       group: "taino",
       fallback: "She turns back to the row she was working.",
       answers: {
-        gold: {
-          text: "There is none in this ground. There is cassava in this ground, and that is what we eat when the rains stop.",
-        },
+        gold: { text: "None in this ground. Cassava is in this ground, and that is what we eat." },
         grows: {
           text: "Yuca first — we heap the earth into mounds, a conuco, and it holds through the dry season. Maize between the mounds, batata beneath them, ají and cotton at the edges. None of it arrived here on its own.",
           useful: true,
         },
-        decides: {
-          text: "For the planting, I do. For the village, the cacique — and the elder before him. Put that one to her.",
-        },
         trade: {
-          text: "Cotton, mostly. It leaves in bales and comes back as something else, and the canoes are not mine. Ask the man who keeps them.",
+          text: "Cotton leaves in bales. The canoes are not mine — ask the man who keeps them.",
         },
       },
     },
@@ -143,14 +139,9 @@ const QUESTION_NOBODY_ASKED = {
       group: "taino",
       fallback: "He keeps working the hull and lets the question go past him.",
       answers: {
-        gold: {
-          text: "Not in the water. Ask the men who came in the boats — it is the only thing they say.",
-        },
+        gold: { text: "Not in the water. Ask the men who came in the boats." },
         grows: {
-          text: "On the water? Nothing. Fish, turtle, conch — those are taken, not grown. The growing is up in the mounds; ask the woman working them.",
-        },
-        decides: {
-          text: "The sea decides more than any man does. After that, the cacique, and the elder speaks to him first.",
+          text: "Nothing grows on water. The mounds are up the hill — ask the woman working them.",
         },
         trade: {
           text: "The water is a road. I have carried cassava bread to three islands and come back with cotton, with news, and once with a man who stayed. A stranger looks at empty water and thinks we are alone out here. We are not.",
@@ -170,10 +161,7 @@ const QUESTION_NOBODY_ASKED = {
           useful: true,
         },
         decides: {
-          text: "The grown ones. And my grandmother, mostly — she is over there and she will tell you properly.",
-        },
-        trade: {
-          text: "I am not old enough to go out in the big canoe yet. He is — the one working on the hull.",
+          text: "The grown ones. My grandmother is over there — she will tell you properly.",
         },
       },
     },
@@ -188,14 +176,14 @@ const QUESTION_NOBODY_ASKED = {
           text: "That is the whole matter. I have seen it worn thin at the throat, so there is a source and I will find it. The sovereigns funded one crossing on a promise. They will fund a second on proof.",
           useful: true,
         },
+        // Both kept, and both load-bearing: the audit keys an optional observation off each. He is
+        // the one speaker who spends both flat slots this way, which is why his fallback fires on
+        // trade rather than on something he has an opinion about.
         grows: {
-          text: "Cotton, and a root they make their bread from, and trees I have no name for. I shall write that the land is fertile and will bear whatever is set in it. That much is true, and it is the part that will be read.",
+          text: "Cotton, and a root they make bread from. I shall write that the land is fertile and will bear whatever is set in it. That is the part that will be read.",
         },
         decides: {
           text: "They have chiefs, I am told. It has not been a thing I needed to establish.",
-        },
-        trade: {
-          text: "Among themselves, in canoes. It is not trade as a merchant would understand the word, and I have not enquired further.",
         },
       },
     },
@@ -207,17 +195,14 @@ const QUESTION_NOBODY_ASKED = {
       fallback: "He waits with the pen up, and writes nothing.",
       answers: {
         gold: {
-          text: "I set down what the Admiral tells me he has seen. I have not seen it myself. Put that one to him.",
-        },
-        grows: {
-          text: "Cotton I can name and price. The rest goes down as fruits of many kinds — a court does not read further than that.",
+          text: "I set down what the Admiral says he has seen. Put that one to him.",
         },
         decides: {
           text: "In this account? Castile does. I choose the words, but I choose them for readers who will decide whether there is a second voyage. What will not persuade them does not go in.",
           useful: true,
         },
         trade: {
-          text: "Ask the Admiral. He is the one making the case, and I only write it down.",
+          text: "Ask the Admiral. He makes the case; I only write it down.",
         },
       },
     },
@@ -228,9 +213,6 @@ const QUESTION_NOBODY_ASKED = {
       fallback: "He shrugs and goes back to the boat.",
       answers: {
         gold: { text: "I have seen none of it. I have seen a very great deal of water." },
-        grows: {
-          text: "Enough to eat, which is more than we had at sea. What it is and how it got there I could not tell you.",
-        },
         decides: { text: "The Admiral decides. That is the beginning and the end of it." },
         trade: {
           text: "We took on water and cassava bread. We gave hawks' bells and glass beads. They seemed pleased, and I could not tell you what they thought they were getting — nor, if I am honest, what we thought we were giving.",
@@ -301,12 +283,11 @@ const UNIVERSALIS = {
     "Twelve sheets were printed to be pasted into one wall map, and almost none survived that way. Rebuild what is left of this one, then name what it shows — because one of those names had never been printed on any map before.",
   howItWorks: {
     steps: [
-      "Click a piece in the tray, then click the frame you want it in. You can drag instead if you prefer.",
-      "Read the edges, not the pictures. A straight ruled line is the outer border of the printed sheet, so it can only sit on the outside.",
-      "A ragged edge is a plate seam, where two copper plates were joined. Coastlines run straight across a seam, so a shore that continues is two pieces that belong side by side.",
-      "Corners first — a piece with a ruled border on two sides has only four possible homes, and each one is different.",
-      "Put a piece in the wrong frame and the board will tell you what made it look right. That is worth more than getting it first time.",
+      "Click a piece in the tray, then the frame you want it in. Dragging works too.",
+      "Read the edges, not the pictures. A straight ruled line is the sheet's outer border; a ragged one is a seam where two copper plates were joined, and a coastline runs straight across it.",
+      "Put a piece in the wrong frame and the board tells you what made it look right.",
     ],
+    note: "Corners are the cheapest place to start: a piece with a ruled border on two sides has only four possible homes.",
   },
   terms: [
     {
@@ -524,11 +505,14 @@ const WHAT_WILL_BE_USEFUL = {
   howItWorks: {
     steps: [
       "Read the letter first. All of it — the claims below are lines lifted out of it.",
-      "For each line, look across at what you gathered on the island, then say whether your own observations support it, contradict it, or cannot settle it either way.",
-      "Nothing you saw contradicts every line. One of these is simply true, and one you have no way to judge — saying so is part of the work.",
-      "When you land on contradicted, a second question opens: was it an error, or a design? A man can be wrong, and a man can be writing for someone.",
+      "For each line, say whether what you gathered on the island supports it, contradicts it, or cannot settle it. One is simply true and one you have no way to judge; saying so is part of the work.",
+      "Land on contradicted and a second question opens: error, or design? A man can be wrong, and a man can be writing for someone.",
     ],
-    note: "The right-hand column holds only what you actually logged in your notebook. Where it says you did not gather something, that is a line of this letter you have no way to check.",
+    note: "The right-hand column holds only what you logged. Where it says you did not gather something, that is a line of this letter you have no way to check.",
+  },
+  briefing: {
+    speaker: "columbus",
+    line: "Write what you like. I am writing what will be useful, and mine is the copy that goes to Castile.",
   },
   terms: [
     {

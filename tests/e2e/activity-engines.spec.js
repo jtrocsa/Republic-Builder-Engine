@@ -17,7 +17,13 @@
 //   5. A filed interview stops the cast offering questions, and the Mission Tracker is what gets you
 //      back to the notebook afterwards.
 import { expect, test } from "@playwright/test";
-import { loadSeededSave, readProgress, seedProgress, walkToNpc } from "./helpers/progress-seed.js";
+import {
+  briefed,
+  loadSeededSave,
+  readProgress,
+  seedProgress,
+  walkToNpc,
+} from "./helpers/progress-seed.js";
 
 const CASE_001 = {
   activeCaseId: "case-001",
@@ -35,6 +41,7 @@ const LOGGED_TWO = {
       filed: null,
     },
     completed: false,
+    briefed: true,
   },
 };
 
@@ -64,6 +71,7 @@ const FILED = {
       filed: "questions",
     },
     completed: true,
+    briefed: true,
   },
 };
 
@@ -109,6 +117,18 @@ test.describe("INTERVIEW, out on the map", () => {
     expect(progress.sourceActivities["taino-context"].state.logged["taino-child"]).toEqual([
       "grows",
     ]);
+
+    // The other half of a sparse grid (Phase 71): a question this speaker has no answer for gets
+    // his authored `fallback`, and no log control at all — a stage direction is not testimony and
+    // there is nothing in it to write down. Until this phase every speaker answered every question,
+    // so not one of the cast's fifteen fallback lines had ever been reachable.
+    await bubble.locator('[data-question="trade"]').click();
+    await expect(bubble.locator(".field-interview__answer")).toHaveText(
+      "He looks at you, then at his feet."
+    );
+    await expect(bubble.locator(".field-interview__answer")).not.toHaveClass(/is-useful/);
+    await expect(bubble.locator(".field-interview__log")).toHaveCount(0);
+    await expect(bubble.locator(".field-interview__logged")).toHaveCount(0);
 
     // The bubble grew by a log button in Phase 69, and it was already at the limit of what fits
     // above a speaker — an answer plus four chips is roughly double a standing line. What keeps it
@@ -162,7 +182,10 @@ test.describe("INTERVIEW, out on the map", () => {
     // answers do not become unreadable just because the record is filed.
     const tracker = page.locator(".field-tracker");
     await expect(tracker).toContainText("Mission Tracker");
-    await expect(tracker).toContainText("The Question Nobody Asked");
+    // The mission in flight takes over its own record row, which used to name the elder carrying it.
+    await expect(tracker.locator(".field-tracker__row.is-tracked")).toContainText(
+      "The Question Nobody Asked"
+    );
     await tracker.locator('[data-action="open-activity-notebook"]').click();
 
     await expect(page.locator(".activity-board--interview")).toBeVisible();
@@ -180,11 +203,16 @@ test.describe("INTERVIEW, out on the map", () => {
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
     // Two of the seven accounts logged. One number, not two — the whole point of making
-    // `requires` one dimension.
+    // `requires` one dimension — and since Phase 71 that number is one string rather than a `<b>`
+    // with " of 7" beside it, which space-between was pushing to the far side of the panel.
     await expect(page.locator(".field-tracker__progress")).toContainText(
       "Islanders' accounts secured"
     );
-    await expect(page.locator(".field-tracker__progress b")).toHaveText("2");
+    await expect(page.locator(".field-tracker__progress b")).toHaveText("2/7");
+    // And the same fraction as a bar, which is what the owner asked the gappy count be replaced by.
+    const bar = page.locator(".field-tracker__bar");
+    await expect(bar).toHaveAttribute("aria-valuenow", "2");
+    await expect(bar).toHaveAttribute("aria-valuemax", "7");
   });
 });
 
@@ -194,6 +222,7 @@ test.describe("ASSEMBLY", () => {
       ...CASE_001,
       currentScreen: "assembly",
       activeActivitySourceId: "waldseemuller-map",
+      sourceActivities: briefed("waldseemuller-map"),
     });
     await loadSeededSave(page);
 
@@ -232,6 +261,7 @@ test.describe("ASSEMBLY", () => {
       ...CASE_001,
       currentScreen: "assembly",
       activeActivitySourceId: "waldseemuller-map",
+      sourceActivities: briefed("waldseemuller-map"),
     });
     await loadSeededSave(page);
     await page.locator('[data-activity-fragment="f1"]').click();
@@ -255,6 +285,7 @@ test.describe("DISCREPANCY", () => {
       ...CASE_001,
       currentScreen: "discrepancy",
       activeActivitySourceId: "columbus-letter",
+      sourceActivities: briefed("columbus-letter"),
     });
     await loadSeededSave(page);
 
@@ -285,7 +316,7 @@ test.describe("DISCREPANCY", () => {
       ...CASE_001,
       currentScreen: "discrepancy",
       activeActivitySourceId: "columbus-letter",
-      sourceActivities: LOGGED_TWO,
+      sourceActivities: { ...LOGGED_TWO, ...briefed("columbus-letter") },
     });
     await loadSeededSave(page);
 
@@ -315,7 +346,9 @@ test.describe("DISCREPANCY", () => {
         "taino-context": {
           state: { asked: { "taino-gardener": ["grows"] }, logged: {}, filed: null },
           completed: false,
+          briefed: true,
         },
+        ...briefed("columbus-letter"),
       },
     });
     await loadSeededSave(page);

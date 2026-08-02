@@ -42,7 +42,30 @@ describe("activity content: the rules every authored mission is held to", () => 
         activity.howItWorks?.steps?.length,
         `${sourceId} has no howItWorks steps`
       ).toBeGreaterThanOrEqual(2);
+      // And capped, which the schema also enforces — asserted here too because the reason is a
+      // content rule rather than a shape one. These are now a screen a player reads before the
+      // mission opens (Phase 71), and six bullets is a wall nobody reads. Detail goes in `note`.
+      expect(
+        activity.howItWorks.steps.length,
+        `${sourceId} has ${activity.howItWorks.steps.length} howItWorks steps`
+      ).toBeLessThanOrEqual(4);
       expect(activity.terms?.length, `${sourceId} has no glossary`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it.each(AUTHORED_UNITS)("$unitId names who hands each mission over", ({ unitId, activities }) => {
+    // The Mission Instructions screen opens on the giver's own portrait and their line. A briefing
+    // naming somebody who is not on this unit's map renders a plate with a blank name on it, and
+    // the failure is silent — main.js's fieldNpcName() returns "" rather than throwing.
+    //
+    // Not every activity has to have one: a record found on a shore was handed over by nobody, and
+    // the screen has a deliberate third tier for that. What it may not do is name a ghost.
+    const npcIds = new Set((FIELD_MAPS[unitId]?.npcs || []).map((npc) => npc.id));
+    for (const [sourceId, activity] of entriesOf(activities)) {
+      if (!activity.briefing) continue;
+      expect(npcIds, `${sourceId} is briefed by an NPC not on this map`).toContain(
+        activity.briefing.speaker
+      );
     }
   });
 
@@ -91,15 +114,41 @@ describe("activity content: an interview's bar is one useful answer per person",
     }
   });
 
-  it.each(AUTHORED_UNITS)("$unitId answers every question from every speaker", ({ activities }) => {
-    // `fallback` exists for a speaker who has not been asked yet, not as a way to leave a cell
-    // blank. A missing answer renders as the fallback and reads to the player as a bug.
+  it.each(AUTHORED_UNITS)("$unitId leaves every speaker's fallback reachable", ({ activities }) => {
+    // This assertion used to say the opposite — that every speaker answers every question — and
+    // holding to it is what made both interviews unplayable in the way the Phase 71 playtest found.
+    // With a full grid, asking everyone everything is strictly dominant, `fallback` is unreachable
+    // dead content on all fifteen speakers, and reading a person's position buys nothing.
+    //
+    // A speaker now answers some of the questions and not others. The one they do not answer is
+    // where their authored fallback finally fires, which is the game's whole "that is not my job"
+    // register. At least two answers, so nobody is a one-line vending machine; at least one gap.
     for (const [sourceId, activity] of ofKind(activities, "interview")) {
-      const questionIds = activity.questions.map((q) => q.id);
+      const total = activity.questions.length;
       for (const speaker of activity.speakers) {
-        expect(Object.keys(speaker.answers || {}).sort(), `${sourceId}: ${speaker.id}`).toEqual(
-          [...questionIds].sort()
+        const answered = Object.keys(speaker.answers || {}).length;
+        expect(answered, `${sourceId}: ${speaker.id} answers too few`).toBeGreaterThanOrEqual(2);
+        expect(answered, `${sourceId}: ${speaker.id} has no unanswered question`).toBeLessThan(
+          total
         );
+      }
+    }
+  });
+
+  it.each(AUTHORED_UNITS)("$unitId keeps its deflections short", ({ activities }) => {
+    // The useful answer is the long one and the mission is finding it. When a flat answer runs as
+    // long as a useful one — Unit 2 shipped at 31 words a flat answer against 73 useful — the
+    // player cannot feel the difference and logs everything. 40 words is a ceiling, not a target;
+    // the shipped flats sit around 15.
+    for (const [sourceId, activity] of ofKind(activities, "interview")) {
+      for (const speaker of activity.speakers) {
+        for (const [questionId, answer] of Object.entries(speaker.answers || {})) {
+          if (answer.useful === true) continue;
+          const words = answer.text.trim().split(/\s+/).length;
+          expect(words, `${sourceId}: ${speaker.id}/${questionId} is ${words} words`).toBeLessThan(
+            40
+          );
+        }
       }
     }
   });

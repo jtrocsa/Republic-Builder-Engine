@@ -32,12 +32,20 @@
 // mission is one consequence of how it is worded: land is granted by the head,
 // and the head need not be your own.
 //
-// Four questions, eight speakers, thirty-two answers, exactly eight of them
-// useful — one per person, which is also the completion bar (`requires.useful`,
-// per 0052 §3: one number, not two). The eight are spread across all four
-// questions so none of them is dead, and two people are useful on the same
-// question on purpose: `owed`, put to the two men working adjacent fields, comes
-// back as a term and as a silence.
+// Four questions, eight speakers, exactly eight useful answers — one per person,
+// which is also the completion bar (`requires.useful`, per 0052 §3: one number,
+// not two). The eight are spread across all four questions so none of them is
+// dead, and two people are useful on the same question on purpose: `owed`, put
+// to the two men working adjacent fields, comes back as a term and as a silence.
+//
+// **The grid is deliberately sparse — 24 of 32 cells, three per speaker.** It
+// shipped full in Phase 70, at an average of 31 words per non-useful answer,
+// which made asking everyone everything the dominant strategy and reading a
+// person's position pointless. Each speaker now carries one useful answer, two
+// short deflections that mostly name who to ask instead, and one question left
+// unauthored so their `fallback` fires. Three flat answers are load-bearing and
+// were trimmed rather than cut — `indentured-servant:passage`, `wharf-clerk:land`
+// and `settlement-burgess:owed` key the audit's three optional observations.
 //
 // The Angolan man's answer must stay unresolved. The August 1619 arrivals off
 // the White Lion were traded at Point Comfort for provisions and the muster
@@ -53,13 +61,11 @@ const BY_WHOSE_HEAD = {
     "The charter grants fifty acres for every person brought across the Atlantic. It does not say the acres go to the person. Everyone standing on this ground is an answer to that sentence — put the question to them and see which one they are.",
   howItWorks: {
     steps: [
-      "Walk up to anyone at Riverbend and put any of the four questions to them. There are no wrong people to ask.",
-      "A short answer is a real answer. Someone who cannot help you will usually name the person who can.",
-      "Each of the eight people here knows one thing about this land system that nobody else does, and only one of the four questions reaches it. Find theirs.",
-      "When an answer is worth keeping, press Log this response. Only logged answers go in your notebook.",
-      "Come back whenever you like — the Mission Tracker on the map opens this notebook from anywhere.",
+      "You may ask any question to any person. Consider their position.",
+      "Most people will send you elsewhere. When someone gives you something worth keeping, press Log this response.",
+      "Eight people, eight accounts — one from each. That is the whole mission.",
     ],
-    note: "What you log is what you will be holding when you audit Richard Frethorne's letter at the field edge. A question you never asked is a line of that letter you will have no way to check.",
+    note: "What you log is what you carry into Richard Frethorne's letter at the field edge. A question you never asked is a line of it you have no way to check.",
   },
   briefing: {
     speaker: "settlement-minister",
@@ -114,17 +120,14 @@ const BY_WHOSE_HEAD = {
       fallback: "He waits, with one hand flat on the book, and does not help you.",
       answers: {
         passage: {
-          text: "The Company's, and it cost me a living and a congregation in Kent. I am not the interesting case and I know it. Ask a man who came over owing for it.",
+          text: "The Company's, and I am not the interesting case. Ask a man who came over owing for it.",
         },
         land: {
           text: "Fifty acres to every person transported into this colony at his own charge, and fifty more for every servant he brings and settles here. That is the sentence. Read it slowly: the grant follows the man who paid the passage, not the man who made the crossing. The land is counted out by the head, and the head need not be your own.",
           useful: true,
         },
         voice: {
-          text: "The Assembly speaks for the settlement, and the Company's governor speaks for the Company. Whether either speaks for you is a question for whoever you are — go and put it to them.",
-        },
-        owed: {
-          text: "To God, everything; to the Company, a quitrent on the glebe. Neither answer is what you came out here to write down. The men in the rows owe in years.",
+          text: "The Assembly speaks for the settlement. Whether it speaks for you depends on who you are — go and ask them.",
         },
       },
     },
@@ -135,18 +138,16 @@ const BY_WHOSE_HEAD = {
       group: "settlement",
       fallback: "He nods pleasantly and offers you nothing at all.",
       answers: {
-        passage: {
-          text: "My own, out of my own purse, and I have the patent to show for it. That is the ordinary answer among men who sit where I sit, which ought to tell you something before I say anything else.",
-        },
         land: {
-          text: "Some eight hundred acres along the creek, patented and seated. Ask the clerk how a man gets eight hundred acres out of a grant of fifty — he keeps the book that answers it.",
+          text: "Eight hundred acres along the creek. Ask the clerk how a man gets eight hundred out of a grant of fifty.",
         },
         voice: {
           text: "I do, and I will tell you exactly how I came to. A man may stand for burgess if he is a freeman holding ground. I hold ground because I paid the passage of eleven people, and the charter gave me fifty acres for each of them. Count it however you like: my seat in that Assembly was bought with eleven other men's crossings, and every one of them is still working.",
           useful: true,
         },
+        // Load-bearing: the audit keys an optional observation off it. Trimmed, not cut.
         owed: {
-          text: "Quitrent to the Company, and the Assembly petitions about it every session. It is not a debt that takes years off a man's life. Ask someone whose does.",
+          text: "Quitrent to the Company. It is not a debt that takes years off a man's life. Ask someone whose does.",
         },
       },
     },
@@ -161,14 +162,12 @@ const BY_WHOSE_HEAD = {
           text: "I enter every soul that comes off a ship at this landing. Name, ship, date, and who paid the freight — all four on one line, because the fourth is the one the patent office wants. The man who paid is the man the fifty acres go to, and I write both facts in the same hand at the same moment. Nobody in eleven years has asked me to write it any other way.",
           useful: true,
         },
+        // Load-bearing: the audit keys an optional observation off it. Trimmed, not cut.
         land: {
-          text: "None. I hold a stool and a book. The men whose acres I write down mostly never come to the landing at all — it is their servants I see.",
-        },
-        voice: {
-          text: "The burgess, I suppose, though he has never asked me. Put it to him; he is up by the meetinghouse and he likes the question.",
+          text: "None. I hold a stool and a book. The men whose acres I write down never come to the landing — it is their servants I see.",
         },
         owed: {
-          text: "My wages, when the factor remembers them. Every cask that leaves here is entered twice — once for the company, once for the customs man — and I am paid for neither entry. If you want the casks, that is a different record and it is down at the wharf.",
+          text: "My wages, when the factor remembers them. If you want the casks, that is a different record and it is here at the wharf.",
         },
       },
     },
@@ -179,14 +178,12 @@ const BY_WHOSE_HEAD = {
       group: "settlement",
       fallback: "He straightens, looks at the row, and bends back to it.",
       answers: {
+        // Load-bearing: the audit keys an optional observation off it. Trimmed, not cut.
         passage: {
-          text: "A man in Bristol paid it and sold the paper on before I ever saw Virginia. I have never met the one who holds it now. He is somewhere up the creek with eight hundred acres and I have not laid eyes on him.",
-        },
-        land: {
-          text: "None, and I will hold none while this runs. Ask me again in three years and I may have a different answer, though most who ask it end up back in somebody's rows.",
+          text: "A man in Bristol paid it and sold the paper on before I ever saw Virginia. I have never met the one who holds it now.",
         },
         voice: {
-          text: "Nobody. A servant does not stand for the Assembly and does not vote for it. The man who owns my years does both.",
+          text: "Nobody. A servant does not vote and does not sit. The man who owns my years does both.",
         },
         owed: {
           text: "Seven years, and I am four into them. At the end there are freedom dues — corn, and a suit of clothes, and I am my own man. Here is the part nobody says out loud: the fifty acres my crossing earned were granted the week I landed. They were never mine. They went to whoever held the paper, and my seven years are what he paid for them.",
@@ -202,10 +199,7 @@ const BY_WHOSE_HEAD = {
       fallback: "He looks at you for a long moment and says nothing.",
       answers: {
         passage: {
-          text: "Nobody paid for me. I was taken from Ndongo, put aboard at Luanda, and taken off a second ship at Point Comfort and traded here for victuals. That is not a passage. Ask the clerk what line he wrote me on — I should like to know myself.",
-        },
-        land: {
-          text: "This field, while there is light. Whether that is holding it you would have to ask a man with a paper.",
+          text: "Nobody paid for me. Taken from Ndongo, put aboard at Luanda, taken off a second ship at Point Comfort and traded here for victuals. That is not a passage. Ask the clerk what line he wrote me on.",
         },
         voice: {
           text: "No one has ever put that question to me before. I will not invent an answer for you.",
@@ -223,18 +217,15 @@ const BY_WHOSE_HEAD = {
       group: "settlement",
       fallback: "She wipes her hands and waits for a better question.",
       answers: {
-        passage: {
-          text: "My husband's purse, and I came as his wife rather than as a head of anything. The Company counted me, mind — it counted me into his fifty.",
-        },
         land: {
-          text: "His. All of it, and the fifty acres that came with my own crossing are in his name at the top of the same patent. Widows come into ground here more often than wives do, which is a grim way to hold land and it is the way it is held.",
+          text: "His, all of it — including the fifty my own crossing earned. Widows come into ground here more often than wives do.",
         },
         voice: {
           text: "Not one soul. I do not vote and I do not sit, and when this settlement decides a thing it decides it in a room I have never been in. Count who does the washing, the brewing, the tending and the burying — the muster counts me among my husband's people, not as one of my own, and the record books forget us in exactly that order. The settlement would starve inside a season without us and it would still not write us down.",
           useful: true,
         },
         owed: {
-          text: "Everything that is due from a wife, and nothing that runs out in years. The ones counting down are in the fields.",
+          text: "Everything a wife owes, and nothing that runs out in years. The ones counting down are in the fields.",
         },
       },
     },
@@ -245,18 +236,15 @@ const BY_WHOSE_HEAD = {
       group: "tsenacommacah",
       fallback: "He waits for you to say something worth answering.",
       answers: {
-        passage: {
-          text: "Nobody brought me here. My people's canoes were on this river before a ship found its mouth. That question has an answer for you and none for me.",
-        },
         land: {
           text: "By the same right your king holds England. This country has a name — Tsenacommacah — and some thirty towns in it under one paramount chief, with fields, weirs and paths between them that were old before your palisade. Your paper grants fifty acres of it to a man in London who has never seen this river. The paper does not mention us. That is not an oversight; a document that mentioned us would have to explain itself.",
           useful: true,
         },
         voice: {
-          text: "In your settlement? No one, and I do not want one. Ask the woman by the upper fields what speaking looks like where I am from.",
+          text: "In your settlement? No one, and I do not want one. Ask the woman by the upper fields.",
         },
         owed: {
-          text: "Nothing to you. There have been agreements between our chief and your governor, and they have been broken from both sides. That is not a debt in years.",
+          text: "Nothing to you. Our chief and your governor have made agreements and broken them from both sides.",
         },
       },
     },
@@ -271,14 +259,11 @@ const BY_WHOSE_HEAD = {
           text: "I was born up this river. It is your people the ships bring, and they arrive hungry.",
         },
         land: {
-          text: "The fields are worked by the women who work them, and nobody writes a paper about it. He will tell you about the towns and the chief — that is his to tell.",
+          text: "The towns and the chief are his to tell you about, not mine. He is down by the river.",
         },
         voice: {
           text: "Among us, the women who grow the corn decide what may be spared from it. That is not a small say; it is the say that matters in a hard winter. Your settlement ate through its first winters on corn out of our fields, and it was women who decided that corn could be spared. Now your paper calls the same ground empty and grants it away by the head. Both of those cannot be true, and only one of them is written down.",
           useful: true,
-        },
-        owed: {
-          text: "Less than your settlement owes, and neither debt is being written into anybody's book. Ask your clerk what he has a column for.",
         },
       },
     },
@@ -354,11 +339,14 @@ const NOTHING_TO_BE_GOTTEN = {
   howItWorks: {
     steps: [
       "Read the letter first. All of it — the lines below are lifted straight out of it.",
-      "For each line, look across at what you gathered at Riverbend, then say whether it supports the line, contradicts it, or cannot settle it either way.",
-      "He is not wrong about everything. Two of these your own evidence backs up, and one you have no way to judge — saying so is part of the work.",
-      "When you land on contradicted, a second question opens: was he wrong, or was he right about his own corner of a settlement that is not one condition? Those are different findings.",
+      "For each line, say whether what you gathered at Riverbend supports it, contradicts it, or cannot settle it. He is not wrong about everything: two your evidence backs, and one you have no way to judge.",
+      "Land on contradicted and a second question opens: was he wrong, or right about his own corner of a settlement that is not one condition?",
     ],
-    note: "The right-hand column holds only what you actually logged in your notebook. Where it says you did not gather something, that is a line of this letter you have no way to check.",
+    note: "The right-hand column holds only what you logged. Where it says you did not gather something, that is a line of this letter you have no way to check.",
+  },
+  briefing: {
+    speaker: "indentured-servant",
+    line: "There is a letter going home from a lad at Martin's Hundred, and half the settlement would tell you he lays it on thick. I would not. Read it against what you have been told out here and see who is right.",
   },
   terms: [
     {
@@ -583,12 +571,15 @@ const ONE_HOGSHEAD = {
     "Fourteen casks of tobacco left this landing and three pieces of Kentish cloth, two dozen iron hoes and six dozen knives came back. Follow one cask the whole way and log what the account can actually establish at each step — and what it cannot.",
   howItWorks: {
     steps: [
-      "The cask moves in four legs, in order. Each one tells you what changes and whose hands it passes through.",
-      "For every leg, choose the one entry the wharf account establishes. A leg stays open until you have it right.",
-      "One of the choices means the account does not establish this. It is a real answer and it is correct at least once — a record that begins in one place cannot testify about another.",
-      "Something you know from walking this settlement is not the same as something this page proves. Log what the page proves.",
+      "The cask moves in four legs, in order. Each says what changes and whose hands it passes through.",
+      "For every leg, choose the one entry this wharf account establishes. A leg stays open until you have it right.",
+      "One choice means the account does not establish this. It is a real answer and it is correct at least once.",
     ],
-    note: "File the record when every leg is logged. What you file becomes the Chronicle's reading of what a wharf account is evidence of.",
+    note: "Something you know from walking this settlement is not the same as something this page proves. Log what the page proves, then file.",
+  },
+  briefing: {
+    speaker: "wharf-clerk",
+    line: "Every cask is entered twice — once for the company, once for the customs man. Follow one out and back and tell me which of the two entries my book is actually good for.",
   },
   terms: [
     {

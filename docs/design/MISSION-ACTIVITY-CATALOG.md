@@ -412,6 +412,7 @@ Ordered by payoff per unit of work. None of this is scheduled; it is the queue t
 | 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    | Open                                             |
 | 7   | `howItWorks` + `terms` on every activity authored from here on                  | —     | S    | **Rule** (Phase 69), enforced by test (Phase 70) |
 | 8   | Author activities on Units 3–5's three field maps (18 records)                  | —     | L    | Open — the standing queue                        |
+| 9   | Three instruction steps, a sparse answer grid, and a face on every mission      | A1/A3 | S    | **Rule** (Phase 71), enforced by test and schema |
 
 **The shape of the remaining work changed in Phase 68.** Items 1 and 3 were engine problems and the
 engines now exist — `assembly` takes any image and any grid, `trace` takes any chain of nodes. What
@@ -426,6 +427,24 @@ Item 8 is the queue Phases 68–70 leave behind, and the realistic budget from R
 lines of prose-heavy content per map** plus five registration edits. Note that only a field case can
 carry an activity: the ten non-map cases declare no `sources` at all, and reaching one from
 `missionScreen()` needs a path nobody has built.
+
+**Item 9 is the second standing condition, and it came out of the Phase 71 playtest of both authored
+units** (decision log `0054`). Three parts, and the middle one is the one that matters:
+
+1. **Three steps and a note.** Both units shipped at five and six bullets and the owner stopped
+   reading them. `HowItWorksSchema.steps` is capped at four; detail goes in the note.
+2. **A sparse answer grid.** An INTERVIEW gives each speaker **one useful answer, two short
+   deflections, and one question left unauthored** so their `fallback` fires. Both interviews shipped
+   with every cell filled — 28 of 28 and 32 of 32 — which made asking everyone everything strictly
+   dominant, made reading a person's position pointless, and left all fifteen authored `fallback`
+   lines permanently unreachable. A flat answer runs about fifteen words against a useful one's
+   thirty-plus, and a fallback offers no log control at all, because it is not testimony.
+3. **A face.** An activity's `briefing` names whoever hands the record over, and the Mission
+   Instructions screen opens on their portrait. Author one wherever a person plainly does; a record
+   found on a shore has no giver and the screen says so.
+
+`tests/unit/activity-content.test.js` fails on 1 and 2, and on a `briefing` naming somebody who is
+not on that unit's map.
 
 ---
 

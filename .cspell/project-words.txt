@@ -188,6 +188,7 @@ lerping
 librsvg
 libtiled
 libvips
+loggable
 longcase
 longcoat
 longenough
@@ -367,10 +368,12 @@ unclickable
 uncompletable
 unconfigured
 unearnable
+unauthored
 unenterable
 unflipped
 ungated
 unglobbed
+unheld
 unhighlighted
 unioning
 unlayered

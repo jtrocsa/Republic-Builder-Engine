@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   PROGRESS_KEY,
+  briefed,
   seedProgress,
   loadSeededSave,
   walkTo,
@@ -220,6 +221,7 @@ test.describe("Gameplay visual-regression baselines", () => {
       currentScreen: "interview",
       activeCaseId: "case-001",
       activeActivitySourceId: "taino-context",
+      sourceActivities: briefed("taino-context"),
     });
     await expect(page.locator(".activity-board--interview")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("activity-interview"));
@@ -228,6 +230,7 @@ test.describe("Gameplay visual-regression baselines", () => {
       currentScreen: "discrepancy",
       activeCaseId: "case-001",
       activeActivitySourceId: "columbus-letter",
+      sourceActivities: briefed("columbus-letter"),
     });
     await expect(page.locator(".activity-board--discrepancy")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("activity-discrepancy"));
@@ -236,9 +239,35 @@ test.describe("Gameplay visual-regression baselines", () => {
       currentScreen: "assembly",
       activeCaseId: "case-001",
       activeActivitySourceId: "waldseemuller-map",
+      sourceActivities: briefed("waldseemuller-map"),
     });
     await expect(page.locator(".activity-board--assembly")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("activity-assembly"));
+  });
+
+  // The Mission Instructions screen (Phase 71) — the state every activity opens on the first time,
+  // and the only screen in the game built around a character portrait. Two baselines, because the
+  // two ends of its giver plate are different layouts: a named person with a line, and a record
+  // nobody handed over. mission-instructions.spec.js covers the behaviour.
+  test("mission instructions: the hand-off, with and without a giver", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "interview",
+      activeCaseId: "case-001",
+      activeActivitySourceId: "taino-context",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator(".mission-brief__portrait")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-instructions"));
+
+    await setScreen(page, {
+      currentScreen: "assembly",
+      activeCaseId: "case-001",
+      activeActivitySourceId: "waldseemuller-map",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await expect(page.locator(".mission-brief__mark")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-instructions-unheld"));
   });
 
   // Banked in Phase 53. The Caribbean was the only field map with a baseline, so the Riverbend and
@@ -271,6 +300,7 @@ test.describe("Gameplay visual-regression baselines", () => {
         "riverbend-charter": {
           state: { asked: RIVERBEND_ACCOUNTS, logged: RIVERBEND_ACCOUNTS, filed: null },
           completed: false,
+          briefed: true,
         },
       },
     });
@@ -286,7 +316,9 @@ test.describe("Gameplay visual-regression baselines", () => {
         "riverbend-charter": {
           state: { asked: RIVERBEND_ACCOUNTS, logged: RIVERBEND_ACCOUNTS, filed: "by-the-head" },
           completed: true,
+          briefed: true,
         },
+        ...briefed("riverbend-letter"),
       },
     });
     await expect(page.locator(".activity-board--discrepancy")).toBeVisible();
@@ -296,6 +328,7 @@ test.describe("Gameplay visual-regression baselines", () => {
       currentScreen: "trace",
       activeCaseId: "case-004",
       activeActivitySourceId: "riverbend-ledger",
+      sourceActivities: briefed("riverbend-ledger"),
     });
     await expect(page.locator(".activity-board--trace")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("activity-trace"));
@@ -518,6 +551,7 @@ test.describe("Gameplay visual-regression baselines", () => {
             filed: null,
           },
           completed: false,
+          briefed: true,
         },
       },
     });
@@ -573,6 +607,7 @@ test.describe("Gameplay visual-regression baselines", () => {
             filed: "knowledge",
           },
           completed: false,
+          briefed: true,
         },
       },
     });
@@ -611,6 +646,7 @@ test.describe("Gameplay visual-regression baselines", () => {
             filed: "by-the-head",
           },
           completed: false,
+          briefed: true,
         },
       },
     });

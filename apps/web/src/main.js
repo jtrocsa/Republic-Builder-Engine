@@ -9363,7 +9363,14 @@ const ACTIVITY_IMAGES = { "waldseemuller-1507": waldseemuller };
 
 function ensureSourceActivity(sourceId) {
   progress.sourceActivities ??= {};
-  const entry = (progress.sourceActivities[sourceId] ??= { state: null, completed: false });
+  // `briefed`: whether the Mission Instructions screen has been cleared for this record. Absent on
+  // any save written before Phase 71, which reads as falsy and shows the screen once — the intended
+  // migration, since it is new UI nobody has seen.
+  const entry = (progress.sourceActivities[sourceId] ??= {
+    state: null,
+    completed: false,
+    briefed: false,
+  });
   const activity = activityFor(sourceId);
   // Also the migration path off the three retired screens: their saves carry
   // {observed, choice, placed} and no `state`, so an activity in flight restarts here. Secured
@@ -9683,47 +9690,51 @@ function fieldObjectiveTracker() {
   // outcome fieldObjectives()'s own comment rules out: standing in the Chimborazo ward, a player
   // was told to go and find "Ward Register, Chimborazo Hospital" rather than Jane Ferris, who was
   // four tiles away. Unit 4 shipped with the same defect across two surfaces; Richmond has three.
-  const surfaces = [activeFieldOutdoorMap(), ...fieldInteriors()];
-  const points = Object.assign({}, ...surfaces.map((surface) => surface.sourcePoints || {}));
-  const npcNameFor = (npcId) => {
-    for (const surface of surfaces) {
-      const npc = (surface.npcs || []).find((candidate) => candidate.id === npcId);
-      if (npc) return npc.name;
-    }
-    return undefined;
-  };
-  const rows = fieldObjectives(caseId, sourcesForCase(caseId), points, npcNameFor);
+  const points = Object.assign({}, ...fieldSurfaces().map((surface) => surface.sourcePoints || {}));
+  const rows = fieldObjectives(caseId, sourcesForCase(caseId), points, fieldNpcName);
   if (rows.length === 0) return "";
   const secured = rows.filter((row) => row.availability === "secured").length;
   const collapsed = progress.settings?.trackerCollapsed === true;
   const glyph = { secured: "✓", available: "✦", locked: "·" };
+  const tracked = trackedFieldActivity();
   const items = rows
     .map((row) => {
-      const where = row.availability === "locked" ? "Not yet available" : row.where;
+      // A record you have not opened names the person carrying it, because that is what you can spot
+      // across the map. The one you have open names the mission instead: you already know where it
+      // came from, and what you want back from the panel now is what you are holding. This is why
+      // there is no longer a second block underneath repeating the same name as a heading.
+      const inFlight = tracked?.source.id === row.id;
+      const where =
+        row.availability === "locked"
+          ? "Not yet available"
+          : inFlight
+            ? tracked.activity.title
+            : row.where;
       // The glyph carries the state visually and is hidden from assistive tech, so the state goes in
       // the row's own accessible name instead — a screen reader announcing "✓" tells nobody anything.
-      return `<li class="field-tracker__row is-${row.availability}" aria-label="${esc(row.availability)} — ${esc(where)}"><i aria-hidden="true">${glyph[row.availability]}</i><span>${esc(where)}</span></li>`;
+      return `<li class="field-tracker__row is-${row.availability}${inFlight ? " is-tracked" : ""}" aria-label="${esc(row.availability)} — ${esc(where)}"><i aria-hidden="true">${glyph[row.availability]}</i><span>${esc(where)}</span></li>`;
     })
     .join("");
   // Absolutely positioned inside `.field-viewport` but OUTSIDE `.caribbean-world`, which is the
   // element updateFieldPlayer() translates. Anything inside that div scrolls with the camera; this has
   // to stay pinned to the frame. It also must never focus or scroll anything — see CLAUDE.md's camera
   // invariant, which several past regressions came from violating.
-  return `<aside class="field-tracker ${collapsed ? "is-collapsed" : ""}" aria-label="Mission tracker"><button class="field-tracker__toggle" data-action="field-tracker-toggle" aria-expanded="${!collapsed}"><i aria-hidden="true">${collapsed ? "▸" : "▾"}</i><b>Mission Tracker</b><em>${secured}/${rows.length}</em></button><div class="field-tracker__body"><p class="field-tracker__key">✦ go here · ✓ secured · · locked</p><ul>${items}</ul>${fieldTrackerActivityBlock()}</div></aside>`;
+  return `<aside class="field-tracker ${collapsed ? "is-collapsed" : ""}" aria-label="Mission tracker"><button class="field-tracker__toggle" data-action="field-tracker-toggle" aria-expanded="${!collapsed}"><i aria-hidden="true">${collapsed ? "▸" : "▾"}</i><b>Mission Tracker</b><em>${secured}/${rows.length}</em></button><div class="field-tracker__body"><p class="field-tracker__key">✦ go here · ✓ secured · · locked</p><ul>${items}</ul>${fieldTrackerMissionBlock(tracked)}</div></aside>`;
 }
 
 /**
- * The tracker's second block: the mission you have open, how far along it is, and the way
- * back into it.
+ * How far along the mission in flight is, and the way back into it.
  *
  * This exists because the first playtest of the INTERVIEW had a player walking back across
  * the island to the elder repeatedly, purely to re-read which questions they had already
  * put to people — the notebook was only reachable through the record that opened it. The
  * button is a plain screen change; it must not focus or scroll anything, for the same
  * reason the panel around it is positioned the way it is.
+ *
+ * It used to open with the mission's name as a heading, which the record list above was already
+ * printing on the in-flight row — the same name twice in a 232px panel. The row keeps it.
  */
-function fieldTrackerActivityBlock() {
-  const tracked = trackedFieldActivity();
+function fieldTrackerMissionBlock(tracked) {
   if (!tracked) return "";
   const { source, activity, state } = tracked;
   const summary = activitySummary(activity.kind, activity, state);
@@ -9731,9 +9742,25 @@ function fieldTrackerActivityBlock() {
   const line = done
     ? `<p class="field-tracker__progress is-done">✓ Filed — your notes are still here</p>`
     : summary
-      ? `<p class="field-tracker__progress"><span>${esc(summary.label)}</span><b>${summary.done}</b> of ${summary.total}</p>`
+      ? `<p class="field-tracker__progress"><span>${esc(summary.label)}</span><b>${summary.done}/${summary.total}</b></p>`
       : "";
-  return `<div class="field-tracker__mission"><p class="field-tracker__mission-name">${esc(activity.title)}</p>${line}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">Open your notebook →</button></div>`;
+  // A bar only where there is something to fill. TRACE declares no summary() — a chain is not a
+  // count — so it gets its row and its button and nothing in between, which is the honest answer
+  // rather than a gap to fill.
+  const bar = summary ? fieldTrackerBar(done ? summary.total : summary.done, summary.total) : "";
+  return `<div class="field-tracker__mission">${line}${bar}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">Open your notebook →</button></div>`;
+}
+
+/**
+ * The mission's progress, as a bar.
+ *
+ * CSS rather than a generated asset: this sits in a 232px panel that narrows to 200px under
+ * 1400px, so a bitmap bar would have to be sliced or accept blurring, and the tracker is UI chrome
+ * in the blue/gold material rather than part of the pixel-art world.
+ */
+function fieldTrackerBar(done, total) {
+  const filled = total > 0 ? Math.max(0, Math.min(100, Math.round((done / total) * 100))) : 0;
+  return `<div class="field-tracker__bar" role="progressbar" aria-valuenow="${done}" aria-valuemin="0" aria-valuemax="${total}"><i style="width:${filled}%"></i></div>`;
 }
 function fieldNpcButton(npc) {
   const active = progress.activeFieldNpc === npc.id;
@@ -9862,10 +9889,34 @@ function placeFieldDialogueBubble() {
 }
 
 /** Display name for an NPC id, across every surface of the active unit's map. */
+/**
+ * Every surface of the active unit's map — outdoors, plus each interior it opens into.
+ *
+ * Deliberately not "the surface the player is standing on": a record can be anchored to someone in
+ * another room, and both the Mission Tracker and the Mission Instructions screen have to be able to
+ * name that person from wherever the player happens to be.
+ */
+function fieldSurfaces() {
+  return [activeFieldOutdoorMap(), ...fieldInteriors()];
+}
+function fieldNpcById(npcId) {
+  if (!npcId) return null;
+  for (const surface of fieldSurfaces()) {
+    const npc = (surface.npcs || []).find((candidate) => candidate.id === npcId);
+    if (npc) return npc;
+  }
+  return null;
+}
 function fieldNpcName(npcId) {
-  const outdoor = activeFieldOutdoorMap();
-  const rooms = (outdoor.interiors || []).flatMap((room) => room.npcs || []);
-  return [...outdoor.npcs, ...rooms].find((npc) => npc.id === npcId)?.name || "";
+  return fieldNpcById(npcId)?.name || "";
+}
+/** The person carrying a record, if it is on a person at all rather than on an object. */
+function sourceAnchorNpcId(sourceId) {
+  for (const surface of fieldSurfaces()) {
+    const npcId = surface.sourcePoints?.[sourceId]?.anchor?.npc;
+    if (npcId) return npcId;
+  }
+  return null;
 }
 
 function liveFieldInterview() {
@@ -10044,6 +10095,12 @@ function activityScreen(kind) {
   // knows what it is opening.
   openSourceId = source.id;
   const entry = ensureSourceActivity(source.id);
+  // The instructions are a moment before they are a reference. Cleared once per record and then
+  // never again — the copy column below keeps the same steps for the rest of the mission, which is
+  // what makes clearing this screen safe. An activity with no `howItWorks` has nothing to show and
+  // goes straight to its board.
+  if (activity.howItWorks && !entry.briefed)
+    return missionInstructionsScreen(kind, source, activity);
   const complete = isActivityComplete(kind, activity, entry.state);
   const activeCase = caseById(activeFieldCaseId());
   const kicker = `${ACTIVITY_ENGINE_ICONS[kind] || ""}<span>${esc(
@@ -10078,6 +10135,65 @@ function activityScreen(kind) {
   // The board and the footer share the shell's right-hand column, so they are wrapped rather than
   // being two more children of a two-column grid.
   return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p>${esc(activity.intro)}</p>${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
+}
+
+/**
+ * Who is handing this record over.
+ *
+ * Three tiers, in order, and none of them invents content: whoever the activity's `briefing` names;
+ * failing that, whoever is carrying the record on the map; failing that, nobody — a record found on
+ * a shore has no giver and the screen says so rather than borrowing someone.
+ */
+function missionGiver(source, activity) {
+  const spoken = fieldNpcById(activity.briefing?.speaker);
+  if (spoken) return { npc: spoken, line: activity.briefing.line };
+  const carrier = fieldNpcById(sourceAnchorNpcId(source.id));
+  return carrier ? { npc: carrier, line: "" } : null;
+}
+
+/**
+ * Mission Instructions — the screen a record opens on, once.
+ *
+ * Phase 69 answered "have an instruction screen explaining the quest" (decision log `0052` §10) with
+ * a panel in the activity's copy column, beside the board the panel was meant to explain. A player
+ * already looking at the board does not read it. This is the same content given its own beat, framed
+ * as the hand-off it always was in fiction: the person who gave you the job, their portrait, and what
+ * they want done.
+ *
+ * Deliberately *not* a new screen id. The engine keys already double as `VALID_SCREENS` entries and
+ * as content's `activityRoute`, so a fifth id here would be a save-compatibility change to buy
+ * nothing — this is a state of the activity screen, the same way the Entrance Hall is a room and not
+ * a screen. `briefed` lives on the per-source activity entry beside `state` and `completed`.
+ */
+function missionInstructionsScreen(kind, source, activity) {
+  const activeCase = caseById(activeFieldCaseId());
+  const kicker = `${ACTIVITY_ENGINE_ICONS[kind] || ""}<span>${esc(
+    [activeCase ? caseNumberLabel(activeCase) : "", ACTIVITY_ENGINE_LABELS[kind]]
+      .filter(Boolean)
+      .join(" · ")
+  )}</span>`;
+  const giver = missionGiver(source, activity);
+  // The portrait is the character's own committed `-portrait.png` — characterSheet() builds one for
+  // every member of the cast and throws at boot if a file is missing, so this can never 404.
+  const plate = giver
+    ? `<figure class="mission-brief__giver"><img class="mission-brief__portrait" src="${sheetFor(giver.npc.sprite).portrait}" alt=""><figcaption><b>${esc(giver.npc.name)}</b>${giver.npc.label ? `<span>${esc(giver.npc.label)}</span>` : ""}</figcaption>${giver.line ? `<blockquote><p>${esc(giver.line)}</p></blockquote>` : ""}</figure>`
+    : `<figure class="mission-brief__giver is-record"><div class="mission-brief__mark" aria-hidden="true">${ACTIVITY_ENGINE_ICONS[kind] || ""}</div><figcaption><b>${esc(source.title)}</b><span>Nobody handed you this one</span></figcaption></figure>`;
+  const steps = activity.howItWorks.steps.map((step) => `<li>${esc(step)}</li>`).join("");
+  const note = activity.howItWorks.note
+    ? `<p class="mission-brief__note">${esc(activity.howItWorks.note)}</p>`
+    : "";
+  const terms = activity.terms
+    ? `<section class="mission-brief__terms"><h2>Words in this record</h2><dl>${activity.terms
+        .map((word) => `<dt>${esc(word.term)}</dt><dd>${esc(word.definition)}</dd>`)
+        .join("")}</dl></section>`
+    : "";
+  // The button lives in the giver's column, not under the instructions. Two reasons, and the first
+  // is the binding one: on the 1366x768 Chromebook this game is built for, a heading, an intro,
+  // three steps and a glossary put anything below them off the bottom of the screen, and a
+  // click-to-continue control a player has to scroll to find is a screen that looks stuck. The
+  // second is that it reads correctly there — you accept the job from the person offering it.
+  const begin = `<button class="btn btn-gold mission-brief__begin" data-action="mission-briefed" data-source="${esc(source.id)}">Begin the mission →</button>`;
+  return `${chrome()}<main class="shell mission-brief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${begin}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p class="mission-brief__intro">${esc(activity.intro)}</p><section class="mission-brief__steps"><h2>Mission Instructions</h2><ol>${steps}</ol>${note}</section>${terms}</section></main>`;
 }
 
 // One dispatch point for every control an engine renders. Deliberately on its own
@@ -11468,6 +11584,17 @@ function handleFieldClick(target, action) {
     ensureSourceActivity(openSourceId).completed = true;
     progress.activeActivitySourceId = null;
     progress.currentScreen = "source";
+    save();
+    render();
+    return true;
+  }
+  // Clearing the Mission Instructions screen. A plain `data-action`, deliberately not a
+  // `data-activity-action`: that attribute is matched first and dispatches into the engine's own
+  // reducer, which knows nothing about a host-side gate and would refuse the verb.
+  if (action === "mission-briefed") {
+    const sourceId = target.dataset.source;
+    if (!activityFor(sourceId)) return true;
+    ensureSourceActivity(sourceId).briefed = true;
     save();
     render();
     return true;

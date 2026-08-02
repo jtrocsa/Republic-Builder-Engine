@@ -145,16 +145,22 @@ describe("interviewAnswer — the sparse matrix", () => {
     expect(interviewAnswer(elder, "grows")).toEqual({
       text: "Cassava, and maize after it.",
       useful: true,
+      authored: true,
     });
   });
 
   it("returns the speaker's flat fallback for a pair with no authored answer (normal case)", () => {
     // The whole lesson of the mission: asking the wrong person the wrong
     // question is a legal move that returns legitimate nothing.
+    //
+    // `authored: false` is what the host reads to withhold the log control. Both shipped interviews
+    // leave one question per speaker unauthored (Phase 71), so this is a live path rather than a
+    // guard — before that the fallback was unreachable in either of them.
     const elder = activity().speakers[0];
     expect(interviewAnswer(elder, "gold")).toEqual({
       text: "She waits for a better question.",
       useful: false,
+      authored: false,
     });
   });
 
@@ -198,6 +204,21 @@ describe("actInterview", () => {
     expect(
       actInterview(activity(), before, { type: "ask", speaker: "elder", question: "nope" })
     ).toBe(before);
+  });
+
+  it("refuses to log a speaker's fallback (edge case)", () => {
+    // A fallback is the speaker having nothing for you, not testimony, so there is nothing in it to
+    // keep. The field bubble draws no log control for one — this is the same rule where it is
+    // actually enforceable, since a disabled control is a hint and the reducer is the lock.
+    let state = actInterview(activity(), defaultInterviewState(), {
+      type: "ask",
+      speaker: "elder",
+      question: "gold",
+    });
+    const asked = state;
+    state = actInterview(activity(), state, { type: "log", speaker: "elder", question: "gold" });
+    expect(state).toBe(asked);
+    expect(state.logged.elder).toBeUndefined();
   });
 
   it("logs whatever the speaker is currently saying when no question is named (normal case)", () => {
@@ -256,10 +277,25 @@ describe("actInterview", () => {
 
 describe("interviewCoverage / interviewGoals / interviewSummary", () => {
   it("counts distinct logged questions and speakers, not total asks (normal case)", () => {
+    // Re-asking and re-logging the same pair must not move any of the three numbers. (This used to
+    // reach two questions by also logging the elder's `gold`, which is her fallback — since
+    // Phase 71 the reducer refuses that, because a fallback is not testimony.)
     let state = askAndLog(defaultInterviewState(), "elder", "grows");
-    state = askAndLog(state, "elder", "gold");
-    const coverage = interviewCoverage(activity(), state);
-    expect(coverage).toMatchObject({ questions: 2, speakers: 1, useful: 1, met: false });
+    state = askAndLog(state, "elder", "grows");
+    expect(interviewCoverage(activity(), state)).toMatchObject({
+      questions: 1,
+      speakers: 1,
+      useful: 1,
+      met: false,
+    });
+
+    state = askAndLog(state, "captain", "gold");
+    expect(interviewCoverage(activity(), state)).toMatchObject({
+      questions: 2,
+      speakers: 2,
+      useful: 2,
+      met: true,
+    });
   });
 
   it("reports one goal row per dimension the content actually asks for (normal case)", () => {
