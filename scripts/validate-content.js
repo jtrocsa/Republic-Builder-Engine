@@ -163,6 +163,13 @@ function main() {
   );
   results.push(
     runSchema(
+      "unit-01-quests.js: UNIT_01_READER_MCQ_QUESTS",
+      McqQuestListSchema,
+      content.unit01.readerMcqQuests
+    )
+  );
+  results.push(
+    runSchema(
       "unit-01-quests.js: UNIT_01_ARCHIVE_CHALLENGE_QUESTS",
       SequencingQuestListSchema,
       content.unit01.archiveChallengeQuests
@@ -577,6 +584,7 @@ function main() {
     "cross-reference: dbq quest ids",
     "cross-reference: archive challenge quest references",
     "cross-reference: investigation challenge quest references",
+    "cross-reference: reader question references",
     "cross-reference: source alternate references",
     "cross-reference: mcq alternate references",
     "cross-reference: sequencing alternate references",
@@ -612,6 +620,10 @@ function main() {
       {
         source: "unit-03-quests.js:UNIT_03_INVESTIGATION_MCQ_QUESTS",
         items: content.unit03.investigationMcqQuests,
+      },
+      {
+        source: "unit-01-quests.js:UNIT_01_READER_MCQ_QUESTS",
+        items: content.unit01.readerMcqQuests,
       },
       {
         source: "unit-02-quests.js:UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS",
@@ -802,6 +814,18 @@ function main() {
       questType: s.investigationMode,
       questId: s.investigationQuestId,
     }));
+  // A source's reader questions (readerQuestType/readerQuestIds) replace the written
+  // "initial reading" in sourceReader(). Array-valued, unlike the single-pointer
+  // investigation gate, so one source flattens into one entry per question id.
+  const readerEntries = (sourceLabel, sources) =>
+    sources.flatMap((s) =>
+      (Array.isArray(s.readerQuestIds) ? s.readerQuestIds : []).map((questId, index) => ({
+        source: sourceLabel,
+        path: `find(${JSON.stringify(s.id)}).readerQuestIds[${index}]`,
+        questType: s.readerQuestType,
+        questId,
+      }))
+    );
 
   const crossFileErrors = [
     ...checkUniqueGlobalIds("cross-reference: case ids", [
@@ -855,6 +879,18 @@ function main() {
         ...investigationEntries("unit-03-campaign.js:CASE_007_SOURCES", content.unit03.sources),
         ...investigationEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
         ...investigationEntries("unit-05-campaign.js:CASE_013_SOURCES", content.unit05.sources),
+      ],
+      questTypeKeys,
+      questsByType
+    ),
+    ...checkChallengeReferences(
+      "cross-reference: reader question references",
+      [
+        ...readerEntries("unit-01-campaign.js:CASE_001_SOURCES", content.unit01.sources),
+        ...readerEntries("unit-02-campaign.js:CASE_004_SOURCES", content.unit02.sources),
+        ...readerEntries("unit-03-campaign.js:CASE_007_SOURCES", content.unit03.sources),
+        ...readerEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
+        ...readerEntries("unit-05-campaign.js:CASE_013_SOURCES", content.unit05.sources),
       ],
       questTypeKeys,
       questsByType

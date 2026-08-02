@@ -8,6 +8,7 @@ import {
   AssemblyActivitySchema,
   actAssembly,
   assemblyOutcome,
+  boardOpen,
   boardStatus,
   defaultAssemblyState,
   isAssemblyComplete,
@@ -156,6 +157,73 @@ describe("AssemblyActivitySchema", () => {
     expect(result.success).toBe(false);
     expect(result.error.issues.some((i) => i.message.includes("needs an image key"))).toBe(true);
   });
+
+  it("rejects opensAfter naming a board that does not exist (edge case)", () => {
+    const broken = activity();
+    broken.boards[1].opensAfter = "ghost";
+    const result = AssemblyActivitySchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("unknown board"))).toBe(true);
+  });
+
+  it("rejects an opensAfter cycle (edge case)", () => {
+    // Two boards each waiting on the other locks both forever, and does so
+    // silently — the activity simply has no first move.
+    const broken = activity();
+    broken.boards[0].opensAfter = "cartouches";
+    broken.boards[1].opensAfter = "sheet";
+    const result = AssemblyActivitySchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("opensAfter cycle"))).toBe(true);
+  });
+});
+
+describe("boardOpen — a board that waits on another", () => {
+  const gated = () => {
+    const content = activity();
+    content.boards[1].opensAfter = "sheet";
+    return content;
+  };
+
+  it("is closed until its prerequisite is solved, then open (normal case)", () => {
+    const content = gated();
+    expect(boardOpen(content, content.boards[1], defaultAssemblyState())).toBe(false);
+    let state = actAssembly(content, defaultAssemblyState(), {
+      type: "place",
+      board: "sheet",
+      slot: "left",
+      fragment: "west",
+    });
+    state = actAssembly(content, state, {
+      type: "place",
+      board: "sheet",
+      slot: "right",
+      fragment: "east",
+    });
+    expect(boardOpen(content, content.boards[1], state)).toBe(true);
+  });
+
+  it("refuses a placement on a closed board (regression case)", () => {
+    // The rendered `disabled` is a hint. Without the reducer guard a fragment
+    // dropped into a locked board still counted toward completion.
+    const content = gated();
+    const before = defaultAssemblyState();
+    expect(
+      actAssembly(content, before, {
+        type: "place",
+        board: "cartouches",
+        slot: "upper",
+        fragment: "america",
+      })
+    ).toBe(before);
+  });
+
+  it("says which board is holding it up (normal case)", () => {
+    const content = gated();
+    const markup = renderAssembly(content, defaultAssemblyState());
+    expect(markup).toContain("is-locked");
+    expect(markup).toContain("Finish The torn sheet first.");
+  });
 });
 
 describe("actAssembly", () => {
@@ -303,6 +371,40 @@ describe("renderAssembly", () => {
     const markup = renderAssembly(activity(), solved());
     expect(markup).not.toContain("background-image");
     expect(markup).toContain('data-activity-action="lift"');
+  });
+
+  it("keeps a label board's captions and drops an image board's (normal case)", () => {
+    // A text tile with no label is a blank button; a picture tile with one has a
+    // pill of engraver's jargon sitting on the art it is meant to help you read.
+    const markup = renderAssembly(activity(), solved(), { images: { "sheet-scan": "/scan.jpg" } });
+    expect(markup).toContain(">America<");
+    expect(markup).not.toContain(">West<");
+    // Still named for a screen reader, which is the whole reason `label` stays
+    // required on an unlabelled board.
+    expect(markup).toContain('aria-label="Left half — holding West"');
+  });
+
+  it("shows an image board's labels when the board asks for them (boundary case)", () => {
+    const trained = activity();
+    trained.boards[0].showFragmentLabels = true;
+    expect(renderAssembly(trained, solved())).toContain(">West<");
+  });
+
+  it("names a misplaced image tile by the slot it landed in (regression case)", () => {
+    // Its own label is not on screen on an unlabelled board, so naming the piece
+    // by it described something the player cannot see. The red slot is what they
+    // are looking at.
+    const state = actAssembly(activity(), defaultAssemblyState(), {
+      type: "place",
+      board: "sheet",
+      slot: "right",
+      fragment: "west",
+    });
+    const misread = renderAssembly(activity(), state).match(
+      /<ul class="activity-misread">.*?<\/ul>/s
+    )[0];
+    expect(misread).toContain("Right half");
+    expect(misread).not.toContain("West");
   });
 
   it("does not emit NaN when a board omits its grid size (regression case)", () => {

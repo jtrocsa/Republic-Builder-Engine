@@ -42,6 +42,7 @@ export function loadChronicleContent() {
       sourceAnalysisQuests: unit01Quests.UNIT_01_SOURCE_ANALYSIS_QUESTS,
       investigationMcqQuests: unit01Quests.UNIT_01_INVESTIGATION_MCQ_QUESTS,
       investigationSequencingQuests: unit01Quests.UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
+      readerMcqQuests: unit01Quests.UNIT_01_READER_MCQ_QUESTS,
       archiveChallengeQuests: unit01Quests.UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
       archiveEvidenceQuests: unit01Quests.UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
       archiveSaqQuests: unit01Quests.UNIT_01_ARCHIVE_SAQ_QUESTS,

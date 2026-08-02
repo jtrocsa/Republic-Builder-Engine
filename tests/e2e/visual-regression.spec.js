@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { PROGRESS_KEY, seedProgress, loadSeededSave, walkToNpc } from "./helpers/progress-seed.js";
+import {
+  PROGRESS_KEY,
+  seedProgress,
+  loadSeededSave,
+  walkTo,
+  walkToNpc,
+} from "./helpers/progress-seed.js";
 
 // Phase 45A: the visual-regression net that makes the rest of Phase 45 (and the CSS
 // consolidation/token work in 45B-45E, plus Phases 47-48's animation/hub-camera work) safe to
@@ -391,28 +397,68 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("practice-check-graded"));
   });
 
-  test("investigation challenge, interview completion, and source reader", async ({ page }) => {
+  // Split in two in Phase 69. This used to be one walk to the community elder, whose record was
+  // gated by an Investigation Challenge and then opened the interview. That gate was removed when
+  // the record stopped being a worksheet (decision log 0052), so the only Investigation Challenge
+  // left in Case 1.01 is the map's — a world marker on the far west shore rather than a person a
+  // few tiles north. Two moderate walks that can run in parallel beat one long serial one.
+  test("investigation challenge", async ({ page }) => {
+    test.setTimeout(120_000);
     await seedProgress(page, {
       currentScreen: "field",
       tutorial: { step: "complete", completed: true, skipped: false },
-      // The interview's coverage bar is four questions across five people, which is a walk around
-      // the island rather than three clicks on one screen. It is banked as gameplay in
-      // activity-engines.spec.js; here the asking is seeded so this test stays about the two
-      // screenshots it takes.
+      // Nothing but the village is reachable until the village is secured — sourceAvailability().
+      caseEvidence: { "case-001": ["taino-context"] },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    // investigationScreen() reads the module-local openSourceId, so this screen cannot be jumped
+    // to with setScreen() the way the activity screens above can — it has to be walked to. See
+    // investigation-challenge.spec.js, which banks the behaviour.
+    const table = '.source-signal--world[data-source="waldseemuller-map"]';
+    expect(await walkTo(page, table, "caseFieldPlayer", { timeoutMs: 60_000 })).toBe(true);
+    await page.locator(table).click();
+
+    await expect(
+      page.locator('[data-quest-id="case-001-investigation-sequencing-waldseemuller-naming"]')
+    ).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("investigation-challenge"));
+  });
+
+  test("interview completion and source reader", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      tutorial: { step: "complete", completed: true, skipped: false },
+      // The interview's bar is one useful answer from each of the seven people on the island,
+      // which is a walk around it rather than three clicks on one screen. It is banked as
+      // gameplay in activity-engines.spec.js; here the asking is seeded so this test stays about
+      // the two screenshots it takes.
       //
       // Deliberately not the elder: this test walks to her and clicks the record button in her
-      // speech bubble, and seeding her as already-asked swaps her ambient line for an answer and
-      // adds four question chips, making that bubble tall enough to be a flaky click target under
-      // parallel workers. The other five satisfy the bar on their own.
+      // speech bubble, and seeding her as already-asked swaps her ambient line for an answer, a
+      // log button and four question chips, making that bubble tall enough to be a flaky click
+      // target under parallel workers. Her own account is logged without being "asked", which the
+      // reducer would refuse but a seed can simply state.
       sourceActivities: {
         "taino-context": {
           state: {
             asked: {
               "taino-gardener": ["grows"],
               "taino-fisher": ["trade"],
-              "taino-child": ["gold"],
-              columbus: ["decides"],
+              "taino-child": ["grows"],
+              columbus: ["gold"],
               "spanish-scribe": ["decides"],
+              "spanish-sailor": ["trade"],
+            },
+            logged: {
+              "taino-elder": ["decides"],
+              "taino-gardener": ["grows"],
+              "taino-fisher": ["trade"],
+              "taino-child": ["grows"],
+              columbus: ["gold"],
+              "spanish-scribe": ["decides"],
+              "spanish-sailor": ["trade"],
             },
             filed: null,
           },
@@ -423,9 +469,8 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    // Same approach as tests/e2e/investigation-challenge.spec.js: `taino-context` is carried by the
-    // community elder (Phase 56), so it is reached through her speech bubble rather than by clicking
-    // a card on the grass.
+    // `taino-context` is carried by the community elder (Phase 56), so it is reached through her
+    // speech bubble rather than by clicking a card on the grass.
     await walkToNpc(page, "taino-elder");
     await page.locator('[data-npc="taino-elder"]').click();
     await page
@@ -434,15 +479,8 @@ test.describe("Gameplay visual-regression baselines", () => {
       )
       .click();
 
-    const quest = page.locator('[data-quest-id="case-001-investigation-mcq-taino-origins"]');
-    await expect(quest).toBeVisible();
-    await expect(page).toHaveScreenshot(snap("investigation-challenge"));
-
-    await quest.locator('input[type="radio"][value="0"]').check();
-    await page.locator('[data-action="investigation-continue"]').click();
-
-    // Lands on the interview (taino-context's activityRoute). With the coverage bar already met by
-    // the seed, filing the record is the one move left before the source reader opens.
+    // Lands straight on the interview now — there is no gate on this record. With the coverage
+    // bar already met by the seed, filing is the one move left before the source reader opens.
     await expect(page.locator(".activity-board--interview")).toBeVisible();
     await page.locator('.activity-closer [data-option="questions"]').click();
     const openSourceButton = page.locator('[data-action="open-activity-source"]');
@@ -451,6 +489,45 @@ test.describe("Gameplay visual-regression baselines", () => {
 
     await expect(page.locator(".reader-shell")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("source-reader"));
+  });
+
+  // The other reader shape: a record whose activity has already done the reading, so the written
+  // "initial reading" is replaced by a short multiple-choice set (Phase 69, decision log 0052).
+  // Only waldseemuller-map opts in; the other 23 records in the game keep the textarea and the
+  // Archive Evaluator, which the `source-reader` baselines above cover.
+  test("source reader: the multiple-choice variant", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "assembly",
+      activeCaseId: "case-001",
+      activeActivitySourceId: "waldseemuller-map",
+      caseEvidence: { "case-001": ["taino-context"] },
+      tutorial: { step: "complete", completed: true, skipped: false },
+      // A finished reconstruction, so the activity's footer offers the record — which is what
+      // sets the module-local openSourceId the reader resolves from. There is no other way into
+      // this screen that does not involve a walk to the far west shore.
+      sourceActivities: {
+        "waldseemuller-map": {
+          state: {
+            placed: {
+              sheet: Object.fromEntries(
+                Array.from({ length: 10 }, (_, i) => [`p${i + 1}`, `f${i + 1}`])
+              ),
+              cartouches: { south: "america", north: "terra-incognita", east: "india" },
+            },
+            selected: null,
+            filed: "knowledge",
+          },
+          completed: false,
+        },
+      },
+    });
+    await loadSeededSave(page);
+    await page.locator('[data-action="open-activity-source"]').click();
+
+    await expect(page.locator(".reader-questions")).toBeVisible();
+    await expect(page.locator(".quest-mcq")).toHaveCount(2);
+    await expect(page.locator("#sourceResponse")).toHaveCount(0);
+    await expect(page).toHaveScreenshot(snap("source-reader-questions"));
   });
 
   test("source reader: a primary source that is laid out as prose", async ({ page }) => {

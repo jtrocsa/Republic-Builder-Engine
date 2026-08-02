@@ -49,6 +49,7 @@ import {
   UNIT_01_SOURCE_ANALYSIS_QUESTS,
   UNIT_01_INVESTIGATION_MCQ_QUESTS,
   UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
+  UNIT_01_READER_MCQ_QUESTS,
   UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
   UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
   UNIT_01_ARCHIVE_SAQ_QUESTS,
@@ -104,6 +105,7 @@ import {
   ACTIVITY_ENGINE_KEYS,
   actOnActivity,
   activityOutcome,
+  activitySummary,
   defaultActivityState,
   isActivityComplete,
   isActivityEngine,
@@ -3946,6 +3948,25 @@ const INVESTIGATION_QUESTS_BY_TYPE = {
 };
 function investigationQuestFor(questType, questId) {
   return (INVESTIGATION_QUESTS_BY_TYPE[questType] || []).find((quest) => quest.id === questId);
+}
+// Reader questions: the alternative to sourceReader()'s written "initial reading" for a
+// record whose activity has already done the thinking. A source that carries
+// readerQuestType/readerQuestIds answers a short set of multiple-choice items instead of
+// writing a paragraph, because "file the record" followed by a paragraph box is two endings
+// for one activity — see docs/decision-log/0052. Opt-in per source; the other 23 records in
+// the game are untouched and keep the Archive Evaluator.
+const READER_QUESTS_BY_TYPE = {
+  mcq: UNIT_01_READER_MCQ_QUESTS,
+};
+function readerQuestsFor(source) {
+  const questType = source?.readerQuestType;
+  const ids = source?.readerQuestIds;
+  if (!questType || !Array.isArray(ids)) return [];
+  const pool = READER_QUESTS_BY_TYPE[questType] || [];
+  return ids
+    .map((id) => pool.find((quest) => quest.id === id))
+    .filter(Boolean)
+    .map((quest) => resolveQuestSlot(questType, quest));
 }
 // gradeQuest()'s result shape differs by quest type — investigationScreen()/
 // archiveChallengesScreen()/practiceCheckScreen() all need one completion/
@@ -9356,7 +9377,10 @@ function interviewTokens() {
   const tokens = [];
   Object.entries(progress.sourceActivities || {}).forEach(([sourceId, entry]) => {
     if (activityFor(sourceId)?.kind !== "interview") return;
-    Object.entries(entry?.state?.asked || {}).forEach(([speakerId, questions]) => {
+    // `logged`, not `asked`: an answer the player heard and walked away from is not
+    // something they are carrying. The log button in the dialogue bubble is the whole
+    // point of the distinction, and this is the one place it pays out.
+    Object.entries(entry?.state?.logged || {}).forEach(([speakerId, questions]) => {
       (Array.isArray(questions) ? questions : []).forEach((questionId) => {
         tokens.push(`asked:${speakerId}:${questionId}`);
       });
@@ -9669,7 +9693,31 @@ function fieldObjectiveTracker() {
   // element updateFieldPlayer() translates. Anything inside that div scrolls with the camera; this has
   // to stay pinned to the frame. It also must never focus or scroll anything — see CLAUDE.md's camera
   // invariant, which several past regressions came from violating.
-  return `<aside class="field-tracker ${collapsed ? "is-collapsed" : ""}" aria-label="Records to recover"><button class="field-tracker__toggle" data-action="field-tracker-toggle" aria-expanded="${!collapsed}"><i aria-hidden="true">${collapsed ? "▸" : "▾"}</i><b>Records to Recover</b><em>${secured}/${rows.length}</em></button><div class="field-tracker__body"><p class="field-tracker__key">✦ go here · ✓ secured · · locked</p><ul>${items}</ul></div></aside>`;
+  return `<aside class="field-tracker ${collapsed ? "is-collapsed" : ""}" aria-label="Mission tracker"><button class="field-tracker__toggle" data-action="field-tracker-toggle" aria-expanded="${!collapsed}"><i aria-hidden="true">${collapsed ? "▸" : "▾"}</i><b>Mission Tracker</b><em>${secured}/${rows.length}</em></button><div class="field-tracker__body"><p class="field-tracker__key">✦ go here · ✓ secured · · locked</p><ul>${items}</ul>${fieldTrackerActivityBlock()}</div></aside>`;
+}
+
+/**
+ * The tracker's second block: the mission you have open, how far along it is, and the way
+ * back into it.
+ *
+ * This exists because the first playtest of the INTERVIEW had a player walking back across
+ * the island to the elder repeatedly, purely to re-read which questions they had already
+ * put to people — the notebook was only reachable through the record that opened it. The
+ * button is a plain screen change; it must not focus or scroll anything, for the same
+ * reason the panel around it is positioned the way it is.
+ */
+function fieldTrackerActivityBlock() {
+  const tracked = trackedFieldActivity();
+  if (!tracked) return "";
+  const { source, activity, state } = tracked;
+  const summary = activitySummary(activity.kind, activity, state);
+  const done = isActivityComplete(activity.kind, activity, state);
+  const line = done
+    ? `<p class="field-tracker__progress is-done">✓ Filed — your notes are still here</p>`
+    : summary
+      ? `<p class="field-tracker__progress"><span>${esc(summary.label)}</span><b>${summary.done}</b> of ${summary.total}</p>`
+      : "";
+  return `<div class="field-tracker__mission"><p class="field-tracker__mission-name">${esc(activity.title)}</p>${line}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">Open your notebook →</button></div>`;
 }
 function fieldNpcButton(npc) {
   const active = progress.activeFieldNpc === npc.id;
@@ -9721,7 +9769,11 @@ function fieldDialogueBubble() {
       : availability === "secured"
         ? `<button class="btn btn-outline field-speech-bubble__record" data-action="open-source" data-source="${carried.id}" data-origin="field">✓ ${esc(point.label)} — reopen</button>`
         : "";
-  return `<aside class="field-speech-bubble${edgeClass}" data-speaker-y="${state.y.toFixed(3)}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><b>${esc(npc.name)}</b>${line}${interview.markup}${record}</aside>`;
+  // Everything but the close button and the tail lives in one scrollable child, so a bubble taller
+  // than the room beside its speaker scrolls inside itself instead of being cut off by the frame.
+  // It has to be a child rather than `overflow` on the aside: the tail is an ::after hanging 12px
+  // outside the box, and an overflowing aside clips it off.
+  return `<aside class="field-speech-bubble${edgeClass}" data-speaker-y="${state.y.toFixed(3)}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px" aria-live="polite"><button class="field-speech-bubble__close" data-action="field-dialogue-close" aria-label="Close dialogue">×</button><div class="field-speech-bubble__scroll"><b>${esc(npc.name)}</b>${line}${interview.markup}${record}</div></aside>`;
 }
 
 /**
@@ -9752,31 +9804,45 @@ function fieldInterviewPanel(npcId) {
  * record that briefs the questions, and not before. Until then the cast has nothing to be asked.
  */
 /**
- * Flips the dialogue bubble under its speaker when there is no room above it.
+ * Puts the dialogue bubble on whichever side of its speaker has more room, and caps it to that room.
  *
- * Measured rather than estimated, because the bubble's height is whatever the speaker has to say
- * plus — once an interview is running — four question chips and an answer, which is roughly double.
- * An estimate that is a little low silently reintroduces the clipping this exists to remove.
+ * Two things went wrong here before, and both were only findable by measuring. The first version
+ * estimated the bubble's height and never fired. The second measured, but wrote a class whose
+ * `transform` was being beaten by an `!important` further down global.css — so the flip was applied,
+ * did nothing, and the bubble simply stayed above the speaker for a whole phase. That override is
+ * gone; if a flip ever silently stops working again, check the cascade before the arithmetic.
  *
- * The world scrolls under a fixed frame, so "no room" means the bubble's top is above the field
- * viewport's top, not the page's. Reads layout and writes one class and one `top`; it never touches
- * fieldCamera, which stays a pure function of player position. Safe to run once per render because
- * the bubble is only created by a render, and moving closes it.
+ * "More room" is decided from the two tail anchors rather than from the bubble's own rect, because
+ * the rect on one side tells you nothing about the other. When neither side can hold it — an
+ * interview answer plus a log button plus four chips is roughly triple a standing line — the cap
+ * plus `.field-speech-bubble__scroll` lets it scroll inside itself, which is the only outcome that
+ * survives a speaker standing anywhere on any map.
+ *
+ * The world scrolls under a fixed frame, so all of this is measured against the field viewport's
+ * box, not the page's. Reads layout and writes one class, one `top` and one `max-height`; it never
+ * touches fieldCamera, which stays a pure function of player position. Safe to run once per render
+ * because the bubble is only created by a render, and moving closes it.
  */
 function placeFieldDialogueBubble() {
   const bubble = document.querySelector(".field-speech-bubble");
   const viewport = document.getElementById("caseFieldMap");
-  if (!bubble || !viewport) return;
+  const world = document.getElementById("caribbeanWorld");
+  if (!bubble || !viewport || !world) return;
   const speakerY = Number.parseFloat(bubble.dataset.speakerY);
   if (!Number.isFinite(speakerY)) return;
   const tile = activeFieldGrid().tile;
-  const BELOW = "field-speech-bubble--below";
-  bubble.classList.remove(BELOW);
-  bubble.style.top = `${((speakerY - 1.18) * tile).toFixed(1)}px`;
-  const clearance = bubble.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
-  if (clearance >= 8) return;
-  bubble.classList.add(BELOW);
-  bubble.style.top = `${((speakerY + 0.95) * tile).toFixed(1)}px`;
+  const MARGIN = 8;
+  const frame = viewport.getBoundingClientRect();
+  const worldTop = world.getBoundingClientRect().top;
+  // Where the tail would touch on each side, in screen coordinates.
+  const roomAbove = worldTop + (speakerY - 1.18) * tile - frame.top - MARGIN;
+  const roomBelow = frame.bottom - (worldTop + (speakerY + 0.95) * tile) - MARGIN;
+  const flip = roomBelow > roomAbove;
+  bubble.classList.toggle("field-speech-bubble--below", flip);
+  bubble.style.top = `${((speakerY + (flip ? 0.95 : -1.18)) * tile).toFixed(1)}px`;
+  // A floor of 120px so a speaker jammed against the frame still gets a readable, scrollable bubble
+  // rather than a sliver.
+  bubble.style.maxHeight = `${Math.max(120, Math.round(flip ? roomBelow : roomAbove))}px`;
 }
 
 /** Display name for an NPC id, across every surface of the active unit's map. */
@@ -9791,7 +9857,29 @@ function liveFieldInterview() {
     const activity = activityFor(source.id);
     if (activity?.kind !== "interview") continue;
     const state = progress.sourceActivities?.[source.id]?.state;
-    if (state?.asked) return { source, activity, state };
+    if (!state?.asked) continue;
+    // A filed interview is over, and the cast stops offering questions. Without this,
+    // Columbus was still holding out four question chips long after the record they
+    // belonged to had been closed and secured — the first thing the playtest caught.
+    if (isActivityComplete(activity.kind, activity, state)) continue;
+    return { source, activity, state };
+  }
+  return null;
+}
+
+/**
+ * The activity this case has in flight, for the Mission Tracker: any source of the active
+ * case whose activity state has actually been created. Unlike liveFieldInterview() this
+ * keeps reporting a finished one, because the notebook is still worth re-reading after it
+ * is filed — that is most of what the tracker's button is for.
+ */
+function trackedFieldActivity() {
+  for (const source of sourcesForCase(activeFieldCaseId())) {
+    const activity = activityFor(source.id);
+    if (!activity) continue;
+    const state = progress.sourceActivities?.[source.id]?.state;
+    if (!state || typeof state !== "object") continue;
+    return { source, activity, state };
   }
   return null;
 }
@@ -9953,12 +10041,27 @@ function activityScreen(kind) {
   const briefing = activity.briefing
     ? `<blockquote class="activity-briefing"><p>${esc(activity.briefing.line)}</p><cite>${esc(fieldNpcName(activity.briefing.speaker))}</cite></blockquote>`
     : "";
+  // How the thing is played, and the words it plays with. Both are host-rendered for the
+  // same reason as the briefing: they belong in the copy column, which no engine has a view
+  // of. Both are optional, and an activity that omits them renders exactly as before.
+  const howItWorks = activity.howItWorks
+    ? `<section class="activity-howto"><h2>How this works</h2><ol>${activity.howItWorks.steps
+        .map((step) => `<li>${esc(step)}</li>`)
+        .join(
+          ""
+        )}</ol>${activity.howItWorks.note ? `<p class="activity-howto__note">${esc(activity.howItWorks.note)}</p>` : ""}</section>`
+    : "";
+  const terms = activity.terms
+    ? `<section class="activity-terms"><h2>Words in this record</h2><dl>${activity.terms
+        .map((word) => `<dt>${esc(word.term)}</dt><dd>${esc(word.definition)}</dd>`)
+        .join("")}</dl></section>`
+    : "";
   const footer = complete
     ? `<p class="activity-feedback success">Record stabilized.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${esc(source.id)}">Open ${esc(source.title)} →</button>`
     : "";
   // The board and the footer share the shell's right-hand column, so they are wrapped rather than
   // being two more children of a two-column grid.
-  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p>${esc(activity.intro)}</p>${briefing}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
+  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p>${esc(activity.intro)}</p>${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
 }
 
 // One dispatch point for every control an engine renders. Deliberately on its own
@@ -10244,13 +10347,58 @@ function sourceReader() {
     return `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Codex reader reset</p><h1>Source reader restored.</h1><p>The app recovered from a reload while a source reader was open. Return to the field and open the source again.</p><button class="btn btn-gold" data-action="field">Back to field →</button></section></main>`;
   }
   const response = progress.responses[source.id] || "";
+  const readerQuests = readerQuestsFor(source);
+  // Answering the set is what "revealed" means on a question-based record, exactly as
+  // submitting a written reading is on a prose one — both unlock Institute Context and
+  // "Secure in Codex". Written at render time, which is the same convention
+  // investigationScreen()'s recordSkillOutcomes() and ensureTodaysRotationQueue() already use.
+  if (readerQuests.length) {
+    const allCorrect = readerQuests.every((quest) => {
+      const state = progress.questResponses[quest.id] || {};
+      recordSkillOutcomes(
+        source.readerQuestType,
+        quest,
+        state,
+        gradeQuest(source.readerQuestType, quest, state)
+      );
+      return isQuestComplete(
+        source.readerQuestType,
+        gradeQuest(source.readerQuestType, quest, state)
+      );
+    });
+    if (allCorrect && !progress.revealedContexts.includes(source.id)) {
+      progress.revealedContexts.push(source.id);
+      save();
+    }
+  }
   const revealed = progress.revealedContexts.includes(source.id);
   const secured = hasEvidence(activeFieldCaseId(), source.id);
   const existingSubmission = progress.submissions[source.id];
-  const evaluatorSection = revealed
-    ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-source" data-source="${source.id}" ${evaluatorPendingTaskIds.has(source.id) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(source.id) ? "Consulting the Archive Evaluator…" : existingSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[source.id] ? `<p class="feedback error">${esc(evaluatorErrors[source.id])}</p>` : ""}${archiveFeedbackMarkup(existingSubmission?.feedback?.payload)}</section>`
-    : "";
-  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1><section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label><button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Secured in Codex ✓" : "Secure in Codex →"}</button></section></main>`;
+  const evaluatorSection =
+    revealed && !readerQuests.length
+      ? `<section class="archive-evaluator"><button class="btn btn-outline" data-action="evaluate-source" data-source="${source.id}" ${evaluatorPendingTaskIds.has(source.id) ? "disabled" : ""}>${evaluatorPendingTaskIds.has(source.id) ? "Consulting the Archive Evaluator…" : existingSubmission ? "Get feedback on my revision →" : "Get Archive Evaluator feedback →"}</button>${evaluatorErrors[source.id] ? `<p class="feedback error">${esc(evaluatorErrors[source.id])}</p>` : ""}${archiveFeedbackMarkup(existingSubmission?.feedback?.payload)}</section>`
+      : "";
+  // Same `.quest-practice-item[data-quest-status]` wrapper the Investigation Challenge and
+  // Practice Check use, so these need no styling of their own.
+  const promptSection = readerQuests.length
+    ? `<section class="reader-questions quest-practice-board"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p>${readerQuests
+        .map((quest) => {
+          const state = progress.questResponses[quest.id] || {};
+          const result = gradeQuest(source.readerQuestType, quest, state);
+          const complete = isQuestComplete(source.readerQuestType, result);
+          const status = !questAnsweredAny(source.readerQuestType, state)
+            ? "unanswered"
+            : complete
+              ? "correct"
+              : "in-progress";
+          return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(source.readerQuestType, quest, state)}<p class="activity-feedback${complete ? " success" : ""}" role="status" aria-live="polite">${esc(questHint(source.readerQuestType, result))}</p></div>`;
+        })
+        .join("")}</section>`
+    : `<section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label><button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>`;
+  const sealedNote = readerQuests.length
+    ? "Answer both questions correctly first. The context note will then fill in what the record itself cannot tell you."
+    : "Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.";
+  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1>${promptSection}${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>${esc(sealedNote)}</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Secured in Codex ✓" : "Secure in Codex →"}</button></section></main>`;
 }
 
 function codexScreen() {
@@ -11304,6 +11452,23 @@ function handleFieldClick(target, action) {
     ensureSourceActivity(openSourceId).completed = true;
     progress.activeActivitySourceId = null;
     progress.currentScreen = "source";
+    save();
+    render();
+    return true;
+  }
+  // The Mission Tracker's way back into an activity already in flight. Unlike
+  // "start-source-activity" it skips sourceEntryScreen() and goes straight to the engine's
+  // own screen: the Investigation Challenge gate is a gate on *opening* a record, and this
+  // is a record already open.
+  if (action === "open-activity-notebook") {
+    const sourceId = target.dataset.source;
+    const activity = activityFor(sourceId);
+    if (!activity) return true;
+    openSourceId = sourceId;
+    sourceOrigin = "field";
+    ensureSourceActivity(sourceId);
+    progress.activeActivitySourceId = sourceId;
+    progress.currentScreen = activity.kind;
     save();
     render();
     return true;

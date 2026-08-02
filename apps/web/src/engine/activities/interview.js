@@ -9,6 +9,13 @@
 // wrong person the wrong question is a legitimate move that returns legitimate
 // nothing, and the player learns more from that than from feedback text.
 //
+// Hearing an answer and *keeping* it are two moves, not one. `asked` is what a
+// speaker has been put and is currently saying; `logged` is what went into the
+// notebook, and it is what coverage, the notebook, the outcome and the host's
+// evidence tokens all read. The first playtest asked for this in as many words:
+// with a single implicit step there was no moment where a player could see that
+// anything had been recorded.
+//
 // This is the only engine that implements renderInline(): its questions are put
 // to people standing on the map, inside the field dialogue bubble, rather than
 // on a screen. render() is the notebook you come back to.
@@ -18,6 +25,7 @@
 // (civics).
 import { z } from "zod";
 import {
+  COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
   checkUniqueIds,
   closerResult,
@@ -38,19 +46,29 @@ const SpeakerSchema = z.object({
   id: z.string().min(1, "speaker.id is required"),
   name: z.string().min(1, "speaker.name is required"),
   role: z.string().min(1).optional(),
-  // Free-form grouping the content owns (a side, a faction, a discipline). The
-  // engine only ever compares it for equality when reporting coverage.
+  // Free-form grouping the content owns (a side, a faction, a discipline). When
+  // `groups` is authored the notebook renders one panel per group, which is what
+  // makes two accounts of the same thing comparable on screen instead of
+  // interleaved in one table.
   group: z.string().min(1).optional(),
   fallback: z.string().min(1, "speaker.fallback is required — it is what an unasked question gets"),
   answers: z.record(z.string(), AnswerSchema).default({}),
 });
 
+// The three dimensions an activity can set a bar on, and the engine's own name
+// for each. `useful` is the one whose name is worth overriding from content
+// (`requires.label`) — "answers worth keeping" is accurate but bloodless, and it
+// is the number a player actually watches.
+const GOAL_LABELS = {
+  questions: "Questions put",
+  speakers: "People asked",
+  useful: "Answers worth keeping",
+};
+
 export const InterviewActivitySchema = z
   .object({
+    ...COMMON_ACTIVITY_FIELDS,
     kind: z.literal("interview"),
-    id: z.string().min(1, "activity.id is required"),
-    title: z.string().min(1, "activity.title is required"),
-    intro: z.string().min(1, "activity.intro is required"),
     // Who hands the player the questions, and the line they hand them over
     // with. Optional: an activity can simply open with them.
     briefing: z
@@ -69,22 +87,51 @@ export const InterviewActivitySchema = z
         })
       )
       .min(2, "an interview needs at least two questions, or there is no choice to make"),
+    groups: z
+      .array(
+        z.object({
+          id: z.string().min(1, "group.id is required"),
+          label: z.string().min(1, "group.label is required"),
+          note: z.string().min(1).optional(),
+        })
+      )
+      .min(2, "grouping a cast into one group is not a grouping")
+      .optional(),
     speakers: z.array(SpeakerSchema).min(2, "an interview needs at least two speakers"),
     // The coverage bar before the closer unlocks. Content owns it because "how
-    // much asking is enough" is a pedagogy call, not an engine one.
-    requires: z.object({
-      questions: z.number().int().min(1),
-      speakers: z.number().int().min(1),
-    }),
+    // much asking is enough" is a pedagogy call, not an engine one. Every
+    // dimension is optional and at least one must be set: an activity that asks
+    // for two of them at once reports two numbers, and a player reads that as a
+    // contradiction rather than a goal — which is exactly what the first
+    // playtest of "4 questions / 5 people" produced.
+    requires: z
+      .object({
+        questions: z.number().int().min(1).optional(),
+        speakers: z.number().int().min(1).optional(),
+        useful: z.number().int().min(1).optional(),
+        label: z.string().min(1).optional(),
+      })
+      .superRefine((requires, ctx) => {
+        if (!requires.questions && !requires.speakers && !requires.useful) {
+          ctx.addIssue({
+            code: "custom",
+            message: "requires needs at least one of questions, speakers or useful.",
+          });
+        }
+      }),
     closer: ClosingChoiceSchema,
   })
   .superRefine((activity, ctx) => {
     checkUniqueIds(activity.questions, ctx, "interview question", ["questions"]);
     checkUniqueIds(activity.speakers, ctx, "interview speaker", ["speakers"]);
+    if (activity.groups) checkUniqueIds(activity.groups, ctx, "interview group", ["groups"]);
 
     const questionIds = new Set(activity.questions.map((question) => question.id));
+    const groupIds = activity.groups ? new Set(activity.groups.map((group) => group.id)) : null;
+    let useful = 0;
+
     activity.speakers.forEach((speaker, index) => {
-      Object.keys(speaker.answers).forEach((questionId) => {
+      Object.entries(speaker.answers).forEach(([questionId, answer]) => {
         if (!questionIds.has(questionId)) {
           ctx.addIssue({
             code: "custom",
@@ -92,30 +139,43 @@ export const InterviewActivitySchema = z
             message: `Speaker "${speaker.id}" answers unknown question "${questionId}".`,
           });
         }
+        if (answer.useful) useful += 1;
       });
+      // A speaker with no group in a grouped cast would silently fall out of the
+      // notebook, which is the one place the whole activity is reviewed.
+      if (groupIds && !groupIds.has(speaker.group || "")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["speakers", index, "group"],
+          message: `Speaker "${speaker.id}" has group "${speaker.group || ""}", which is not one of the authored groups.`,
+        });
+      }
     });
 
-    if (activity.requires.questions > activity.questions.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["requires", "questions"],
-        message: `requires.questions (${activity.requires.questions}) exceeds the ${activity.questions.length} questions authored — the closer could never unlock.`,
-      });
-    }
-    if (activity.requires.speakers > activity.speakers.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["requires", "speakers"],
-        message: `requires.speakers (${activity.requires.speakers}) exceeds the ${activity.speakers.length} speakers authored — the closer could never unlock.`,
-      });
-    }
+    const ceilings = {
+      questions: activity.questions.length,
+      speakers: activity.speakers.length,
+      useful,
+    };
+    Object.entries(ceilings).forEach(([key, ceiling]) => {
+      const asked = activity.requires[key];
+      if (asked && asked > ceiling) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["requires", key],
+          message: `requires.${key} (${asked}) exceeds the ${ceiling} authored — the closer could never unlock.`,
+        });
+      }
+    });
   });
 
 export function defaultInterviewState() {
   // asked[speakerId] is ordered and the last entry is what the bubble is
   // showing, which is how re-reading an earlier answer costs no extra state:
   // asking again moves that question to the end rather than duplicating it.
-  return { asked: {}, filed: null };
+  // logged[speakerId] is the notebook, and is deliberately a separate list —
+  // everything downstream counts logged, never asked.
+  return { asked: {}, logged: {}, filed: null };
 }
 
 /** @param {ReturnType<typeof defaultInterviewState>} [state] */
@@ -124,8 +184,17 @@ function askedFor(state, speakerId) {
   return Array.isArray(asked) ? asked : [];
 }
 
+/** @param {ReturnType<typeof defaultInterviewState>} [state] */
+function loggedFor(state, speakerId) {
+  const logged = state?.logged?.[speakerId];
+  return Array.isArray(logged) ? logged : [];
+}
+
 /**
- * How much of the matrix the player has actually walked.
+ * How much of the matrix the player has actually written down.
+ *
+ * Counted off `logged` rather than `asked`: an answer heard and left on the
+ * ground is not evidence, and the host's `requires` tokens read the same list.
  *
  * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
  * @param {ReturnType<typeof defaultInterviewState>} [state]
@@ -133,17 +202,53 @@ function askedFor(state, speakerId) {
 export function interviewCoverage(activity, state = defaultInterviewState()) {
   const questions = new Set();
   const speakers = new Set();
+  let useful = 0;
   activity.speakers.forEach((speaker) => {
-    const asked = askedFor(state, speaker.id);
-    if (asked.length) speakers.add(speaker.id);
-    asked.forEach((questionId) => questions.add(questionId));
+    const logged = loggedFor(state, speaker.id);
+    if (logged.length) speakers.add(speaker.id);
+    logged.forEach((questionId) => {
+      questions.add(questionId);
+      if (interviewAnswer(speaker, questionId).useful) useful += 1;
+    });
   });
-  return {
-    questions: questions.size,
-    speakers: speakers.size,
-    met:
-      questions.size >= activity.requires.questions && speakers.size >= activity.requires.speakers,
-  };
+  const totals = { questions: questions.size, speakers: speakers.size, useful };
+  const met = Object.keys(GOAL_LABELS).every(
+    (key) => !activity.requires[key] || totals[key] >= activity.requires[key]
+  );
+  return { ...totals, met };
+}
+
+/**
+ * One row per dimension this activity actually asks for, in a fixed order, so
+ * the notebook and the host's tracker report the same numbers with the same
+ * names.
+ *
+ * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
+ * @param {ReturnType<typeof defaultInterviewState>} [state]
+ */
+export function interviewGoals(activity, state = defaultInterviewState()) {
+  const coverage = interviewCoverage(activity, state);
+  return Object.keys(GOAL_LABELS)
+    .filter((key) => !!activity.requires[key])
+    .map((key) => ({
+      key,
+      label: (key === "useful" && activity.requires.label) || GOAL_LABELS[key],
+      done: Math.min(coverage[key], activity.requires[key]),
+      total: activity.requires[key],
+    }));
+}
+
+/**
+ * The one line worth putting on a panel that has room for one line. Prefers the
+ * `useful` goal, which is the one an author names, and falls back to whichever
+ * dimension is set.
+ *
+ * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
+ * @param {ReturnType<typeof defaultInterviewState>} [state]
+ */
+export function interviewSummary(activity, state = defaultInterviewState()) {
+  const goals = interviewGoals(activity, state);
+  return goals.find((goal) => goal.key === "useful") || goals[0] || null;
 }
 
 /**
@@ -159,6 +264,22 @@ export function actInterview(activity, state = defaultInterviewState(), action =
     const asked = askedFor(state, speaker.id).filter((id) => id !== question.id);
     return { ...state, asked: { ...state.asked, [speaker.id]: [...asked, question.id] } };
   }
+
+  if (action.type === "log") {
+    const speaker = activity.speakers.find((item) => item.id === action.speaker);
+    if (!speaker) return state;
+    const asked = askedFor(state, speaker.id);
+    // Defaults to whatever they are currently saying, so the button beneath an
+    // answer needs to carry no question id of its own.
+    const questionId = action.question || asked[asked.length - 1];
+    // Logging something never heard would let a player fill the notebook from
+    // the closer screen, where the answers are not even on offer.
+    if (!questionId || !asked.includes(questionId)) return state;
+    const logged = loggedFor(state, speaker.id);
+    if (logged.includes(questionId)) return state;
+    return { ...state, logged: { ...state.logged, [speaker.id]: [...logged, questionId] } };
+  }
+
   if (action.type === "file") {
     // Guarded here rather than only in the UI: the closer's disabled attribute
     // is a hint, not a lock, and a filed-too-early record would read as
@@ -167,6 +288,7 @@ export function actInterview(activity, state = defaultInterviewState(), action =
     const option = activity.closer.options.find((item) => item.id === action.option);
     return option ? { ...state, filed: option.id } : state;
   }
+
   return state;
 }
 
@@ -201,10 +323,10 @@ export function interviewAnswer(speaker, questionId) {
 }
 
 /**
- * The question chips and the current answer, for one speaker, rendered into the
- * field dialogue bubble. Returns "" for anyone who is not part of this
- * interview, which is what lets the host call it for every NPC on the map
- * without knowing who is in the cast.
+ * The question chips, the current answer, and the button that keeps it —
+ * rendered into the field dialogue bubble for one speaker. Returns "" for anyone
+ * who is not part of this interview, which is what lets the host call it for
+ * every NPC on the map without knowing who is in the cast.
  *
  * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
  * @param {ReturnType<typeof defaultInterviewState>} [state]
@@ -214,15 +336,16 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
   const speaker = activity.speakers.find((item) => item.id === actorId);
   if (!speaker) return "";
   const asked = askedFor(state, speaker.id);
+  const logged = loggedFor(state, speaker.id);
   const showing = asked[asked.length - 1] || null;
   const answer = showing ? interviewAnswer(speaker, showing) : null;
   const chips = activity.questions
     .map((question) => {
-      const wasAsked = asked.includes(question.id);
       const isShowing = question.id === showing;
       const classes = [
         "field-interview__q",
-        wasAsked ? "is-asked" : "",
+        asked.includes(question.id) ? "is-asked" : "",
+        logged.includes(question.id) ? "is-logged" : "",
         isShowing ? "is-showing" : "",
       ]
         .filter(Boolean)
@@ -230,14 +353,64 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
       return `<button type="button" class="${classes}" data-activity-action="ask" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(question.id)}" aria-pressed="${isShowing ? "true" : "false"}">${escapeHtml(question.label)}</button>`;
     })
     .join("");
+  // The log control is the only thing on this panel that changes what the player
+  // is carrying, so it says so in both states rather than disappearing once
+  // taken — a control that vanishes reads as a control that failed.
+  const keep = !answer
+    ? ""
+    : logged.includes(showing)
+      ? `<p class="field-interview__logged">✓ In your notebook</p>`
+      : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Log this response</button>`;
   return `<div class="field-interview">
   ${
     answer
       ? `<p class="field-interview__answer${answer.useful ? " is-useful" : ""}">${escapeHtml(answer.text)}</p>`
       : ""
   }
+  ${keep}
   <div class="field-interview__questions" role="group" aria-label="Questions you can ask">${chips}</div>
 </div>`;
+}
+
+/**
+ * One row per speaker: what they were asked, and what of it was kept.
+ *
+ * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
+ * @param {ReturnType<typeof defaultInterviewState>} [state]
+ * @param {import("zod").infer<typeof SpeakerSchema>[]} speakers
+ */
+function notebookTable(activity, state, speakers) {
+  const head = activity.questions
+    .map((question) => `<th scope="col">${escapeHtml(question.label)}</th>`)
+    .join("");
+  const rows = speakers
+    .map((speaker) => {
+      const asked = askedFor(state, speaker.id);
+      const logged = loggedFor(state, speaker.id);
+      const cells = activity.questions
+        .map((question) => {
+          if (logged.includes(question.id)) {
+            const answer = interviewAnswer(speaker, question.id);
+            // The tick is the "I secured the right one" signal the first
+            // playtest asked for by name.
+            const mark = answer.useful ? `<i aria-hidden="true">✓</i>` : "";
+            return `<td class="${answer.useful ? "is-useful" : "is-flat"}">${mark}${escapeHtml(answer.text)}</td>`;
+          }
+          if (asked.includes(question.id)) {
+            return `<td class="is-heard"><span>Heard, not logged</span></td>`;
+          }
+          return `<td class="is-unasked"><span class="visually-hidden">Not asked</span></td>`;
+        })
+        .join("");
+      return `<tr><th scope="row"><b>${escapeHtml(speaker.name)}</b>${speaker.role ? `<small>${escapeHtml(speaker.role)}</small>` : ""}</th>${cells}</tr>`;
+    })
+    .join("");
+  return `<div class="activity-scroller">
+    <table class="interview-notebook">
+      <thead><tr><th scope="col"><span class="visually-hidden">Speaker</span></th>${head}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
 }
 
 /**
@@ -249,37 +422,36 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
  */
 export function renderInterview(activity, state = defaultInterviewState()) {
   const coverage = interviewCoverage(activity, state);
-  const head = activity.questions
-    .map((question) => `<th scope="col">${escapeHtml(question.label)}</th>`)
+  const goals = interviewGoals(activity, state)
+    .map(
+      (goal) => `<p><span>${escapeHtml(goal.label)}</span><b>${goal.done}</b> of ${goal.total}</p>`
+    )
     .join("");
-  const rows = activity.speakers
-    .map((speaker) => {
-      const asked = askedFor(state, speaker.id);
-      const cells = activity.questions
-        .map((question) => {
-          if (!asked.includes(question.id)) {
-            return `<td class="is-unasked"><span class="visually-hidden">Not asked</span></td>`;
-          }
-          const answer = interviewAnswer(speaker, question.id);
-          return `<td class="${answer.useful ? "is-useful" : "is-flat"}">${escapeHtml(answer.text)}</td>`;
+  // Grouping is what turns the notebook into a comparison. Ungrouped, the two
+  // accounts of the same island interleave by authoring order and the closer's
+  // question about the difference between them has nothing on screen to answer
+  // it with.
+  const panels = activity.groups
+    ? activity.groups
+        .map((group) => {
+          const speakers = activity.speakers.filter((speaker) => speaker.group === group.id);
+          if (!speakers.length) return "";
+          return `<section class="interview-group">
+    <h4>${escapeHtml(group.label)}</h4>
+    ${group.note ? `<p class="activity-note">${escapeHtml(group.note)}</p>` : ""}
+    ${notebookTable(activity, state, speakers)}
+  </section>`;
         })
-        .join("");
-      return `<tr><th scope="row"><b>${escapeHtml(speaker.name)}</b>${speaker.role ? `<small>${escapeHtml(speaker.role)}</small>` : ""}</th>${cells}</tr>`;
-    })
-    .join("");
+        .join("")
+    : notebookTable(activity, state, activity.speakers);
+
   return `<section class="activity-board activity-board--interview">
-  <div class="activity-progress">
-    <p>Questions put: <b>${coverage.questions}</b> of ${activity.requires.questions} needed · People asked: <b>${coverage.speakers}</b> of ${activity.requires.speakers} needed</p>
-  </div>
-  <div class="activity-scroller">
-    <table class="interview-notebook">
-      <thead><tr><th scope="col"><span class="visually-hidden">Speaker</span></th>${head}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>
+  <div class="activity-progress">${goals}</div>
+  ${panels}
   ${renderCloser(activity.closer, state.filed, {
     locked: !coverage.met,
-    lockedNote: "Put more of your questions to more of the people on the island before you file.",
+    lockedNote:
+      "Every person on this island is holding one thing worth writing down. Find the rest before you file.",
   })}
 </section>`;
 }
@@ -301,7 +473,7 @@ export function isInterviewComplete(activity, state = defaultInterviewState()) {
 export function interviewOutcome(activity, state = defaultInterviewState()) {
   const findings = [];
   activity.speakers.forEach((speaker) => {
-    askedFor(state, speaker.id).forEach((questionId) => {
+    loggedFor(state, speaker.id).forEach((questionId) => {
       const answer = interviewAnswer(speaker, questionId);
       if (!answer.useful) return;
       findings.push({ id: `${speaker.id}:${questionId}`, text: answer.text, from: speaker.name });

@@ -34,6 +34,7 @@ import {
   defaultInterviewState,
   interviewHasAsked,
   interviewOutcome,
+  interviewSummary,
   isInterviewComplete,
   renderInterview,
   renderInterviewInline,
@@ -53,15 +54,23 @@ import {
 // VALID_SCREENS and the strings content puts in a source's `activityRoute`, so
 // a rename here is a save-compatibility change, not a refactor.
 //
-// renderInline is the one optional contract slot. Only INTERVIEW implements it,
-// because only INTERVIEW runs part of itself out on the map, in the field
-// dialogue bubble, rather than entirely on its own screen.
+// renderInline and summary are the two optional contract slots.
+//
+// Only INTERVIEW implements renderInline, because only INTERVIEW runs part of
+// itself out on the map, in the field dialogue bubble, rather than entirely on
+// its own screen.
+//
+// `summary` is how a panel outside the activity says how far along it is in one
+// line — the field's Mission Tracker is the only consumer. An engine whose
+// progress is not one ratio (a TRACE is a chain, not a count) simply doesn't
+// declare it, and the tracker prints the activity's name alone.
 export const ACTIVITY_ENGINES = {
   interview: {
     schema: InterviewActivitySchema,
     defaultState: defaultInterviewState,
     render: renderInterview,
     renderInline: renderInterviewInline,
+    summary: interviewSummary,
     act: actInterview,
     isComplete: isInterviewComplete,
     outcome: interviewOutcome,
@@ -124,6 +133,15 @@ export function renderActivity(kind, activity, state, ctx) {
 export function renderActivityInline(kind, activity, state, actorId) {
   const inline = requireEngine(kind).renderInline;
   return inline ? inline(activity, state, actorId) : "";
+}
+
+/**
+ * The other optional slot — `{ label, done, total }` for a one-line progress
+ * readout, or null for an engine that doesn't have one.
+ */
+export function activitySummary(kind, activity, state) {
+  const summary = requireEngine(kind).summary;
+  return summary ? summary(activity, state) : null;
 }
 
 export function actOnActivity(kind, activity, state, action) {

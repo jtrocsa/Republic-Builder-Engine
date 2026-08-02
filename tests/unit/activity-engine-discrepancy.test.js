@@ -227,9 +227,55 @@ describe("renderDiscrepancy — the observation column", () => {
     );
   });
 
+  it("counts what the player is actually holding in the column heading (normal case)", () => {
+    // The nudge that says go back and ask more. Without it the missing rows read
+    // as content that failed to load.
+    expect(renderDiscrepancy(activity(), defaultDiscrepancyState(), { holds: [] })).toContain(
+      "1 of 2"
+    );
+    expect(
+      renderDiscrepancy(activity(), defaultDiscrepancyState(), { holds: ["asked:grows"] })
+    ).toContain("2 of 2");
+  });
+
   it("withholds a claim's `why` until it is settled (normal case)", () => {
     const before = renderDiscrepancy(activity(), defaultDiscrepancyState());
     expect(before).not.toContain("He needed unclaimed land");
     expect(renderDiscrepancy(activity(), settled())).toContain("He needed unclaimed land");
+  });
+});
+
+describe("renderDiscrepancy — the record itself", () => {
+  const documented = () => {
+    const content = activity();
+    content.record.context = "The captain is writing to the treasurer who paid for the voyage.";
+    content.record.text = ["“The harbours are deep and safe.”", "“The land lies empty.”"];
+    content.verdictPrompt = "Does what you gathered support this, contradict it, or neither?";
+    return content;
+  };
+
+  it("prints the context, the passage and the standing instruction (normal case)", () => {
+    // All three were missing on the first playtest, which reported not knowing
+    // who the writer was or what the three buttons were comparing against.
+    const markup = renderDiscrepancy(documented(), defaultDiscrepancyState());
+    expect(markup).toContain("the treasurer who paid for the voyage");
+    expect(markup).toContain("activity-transcript");
+    expect(markup).toContain("“The land lies empty.”");
+    expect(markup).toContain("Does what you gathered support this");
+  });
+
+  it("renders without them, exactly as before (boundary case)", () => {
+    const markup = renderDiscrepancy(activity(), defaultDiscrepancyState());
+    expect(markup).not.toContain("activity-transcript");
+    expect(markup).not.toContain("activity-verdict-prompt");
+    expect(markup).toContain("A letter home");
+  });
+
+  it("escapes an authored transcript (regression case)", () => {
+    const hostile = documented();
+    hostile.record.text = ['<script>alert("x")</script>'];
+    const markup = renderDiscrepancy(hostile, defaultDiscrepancyState());
+    expect(markup).toContain("&lt;script&gt;");
+    expect(markup).not.toContain("<script>");
   });
 });

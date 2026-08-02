@@ -21,6 +21,7 @@
 // (mathematics), a score from separated parts (music).
 import { z } from "zod";
 import {
+  COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
   checkUniqueIds,
   closerResult,
@@ -68,23 +69,65 @@ const BoardSchema = z.object({
   // 1.55 and the tiles are cut to the wrong shape, which is the difference between a puzzle that
   // reassembles into a picture and a grid of unrelated crops.
   aspect: z.number().positive().optional(),
+  // Whether a fragment's `label` is printed on the fragment. A `label` board is
+  // nothing but its labels, so they always show; on an `image` board the label
+  // is a caption sitting on top of the art it is meant to help you read, and the
+  // first playtest of the ten-piece sheet reported exactly that — engraver's
+  // vocabulary in a pill over the map, unreadable and in the way. Off by default
+  // there; a board that wants the training wheels asks for them.
+  showFragmentLabels: z.boolean().optional(),
+  // Another board on this activity that must be solved first. A reconstruction
+  // often has a second question that only makes sense with the first one
+  // finished — naming the three landmasses on a sheet you have not assembled is
+  // a guess. The board still renders, with its note, so a player can see what is
+  // coming.
+  opensAfter: z.string().min(1).optional(),
   slots: z.array(SlotSchema).min(2, "a board needs at least two slots"),
   fragments: z.array(FragmentSchema).min(2, "a board needs at least two fragments"),
 });
 
+/** Whether following `opensAfter` from this board ever returns to it. */
+function opensAfterCycle(boards, start) {
+  const seen = new Set();
+  let current = start;
+  while (current?.opensAfter) {
+    if (seen.has(current.id)) return true;
+    seen.add(current.id);
+    current = boards.find((board) => board.id === current.opensAfter);
+    if (current?.id === start.id) return true;
+  }
+  return false;
+}
+
 export const AssemblyActivitySchema = z
   .object({
+    ...COMMON_ACTIVITY_FIELDS,
     kind: z.literal("assembly"),
-    id: z.string().min(1, "activity.id is required"),
-    title: z.string().min(1, "activity.title is required"),
-    intro: z.string().min(1, "activity.intro is required"),
     boards: z.array(BoardSchema).min(1, "an assembly needs at least one board"),
     closer: ClosingChoiceSchema,
   })
   .superRefine((activity, ctx) => {
     checkUniqueIds(activity.boards, ctx, "assembly board", ["boards"]);
+    const boardIds = new Set(activity.boards.map((board) => board.id));
     activity.boards.forEach((board, index) => {
       const path = ["boards", index];
+      if (board.opensAfter !== undefined) {
+        if (!boardIds.has(board.opensAfter)) {
+          ctx.addIssue({
+            code: "custom",
+            path: [...path, "opensAfter"],
+            message: `Board "${board.id}" opens after unknown board "${board.opensAfter}".`,
+          });
+          // A chain that loops back on itself locks every board in it forever,
+          // and does so silently — the activity simply has no first move.
+        } else if (opensAfterCycle(activity.boards, board)) {
+          ctx.addIssue({
+            code: "custom",
+            path: [...path, "opensAfter"],
+            message: `Board "${board.id}" is in an opensAfter cycle — no board in it could ever be started.`,
+          });
+        }
+      }
       checkUniqueIds(board.slots, ctx, "slot", [...path, "slots"]);
       checkUniqueIds(board.fragments, ctx, "fragment", [...path, "fragments"]);
 
@@ -167,12 +210,29 @@ export function boardStatus(board, state = defaultAssemblyState()) {
 }
 
 /**
+ * Whether this board is open for play, or still waiting on the one it follows.
+ *
+ * @param {import("zod").infer<typeof AssemblyActivitySchema>} activity
+ * @param {import("zod").infer<typeof BoardSchema>} board
+ * @param {ReturnType<typeof defaultAssemblyState>} [state]
+ */
+export function boardOpen(activity, board, state = defaultAssemblyState()) {
+  if (!board?.opensAfter) return true;
+  const prerequisite = activity.boards.find((item) => item.id === board.opensAfter);
+  return prerequisite ? boardStatus(prerequisite, state).solved : true;
+}
+
+/**
  * @param {import("zod").infer<typeof AssemblyActivitySchema>} activity
  * @param {ReturnType<typeof defaultAssemblyState>} [state]
  * @param {{ type: string, board?: string, slot?: string, fragment?: string, option?: string }} action
  */
 export function actAssembly(activity, state = defaultAssemblyState(), action = { type: "" }) {
   const board = activity.boards.find((item) => item.id === action.board);
+  // Guarded in the reducer, not only by the rendered `disabled`: a locked board's
+  // controls are a hint, and a fragment placed into one before its prerequisite
+  // was solved would count towards completion.
+  if (board && !boardOpen(activity, board, state)) return state;
 
   if (action.type === "select") {
     if (!board) return state;
@@ -266,9 +326,15 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
   const boards = activity.boards
     .map((board) => {
       const status = boardStatus(board, state);
+      const open = boardOpen(activity, board, state);
       const placed = placedOn(state, board.id);
       const url = board.image ? images[board.image] : undefined;
       const held = new Set(Object.values(placed));
+      // Read defensively, like gridOf() below and for the same reason: a schema
+      // default never reaches runtime here. A label board is nothing but its
+      // labels, so it always shows them; an image board opts in.
+      const showLabels = board.kind === "label" || board.showFragmentLabels === true;
+      const lock = open ? "" : " disabled";
 
       const slots = board.slots
         .map((slot) => {
@@ -289,11 +355,12 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
           // what it is a cartouche *for*. An image board drops it, because there the caption would
           // be sitting on top of the art it is meant to help you read.
           const caption = `<span class="activity-slot__hint">${escapeHtml(slot.label)}</span>`;
-          const body = fragment
-            ? `${board.kind === "label" ? caption : ""}<span class="activity-slot__label">${escapeHtml(fragment.label)}</span>`
-            : caption;
+          const name = showLabels
+            ? `<span class="activity-slot__label">${escapeHtml(fragment?.label || "")}</span>`
+            : "";
+          const body = fragment ? `${board.kind === "label" ? caption : ""}${name}` : caption;
           const act = fragment ? "lift" : "place";
-          return `<button type="button" class="${classes}" data-activity-action="${act}" data-board="${escapeHtml(board.id)}" data-slot="${escapeHtml(slot.id)}" data-activity-slot="${escapeHtml(slot.id)}"${style} aria-label="${escapeHtml(slot.label)}">${body}</button>`;
+          return `<button type="button" class="${classes}" data-activity-action="${act}" data-board="${escapeHtml(board.id)}" data-slot="${escapeHtml(slot.id)}" data-activity-slot="${escapeHtml(slot.id)}"${style}${lock} aria-label="${escapeHtml(fragment ? `${slot.label} — holding ${fragment.label}` : slot.label)}">${body}</button>`;
         })
         .join("");
 
@@ -310,22 +377,32 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
           const home = board.slots.find((slot) => slot.id === fragment.belongs);
           const style =
             board.kind === "image" && home ? ` style="${tileStyle(board, home, url)}"` : "";
-          return `<button type="button" class="activity-fragment${isSelected ? " is-selected" : ""}" draggable="true" data-activity-action="select" data-board="${escapeHtml(board.id)}" data-fragment="${escapeHtml(fragment.id)}" data-activity-fragment="${escapeHtml(fragment.id)}"${style} aria-pressed="${isSelected ? "true" : "false"}"><span>${escapeHtml(fragment.label)}</span></button>`;
+          // The label is always the accessible name even when it is not printed:
+          // an unlabelled image tile is a picture to a sighted player and nothing
+          // at all to a screen reader.
+          const body = showLabels ? `<span>${escapeHtml(fragment.label)}</span>` : "";
+          return `<button type="button" class="activity-fragment${isSelected ? " is-selected" : ""}" draggable="${open ? "true" : "false"}" data-activity-action="select" data-board="${escapeHtml(board.id)}" data-fragment="${escapeHtml(fragment.id)}" data-activity-fragment="${escapeHtml(fragment.id)}"${style}${lock} aria-pressed="${isSelected ? "true" : "false"}" aria-label="${escapeHtml(fragment.label)}">${body}</button>`;
         })
         .join("");
 
+      // Which piece went wrong is named by where it landed on an image board,
+      // because there the fragment's own label is not on screen to name it by —
+      // and the red slot is the thing the player is looking at anyway.
       const misread = status.misplaced
-        .map(
-          ({ slot, fragment }) =>
-            `<li><b>${escapeHtml(fragment.label)}</b> <i>→ ${escapeHtml(slot.label)}</i><span>${escapeHtml(fragment.misread)}</span></li>`
+        .map(({ slot, fragment }) =>
+          showLabels
+            ? `<li><b>${escapeHtml(fragment.label)}</b> <i>→ ${escapeHtml(slot.label)}</i><span>${escapeHtml(fragment.misread)}</span></li>`
+            : `<li><b>${escapeHtml(slot.label)}</b><span>${escapeHtml(fragment.misread)}</span></li>`
         )
         .join("");
 
       const grid = gridOf(board);
       const geometry = `--assembly-columns:${grid.columns};--assembly-rows:${grid.rows};--assembly-aspect:${board.aspect || 1.55}`;
-      return `<article class="activity-assembly-board activity-assembly-board--${escapeHtml(board.kind)}${status.solved ? " is-solved" : ""}" style="${geometry}">
+      const waiting = activity.boards.find((item) => item.id === board.opensAfter);
+      return `<article class="activity-assembly-board activity-assembly-board--${escapeHtml(board.kind)}${status.solved ? " is-solved" : ""}${open ? "" : " is-locked"}" style="${geometry}">
   <h3>${escapeHtml(board.label)}</h3>
   ${board.note ? `<p class="activity-note">${escapeHtml(board.note)}</p>` : ""}
+  ${open ? "" : `<p class="activity-note activity-note--locked">Finish ${escapeHtml(waiting?.label || "the board above")} first.</p>`}
   <div class="activity-slots">${slots}</div>
   ${tray ? `<div class="activity-tray" role="group" aria-label="Fragments">${tray}</div>` : ""}
   ${misread ? `<ul class="activity-misread">${misread}</ul>` : ""}

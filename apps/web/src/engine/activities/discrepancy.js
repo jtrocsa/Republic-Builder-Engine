@@ -17,6 +17,7 @@
 // measured data (science), a press release against the numbers (journalism).
 import { z } from "zod";
 import {
+  COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
   checkUniqueIds,
   closerResult,
@@ -33,18 +34,28 @@ const LabelledSchema = z.object({
 
 export const DiscrepancyActivitySchema = z
   .object({
+    ...COMMON_ACTIVITY_FIELDS,
     kind: z.literal("discrepancy"),
-    id: z.string().min(1, "activity.id is required"),
-    title: z.string().min(1, "activity.title is required"),
-    intro: z.string().min(1, "activity.intro is required"),
     record: z.object({
       label: z.string().min(1, "record.label is required"),
       attribution: z.string().min(1, "record.attribution is required"),
+      // Who made this, for whom, and why — the situation the claims come out of.
+      // Optional, but an audit without it hands a player five sentences from a
+      // stranger: the first playtest of this engine reported not knowing who
+      // Columbus was in the scene or what he was doing there.
+      context: z.string().min(1).optional(),
+      // The passage itself, in paragraphs, shown before it is broken into
+      // claims. Reading the whole thing first is the move being taught.
+      text: z.array(z.string().min(1)).min(1).optional(),
     }),
     // The verdicts are content, not an enum, because what counts as a verdict
     // differs by subject — "supported / contradicted / cannot tell" here,
     // "matches / overstated / not itemised" in an accounts audit.
     verdicts: z.array(LabelledSchema).min(2, "a discrepancy needs at least two verdicts"),
+    // The standing instruction above the claim list: what the player is being
+    // asked to compare against what. Three bare verdict buttons do not say
+    // "against your own observations" — content has to.
+    verdictPrompt: z.string().min(1).optional(),
     // Which verdict means "this failed, now say why". Naming it in content is
     // what keeps the engine from having to know that "contradicted" is special.
     gapRequiredFor: z.string().min(1, "gapRequiredFor is required"),
@@ -211,10 +222,10 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
   const holds = new Set(ctx.holds || []);
   const settled = discrepancySettled(activity, state);
 
+  const available = activity.observed.filter((item) => !item.requires || holds.has(item.requires));
   const observations = activity.observed
     .map((item) => {
-      const available = !item.requires || holds.has(item.requires);
-      if (!available) {
+      if (!available.includes(item)) {
         return `<li class="activity-observation is-missing"><span>You did not gather this.</span></li>`;
       }
       return `<li class="activity-observation">${escapeHtml(item.text)}${item.from ? `<cite>${escapeHtml(item.from)}</cite>` : ""}</li>`;
@@ -258,15 +269,24 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
     })
     .join("");
 
+  const transcript = activity.record.text
+    ? `<div class="activity-transcript">${activity.record.text
+        .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+        .join("")}</div>`
+    : "";
+
   return `<section class="activity-board activity-board--discrepancy">
   <div class="activity-audit">
     <div class="activity-audit__record">
       <h3>${escapeHtml(activity.record.label)}</h3>
       <p class="activity-attribution">${escapeHtml(activity.record.attribution)}</p>
+      ${activity.record.context ? `<p class="activity-record-context">${escapeHtml(activity.record.context)}</p>` : ""}
+      ${transcript}
+      ${activity.verdictPrompt ? `<p class="activity-verdict-prompt">${escapeHtml(activity.verdictPrompt)}</p>` : ""}
       <ol class="activity-claims">${claims}</ol>
     </div>
     <aside class="activity-audit__observed">
-      <h3>What you saw</h3>
+      <h3>What you gathered <em>${available.length} of ${activity.observed.length}</em></h3>
       <ul class="activity-observations">${observations}</ul>
     </aside>
   </div>

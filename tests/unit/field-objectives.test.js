@@ -1,4 +1,4 @@
-// What the field's Records to Recover checklist says about each record.
+// What the field's Mission Tracker checklist says about each record.
 //
 // Tested apart from the markup because the interesting decisions are all in the derivation: which
 // name a row shows (the person, the object, or the record), and which of the three states it is in.

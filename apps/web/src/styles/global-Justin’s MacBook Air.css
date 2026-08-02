@@ -4556,15 +4556,11 @@ dd {
 }
 
 /* ---------------------------------------------------------------------------
-   Mission Tracker — the field objective panel (Phase 57; renamed and extended Phase 69)
+   Records to Recover — the field objective tracker (Phase 57)
    ---------------------------------------------------------------------------
    The player had no way to see what a case asked of them. The only progress signal in the field was
    the number on the "Open Codex" button, so "how many records are there, which have I got, and where
    is the next one" was answerable only by walking the whole map.
-
-   Phase 69 added the second block, for the same reason at one level down: the records list said
-   which records existed but not what was inside the one you had open, so a player mid-INTERVIEW
-   walked back to the elder repeatedly just to re-read their own notes.
 
    Pinned inside `.field-viewport` but deliberately a sibling of `.caribbean-world` rather than a
    child: that div is the one updateFieldPlayer() translates, so anything inside it scrolls away with
@@ -4575,7 +4571,7 @@ dd {
   right: 14px;
   top: 14px;
   z-index: 90;
-  /* Wide enough that "Mission Tracker" stays on one line beside its count — at 208px the header
+  /* Wide enough that "Records to Recover" stays on one line beside its count — at 208px the header
      wrapped, which made the panel read as two stacked labels rather than one heading. */
   width: 232px;
   max-width: calc(100% - 28px);
@@ -4674,55 +4670,6 @@ dd {
 }
 .field-tracker__row.is-locked {
   color: #7b9599;
-}
-/* The tracker's second block: the mission you have open, and the way back into its notebook without
-   walking across the island to the person who handed it to you. */
-.field-tracker__mission {
-  margin-top: 10px;
-  padding-top: 9px;
-  border-top: 1px solid rgba(var(--c-gold-rgb), 0.22);
-}
-.field-tracker__mission-name {
-  margin: 0;
-  font-family: "Cinzel", serif;
-  font-size: 0.64rem;
-  letter-spacing: 0.05em;
-  line-height: 1.35;
-  color: var(--gold-soft);
-}
-.field-tracker__progress {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 5px 0 0;
-  font-size: 0.64rem;
-  color: #cfe6ea;
-}
-.field-tracker__progress b {
-  color: #ffeaa7;
-  font-variant-numeric: tabular-nums;
-}
-.field-tracker__progress.is-done {
-  color: #9fd8ab;
-}
-.field-tracker__open {
-  width: 100%;
-  margin-top: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--c-border-gold);
-  border-radius: var(--c-radius-pill);
-  background: rgba(var(--c-gold-rgb), 0.12);
-  color: #ffe8a8;
-  font-family: inherit;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-.field-tracker__open:hover,
-.field-tracker__open:focus-visible {
-  background: rgba(var(--c-gold-rgb), 0.24);
 }
 @media (max-width: 1400px) {
   .field-tracker {
@@ -5425,16 +5372,6 @@ dd {
      panel as a tall empty box on all three Unit 1 activities. */
   align-items: start;
 }
-/* Same fix, and the same reason, as `.mission-shell.activity-shell--wide .activity-copy h1` further
-   up: `.activity-copy h1`'s clamp is sized off the viewport (4.2vw ≈ 57px at 1366) and this heading
-   wraps inside a ~290px column, so `overflow-wrap: break-word` did the only thing left to it and
-   split "Universalis" across two lines mid-word. The Investigation Challenge shares the column and
-   the defect — it was breaking "Begin Investigatio / n". */
-.activity-shell[data-activity-source] .activity-copy h1,
-.investigation-shell .activity-copy h1 {
-  font-size: clamp(1.9rem, 2.4vw, 3rem);
-  line-height: 1.06;
-}
 /* Screen-reader-only. Used by the interview notebook, where a cell nobody asked has to be silent
    visually and legible to a reader. There was no such utility in this file before. */
 .visually-hidden {
@@ -5487,60 +5424,6 @@ dd {
   text-transform: uppercase;
   color: var(--gold-soft);
 }
-/* How the activity is played, and the words it plays with. Both sit in the copy column under the
-   briefing, and both are host-rendered from optional content fields — an activity that omits them
-   renders exactly as it did before they existed. */
-.activity-howto,
-.activity-terms {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--c-border-subtle);
-}
-.activity-howto h2,
-.activity-terms h2 {
-  margin: 0 0 10px;
-  font-family: "Cinzel", serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gold-soft);
-}
-.activity-howto ol {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding-left: 1.15em;
-}
-.activity-howto li {
-  font-size: 0.9rem;
-  line-height: 1.55;
-  color: var(--c-text-secondary);
-}
-.activity-howto__note {
-  margin: 12px 0 0;
-  font-size: 0.86rem;
-  font-style: italic;
-  line-height: 1.55;
-  color: var(--c-text-muted);
-}
-.activity-terms dl {
-  display: grid;
-  gap: 4px 10px;
-  margin: 0;
-  grid-template-columns: auto 1fr;
-}
-.activity-terms dt {
-  font-family: "Cinzel", serif;
-  font-size: 0.78rem;
-  color: var(--gold-soft);
-  white-space: nowrap;
-}
-.activity-terms dd {
-  margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.5;
-  color: var(--c-text-secondary);
-}
 .activity-stage {
   display: grid;
   align-content: start;
@@ -5576,21 +5459,12 @@ dd {
   color: var(--c-text-muted);
 }
 .activity-progress {
-  display: grid;
-  gap: 4px;
-  padding: 10px 16px;
+  padding: 10px 14px;
   border: 1px solid var(--activity-edge);
   border-radius: var(--c-radius-pill);
   background: rgba(var(--c-black-rgb), 0.22);
 }
-/* One row per goal the activity actually sets, label left and count right. An engine that reports
-   two numbers reports them as two rows rather than one run-on sentence — "4 questions · 5 people"
-   on one line was read as a contradiction rather than as two bars. */
 .activity-progress p {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
   margin: 0;
   font-size: 0.84rem;
   letter-spacing: 0.02em;
@@ -5696,21 +5570,6 @@ dd {
 }
 
 /* --- INTERVIEW: the notebook --- */
-/* Grouping is the comparison. Two accounts of the same island interleaved in one table cannot be
-   held against each other, which is what the closer asks a player to do. */
-.interview-group + .interview-group {
-  margin-top: 18px;
-}
-.interview-group h4 {
-  margin: 0 0 4px;
-  font-family: "Cinzel", serif;
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-  color: var(--gold-soft);
-}
-.interview-group .activity-note {
-  margin-bottom: 8px;
-}
 .interview-notebook {
   border-collapse: separate;
   border-spacing: 0;
@@ -5760,15 +5619,6 @@ dd {
     rgba(var(--c-white-rgb), 0.05) 5px 6px
   );
 }
-/* Asked, and walked away from. Distinct from never-asked, because a player who is hunting for the
-   one useful answer needs to see where they have already been. */
-.interview-notebook td.is-heard span {
-  font-size: 0.72rem;
-  font-style: italic;
-  letter-spacing: 0.03em;
-  color: var(--c-text-muted);
-  opacity: 0.72;
-}
 .interview-notebook td.is-flat {
   color: var(--c-text-muted);
   font-style: italic;
@@ -5778,22 +5628,10 @@ dd {
   background: rgba(var(--c-gold-rgb), 0.07);
   color: var(--c-text);
 }
-/* The "I got the right one" mark. Decorative — the cell's gold rule already carries the state, and
-   the tick is what a student scans the organizer for. */
-.interview-notebook td.is-useful i {
-  float: right;
-  margin-left: 8px;
-  color: var(--c-gold);
-  font-style: normal;
-}
 
 /* --- INTERVIEW, out on the map: question chips inside the field dialogue bubble --- */
-/* Wider than a standing line, because this bubble carries an answer, a log button and four question
-   chips. `max-width` has to be widened too — the base rule caps at 300px, and a `width` override
-   alone silently loses to it, which is why this rule looked applied and did nothing. */
 .field-speech-bubble:has(.field-interview) {
   width: 404px;
-  max-width: 404px;
 }
 .field-interview-panel {
   margin-top: 10px;
@@ -5814,39 +5652,6 @@ dd {
   border-left-color: var(--c-gold);
   background: rgba(var(--c-gold-rgb), 0.1);
   color: var(--c-text);
-}
-/* Keeping the answer is a move, not a side effect of hearing it. Both states occupy the same slot so
-   the bubble's height does not change when one replaces the other — the bubble is already at the
-   limit of what the field viewport can show above a speaker. */
-.field-interview__log,
-.field-interview__logged {
-  display: block;
-  width: 100%;
-  margin: 0 0 9px;
-  padding: 6px 11px;
-  border-radius: var(--c-radius-pill);
-  font-size: 0.76rem;
-  line-height: 1.3;
-  text-align: center;
-}
-.field-interview__log {
-  border: 1px solid var(--c-border-gold);
-  background: rgba(var(--c-gold-rgb), 0.14);
-  color: #ffe8a8;
-  font-family: inherit;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-}
-.field-interview__log:hover,
-.field-interview__log:focus-visible {
-  background: rgba(var(--c-gold-rgb), 0.24);
-}
-.field-interview__logged {
-  border: 1px solid rgba(70, 165, 124, 0.5);
-  background: rgba(70, 165, 124, 0.14);
-  color: #dfffee;
-  letter-spacing: 0.03em;
 }
 /* Two columns, not a wrapping row: four stacked chips made the bubble tall enough to be clipped by
    the top of the field viewport, and the flip alone shouldn't have to carry that. */
@@ -5875,13 +5680,6 @@ dd {
   border-style: dashed;
   color: var(--c-text-muted);
 }
-/* Already in the notebook. A dashed chip means "you heard this"; a solid green one means "you kept
-   it", which is the difference the log button exists to make visible. */
-.field-interview__q.is-logged {
-  border-style: solid;
-  border-color: rgba(70, 165, 124, 0.55);
-  color: #bfe8d4;
-}
 .field-interview__q.is-showing {
   border-style: solid;
   border-color: var(--c-gold);
@@ -5893,17 +5691,6 @@ dd {
 .activity-assembly-board {
   display: grid;
   gap: 14px;
-}
-/* A board waiting on the one above it. Still rendered, and still readable, because hiding it made
-   the activity look like it had one board and then grew another. */
-.activity-assembly-board.is-locked .activity-slots,
-.activity-assembly-board.is-locked .activity-tray {
-  opacity: 0.4;
-  filter: saturate(0.5);
-}
-.activity-note--locked {
-  color: var(--gold-soft);
-  font-style: italic;
 }
 .activity-slots {
   display: grid;
@@ -6069,50 +5856,6 @@ dd {
   letter-spacing: 0.02em;
   color: var(--c-text-muted);
 }
-/* Who made this, for whom, and why — then the passage itself, whole, before it is broken into
-   claims. Five sentences from a stranger is what this record was before both of these. */
-.activity-record-context {
-  margin: 0.9em 0 0;
-  font-size: 0.9rem;
-  line-height: 1.65;
-  color: var(--c-text-secondary);
-}
-.activity-transcript {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 16px 18px;
-  border: 1px solid var(--activity-edge);
-  border-radius: var(--c-radius-md);
-  background: rgba(var(--c-black-rgb), 0.24);
-}
-.activity-transcript p {
-  margin: 0;
-  font-family: "Spectral", serif;
-  font-size: 0.94rem;
-  line-height: 1.7;
-  color: var(--c-text);
-}
-/* The standing instruction the three verdict buttons need and cannot say themselves. */
-.activity-verdict-prompt {
-  margin: 18px 0 0;
-  padding: 11px 14px;
-  border-left: 3px solid var(--c-border-gold);
-  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
-  background: rgba(var(--c-gold-rgb), 0.08);
-  font-size: 0.92rem;
-  line-height: 1.6;
-  color: var(--c-text);
-}
-.activity-audit__observed h3 em {
-  margin-left: 8px;
-  color: var(--c-text-muted);
-  font-family: system-ui, sans-serif;
-  font-size: 0.76rem;
-  font-style: normal;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
 .activity-claims {
   display: grid;
   gap: 14px;
@@ -6149,7 +5892,7 @@ dd {
   gap: 7px;
 }
 .activity-verdict,
-.activity-gap-kind,
+.activity-gapkind,
 .activity-effect {
   padding: 7px 13px;
   border: 1px solid var(--c-border);
@@ -6164,23 +5907,23 @@ dd {
     background var(--c-dur-fast) ease;
 }
 .activity-verdict:hover,
-.activity-gap-kind:hover,
+.activity-gapkind:hover,
 .activity-effect:hover,
 .activity-verdict:focus-visible,
-.activity-gap-kind:focus-visible,
+.activity-gapkind:focus-visible,
 .activity-effect:focus-visible {
   border-color: var(--c-border-gold);
   color: var(--c-text);
 }
 .activity-verdict.is-correct,
-.activity-gap-kind.is-correct,
+.activity-gapkind.is-correct,
 .activity-effect.is-correct {
   border-color: var(--c-success);
   background: rgba(70, 165, 124, 0.2);
   color: #dfffee;
 }
 .activity-verdict.is-wrong,
-.activity-gap-kind.is-wrong,
+.activity-gapkind.is-wrong,
 .activity-effect.is-wrong {
   border-color: var(--c-error);
   background: rgba(178, 75, 75, 0.18);
@@ -7765,26 +7508,15 @@ html {
 /* -------------------------------------------------------------------------
    Milestone 3.4.12 · anchored dialogue, spaced field UI, living Archive NPCs
    ------------------------------------------------------------------------- */
-/* Box, tail and placement all live here. A later hotfix layer used to restate the width, padding,
-   radius and transform with `!important`, and that is how the flip below a speaker came to be
-   silently dead for a whole phase: `.field-speech-bubble--below`'s plain `translate(-50%, 0)` cannot
-   beat a `translate(-50%, -108%) !important` further down the file, so the class went on, the top
-   was recomputed, and the bubble stayed exactly where it was. The winning values are folded in here
-   and that layer is gone — see the note where it was. */
 .field-speech-bubble {
   position: absolute;
   z-index: 145;
-  /* A column, so the scroll child below can shrink against the max-height placeFieldDialogueBubble()
-     writes. Without `display: flex` the child has no definite height to scroll within. */
-  display: flex;
-  flex-direction: column;
-  width: 300px;
-  max-width: 300px;
-  /* -108% rather than -100%: the extra 8% lifts the tail clear of the speaker's head. */
-  transform: translate(-50%, -108%);
-  padding: 11px 34px 12px 13px;
+  width: 340px;
+  max-width: 340px;
+  transform: translate(-50%, -100%);
+  padding: 13px 38px 14px 15px;
   border: 2px solid rgba(var(--c-gold-rgb), 0.66);
-  border-radius: 15px;
+  border-radius: 17px;
   background: rgba(3, 28, 40, 0.98);
   color: #f6fffb;
   box-shadow:
@@ -7806,21 +7538,14 @@ html {
   border-right: 2px solid rgba(var(--c-gold-rgb), 0.66);
   border-bottom: 2px solid rgba(var(--c-gold-rgb), 0.66);
 }
-/* Everything but the close button and the tail. `min-height: 0` is what lets a flex child actually
-   shrink below its content height, which is the whole mechanism. */
-.field-speech-bubble__scroll {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
 .field-speech-bubble--left-edge {
-  transform: translate(-14%, -108%);
+  transform: translate(-12%, -100%);
 }
 .field-speech-bubble--left-edge::after {
   left: 16%;
 }
 .field-speech-bubble--right-edge {
-  transform: translate(-86%, -108%);
+  transform: translate(-88%, -100%);
 }
 .field-speech-bubble--right-edge::after {
   left: 84%;
@@ -7840,10 +7565,10 @@ html {
   border-top: 2px solid rgba(var(--c-gold-rgb), 0.66);
 }
 .field-speech-bubble--below.field-speech-bubble--left-edge {
-  transform: translate(-14%, 0);
+  transform: translate(-12%, 0);
 }
 .field-speech-bubble--below.field-speech-bubble--right-edge {
-  transform: translate(-86%, 0);
+  transform: translate(-88%, 0);
 }
 .field-speech-bubble b {
   display: block;
@@ -8013,9 +7738,19 @@ body {
 .caribbean-world {
   transition: transform 58ms linear !important;
 }
-/* The bubble's box and placement used to be restated here with `!important`, which is what made
-   `.field-speech-bubble--below` unable to flip it — see the consolidated rule further up, which now
-   carries these exact values. Nothing is lost; the layer is. */
+.field-speech-bubble {
+  width: 300px !important;
+  max-width: 300px !important;
+  padding: 11px 34px 12px 13px !important;
+  border-radius: 15px !important;
+  transform: translate(-50%, -108%) !important;
+}
+.field-speech-bubble--left-edge {
+  transform: translate(-14%, -108%) !important;
+}
+.field-speech-bubble--right-edge {
+  transform: translate(-86%, -108%) !important;
+}
 .field-speech-bubble p {
   font-size: 13px !important;
   line-height: 1.34 !important;

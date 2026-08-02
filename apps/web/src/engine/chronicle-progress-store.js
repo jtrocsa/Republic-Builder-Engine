@@ -60,7 +60,7 @@ export const DEFAULT_PROGRESS = {
     streakDays: 0,
     lastCompletedDate: null,
   },
-  // `trackerCollapsed`: whether the field's Records to Recover checklist is folded to its header.
+  // `trackerCollapsed`: whether the field's Mission Tracker checklist is folded to its header.
   // Persisted rather than ephemeral so collapsing it once holds across screen changes and sessions.
   settings: { miniGamesEnabled: true, trackerCollapsed: false },
   miniGameScores: { stormNavigationBest: 0 },

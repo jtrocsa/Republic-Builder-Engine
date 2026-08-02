@@ -14,6 +14,19 @@ Companion ADR: `docs/decision-log/0050-mission-activity-catalog.md` records _why
 > below describes. Unit 1's Caribbean runs three of them; `trace` has no content yet. See
 > `docs/decision-log/0051-activity-engines.md`. The rest of this document is still the queue: §4's
 > unbuilt entries are unbuilt, and §5's variety rule is unchanged.
+>
+> **Phase 69 added one rule this catalog was missing, and it is binding on every entry below.**
+> The first playtest of the three built missions found the mechanics working and the missions
+> unplayable, because nothing on screen said what the player was doing — a student worked out the
+> INTERVIEW's central design by trial and reported it back as a discovery. So: **a mission states its
+> own rules, in the player's words, before they make a move.** Every engine now carries optional
+> `howItWorks` (an ordered list of steps) and `terms` (a glossary for any word the mission uses that
+> a student may not have), and both should be authored as defaults rather than extras. Two
+> corollaries worth carrying into §4's unbuilt entries: **a mission asks for one number, not two** —
+> a completion bar reported as "4 questions and 5 people" reads as a contradiction rather than a goal
+> — and **a record the player is asked to audit or reconstruct arrives with its own context and its
+> full text first**, not as a list of claims from a stranger. See
+> `docs/decision-log/0052-making-the-missions-legible.md`.
 
 ---
 
@@ -383,11 +396,15 @@ Ordered by payoff per unit of work. None of this is scheduled; it is the queue t
 | 4   | Units 4/5's composite documents → fillable forms with an omission question      | B3    | M    | Open                    |
 | 5   | Unit 5's "who the record counted" lane → a real tally against the ward register | B4    | M    | Open                    |
 | 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    | Open                    |
+| 7   | `howItWorks` + `terms` on every activity authored from here on                  | —     | S    | **Rule** (Phase 69)     |
 
 **The shape of the remaining work changed in Phase 68.** Items 1 and 3 were engine problems and the
 engines now exist — `assembly` takes any image and any grid, `trace` takes any chain of nodes. What
 is left on those rows is authored content, not code. Item 2 is unchanged and still the cheapest real
 win in this table.
+
+Item 7 is not a task but a standing condition on the rest, added after Phase 69's playtest: an
+activity shipped without it is a mechanic a student has to reverse-engineer. It costs five sentences.
 
 ---
 

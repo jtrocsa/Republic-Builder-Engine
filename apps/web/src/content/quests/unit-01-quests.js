@@ -165,6 +165,13 @@ export const UNIT_01_SEQUENCING_QUESTS = [
 // single object is fetched by investigationQuestFor() in main.js — the
 // second is kept as a ready second question for a future multi-question
 // gate.
+//
+// As of Phase 69 *neither* entry is wired: taino-context's Investigation
+// Challenge was removed when that record became an INTERVIEW, because the gate
+// asked a player to predict the sourcing of a worksheet that no longer exists,
+// and a "How this works" panel took its place (docs/decision-log/0052). Both
+// questions stay here on the same terms as the second one always did — good
+// Sourcing items, ready for a gate that wants them.
 export const UNIT_01_INVESTIGATION_MCQ_QUESTS = [
   {
     id: "case-001-investigation-mcq-taino-origins",
@@ -195,6 +202,49 @@ export const UNIT_01_INVESTIGATION_MCQ_QUESTS = [
     explanation:
       "A record titled around Caribbean “society,” framed as background context rather than voyage narrative, most plausibly emphasizes how communities were organized and governed — which the full record confirms by describing villages led by caciques.",
     skillCategory: "Sourcing",
+  },
+];
+
+// Reader questions (Phase 69, docs/decision-log/0052) — what sourceReader()
+// asks instead of a written "initial reading" on a record whose activity has
+// already done the thinking. Only waldseemuller-map uses this: rebuilding the
+// sheet, naming the three cartouches and then filing a judgement about what the
+// sheet can evidence is three acts of reading, and a paragraph box after them
+// was a fourth ending for one record.
+//
+// Deliberately not a restatement of the ASSEMBLY closer, which asks what the
+// map is evidence *of*. These two ask where the name came from, and what it
+// means that half the sheet is thirteen centuries older than the other half.
+export const UNIT_01_READER_MCQ_QUESTS = [
+  {
+    id: "case-001-reader-mcq-waldseemuller-naming",
+    prompt:
+      "You have just set AMERICA into the cartouche over the long southern landmass. Whose word is that, and where did the mapmaker get it?",
+    choices: [
+      "Waldseemüller's own, coined from Amerigo Vespucci's published account of sailing that southern coast",
+      "Columbus's, given on his return in 1493 and copied by Waldseemüller from the letter",
+      "The Taíno name for the island group, written down by Spanish scribes and carried back to Europe",
+      "An official name assigned by the Spanish crown for the territory it had claimed",
+    ],
+    answer: 0,
+    explanation:
+      "Waldseemüller printed it in 1507 and explained the choice in the book that accompanied the map: the southern land was named for Amerigo Vespucci, whose published letters described sailing its coast. Columbus never saw this sheet — he died in 1506, the year before it was printed, still holding that he had reached Asia.",
+    skillCategory: "Sourcing",
+  },
+  {
+    id: "case-001-reader-mcq-waldseemuller-ptolemy",
+    prompt:
+      "On the sheet you rebuilt, the eastern landmass is drawn almost exactly as Ptolemy drew it in the second century, while the western coasts are new work. What does printing the two side by side show about how European geography changed?",
+    choices: [
+      "It was revised piecemeal — new coastlines were drawn where voyages had actually reached, and inherited authority was left standing everywhere else",
+      "Waldseemüller doubted the Atlantic voyages and hedged by keeping the older map underneath",
+      "The Atlantic voyages had confirmed Ptolemy's geography, so there was nothing in the east to correct",
+      "The eastern sheets were the work of a different mapmaker who had not seen the new accounts",
+    ],
+    answer: 0,
+    explanation:
+      "Change here is uneven, not wholesale. Fourteen years of Atlantic voyaging rewrote the western third of the sheet and left the rest as Ptolemy had it, because nothing had happened to challenge it — which is what a historian means by continuity sitting inside a period of change.",
+    skillCategory: "Continuity and Change",
   },
 ];
 

@@ -1,12 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-seed.js";
 
-// The field's Records to Recover checklist (Phase 57). Before it, the only progress signal in the
-// field was the number on the "Open Codex" button, so "how many records are there, which have I got,
-// and where is the next one" was answerable only by walking the whole map.
+// The field's Mission Tracker checklist (Phase 57; renamed from "Records to Recover" in Phase 69,
+// when it gained the second block that opens the mission you have in flight). Before it, the only
+// progress signal in the field was the number on the "Open Codex" button, so "how many records are
+// there, which have I got, and where is the next one" was answerable only by walking the whole map.
 //
 // Three states per row, and the point of each is that it is readable without reading the words:
 // gold + pulsing ✦ = go here, struck-through green ✓ = secured, grey · = not yet available.
+//
+// The second block is covered in activity-engines.spec.js, beside the interview it reports on.
 
 test.describe("Field objective tracker", () => {
   test("lists every record with its destination, and counts what is secured", async ({ page }) => {

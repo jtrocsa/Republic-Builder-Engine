@@ -112,12 +112,12 @@ export const CASE_001_SOURCES = [
     record: "1492: An Ongoing Voyage, Library of Congress",
     visual: "context",
     activityRoute: "interview",
-    // Investigation Challenge (Phase A of the Investigation/Archive Challenge
-    // plan's catalog-expansion pass) — gates this source's sourceReader()
-    // worksheet behind a pre-reveal prediction quest
-    // (UNIT_01_INVESTIGATION_MCQ_QUESTS).
-    investigationMode: "mcq",
-    investigationQuestId: "case-001-investigation-mcq-taino-origins",
+    // No Investigation Challenge. This record used to be gated behind a quest asking a
+    // player to predict the sourcing of the worksheet they were about to open — and since
+    // Phase 68 there is no worksheet, there is an INTERVIEW put to seven people out on the
+    // map. The gate's replacement is the activity's own `howItWorks` panel, which explains
+    // the mechanic instead of quizzing the record's metadata. Both questions survive in
+    // UNIT_01_INVESTIGATION_MCQ_QUESTS; see docs/decision-log/0052.
     excerpt:
       "The largest group of people living in the islands of the Caribbean were the Taínos. Their villages were governed by chieftains, or caciques. Related families lived together in large houses built of poles, mats, and thatch.",
     prompt:
@@ -168,6 +168,15 @@ export const CASE_001_SOURCES = [
     // (UNIT_01_INVESTIGATION_SEQUENCING_QUESTS).
     investigationMode: "sequencing",
     investigationQuestId: "case-001-investigation-sequencing-waldseemuller-naming",
+    // Reader questions instead of a written initial reading. Rebuilding the sheet, naming
+    // the cartouches and filing what it can evidence is already three acts of reading; a
+    // paragraph box after them was a fourth ending for one record. Opt-in per source —
+    // every other record in the game keeps the textarea and the Archive Evaluator.
+    readerQuestType: "mcq",
+    readerQuestIds: [
+      "case-001-reader-mcq-waldseemuller-naming",
+      "case-001-reader-mcq-waldseemuller-ptolemy",
+    ],
     excerpt:
       "A printed European world map made after early Atlantic voyages. It depicts a separate Western Hemisphere and labels the new lands “America.”",
     prompt:

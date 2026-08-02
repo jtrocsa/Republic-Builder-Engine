@@ -32,6 +32,58 @@ export function escapeHtml(value) {
 }
 
 /**
+ * How this activity is played, in the player's own terms.
+ *
+ * An engine's mechanic is legible to whoever wrote it and to nobody else. The
+ * first playtest of all four established that: a player worked out by trial that
+ * an INTERVIEW lets you put any question to anyone — which is the entire design —
+ * and reported it as a discovery. Content that states the rule up front costs one
+ * short list and buys the whole activity.
+ *
+ * Rendered by the host in the copy column rather than by the engine, because it
+ * sits beside the intro and the briefing, which the engine also has no view of.
+ */
+export const HowItWorksSchema = z.object({
+  steps: z
+    .array(z.string().min(1))
+    .min(2, "howItWorks needs at least two steps, or it is a sentence and belongs in the intro"),
+  note: z.string().min(1).optional(),
+});
+
+/**
+ * Words the activity uses that a player may not have.
+ *
+ * Deliberately a flat list the host prints, not a text-scanning glossary: an
+ * engine that went looking for its own terms inside authored prose would have to
+ * know something about language, and this folder's rule is that it knows nothing
+ * about the subject at all.
+ */
+export const TermsSchema = z
+  .array(
+    z.object({
+      term: z.string().min(1, "a glossary entry needs a term"),
+      definition: z.string().min(1, "a glossary entry needs a definition"),
+    })
+  )
+  .min(1);
+
+/**
+ * The fields every engine carries regardless of its mechanic, spread into each
+ * engine's own `z.object({...})` before its `.superRefine()`.
+ *
+ * A plain object of field schemas rather than a base `z.object()` to extend:
+ * every engine schema ends in `.superRefine()`, which returns a ZodEffects with
+ * no `.extend()` on it, so composition has to happen before the object is built.
+ */
+export const COMMON_ACTIVITY_FIELDS = {
+  id: z.string().min(1, "activity.id is required"),
+  title: z.string().min(1, "activity.title is required"),
+  intro: z.string().min(1, "activity.intro is required"),
+  howItWorks: HowItWorksSchema.optional(),
+  terms: TermsSchema.optional(),
+};
+
+/**
  * Every activity ends the same way: the player files a judgement about what the
  * record they just handled can actually support. This is the one graded moment
  * — the interaction before it teaches, this scores.

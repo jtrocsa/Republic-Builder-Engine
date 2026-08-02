@@ -21,6 +21,7 @@
 // cycle (biology), an algorithm's state (computing).
 import { z } from "zod";
 import {
+  COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
   checkUniqueIds,
   closerResult,
@@ -31,10 +32,8 @@ import {
 
 export const TraceActivitySchema = z
   .object({
+    ...COMMON_ACTIVITY_FIELDS,
     kind: z.literal("trace"),
-    id: z.string().min(1, "activity.id is required"),
-    title: z.string().min(1, "activity.title is required"),
-    intro: z.string().min(1, "activity.intro is required"),
     // The one thing being followed. A trace with two subjects is two traces.
     subject: z.object({
       label: z.string().min(1, "subject.label is required"),

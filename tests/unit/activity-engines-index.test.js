@@ -9,6 +9,7 @@ import {
   ActivityMapSchema,
   actOnActivity,
   activityOutcome,
+  activitySummary,
   defaultActivityState,
   isActivityComplete,
   isActivityEngine,
@@ -151,10 +152,45 @@ describe("ACTIVITY_ENGINES — the contract every engine owes", () => {
   });
 
   it("implements renderInline only where an engine runs on the map (boundary case)", () => {
-    // The one optional slot. INTERVIEW puts its questions to people standing on
-    // the field map; the other three are entirely screen-hosted.
+    // One of the two optional slots. INTERVIEW puts its questions to people
+    // standing on the field map; the other three are entirely screen-hosted.
     const inline = ACTIVITY_ENGINE_KEYS.filter((kind) => ACTIVITY_ENGINES[kind].renderInline);
     expect(inline).toEqual(["interview"]);
+  });
+
+  it("implements summary only where progress is one ratio (boundary case)", () => {
+    // The other optional slot, read by the field's Mission Tracker. A TRACE is a
+    // chain rather than a count, so it declares nothing and the tracker prints
+    // the activity's name alone.
+    const summarised = ACTIVITY_ENGINE_KEYS.filter((kind) => ACTIVITY_ENGINES[kind].summary);
+    expect(summarised).toEqual(["interview"]);
+    expect(activitySummary("assembly", SAMPLES.assembly, defaultActivityState("assembly"))).toBe(
+      null
+    );
+    expect(
+      activitySummary("interview", SAMPLES.interview, defaultActivityState("interview"))
+    ).toMatchObject({ done: 0, total: 1 });
+  });
+
+  it.each(ACTIVITY_ENGINE_KEYS)(
+    "%s accepts the shared howItWorks and terms fields (normal case)",
+    (kind) => {
+      // Both are spread into every engine's schema from contract.js and rendered
+      // by the host in the copy column, so any engine can explain itself.
+      const documented = {
+        ...SAMPLES[kind],
+        howItWorks: { steps: ["First this.", "Then this."], note: "And remember." },
+        terms: [{ term: "cacique", definition: "The one who speaks for the village." }],
+      };
+      expect(ACTIVITY_ENGINES[kind].schema.safeParse(documented).success).toBe(true);
+    }
+  );
+
+  it("rejects a one-step howItWorks (edge case)", () => {
+    // One step is a sentence and belongs in the intro; a numbered list of one
+    // reads as a rendering bug.
+    const thin = { ...SAMPLES.assembly, howItWorks: { steps: ["Just do it."] } };
+    expect(ACTIVITY_ENGINES.assembly.schema.safeParse(thin).success).toBe(false);
   });
 
   it.each(ACTIVITY_ENGINE_KEYS)("%s round-trips through the wrappers (normal case)", (kind) => {
