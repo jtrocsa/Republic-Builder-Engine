@@ -54,6 +54,26 @@ const FragmentSchema = z.object({
   misread: z
     .string()
     .min(1, "every fragment needs a `misread` — why it looks like it fits where it doesn't"),
+  /**
+   * What to say on the first wrong placements, before the full `misread`.
+   *
+   * A ladder, not a gate: `hints[0]` on the first wrong placement, `hints[1]` on the second,
+   * `misread` from the third on. A fragment that declares none goes straight to `misread`, which is
+   * every fragment shipped before Phase 76.
+   *
+   * The problem it solves is ordering, not withholding. `misread` is the best writing on the board —
+   * a full paragraph on why a wrong piece looked right — and it fires the instant a piece lands
+   * wrong, all of them at once. Place three pieces wrong on a label board and three paragraphs
+   * arrive together, at the moment the player is least able to read them. A short nudge first is
+   * what a person leaning over your shoulder would say, and it keeps the paragraph for the moment
+   * you actually want it.
+   *
+   * Capped at two, because a third rung is a hint system rather than teaching.
+   */
+  hints: z
+    .array(z.string().min(1))
+    .max(2, "two rungs, then the misread — a longer ladder is a hint system")
+    .optional(),
 });
 
 const BoardSchema = z.object({
@@ -184,11 +204,38 @@ export const AssemblyActivitySchema = z
   });
 
 export function defaultAssemblyState() {
-  return { placed: {}, selected: null, filed: null, notebook: { kept: [] } };
+  return { placed: {}, selected: null, attempts: {}, filed: null, notebook: { kept: [] } };
 }
 
 function placedOn(state, boardId) {
   return state?.placed?.[boardId] || {};
+}
+
+/**
+ * How many times this fragment has been placed somewhere it does not belong.
+ *
+ * Read defensively: `ensureSourceActivity()` never rewrites an existing state object, so a save
+ * written before Phase 76 has no `attempts` at all and every fragment reads as zero — which lands
+ * that player on `hints[0]`, the gentlest rung, rather than throwing.
+ */
+function attemptsFor(state, boardId, fragmentId) {
+  return state?.attempts?.[boardId]?.[fragmentId] || 0;
+}
+
+/**
+ * What to say about a fragment sitting in the wrong slot, given how often it has been tried.
+ *
+ * Exported because it is the whole of the ladder and worth testing directly: everything else here
+ * is bookkeeping around this one expression.
+ *
+ * @param {{ misread: string, hints?: string[] }} fragment
+ * @param {number} attempts
+ */
+export function fragmentNote(fragment, attempts = 1) {
+  const hints = Array.isArray(fragment.hints) ? fragment.hints : [];
+  // The first wrong placement is attempt 1, which is hints[0]. Past the end of the ladder — and
+  // immediately, for a fragment that declares none — it is the misread.
+  return hints[Math.max(0, attempts - 1)] || fragment.misread;
 }
 
 /**
@@ -274,9 +321,25 @@ export function actAssembly(activity, state = defaultAssemblyState(), action = {
       if (placed[slotId] === fragment.id) delete placed[slotId];
     });
     placed[slot.id] = fragment.id;
+    // Counted here rather than derived in the renderer, because it is a history and the board only
+    // holds a present. Every wrong placement counts, including re-placing the same piece in the
+    // same wrong slot — a player doing that has tried again, which is exactly what the ladder is
+    // measuring. A correct placement is not counted and does not reset the count: lifting a piece
+    // out and putting it back should not walk the player back down to the first rung.
+    const wrong = fragment.belongs !== slot.id;
+    const attempts = wrong
+      ? {
+          ...state.attempts,
+          [board.id]: {
+            ...(state.attempts?.[board.id] || {}),
+            [fragment.id]: attemptsFor(state, board.id, fragment.id) + 1,
+          },
+        }
+      : state.attempts;
     return {
       ...state,
       placed: { ...state.placed, [board.id]: placed },
+      attempts,
       selected: null,
     };
   }
@@ -397,11 +460,15 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
       // because there the fragment's own label is not on screen to name it by —
       // and the red slot is the thing the player is looking at anyway.
       const misread = status.misplaced
-        .map(({ slot, fragment }) =>
-          showLabels
-            ? `<li><b>${escapeHtml(fragment.label)}</b> <i>→ ${escapeHtml(slot.label)}</i><span>${escapeHtml(fragment.misread)}</span></li>`
-            : `<li><b>${escapeHtml(slot.label)}</b><span>${escapeHtml(fragment.misread)}</span></li>`
-        )
+        .map(({ slot, fragment }) => {
+          const note = fragmentNote(fragment, attemptsFor(state, board.id, fragment.id));
+          // `is-hint` while the ladder is still short of the misread, so a nudge does not carry the
+          // same visual weight as the full explanation.
+          const rung = note === fragment.misread ? "" : ' class="is-hint"';
+          return showLabels
+            ? `<li${rung}><b>${escapeHtml(fragment.label)}</b> <i>→ ${escapeHtml(slot.label)}</i><span>${escapeHtml(note)}</span></li>`
+            : `<li${rung}><b>${escapeHtml(slot.label)}</b><span>${escapeHtml(note)}</span></li>`;
+        })
         .join("");
 
       const grid = gridOf(board);

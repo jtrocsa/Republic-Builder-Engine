@@ -160,6 +160,101 @@ describe("actTrace / traceLogged / isTraceComplete", () => {
   });
 });
 
+// The second axis (Phase 76). A trace that declares `supportLevels` asks every leg twice: what
+// happens here, and how far this record carries it. The activity above declares none, and every
+// test in this file that predates the axis still passes unchanged — which is the contract.
+const supported = () => {
+  const a = activity();
+  a.supportLevels = [
+    { id: "states", label: "The record states it" },
+    { id: "infer", label: "Reasonable, not stated" },
+    { id: "not-shown", label: "Not shown here" },
+  ];
+  a.legs[0].support = "states";
+  a.legs[1].support = "not-shown";
+  return a;
+};
+
+const bothAnswered = () => {
+  const a = supported();
+  let state = defaultTraceState();
+  state = actTrace(a, state, { type: "log", leg: "leg-1", effect: "enriches" });
+  state = actTrace(a, state, { type: "support", leg: "leg-1", support: "states" });
+  state = actTrace(a, state, { type: "log", leg: "leg-2", effect: "cannot" });
+  state = actTrace(a, state, { type: "support", leg: "leg-2", support: "not-shown" });
+  return state;
+};
+
+describe("TRACE's support axis", () => {
+  it("requires a support level on every leg once the activity declares them (edge case)", () => {
+    const half = supported();
+    delete half.legs[1].support;
+    const result = TraceActivitySchema.safeParse(half);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("every leg has to answer it"))).toBe(
+      true
+    );
+  });
+
+  it("rejects a support level nothing declares (edge case)", () => {
+    const orphan = activity();
+    orphan.legs[0].support = "states";
+    const result = TraceActivitySchema.safeParse(orphan);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("no supportLevels"))).toBe(true);
+  });
+
+  it("does not log a leg on the right effect alone (boundary case)", () => {
+    // The whole point of splitting the axis: saying what happens is half the job.
+    const state = actTrace(supported(), defaultTraceState(), {
+      type: "log",
+      leg: "leg-1",
+      effect: "enriches",
+    });
+    const status = legStatus(supported(), supported().legs[0], state);
+    expect(status.effectRight).toBe(true);
+    expect(status.correct).toBe(false);
+    expect(traceLogged(supported(), state)).toBe(false);
+  });
+
+  it("refuses the support verb until the effect is right (boundary case)", () => {
+    const a = supported();
+    const wrong = actTrace(a, defaultTraceState(), { type: "log", leg: "leg-1", effect: "feeds" });
+    // Asking how far a record carries an answer the player has not settled on is asking about
+    // nothing, and the renderer does not draw the control — the reducer refuses it too.
+    expect(actTrace(a, wrong, { type: "support", leg: "leg-1", support: "states" })).toBe(wrong);
+  });
+
+  it("completes only when both questions land on every leg (normal case)", () => {
+    const a = supported();
+    const state = actTrace(a, bothAnswered(), { type: "file", option: "partial" });
+    expect(traceLogged(a, state)).toBe(true);
+    expect(isTraceComplete(a, state)).toBe(true);
+  });
+
+  it("reads a save written before the axis existed as unanswered (regression case)", () => {
+    // ensureSourceActivity() never rewrites an existing state object, so a pre-Phase-76 save
+    // arrives with a full `ledger` and no `support` at all. It must reopen the second question,
+    // not throw and not count as finished.
+    const a = supported();
+    const old = { ledger: { "leg-1": "enriches", "leg-2": "cannot" }, filed: "partial" };
+    expect(() => legStatus(a, a.legs[0], old)).not.toThrow();
+    expect(legStatus(a, a.legs[0], old).supportAnswered).toBe(false);
+    expect(traceLogged(a, old)).toBe(false);
+    expect(isTraceComplete(a, old)).toBe(false);
+  });
+
+  it("names the entry the player made, not the paragraph explaining it (normal case)", () => {
+    // A finding is carried into the Field Notebook and then into the Codex. `leg.why` is on the
+    // board and stays there; four of them made a filed Codex record three times the height of any
+    // other engine's (decision log 0058).
+    const findings = traceOutcome(supported(), bothAnswered()).findings;
+    expect(findings[0].text).toBe("Down the race road — Enriches someone (The record states it)");
+    expect(findings[1].text).toBe("Downriver — Cannot establish (Not shown here)");
+    expect(findings[0].text).not.toContain("The toll is the first time");
+  });
+});
+
 describe("renderTrace", () => {
   it("draws each leg between its named nodes (normal case)", () => {
     const markup = renderTrace(activity(), defaultTraceState());
@@ -180,5 +275,24 @@ describe("renderTrace", () => {
     // knowing which legs the record actually covers.
     const markup = renderTrace(activity(), defaultTraceState());
     expect((markup.match(/data-effect="cannot"/g) || []).length).toBe(2);
+  });
+
+  it("opens the support question only on a leg whose effect is right (normal case)", () => {
+    const a = supported();
+    expect(renderTrace(a, defaultTraceState())).not.toContain('data-activity-action="support"');
+    const wrong = actTrace(a, defaultTraceState(), { type: "log", leg: "leg-1", effect: "feeds" });
+    expect(renderTrace(a, wrong)).not.toContain('data-activity-action="support"');
+    const right = actTrace(a, defaultTraceState(), {
+      type: "log",
+      leg: "leg-1",
+      effect: "enriches",
+    });
+    const markup = renderTrace(a, right);
+    // One leg's worth of controls, not both — the second leg's effect is still unanswered.
+    expect((markup.match(/data-activity-action="support"/g) || []).length).toBe(3);
+  });
+
+  it("draws no support control at all for a trace that declares none (regression case)", () => {
+    expect(renderTrace(activity(), logged())).not.toContain("activity-leg__support");
   });
 });

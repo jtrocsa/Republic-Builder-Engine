@@ -714,10 +714,16 @@ const ONE_HOGSHEAD = {
   howItWorks: {
     steps: [
       "The cask moves in four legs, in order. Each says what changes and whose hands it passes through.",
-      "For every leg, choose the one entry this wharf account supports. A leg stays open until you have it right.",
-      "One choice means the account does not show this. It is a real answer and it is correct at least once.",
+      "Every leg asks you twice: what happens here, and how far this page carries it. The second question only opens once the first is right.",
+      "Then keep three of the four entries in your Field Notebook. Three is all you get, so keep the ones your conclusion will rest on.",
     ],
-    note: "Something you know from walking this settlement is not the same as something this page supports. Enter what the page supports, then file.",
+    note: "Something you know from walking this settlement is not the same as something this page supports. Both are worth having. Saying which is which is the job.",
+  },
+  notebook: {
+    capacity: 3,
+    prompt:
+      "Four legs entered, three slots. The one you leave out is not a mistake you made — it is the part of this cargo the page cannot speak to.",
+    emptyNote: "Enter a leg correctly and it becomes available to keep.",
   },
   briefing: {
     speaker: "wharf-clerk",
@@ -756,17 +762,33 @@ const ONE_HOGSHEAD = {
     { id: "london", label: "London: customs house and warehouse" },
     { id: "return", label: "Back at the landing, next season" },
   ],
+  // What happens on a leg — a question about the world, answered from everything the player knows.
+  //
+  // "Not shown by this account" used to live in this list, as one answer among the five, and it was
+  // the correct answer to exactly one leg. That taught a meta-rule rather than a skill: find the odd
+  // leg out. It is now the support axis below, asked on every leg (Phase 76, decision log `0059`).
+  //
+  // `planter-choice` is the standing distractor and is the answer to nothing. It is the intuitive
+  // reading of a consignment — the man who grew it decides where it sells — and it is exactly what
+  // the arrangement takes away from him.
   effects: [
-    {
-      id: "not-established",
-      label: "Not shown by this account",
-      note: "The record does not reach this far.",
-    },
     { id: "crown-revenue", label: "The Crown takes its share in duty" },
     { id: "planter-credit", label: "Value comes back as credit, not coin" },
     { id: "merchant-control", label: "London chooses what comes back" },
     { id: "labor-cost", label: "The cost of it falls on bound labor" },
+    { id: "planter-choice", label: "The planter decides where it is sold" },
   ],
+  // How far this page carries the answer just given — a question about the record.
+  //
+  // Three levels and all three are live in the chain below, which is the design rule: an axis where
+  // one level is the answer everywhere is a formality, and an axis where one level is the answer
+  // exactly once is the odd-one-out puzzle this replaced.
+  supportLevels: [
+    { id: "established", label: "The account states it" },
+    { id: "inferred", label: "Reasonable from the account, not stated" },
+    { id: "not-shown", label: "Not shown by this account" },
+  ],
+  supportPrompt: "And how far does this wharf account actually carry that?",
   legs: [
     {
       id: "curing",
@@ -776,8 +798,9 @@ const ONE_HOGSHEAD = {
       transforms:
         "Leaf is cut, hung and cured through the autumn, stemmed, pressed into a cask and marked with the planter's mark.",
       actor: "The hands that worked the rows — whoever they were.",
-      effect: "not-established",
-      why: "You know whose hands these were, because you stood in the fields and asked them: a servant four years into seven, a man from Ndongo who has never been given a number, a woman working the kitchen garden the settlement eats from when the ships are late. The account does not say so. It opens at the landing with fourteen hogsheads already casked and weighed, and a record that begins where the labor ends cannot be used to establish who did it. You can prove this from the settlement. You cannot prove it from this page — and knowing which of the two you are holding is the whole of the job.",
+      effect: "labor-cost",
+      support: "not-shown",
+      why: "Both halves, and they point opposite ways. The cost of this leg does fall on bound labor — you know whose hands these were, because you stood in the fields and asked them: a servant four years into seven, a man from Ndongo who has never been given a number, a woman working the kitchen garden the settlement eats from when the ships are late. And this page does not say so. It opens at the landing with fourteen hogsheads already casked and weighed, and a record that begins where the labor ends cannot establish who did it. You can prove this from the settlement. You cannot prove it from this page — and holding both of those at once is the whole of the job.",
     },
     {
       id: "entering",
@@ -788,7 +811,8 @@ const ONE_HOGSHEAD = {
         "The hogshead is weighed, its mark and weight noted, and entered twice — once to the planter's account, once against the customs the cargo will owe on landing in England.",
       actor: "The wharf clerk and the ship's factor.",
       effect: "crown-revenue",
-      why: "The clerk told you what the doubled entry is for: once for the company, once for the customs man. Tobacco paid duty on entering England, and across the seventeenth century those duties became one of the Crown's most dependable revenues — which is precisely why a cask on a Virginia riverbank is weighed this carefully before it sails. The format of a record is evidence of what the record was for.",
+      support: "established",
+      why: "The clerk told you what the doubled entry is for: once for the company, once for the customs man. Tobacco paid duty on entering England, and across the seventeenth century those duties became one of the Crown's most dependable revenues — which is precisely why a cask on a Virginia riverbank is weighed this carefully before it sails. And this one the page states outright: the second entry is on it, in the clerk's own hand. The format of a record is evidence of what the record was for.",
     },
     {
       id: "crossing",
@@ -799,7 +823,8 @@ const ONE_HOGSHEAD = {
         "Duty is paid on landing, the merchant sells at whatever the London market gives that season, and the planter is credited on the merchant's books for the proceeds less freight, duty and commission.",
       actor: "The ship's master, the customs officer, and the London merchant.",
       effect: "planter-credit",
-      why: "The planter never touches coin. He is credited — and the figure he is credited at was set in London, months after the leaf left his hands, in a market he cannot see and did not sell into. That is the consignment system, and it is the mechanism behind one of the most durable facts of the colonial Chesapeake: planters ran chronically in debt to English merchants, in good years as well as bad.",
+      support: "established",
+      why: "The planter never touches coin. He is credited — and the figure he is credited at was set in London, months after the leaf left his hands, in a market he cannot see and did not sell into. The page carries this one: the credit is entered, less freight, duty and commission, and the arithmetic is right there. That is the consignment system, and it is the mechanism behind one of the most durable facts of the colonial Chesapeake — planters ran chronically in debt to English merchants, in good years as well as bad.",
     },
     {
       id: "returning",
@@ -810,7 +835,8 @@ const ONE_HOGSHEAD = {
         "The credit is spent on English wares — three pieces of Kentish cloth, two dozen iron hoes, six dozen knives — and shipped back to the landing as goods the planter ordered sight unseen and a season in advance.",
       actor: "The London merchant, buying on the planter's behalf.",
       effect: "merchant-control",
-      why: "Look at what actually came back. Cloth, hoes, knives — the tools and textiles a settlement that puts every hand into one crop cannot make for itself. The blacksmith will tell you the Company sent gold-refiners the first year and the settlement had no second hoe. A colony that exports one staple and imports its tools does not choose what arrives; the man holding the credit at the other end chooses, and he is choosing a year ahead.",
+      support: "inferred",
+      why: "Look at what actually came back. Cloth, hoes, knives — the tools and textiles a settlement that puts every hand into one crop cannot make for itself. The blacksmith will tell you the Company sent gold-refiners the first year and the settlement had no second hoe. But read what the page does and does not say: it lists the goods, and it never says who picked them. That the London merchant chose is a reading of a cargo ordered sight unseen a season ahead, and a good one — it is not a line in the book. Most of what a record supports it supports like this, and calling it stated would be the same error as refusing to draw it at all.",
     },
   ],
   closer: {
@@ -822,13 +848,19 @@ const ONE_HOGSHEAD = {
         id: "dependence",
         text: "A settlement exporting one staple and receiving, in return, goods chosen for it on credit it could not spend anywhere else",
         correct: true,
+        // The two legs the page itself carries the credit argument on. Deliberately not all three
+        // of the non-labor legs: with a capacity of three that would leave exactly one legal
+        // notebook, and a forced answer is not a judgement. Two required and one free is.
+        requiresEvidence: ["crossing", "returning"],
+        unsupportedNote:
+          "This is the reading the account will bear, and right now you are not carrying it. The crossing and the return cargo are where this argument lives — the duty entry alone shows a Crown taking its share, not a planter tied to one merchant. Go back and keep the legs your conclusion actually rests on.",
         why: "Right, and every leg you logged points to it. Duty is taken before the planter sees anything; the proceeds arrive as a figure on someone else's books; and what comes back was chosen in London a season ahead. Nothing here is theft and nothing here is illegal — it is simply what a one-crop economy at the far end of a long credit line looks like from the wharf where it is written down.",
       },
       {
         id: "labor",
         text: "That the settlement's wealth was produced by bound labor",
         correct: false,
-        why: "It was. You met them. But you entered the first leg as not shown by this account for exactly this reason: it opens at the landing with the casks already made, and it never names a single pair of hands. Reading a true fact out of a record that does not contain it is the most comfortable mistake in this discipline, because you are right about the world and wrong about the evidence — and a Chronicler is answerable for the record.",
+        why: "It was. You met them, and you entered it — the first leg's cost falls on bound labor and you said so. You also said this page does not show it, which is why that entry cannot carry this conclusion. Reading a true fact out of a record that does not contain it is the most comfortable mistake in this discipline, because you are right about the world and wrong about the evidence, and a Chronicler is answerable for the record.",
       },
       {
         id: "prosperity",

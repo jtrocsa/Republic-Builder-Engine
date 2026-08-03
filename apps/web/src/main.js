@@ -10319,6 +10319,7 @@ function handleActivityAction(control, overrides = {}) {
     gap: data.gap,
     leg: data.leg,
     effect: data.effect,
+    support: data.support,
     option: data.option,
     finding: data.finding,
   });

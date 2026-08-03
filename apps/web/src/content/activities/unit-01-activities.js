@@ -497,10 +497,20 @@ const UNIVERSALIS = {
         { id: "east", label: "The great landmass filling the eastern sheets, drawn from Ptolemy" },
       ],
       fragments: [
+        // The four cartouches carry `hints` and the ten map tiles above them do not, and that split
+        // is deliberate (Phase 76, decision log `0059`). A tile placed wrong on an image board is
+        // wrong *visibly* — the coastline does not meet — so its `misread` is a footnote to
+        // something the player can already see. A cartouche is a knowledge question with four
+        // identical-looking blanks, and there the full explanation on the first try does the
+        // thinking for them.
         {
           id: "america",
           label: "AMERICA",
           belongs: "south",
+          hints: [
+            "Read the slot again. Which of these lands had this map's own voyages actually reached?",
+            "It appears once on the whole sheet. A mapmaker naming a hemisphere would not have been so sparing.",
+          ],
           misread:
             "Waldseemüller printed it here and nowhere else on the sheet — he had named one southern continent, not a hemisphere.",
         },
@@ -508,6 +518,10 @@ const UNIVERSALIS = {
           id: "terra-incognita",
           label: "TERRA INCOGNITA",
           belongs: "north",
+          hints: [
+            "Unknown land. Look at how the three coasts are drawn before you decide which one that describes.",
+            "One coast on this sheet is thin and hedged where the others are firm. That is a mapmaker admitting something.",
+          ],
           misread:
             "Latin for unknown land. An unknown coast is drawn thin and hedged, and this is the only part of the sheet drawn that way.",
         },
@@ -515,6 +529,10 @@ const UNIVERSALIS = {
           id: "india",
           label: "INDIA",
           belongs: "east",
+          hints: [
+            "This is the oldest name on the map. Which half of the sheet is the oldest knowledge?",
+            "The eastern sheets are not this mapmaker's work. He inherited them, and he inherited what they were called.",
+          ],
           misread:
             "The eastern sheets are Ptolemy's, barely altered. That is the older knowledge this map kept, and it kept his name for it too.",
         },
@@ -522,6 +540,10 @@ const UNIVERSALIS = {
           id: "vespucci",
           label: "VESPUCCI",
           belongs: null,
+          hints: [
+            "He is on this map — look at the top of it. That is not the same as being on it as a place.",
+            "A cartouche holds what the mapmaker printed on the land. Is this the word he printed, or the reason he printed the other one?",
+          ],
           misread:
             "His account is the reason the southern land is named at all, and his portrait is at the top of this map beside Ptolemy's. But a cartouche takes the name the mapmaker coined, not the man he coined it from.",
         },

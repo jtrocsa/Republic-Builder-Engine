@@ -358,21 +358,54 @@ describe("activity content: a discrepancy's evidence column is addressable", () 
 describe("activity content: Riverbend's trace turns on what the record cannot say", () => {
   const [, ONE_HOGSHEAD] = ofKind(UNIT_02_ACTIVITIES, "trace")[0];
 
-  it("keys at least one leg to the record not establishing it (normal case)", () => {
-    // trace.js's own header: the effect list is expected to include an option meaning "the evidence
-    // does not establish this," and choosing it correctly is the scored move. A trace where every
-    // leg has a positive answer is a table with arrows drawn on it.
-    const keys = ONE_HOGSHEAD.legs.map((leg) => leg.effect);
-    expect(keys).toContain("not-established");
-    expect(keys[0]).toBe("not-established");
+  it("asks how far the record carries every single leg (normal case)", () => {
+    // This assertion replaced one requiring `not-established` to be the *effect* of exactly one leg
+    // (Phase 76, decision log `0059`). That shape taught a meta-rule rather than a skill: a chain
+    // needs one leg keyed to "not shown" or the idea goes untaught, and a player who spots that is
+    // finding the odd one out, not weighing evidence. The judgement is on every leg now.
+    expect(ONE_HOGSHEAD.supportLevels?.length, "the trace asks only one question").toBeGreaterThan(
+      1
+    );
+    for (const leg of ONE_HOGSHEAD.legs) {
+      expect(
+        leg.support,
+        `leg "${leg.id}" is not asked how far the record carries it`
+      ).toBeTruthy();
+    }
   });
 
-  it("never makes the true-but-unsourced answer correct (edge case)", () => {
-    // `labor-cost` is offered on all four legs and is the answer to none of them. Bound labor did
-    // produce this cargo — the player interviewed the people two records earlier — and a wharf
-    // account that opens at the landing cannot establish it. This distractor is the mission, and a
-    // well-meaning edit that "fixes" leg 1 would delete the point of it.
-    expect(ONE_HOGSHEAD.effects.map((effect) => effect.id)).toContain("labor-cost");
-    expect(ONE_HOGSHEAD.legs.filter((leg) => leg.effect === "labor-cost")).toEqual([]);
+  it("keeps the true-but-unsourced reading reachable, and unsupported (edge case)", () => {
+    // The guard rail this replaced said: `labor-cost` is offered on all four legs and is the answer
+    // to none of them, because bound labor did produce this cargo — the player interviewed the
+    // people two records earlier — and a wharf account that opens at the landing cannot establish
+    // it. Its warning was that a well-meaning edit "fixing" leg 1 would delete the point.
+    //
+    // The split axis keeps that point and stops hiding it behind an unavailable answer. Leg 1's
+    // effect *is* now `labor-cost` — true, and the player says so — and its support is the level
+    // meaning the page does not show it. Being right about the world and wrong about the evidence
+    // is now a thing the player can state in two moves rather than a trap they avoid in one.
+    const first = ONE_HOGSHEAD.legs[0];
+    expect(first.effect).toBe("labor-cost");
+    expect(first.support).toBe("not-shown");
+  });
+
+  it("uses more than one support level, and does not use one only once (normal case)", () => {
+    // An axis where every leg answers the same way is a formality. An axis where one level is the
+    // answer exactly once is the odd-one-out puzzle this design replaced, rebuilt on the new field.
+    const used = ONE_HOGSHEAD.legs.map((leg) => leg.support);
+    expect(new Set(used).size, "every leg gives the same support answer").toBeGreaterThan(1);
+    expect(new Set(used).size, "the support axis is one leg against the rest").toBeGreaterThan(2);
+  });
+
+  it("keeps a standing distractor that is the answer to no leg (normal case)", () => {
+    // With four legs and four live effects the board is solvable by elimination. `planter-choice`
+    // is the intuitive reading of a consignment — the man who grew it decides where it sells — and
+    // it is exactly what the arrangement takes away from him.
+    const answered = new Set(ONE_HOGSHEAD.legs.map((leg) => leg.effect));
+    const unused = ONE_HOGSHEAD.effects.filter((effect) => !answered.has(effect.id));
+    expect(
+      unused.length,
+      "every effect is some leg's answer — the chain solves by elimination"
+    ).toBeGreaterThanOrEqual(1);
   });
 });

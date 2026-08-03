@@ -11,6 +11,7 @@ import {
   boardOpen,
   boardStatus,
   defaultAssemblyState,
+  fragmentNote,
   isAssemblyComplete,
   renderAssembly,
 } from "../../apps/web/src/engine/activities/assembly.js";
@@ -416,5 +417,89 @@ describe("renderAssembly", () => {
     delete bare.boards[0].columns;
     delete bare.boards[0].rows;
     expect(renderAssembly(bare, solved())).not.toContain("NaN");
+  });
+});
+
+// The hint ladder (Phase 76, decision log 0059). `misread` is the best writing on an assembly
+// board and it used to fire the instant a piece landed wrong — all of them at once, at the moment
+// a player is least able to read them. `hints` puts a short nudge first.
+describe("ASSEMBLY's hint ladder", () => {
+  const laddered = () => {
+    const a = activity();
+    a.boards[1].fragments[0].hints = ["Look at the slot again.", "One of these names is newer."];
+    return a;
+  };
+
+  const misplace = (a, times) => {
+    let state = defaultAssemblyState();
+    for (let i = 0; i < times; i += 1) {
+      state = actAssembly(a, state, {
+        type: "place",
+        board: "cartouches",
+        slot: "lower",
+        fragment: "america",
+      });
+    }
+    return state;
+  };
+
+  it("counts a wrong placement and leaves a right one uncounted (normal case)", () => {
+    const a = laddered();
+    const wrong = misplace(a, 2);
+    expect(wrong.attempts.cartouches.america).toBe(2);
+    const right = actAssembly(a, wrong, {
+      type: "place",
+      board: "cartouches",
+      slot: "upper",
+      fragment: "america",
+    });
+    // Not reset, either: lifting a piece out and putting it back should not walk the player back
+    // down to the first rung.
+    expect(right.attempts.cartouches.america).toBe(2);
+  });
+
+  it("climbs the ladder one wrong placement at a time (normal case)", () => {
+    const a = laddered();
+    expect(fragmentNote(a.boards[1].fragments[0], 1)).toBe("Look at the slot again.");
+    expect(fragmentNote(a.boards[1].fragments[0], 2)).toBe("One of these names is newer.");
+    expect(fragmentNote(a.boards[1].fragments[0], 3)).toBe("It is the newer name.");
+    expect(fragmentNote(a.boards[1].fragments[0], 9)).toBe("It is the newer name.");
+  });
+
+  it("goes straight to the misread for a fragment with no hints (regression case)", () => {
+    // Every fragment shipped before this phase, and the reason the field is optional.
+    expect(fragmentNote(activity().boards[1].fragments[0], 1)).toBe("It is the newer name.");
+    const markup = renderAssembly(activity(), misplace(activity(), 1));
+    expect(markup).toContain("It is the newer name.");
+    expect(markup).not.toContain("is-hint");
+  });
+
+  it("renders the rung the player has reached, marked as a hint until the last (normal case)", () => {
+    const a = laddered();
+    const first = renderAssembly(a, misplace(a, 1));
+    expect(first).toContain("Look at the slot again.");
+    expect(first).not.toContain("It is the newer name.");
+    expect(first).toContain('<li class="is-hint">');
+
+    const third = renderAssembly(a, misplace(a, 3));
+    expect(third).toContain("It is the newer name.");
+    expect(third).not.toContain('<li class="is-hint">');
+  });
+
+  it("reads a save written before the ladder existed as attempt zero (regression case)", () => {
+    // ensureSourceActivity() never rewrites an existing state object, so a pre-Phase-76 save has no
+    // `attempts` key. That reads as zero, which lands on the gentlest rung rather than throwing.
+    const a = laddered();
+    const old = { placed: { cartouches: { lower: "america" } }, selected: null, filed: null };
+    expect(() => renderAssembly(a, old)).not.toThrow();
+    expect(renderAssembly(a, old)).toContain("Look at the slot again.");
+  });
+
+  it("caps the ladder at two rungs (edge case)", () => {
+    const tooLong = activity();
+    tooLong.boards[1].fragments[0].hints = ["one", "two", "three"];
+    const result = AssemblyActivitySchema.safeParse(tooLong);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.some((i) => i.message.includes("two rungs"))).toBe(true);
   });
 });

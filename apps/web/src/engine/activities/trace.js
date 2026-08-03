@@ -65,6 +65,32 @@ export const TraceActivitySchema = z
         })
       )
       .min(2, "a trace needs at least two effects to choose between"),
+    /**
+     * The second axis: how far this record carries the answer the player just gave.
+     *
+     * Optional, and its absence is the pre-Phase-76 trace — one question per leg, with "the record
+     * does not show this" sitting in the `effects` list as one answer among the others.
+     *
+     * That shape had a flaw the first shipped trace demonstrated. With "not shown" as an *effect*,
+     * a chain needs exactly one leg keyed to it or the idea goes untaught — and a player who
+     * notices that is no longer weighing evidence, they are spotting the odd one out. Declaring
+     * `supportLevels` moves the judgement onto *every* leg: what happens here, and can this page
+     * prove it. Those are different questions, and conflating them is the misconception the
+     * activity exists to correct.
+     */
+    supportLevels: z
+      .array(
+        z.object({
+          id: z.string().min(1, "supportLevel.id is required"),
+          label: z.string().min(1, "supportLevel.label is required"),
+          note: z.string().min(1).optional(),
+        })
+      )
+      .min(2, "a support axis with one level is not a judgement")
+      .optional(),
+    // The second question, in the words of whoever authored the record. The engine's default is
+    // deliberately placeless; a mission that knows it is holding a wharf book can say so.
+    supportPrompt: z.string().min(1).optional(),
     legs: z
       .array(
         z.object({
@@ -76,6 +102,9 @@ export const TraceActivitySchema = z
           actor: z.string().min(1, "leg.actor is required — whose hands it passes through"),
           // The ledger question's answer.
           effect: z.string().min(1, "leg.effect is required"),
+          // The support question's answer. Required on every leg once the activity declares
+          // `supportLevels`, checked below — a half-graded chain is worse than an ungraded one.
+          support: z.string().min(1).optional(),
           why: z.string().min(1, "leg.why is required — it is what the player earns"),
         })
       )
@@ -86,11 +115,35 @@ export const TraceActivitySchema = z
     checkUniqueIds(activity.nodes, ctx, "node", ["nodes"]);
     checkUniqueIds(activity.effects, ctx, "effect", ["effects"]);
     checkUniqueIds(activity.legs, ctx, "leg", ["legs"]);
+    if (activity.supportLevels)
+      checkUniqueIds(activity.supportLevels, ctx, "support level", ["supportLevels"]);
 
     const nodeIds = new Set(activity.nodes.map((node) => node.id));
     const effectIds = new Set(activity.effects.map((effect) => effect.id));
+    const supportIds = new Set((activity.supportLevels || []).map((level) => level.id));
 
     activity.legs.forEach((leg, index) => {
+      if (activity.supportLevels) {
+        if (!leg.support) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["legs", index, "support"],
+            message: `Leg "${leg.id}" has no support level, but this trace asks the support question — every leg has to answer it.`,
+          });
+        } else if (!supportIds.has(leg.support)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["legs", index, "support"],
+            message: `Leg "${leg.id}" has unknown support level "${leg.support}".`,
+          });
+        }
+      } else if (leg.support) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["legs", index, "support"],
+          message: `Leg "${leg.id}" declares a support level but the activity declares no supportLevels to choose from.`,
+        });
+      }
       if (!nodeIds.has(leg.from)) {
         ctx.addIssue({
           code: "custom",
@@ -126,17 +179,40 @@ export const TraceActivitySchema = z
   });
 
 export function defaultTraceState() {
-  return { ledger: {}, filed: null, notebook: { kept: [] } };
+  return { ledger: {}, support: {}, filed: null, notebook: { kept: [] } };
 }
 
 /**
+ * Where this leg stands on both questions.
+ *
+ * `correct` is what everything downstream reads, and it is deliberately the conjunction: a leg is
+ * not logged until the player has said what happens *and* how far the record carries it. A trace
+ * with no `supportLevels` never asks the second question, so `supportRight` is vacuously true and
+ * the whole thing behaves exactly as it did before Phase 76.
+ *
+ * `state.support` is read defensively — `ensureSourceActivity()` never rewrites an existing state
+ * object, so a save written before this field existed arrives without it.
+ *
  * @param {import("zod").infer<typeof TraceActivitySchema>} activity
- * @param {{ id: string, effect: string }} leg
+ * @param {{ id: string, effect: string, support?: string }} leg
  * @param {ReturnType<typeof defaultTraceState>} [state]
  */
 export function legStatus(activity, leg, state = defaultTraceState()) {
   const chosen = state.ledger?.[leg.id] ?? null;
-  return { chosen, answered: chosen !== null, correct: chosen === leg.effect };
+  const effectRight = chosen === leg.effect;
+  const asksSupport = !!activity.supportLevels;
+  const supportChosen = state.support?.[leg.id] ?? null;
+  const supportRight = !asksSupport || supportChosen === leg.support;
+  return {
+    chosen,
+    answered: chosen !== null,
+    effectRight,
+    asksSupport,
+    supportChosen,
+    supportAnswered: supportChosen !== null,
+    supportRight,
+    correct: effectRight && supportRight,
+  };
 }
 
 /**
@@ -150,7 +226,7 @@ export function traceLogged(activity, state = defaultTraceState()) {
 /**
  * @param {import("zod").infer<typeof TraceActivitySchema>} activity
  * @param {ReturnType<typeof defaultTraceState>} [state]
- * @param {{ type: string, leg?: string, effect?: string, option?: string }} action
+ * @param {{ type: string, leg?: string, effect?: string, support?: string, option?: string }} action
  */
 export function actTrace(activity, state = defaultTraceState(), action = { type: "" }) {
   const notebook = actNotebook(activity, state, action, traceFindings(activity, state));
@@ -161,6 +237,15 @@ export function actTrace(activity, state = defaultTraceState(), action = { type:
     const effect = activity.effects.find((item) => item.id === action.effect);
     if (!leg || !effect) return state;
     return { ...state, ledger: { ...state.ledger, [leg.id]: effect.id } };
+  }
+  if (action.type === "support") {
+    const leg = activity.legs.find((item) => item.id === action.leg);
+    const level = (activity.supportLevels || []).find((item) => item.id === action.support);
+    if (!leg || !level) return state;
+    // Refused until the leg's first question is right, matching the render: asking how far the
+    // record carries an answer the player has not settled on is asking about nothing.
+    if (!legStatus(activity, leg, state).effectRight) return state;
+    return { ...state, support: { ...state.support, [leg.id]: level.id } };
   }
   if (action.type === "file") {
     if (!traceLogged(activity, state)) return state;
@@ -184,10 +269,26 @@ export function renderTrace(activity, state = defaultTraceState()) {
       const options = activity.effects
         .map((effect) => {
           const chosen = status.chosen === effect.id;
-          const tone = chosen ? (status.correct ? " is-correct" : " is-wrong") : "";
+          const tone = chosen ? (status.effectRight ? " is-correct" : " is-wrong") : "";
           return `<button type="button" class="activity-effect${tone}" data-activity-action="log" data-leg="${escapeHtml(leg.id)}" data-effect="${escapeHtml(effect.id)}" aria-pressed="${chosen ? "true" : "false"}">${escapeHtml(effect.label)}</button>`;
         })
         .join("");
+      // The second question, and it only appears once the first is right. Two reasons: asking how
+      // far a record carries an answer the player has not settled on is asking about nothing, and
+      // nine buttons on one card is a form rather than a judgement.
+      const support =
+        status.asksSupport && status.effectRight
+          ? `<div class="activity-leg__support" role="group" aria-label="Support for leg ${index + 1}">
+      <p class="activity-leg__ask">${escapeHtml(activity.supportPrompt || "How far does this record carry that?")}</p>
+      ${activity.supportLevels
+        .map((level) => {
+          const chosen = status.supportChosen === level.id;
+          const tone = chosen ? (status.supportRight ? " is-correct" : " is-wrong") : "";
+          return `<button type="button" class="activity-support${tone}" data-activity-action="support" data-leg="${escapeHtml(leg.id)}" data-support="${escapeHtml(level.id)}" aria-pressed="${chosen ? "true" : "false"}">${escapeHtml(level.label)}</button>`;
+        })
+        .join("")}
+    </div>`
+          : "";
       return `<li class="activity-leg${status.correct ? " is-logged" : ""}">
     <div class="activity-leg__route">
       <span class="activity-leg__node">${escapeHtml(nodeLabel(leg.from))}</span>
@@ -200,6 +301,7 @@ export function renderTrace(activity, state = defaultTraceState()) {
       <dt>Whose hands</dt><dd>${escapeHtml(leg.actor)}</dd>
     </dl>
     <div class="activity-leg__ledger" role="group" aria-label="Ledger entry for leg ${index + 1}">${options}</div>
+    ${support}
     ${status.correct ? `<p class="activity-why is-correct">${escapeHtml(leg.why)}</p>` : ""}
   </li>`;
     })
@@ -224,7 +326,13 @@ export function renderTrace(activity, state = defaultTraceState()) {
 
 /**
  * What the trace has surfaced: one entry per leg the player has entered correctly, including the
- * legs whose correct answer is that the record does not reach that far.
+ * legs whose answer the record does not reach far enough to carry.
+ *
+ * The text is the *entry the player made*, not the paragraph explaining why it was right. That
+ * paragraph is `leg.why`, it is on the board from the moment the leg lands, and it stays there —
+ * whereas a finding is carried into the Field Notebook and, once filed, into the Codex, where four
+ * of them made a record three times the height of any other engine's (decision log `0058`). A
+ * notebook entry is a note. What the player concluded is the note; the argument is on the board.
  *
  * @param {import("zod").infer<typeof TraceActivitySchema>} activity
  * @param {ReturnType<typeof defaultTraceState>} [state]
@@ -232,7 +340,16 @@ export function renderTrace(activity, state = defaultTraceState()) {
 export function traceFindings(activity, state = defaultTraceState()) {
   return activity.legs
     .filter((leg) => legStatus(activity, leg, state).correct)
-    .map((leg) => ({ id: leg.id, text: leg.why, from: leg.actor }));
+    .map((leg) => {
+      const effect = activity.effects.find((item) => item.id === leg.effect);
+      const level = (activity.supportLevels || []).find((item) => item.id === leg.support);
+      const entry = [leg.label, effect?.label].filter(Boolean).join(" — ");
+      return {
+        id: leg.id,
+        text: level ? `${entry} (${level.label})` : entry,
+        from: leg.actor,
+      };
+    });
 }
 
 /**

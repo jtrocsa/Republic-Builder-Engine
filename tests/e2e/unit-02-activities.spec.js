@@ -48,16 +48,17 @@ const LOGGED_THREE = {
   },
 };
 
-// The four legs of the wharf account, in order, with the answer each one grades against.
+// The four legs of the wharf account, in order, with both answers each one grades against: what
+// happens here, and how far this page carries it (Phase 76).
 const LEGS = [
-  ["curing", "not-established"],
-  ["entering", "crown-revenue"],
-  ["crossing", "planter-credit"],
-  ["returning", "merchant-control"],
+  ["curing", "labor-cost", "not-shown"],
+  ["entering", "crown-revenue", "established"],
+  ["crossing", "planter-credit", "established"],
+  ["returning", "merchant-control", "inferred"],
 ];
 
 test.describe("TRACE, on its first mission", () => {
-  test("logs a chain leg by leg, and pays out only on the right entry", async ({ page }) => {
+  test("asks every leg twice, and pays out only when both land", async ({ page }) => {
     await seedProgress(page, {
       ...CASE_004,
       currentScreen: "trace",
@@ -71,31 +72,100 @@ test.describe("TRACE, on its first mission", () => {
     await expect(page.locator(".activity-subject")).toContainText("fourteen hogsheads");
     await expect(page.locator(".activity-leg")).toHaveCount(4);
 
-    // The closer is shut until every leg is logged correctly — including the one the record cannot
-    // establish, which is the leg most likely to be left blank.
+    // The closer is shut until every leg is logged correctly on both axes.
     await expect(page.locator(".activity-closer")).toHaveClass(/is-locked/);
     await expect(page.locator(".activity-option").first()).toBeDisabled();
 
-    // The first leg is the mission. `labor-cost` is true of the world and unsupported by this
-    // record, and it is offered on every leg precisely so it can be turned down here.
+    // The first leg is the mission, and it is now two moves rather than one. `labor-cost` is true
+    // of the world — the player met the people — and this page does not show it. Saying both is
+    // the whole lesson; before Phase 76 the second half was the only half you could say.
     const first = page.locator(".activity-leg").first();
+    // The support question does not exist until the first answer is right.
+    await expect(first.locator(".activity-leg__support")).toHaveCount(0);
+    await first.locator('[data-effect="planter-choice"]').click();
+    await expect(first.locator('[data-effect="planter-choice"]')).toHaveClass(/is-wrong/);
+    await expect(first.locator(".activity-leg__support")).toHaveCount(0);
+
     await first.locator('[data-effect="labor-cost"]').click();
-    await expect(first.locator('[data-effect="labor-cost"]')).toHaveClass(/is-wrong/);
+    // Right on the world question, and still not logged — the record question is now open.
+    await expect(first).not.toHaveClass(/is-logged/);
+    await expect(first.locator(".activity-leg__support")).toBeVisible();
     await expect(first.locator(".activity-why")).toHaveCount(0);
 
-    await first.locator('[data-effect="not-established"]').click();
+    await first.locator('[data-support="established"]').click();
+    await expect(first.locator('[data-support="established"]')).toHaveClass(/is-wrong/);
+    await expect(first).not.toHaveClass(/is-logged/);
+
+    await first.locator('[data-support="not-shown"]').click();
     await expect(first).toHaveClass(/is-logged/);
     await expect(first.locator(".activity-why")).toContainText("begins where the labor ends");
 
-    for (const [leg, effect] of LEGS.slice(1)) {
+    for (const [leg, effect, support] of LEGS.slice(1)) {
       await page.locator(`[data-leg="${leg}"][data-effect="${effect}"]`).click();
+      await page.locator(`[data-leg="${leg}"][data-support="${support}"]`).click();
     }
 
     await expect(page.locator(".activity-closer")).not.toHaveClass(/is-locked/);
     const stored = await readProgress(page);
-    expect(stored.sourceActivities["riverbend-ledger"].state.ledger).toEqual(
-      Object.fromEntries(LEGS)
+    const state = stored.sourceActivities["riverbend-ledger"].state;
+    expect(state.ledger).toEqual(Object.fromEntries(LEGS.map(([leg, effect]) => [leg, effect])));
+    expect(state.support).toEqual(
+      Object.fromEntries(LEGS.map(([leg, , support]) => [leg, support]))
     );
+  });
+
+  test("makes the player keep three of the four entries, and file on the right ones", async ({
+    page,
+  }) => {
+    // The notebook cap arrived with the split axis (Phase 76): four legs, three slots. The one you
+    // leave out is not a mistake — it is the part of the cargo the page cannot speak to.
+    await seedProgress(page, {
+      ...CASE_004,
+      currentScreen: "trace",
+      activeActivitySourceId: "riverbend-ledger",
+      sourceActivities: {
+        "riverbend-ledger": {
+          state: {
+            ledger: Object.fromEntries(LEGS.map(([leg, effect]) => [leg, effect])),
+            support: Object.fromEntries(LEGS.map(([leg, , support]) => [leg, support])),
+            filed: null,
+          },
+          completed: false,
+          briefed: true,
+        },
+      },
+    });
+    await loadSeededSave(page);
+
+    const notebook = page.locator(".evidence-notebook");
+    await expect(notebook).toBeVisible();
+    await expect(notebook.locator("h3")).toContainText("0 of 3");
+    // A notebook entry names the entry the player made, not the paragraph explaining why it was
+    // right — that paragraph is on the board and stays there (decision log 0058/0059).
+    await expect(notebook.locator(".evidence-notebook__entry").first()).toContainText(
+      "Cut leaf becomes a marked cask"
+    );
+    await expect(notebook.locator(".evidence-notebook__entry").first()).toContainText(
+      "Not shown by this account"
+    );
+
+    // Keep the labor leg and one other: a defensible-sounding notebook that cannot carry the
+    // conclusion, because the account does not reach the fields.
+    await page.locator('.evidence-notebook__keep[data-finding="curing"]').click();
+    await page.locator('.evidence-notebook__keep[data-finding="entering"]').click();
+    await page.locator('[data-activity-action="file"][data-option="dependence"]').click();
+
+    // Right conclusion, evidence that does not establish it — the third tone, neither pass nor fail.
+    await expect(page.locator(".activity-why.is-unsupported")).toContainText(
+      "The crossing and the return cargo are where this argument lives"
+    );
+    await expect(page.locator(".mission-debrief")).toHaveCount(0);
+
+    // Swap in what the argument actually rests on.
+    await page.locator('.evidence-notebook__release[data-finding="curing"]').click();
+    await page.locator('.evidence-notebook__keep[data-finding="crossing"]').click();
+    await page.locator('.evidence-notebook__keep[data-finding="returning"]').click();
+    await expect(page.locator(".mission-debrief")).toBeVisible();
   });
 
   test("the tracker names a trace but reports no ratio for it", async ({ page }) => {

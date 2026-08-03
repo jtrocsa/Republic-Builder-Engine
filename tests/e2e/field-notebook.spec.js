@@ -104,9 +104,11 @@ test.describe("The Field Notebook", () => {
       sourceActivities: {
         "riverbend-ledger": {
           state: {
-            // `curing` right, `entering` wrong: a leg only becomes a finding once it is entered
-            // correctly, so this seeds exactly one.
-            ledger: { curing: "not-established", entering: "planter-credit" },
+            // A leg becomes a finding only once *both* of its questions are right (Phase 76), so
+            // this seeds exactly one: `curing` complete, `entering` right on the world question and
+            // wrong on the record question.
+            ledger: { curing: "labor-cost", entering: "crown-revenue" },
+            support: { curing: "not-shown", entering: "not-shown" },
             filed: null,
           },
           completed: false,
@@ -118,8 +120,11 @@ test.describe("The Field Notebook", () => {
 
     const notebook = page.locator(".evidence-notebook");
     await expect(notebook).toBeVisible();
-    // Only the legs entered correctly become findings. The seed has one right and one wrong.
+    // Only the legs settled on both axes become findings. The seed has one of each.
     await expect(notebook.locator(".evidence-notebook__entry")).toHaveCount(1);
+    // And TRACE now declares a capacity, so this panel has the controls the interview's does not.
+    await expect(notebook.locator('[data-activity-action="keep"]')).toHaveCount(1);
+    await expect(notebook.locator("h3")).toContainText("0 of 3");
   });
 
   test("says so when nothing has been gathered yet (edge case)", async ({ page }) => {

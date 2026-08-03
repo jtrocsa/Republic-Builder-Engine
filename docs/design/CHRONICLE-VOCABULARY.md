@@ -88,6 +88,25 @@ determine why" exists so a student is never forced to guess at an author's inten
 | Explain the difference                  | Resolve the discrepancy        |
 | Reconsider                              | Misread                        |
 
+### TRACE's support axis
+
+Added Phase 76 (decision log `0059`). A trace asks each leg two questions, and they are different
+kinds of question — one about the world, one about the page.
+
+| id            | Label                                   | Means                                                   |
+| ------------- | --------------------------------------- | ------------------------------------------------------- |
+| `established` | The account states it                   | It is on the page                                       |
+| `inferred`    | Reasonable from the account, not stated | A good reading of what is on the page, not a line of it |
+| `not-shown`   | Not shown by this account               | True or not, this record cannot reach it                |
+
+**All three must be live, and none of them exactly once.** An axis where every leg answers the same
+way is a formality; an axis where one level is the answer exactly once is the odd-one-out puzzle this
+replaced. `inferred` is the load-bearing one — most of what a record supports it supports like this,
+and a two-level axis teaches that evidence is binary. Pinned by `tests/unit/activity-content.test.js`.
+
+"Not shown by this account" is a **support level**, never an effect. Putting it back in the `effects`
+list is the pre-Phase-76 design and re-creates the odd-one-out problem on the other field.
+
 ### Content hierarchy
 
 | Term                 | Means                                                        |

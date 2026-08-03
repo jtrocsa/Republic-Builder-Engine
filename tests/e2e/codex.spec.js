@@ -53,15 +53,26 @@ const FINISHED_INTERVIEW = {
 };
 
 // Case 2.01's trace, finished — a second unit, which is what makes a thread cross-unit.
+//
+// Both axes since Phase 76 (what happens on the leg, and how far the page carries it), plus the
+// notebook: the trace caps at three of four kept, and `dependence` names the two legs its argument
+// actually rests on, so an entry-less seed is a mission that is not finished.
 const FINISHED_TRACE = {
   "riverbend-ledger": {
     state: {
       ledger: {
-        curing: "not-established",
+        curing: "labor-cost",
         entering: "crown-revenue",
         crossing: "planter-credit",
         returning: "merchant-control",
       },
+      support: {
+        curing: "not-shown",
+        entering: "established",
+        crossing: "established",
+        returning: "inferred",
+      },
+      notebook: { kept: ["entering", "crossing", "returning"] },
       filed: "dependence",
     },
     completed: true,

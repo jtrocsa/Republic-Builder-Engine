@@ -6746,6 +6746,12 @@ dd {
   display: block;
   margin-top: 2px;
 }
+/* A rung of the hint ladder, before the full misread (Phase 76). Same list, quieter voice — a nudge
+   that looked as final as the explanation would read as the explanation. */
+.activity-misread li.is-hint span {
+  font-style: italic;
+  color: var(--c-text-secondary);
+}
 
 /* --- DISCREPANCY: record against observation --- */
 .activity-audit {
@@ -6841,7 +6847,8 @@ dd {
 }
 .activity-verdict,
 .activity-gap-kind,
-.activity-effect {
+.activity-effect,
+.activity-support {
   padding: 7px 13px;
   border: 1px solid var(--c-border);
   border-radius: var(--c-radius-pill);
@@ -6857,22 +6864,26 @@ dd {
 .activity-verdict:hover,
 .activity-gap-kind:hover,
 .activity-effect:hover,
+.activity-support:hover,
 .activity-verdict:focus-visible,
 .activity-gap-kind:focus-visible,
-.activity-effect:focus-visible {
+.activity-effect:focus-visible,
+.activity-support:focus-visible {
   border-color: var(--c-border-gold);
   color: var(--c-text);
 }
 .activity-verdict.is-correct,
 .activity-gap-kind.is-correct,
-.activity-effect.is-correct {
+.activity-effect.is-correct,
+.activity-support.is-correct {
   border-color: var(--c-success);
   background: rgba(70, 165, 124, 0.2);
   color: #dfffee;
 }
 .activity-verdict.is-wrong,
 .activity-gap-kind.is-wrong,
-.activity-effect.is-wrong {
+.activity-effect.is-wrong,
+.activity-support.is-wrong {
   border-color: var(--c-error);
   background: rgba(178, 75, 75, 0.18);
   color: #ffe3de;
@@ -6989,6 +7000,26 @@ dd {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+}
+/* The second question (Phase 76). Set apart rather than appended: it opens only once the first
+   answer is right, and it is asking about the record rather than about the world — running the two
+   groups together as one row of buttons would read as one longer question. */
+.activity-leg__support {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 11px 13px;
+  border: 1px solid var(--activity-edge);
+  border-radius: var(--c-radius-md);
+  background: rgba(var(--c-gold-rgb), 0.06);
+}
+.activity-leg__ask {
+  flex: 1 0 100%;
+  margin: 0;
+  font-family: "Spectral", serif;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--c-text);
 }
 
 /* The shell itself already collapses to one column at 1180px further down; only the audit's own

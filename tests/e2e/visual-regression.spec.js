@@ -377,6 +377,27 @@ test.describe("Gameplay visual-regression baselines", () => {
     });
     await expect(page.locator(".activity-board--trace")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("activity-trace"));
+
+    // The support axis, open (Phase 76). A leg asks its second question only once the first answer
+    // is right, so the control does not exist on the cold board above — and it is the whole of the
+    // change, so it needs a shot where it is on screen. On the element, because leg 1's card sits
+    // above the fold but its own support group does not once the `why` lands beneath it.
+    await setScreen(page, {
+      currentScreen: "trace",
+      activeCaseId: "case-004",
+      activeActivitySourceId: "riverbend-ledger",
+      sourceActivities: {
+        "riverbend-ledger": {
+          state: { ledger: { curing: "labor-cost" }, support: {}, filed: null },
+          completed: false,
+          briefed: true,
+        },
+      },
+    });
+    await expect(page.locator(".activity-leg__support")).toHaveCount(1);
+    await expect(page.locator(".activity-leg").first()).toHaveScreenshot(
+      snap("activity-trace-leg")
+    );
   });
 
   test("field: Philadelphia gathering ground (Unit 3)", async ({ page }) => {
@@ -801,11 +822,18 @@ test.describe("Gameplay visual-regression baselines", () => {
         "riverbend-ledger": {
           state: {
             ledger: {
-              curing: "not-established",
+              curing: "labor-cost",
               entering: "crown-revenue",
               crossing: "planter-credit",
               returning: "merchant-control",
             },
+            support: {
+              curing: "not-shown",
+              entering: "established",
+              crossing: "established",
+              returning: "inferred",
+            },
+            notebook: { kept: ["entering", "crossing", "returning"] },
             filed: "dependence",
           },
           completed: true,
