@@ -56,10 +56,10 @@ const QUESTION_NOBODY_ASKED = {
   howItWorks: {
     steps: [
       "You may ask any question to any person. Consider their position.",
-      "Most people will send you elsewhere. When someone gives you something worth keeping, press Log this response.",
+      "Most people will send you elsewhere. When someone gives you something worth keeping, press Add to Field Notebook.",
       "Seven people, seven accounts — one from each. That is the whole mission.",
     ],
-    note: "What you log is what you carry into Columbus's letter at the chart table. A question you never asked is a line of it you have no way to check.",
+    note: "What goes in your Field Notebook is what you carry into Columbus's letter at the chart table. A question you never asked is a line of it you have no way to check.",
   },
   briefing: {
     speaker: "taino-child",
@@ -225,6 +225,9 @@ const QUESTION_NOBODY_ASKED = {
   // see the end of — see this file's header, and 0052 for why the old pair of
   // numbers was the first thing the playtest tripped over.
   requires: { useful: 7, label: "Islanders' accounts secured" },
+  // The island sentence, now that it is content rather than a fact living inside the engine.
+  lockedNote:
+    "Every person on this island is holding one thing worth writing down. Find the rest before you file.",
   closer: {
     prompt:
       "Your notebook is above, in two panels: what the islanders told you, and what the Spanish party did. Two records of this island will now exist — theirs, and yours. What does the difference between them establish?",
@@ -501,14 +504,14 @@ const WHAT_WILL_BE_USEFUL = {
   id: "case-001-discrepancy-what-will-be-useful",
   title: "What Will Be Useful",
   intro:
-    "The letter goes to Castile whatever you do. What you decide is what the record says it is evidence of — and for each line that does not survive the island, whether it failed by mistake or by choice.",
+    "The letter goes to Castile whatever you do. What you decide is what the record says it is evidence of — and for each line the island does not bear out, why the two differ.",
   howItWorks: {
     steps: [
       "Read the letter first. All of it — the claims below are lines lifted out of it.",
-      "For each line, say whether what you gathered on the island supports it, contradicts it, or cannot settle it. One is simply true and one you have no way to judge; saying so is part of the work.",
-      "Land on contradicted and a second question opens: error, or design? A man can be wrong, and a man can be writing for someone.",
+      "For each line, say what your evidence does to it: supports it, complicates it, contradicts it, or is not enough to settle it. One line is simply true and one you have no way to judge; saying so is part of the work.",
+      "Land on contradicted and a second question opens: why does it differ? A man can be mistaken, and a man can be writing for someone.",
     ],
-    note: "The right-hand column holds only what you logged. Where it says you did not gather something, that is a line of this letter you have no way to check.",
+    note: "The right-hand column holds only what you added to your Field Notebook. Where it says you did not gather something, that is a line of this letter you have no way to check.",
   },
   briefing: {
     speaker: "columbus",
@@ -530,6 +533,16 @@ const WHAT_WILL_BE_USEFUL = {
       definition:
         "Ferdinand and Isabella of Castile and Aragon, who paid for this voyage and will decide whether there is another.",
     },
+    {
+      term: "Complicated by the evidence",
+      definition:
+        "The line is not wrong, and it is not the whole of it. What you gathered adds something the line leaves out.",
+    },
+    {
+      term: "Not enough evidence",
+      definition:
+        "Nothing you gathered settles it either way. This is a finding, not a failure — say so rather than guessing.",
+    },
   ],
   record: {
     label: "Letter Reporting on the First Voyage",
@@ -544,17 +557,27 @@ const WHAT_WILL_BE_USEFUL = {
     ],
   },
   verdictPrompt:
-    "For each line: does what you gathered on the island support it, contradict it, or leave you unable to tell?",
+    "For each line, decide what the evidence you gathered on the island actually does to it.",
   verdicts: [
-    { id: "supported", label: "Supported" },
-    { id: "contradicted", label: "Contradicted" },
-    { id: "cannot-tell", label: "Cannot tell" },
+    { id: "supported", label: "Supported by the evidence" },
+    { id: "complicated", label: "Complicated by the evidence" },
+    { id: "contradicted", label: "Contradicted by the evidence" },
+    { id: "cannot-tell", label: "Not enough evidence" },
   ],
   gapRequiredFor: "contradicted",
+  // The labels carry their own meaning now. These used to be "An error" and "A design" with a
+  // `note` gloss apiece, and the renderer has never printed a note — two authored sentences that
+  // no player could reach. The three additions are the rest of the reasons a record can differ
+  // from what you saw, and they are why the second question is no longer a coin flip.
   gapKinds: [
-    { id: "error", label: "An error", note: "He got it wrong." },
-    { id: "design", label: "A design", note: "It is written this way on purpose." },
+    { id: "error", label: "Mistake" },
+    { id: "design", label: "Deliberate framing" },
+    { id: "incomplete", label: "Incomplete information" },
+    { id: "perspective", label: "Different perspective" },
+    { id: "undetermined", label: "Not enough evidence to determine why" },
   ],
+  gapPrompt: "Why does the letter differ from what you gathered?",
+  lockedNote: "Settle every line of the letter before you file.",
   claims: [
     {
       id: "fertile",

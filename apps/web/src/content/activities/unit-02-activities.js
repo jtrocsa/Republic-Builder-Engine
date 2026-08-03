@@ -62,10 +62,10 @@ const BY_WHOSE_HEAD = {
   howItWorks: {
     steps: [
       "You may ask any question to any person. Consider their position.",
-      "Most people will send you elsewhere. When someone gives you something worth keeping, press Log this response.",
+      "Most people will send you elsewhere. When someone gives you something worth keeping, press Add to Field Notebook.",
       "Eight people, eight accounts — one from each. That is the whole mission.",
     ],
-    note: "What you log is what you carry into Richard Frethorne's letter at the field edge. A question you never asked is a line of it you have no way to check.",
+    note: "What goes in your Field Notebook is what you carry into Richard Frethorne's letter at the field edge. A question you never asked is a line of it you have no way to check.",
   },
   briefing: {
     speaker: "settlement-minister",
@@ -272,6 +272,8 @@ const BY_WHOSE_HEAD = {
   // guarantees Frethorne's audit a full evidence column however the player got
   // here (0052 §3).
   requires: { useful: 8, label: "Accounts secured" },
+  lockedNote:
+    "Everyone here is holding one thing worth writing down. Find the rest before you file.",
   closer: {
     prompt:
       "Your notebook is above, in two panels: the settlement's own people, and the country it stands in. The charter grants fifty acres a head. Reading what you actually collected — whose heads, and whose acres?",
@@ -339,10 +341,10 @@ const NOTHING_TO_BE_GOTTEN = {
   howItWorks: {
     steps: [
       "Read the letter first. All of it — the lines below are lifted straight out of it.",
-      "For each line, say whether what you gathered at Riverbend supports it, contradicts it, or cannot settle it. He is not wrong about everything: two your evidence backs, and one you have no way to judge.",
-      "Land on contradicted and a second question opens: was he wrong, or right about his own corner of a settlement that is not one condition?",
+      "For each line, say what your evidence does to it: supports it, complicates it, contradicts it, or is not enough to settle it. He is not wrong about everything: two your evidence backs, and one you have no way to judge.",
+      "Land on contradicted and a second question opens: why does it differ? He can be mistaken, and he can be exactly right about his own corner of a settlement that is not one condition.",
     ],
-    note: "The right-hand column holds only what you logged. Where it says you did not gather something, that is a line of this letter you have no way to check.",
+    note: "The right-hand column holds only what you added to your Field Notebook. Where it says you did not gather something, that is a line of this letter you have no way to check.",
   },
   briefing: {
     speaker: "indentured-servant",
@@ -364,6 +366,16 @@ const NOTHING_TO_BE_GOTTEN = {
       definition:
         "Fifty acres granted for every person transported — to whoever paid the passage. Frethorne's crossing earned somebody fifty acres. It was not Frethorne.",
     },
+    {
+      term: "Complicated by the evidence",
+      definition:
+        "The line is not wrong, and it is not the whole of it. What you gathered adds something the line leaves out.",
+    },
+    {
+      term: "Not enough evidence",
+      definition:
+        "Nothing you gathered settles it either way. This is a finding, not a failure — say so rather than guessing.",
+    },
   ],
   record: {
     label: "Letter to His Parents from Martin's Hundred",
@@ -378,25 +390,26 @@ const NOTHING_TO_BE_GOTTEN = {
     ],
   },
   verdictPrompt:
-    "For each line: does what you gathered at Riverbend support it, contradict it, or leave you unable to tell?",
+    "For each line, decide what the evidence you gathered at Riverbend actually does to it.",
   verdicts: [
-    { id: "supported", label: "Supported" },
-    { id: "contradicted", label: "Contradicted" },
-    { id: "cannot-tell", label: "Cannot tell" },
+    { id: "supported", label: "Supported by the evidence" },
+    { id: "complicated", label: "Complicated by the evidence" },
+    { id: "contradicted", label: "Contradicted by the evidence" },
+    { id: "cannot-tell", label: "Not enough evidence" },
   ],
   gapRequiredFor: "contradicted",
+  // Same five reasons as Case 1.01's audit, so a student who learned them at the chart table is
+  // not relearning a vocabulary at the wharf. The two Riverbend already used keep their ids —
+  // "He was wrong" was Mistake all along, and "True where he stands" was Different perspective.
   gapKinds: [
-    {
-      id: "he-was-wrong",
-      label: "He was wrong",
-      note: "Being here did not make him right about it.",
-    },
-    {
-      id: "not-one-place",
-      label: "True where he stands",
-      note: "Right about his own position; the settlement is not one condition.",
-    },
+    { id: "he-was-wrong", label: "Mistake" },
+    { id: "not-one-place", label: "Different perspective" },
+    { id: "design", label: "Deliberate framing" },
+    { id: "incomplete", label: "Incomplete information" },
+    { id: "undetermined", label: "Not enough evidence to determine why" },
   ],
+  gapPrompt: "Why does the letter differ from what you gathered?",
+  lockedNote: "Settle every line of the letter before you file.",
   claims: [
     {
       id: "sickness-country",
@@ -568,14 +581,14 @@ const ONE_HOGSHEAD = {
   id: "case-004-trace-one-hogshead",
   title: "One Hogshead",
   intro:
-    "Fourteen casks of tobacco left this landing and three pieces of Kentish cloth, two dozen iron hoes and six dozen knives came back. Follow one cask the whole way and log what the account can actually establish at each step — and what it cannot.",
+    "Fourteen casks of tobacco left this landing and three pieces of Kentish cloth, two dozen iron hoes and six dozen knives came back. Follow one cask the whole way and enter what the account actually supports at each step — and what it does not.",
   howItWorks: {
     steps: [
       "The cask moves in four legs, in order. Each says what changes and whose hands it passes through.",
-      "For every leg, choose the one entry this wharf account establishes. A leg stays open until you have it right.",
-      "One choice means the account does not establish this. It is a real answer and it is correct at least once.",
+      "For every leg, choose the one entry this wharf account supports. A leg stays open until you have it right.",
+      "One choice means the account does not show this. It is a real answer and it is correct at least once.",
     ],
-    note: "Something you know from walking this settlement is not the same as something this page proves. Log what the page proves, then file.",
+    note: "Something you know from walking this settlement is not the same as something this page supports. Enter what the page supports, then file.",
   },
   briefing: {
     speaker: "wharf-clerk",
@@ -617,7 +630,7 @@ const ONE_HOGSHEAD = {
   effects: [
     {
       id: "not-established",
-      label: "The account does not establish this",
+      label: "Not shown by this account",
       note: "The record does not reach this far.",
     },
     { id: "crown-revenue", label: "The Crown takes its share in duty" },
@@ -673,7 +686,7 @@ const ONE_HOGSHEAD = {
   ],
   closer: {
     prompt:
-      "Four legs logged. Your reading goes into the record — what is a wharf account like this one evidence of?",
+      "Four legs entered. Your reading goes into the record — what is a wharf account like this one evidence of?",
     skillCategory: "Economic Systems",
     options: [
       {
@@ -686,7 +699,7 @@ const ONE_HOGSHEAD = {
         id: "labor",
         text: "That the settlement's wealth was produced by bound labor",
         correct: false,
-        why: "It was. You met them. But you logged the first leg as not established for exactly this reason: this account opens at the landing with the casks already made, and it never names a single pair of hands. Reading a true fact out of a record that does not contain it is the most comfortable mistake in this discipline, because you are right about the world and wrong about the evidence — and a Chronicler is answerable for the record.",
+        why: "It was. You met them. But you entered the first leg as not shown by this account for exactly this reason: it opens at the landing with the casks already made, and it never names a single pair of hands. Reading a true fact out of a record that does not contain it is the most comfortable mistake in this discipline, because you are right about the world and wrong about the evidence — and a Chronicler is answerable for the record.",
       },
       {
         id: "prosperity",

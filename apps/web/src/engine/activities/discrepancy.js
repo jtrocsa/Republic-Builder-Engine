@@ -1,11 +1,17 @@
 // DISCREPANCY — the player checks an authoritative record against what they can
-// actually observe, then decides whether each gap is an error or a design.
+// actually observe, then explains the difference wherever the evidence permits it.
 //
 // The mechanic, with the subject stripped off: a list of claims, a list of
-// observations, a verdict per claim, and — for claims that fail — a second
-// question about *why* they fail. The second question is the whole engine.
-// Anyone can notice that a document is wrong; the move worth teaching is
-// telling a mistake apart from a choice.
+// observations, a verdict per claim, and — for claims the record does not simply
+// support — a second question about *why* they differ. The second question is the
+// whole engine. Anyone can notice that a document is wrong; the move worth
+// teaching is telling a mistake apart from a choice, and telling both apart from
+// not yet knowing which it was.
+//
+// Both lists are content, deliberately. A verdict set of "supported by the
+// evidence / complicated by the evidence / contradicted by the evidence / not
+// enough evidence" is a claim about how history is argued, and an engine that
+// hard-coded it would be making that claim on every subject's behalf.
 //
 // The observation column is the transferable hook for cause and effect: an
 // entry may declare `requires`, an opaque token the host resolves against what
@@ -49,8 +55,8 @@ export const DiscrepancyActivitySchema = z
       text: z.array(z.string().min(1)).min(1).optional(),
     }),
     // The verdicts are content, not an enum, because what counts as a verdict
-    // differs by subject — "supported / contradicted / cannot tell" here,
-    // "matches / overstated / not itemised" in an accounts audit.
+    // differs by subject — "supported / complicated / contradicted / not enough
+    // evidence" here, "matches / overstated / not itemised" in an accounts audit.
     verdicts: z.array(LabelledSchema).min(2, "a discrepancy needs at least two verdicts"),
     // The standing instruction above the claim list: what the player is being
     // asked to compare against what. Three bare verdict buttons do not say
@@ -58,7 +64,19 @@ export const DiscrepancyActivitySchema = z
     verdictPrompt: z.string().min(1).optional(),
     // Which verdict means "this failed, now say why". Naming it in content is
     // what keeps the engine from having to know that "contradicted" is special.
-    gapRequiredFor: z.string().min(1, "gapRequiredFor is required"),
+    //
+    // A list, or one id for the common case. More than one verdict can want the second question:
+    // once "complicated by the evidence" exists beside "contradicted by the evidence", both are
+    // claims the record does not simply support, and both are worth asking why about. A bare
+    // string stays valid and means a list of one, so shipped content parses unchanged.
+    gapRequiredFor: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+    // The second question, in the words of the subject asking it.
+    //
+    // This was `<p>Is that gap an error, or a design?</p>` in the renderer — an engine that had
+    // already handed `gapKinds` to content and then hard-coded two of their labels back into its
+    // own prose. An audit whose kinds are "mistake / different perspective / not enough evidence
+    // to determine why" was being asked a question about none of them.
+    gapPrompt: z.string().min(1).optional(),
     gapKinds: z.array(LabelledSchema).min(2, "a discrepancy needs at least two gap kinds"),
     claims: z
       .array(
@@ -94,13 +112,16 @@ export const DiscrepancyActivitySchema = z
     const verdictIds = new Set(activity.verdicts.map((verdict) => verdict.id));
     const gapIds = new Set(activity.gapKinds.map((kind) => kind.id));
 
-    if (!verdictIds.has(activity.gapRequiredFor)) {
+    gapVerdicts(activity).forEach((verdictId, index) => {
+      if (verdictIds.has(verdictId)) return;
       ctx.addIssue({
         code: "custom",
-        path: ["gapRequiredFor"],
-        message: `gapRequiredFor "${activity.gapRequiredFor}" is not one of the authored verdicts.`,
+        path: Array.isArray(activity.gapRequiredFor)
+          ? ["gapRequiredFor", index]
+          : ["gapRequiredFor"],
+        message: `gapRequiredFor "${verdictId}" is not one of the authored verdicts.`,
       });
-    }
+    });
 
     activity.claims.forEach((claim, index) => {
       if (!verdictIds.has(claim.verdict)) {
@@ -110,7 +131,7 @@ export const DiscrepancyActivitySchema = z
           message: `Claim "${claim.id}" has unknown verdict "${claim.verdict}".`,
         });
       }
-      const expectsGap = claim.verdict === activity.gapRequiredFor;
+      const expectsGap = needsGap(activity, claim);
       if (expectsGap && !claim.gap) {
         ctx.addIssue({
           code: "custom",
@@ -139,8 +160,19 @@ export function defaultDiscrepancyState() {
   return { verdicts: {}, gaps: {}, filed: null };
 }
 
+/**
+ * The verdicts that open the second question, always as a list.
+ *
+ * Function declaration rather than a const so the schema's own `.superRefine()` above can call it
+ * — both are evaluated at module load, and only a declaration is hoisted that far.
+ */
+function gapVerdicts(activity) {
+  const required = activity.gapRequiredFor;
+  return Array.isArray(required) ? required : required ? [required] : [];
+}
+
 function needsGap(activity, claim) {
-  return claim.verdict === activity.gapRequiredFor;
+  return gapVerdicts(activity).includes(claim.verdict);
 }
 
 /**
@@ -156,8 +188,8 @@ export function claimStatus(activity, claim, state = defaultDiscrepancyState()) 
   const chosenGap = state.gaps?.[claim.id] ?? null;
   const verdictRight = chosenVerdict === claim.verdict;
   // The gap question only exists once the player has landed the verdict that
-  // opens it — asking "error or design?" about a claim they think is supported
-  // would give the verdict away.
+  // opens it — asking why a claim differs from the evidence, about a claim the
+  // player has just called supported, would give the verdict away.
   const gapOpen = verdictRight && needsGap(activity, claim);
   const gapRight = !gapOpen || chosenGap === claim.gap;
   return {
@@ -245,7 +277,7 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
 
       const gapBlock = status.gapOpen
         ? `<div class="activity-gap">
-      <p>Is that gap an error, or a design?</p>
+      <p>${escapeHtml(activity.gapPrompt || "Why does the record differ from what you gathered?")}</p>
       <div class="activity-gap__options">${activity.gapKinds
         .map((kind) => {
           const chosen = status.chosenGap === kind.id;
@@ -286,13 +318,13 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
       <ol class="activity-claims">${claims}</ol>
     </div>
     <aside class="activity-audit__observed">
-      <h3>What you gathered <em>${available.length} of ${activity.observed.length}</em></h3>
+      <h3>Evidence available to you <em>${available.length} of ${activity.observed.length}</em></h3>
       <ul class="activity-observations">${observations}</ul>
     </aside>
   </div>
   ${renderCloser(activity.closer, state.filed, {
     locked: !settled,
-    lockedNote: "Settle every line of the record before you file.",
+    lockedNote: activity.lockedNote || "Settle every line of the record before you file.",
   })}
 </section>`;
 }

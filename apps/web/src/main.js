@@ -9740,7 +9740,7 @@ function fieldTrackerMissionBlock(tracked) {
   const summary = activitySummary(activity.kind, activity, state);
   const done = isActivityComplete(activity.kind, activity, state);
   const line = done
-    ? `<p class="field-tracker__progress is-done">✓ Filed — your notes are still here</p>`
+    ? `<p class="field-tracker__progress is-done">✓ Filed — your Field Notebook is still here</p>`
     : summary
       ? `<p class="field-tracker__progress"><span>${esc(summary.label)}</span><b>${summary.done}/${summary.total}</b></p>`
       : "";
@@ -9748,7 +9748,7 @@ function fieldTrackerMissionBlock(tracked) {
   // count — so it gets its row and its button and nothing in between, which is the honest answer
   // rather than a gap to fill.
   const bar = summary ? fieldTrackerBar(done ? summary.total : summary.done, summary.total) : "";
-  return `<div class="field-tracker__mission">${line}${bar}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">Open your notebook →</button></div>`;
+  return `<div class="field-tracker__mission">${line}${bar}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">Open the Field Notebook →</button></div>`;
 }
 
 /**
@@ -10530,7 +10530,7 @@ function sourceReader() {
   const sealedNote = readerQuests.length
     ? "Answer both questions correctly first. The context note will then fill in what the record itself cannot tell you."
     : "Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.";
-  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1>${promptSection}${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>${esc(sealedNote)}</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Secured in Codex ✓" : "Secure in Codex →"}</button></section></main>`;
+  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1>${promptSection}${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>${esc(sealedNote)}</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Filed in the Codex ✓" : "File in the Codex →"}</button></section></main>`;
 }
 
 function codexScreen() {
@@ -10541,7 +10541,7 @@ function codexScreen() {
       return `<article class="codex-entry ${secured ? "" : "locked"}"><span>${esc(source.type)}</span><h2>${esc(source.title)}</h2><p>${secured ? esc(progress.responses[source.id] || "Evidence record secured.") : "Secure this record in the field to add it to the Codex."}</p>${secured ? `<button class="text-button" data-action="open-source" data-source="${source.id}" data-origin="codex">Open record →</button>` : ""}</article>`;
     })
     .join("");
-  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>Evidence Satchel</h1><p>Temporary records for the current case. Your initial notes stay attached to the evidence you secured.</p></section><section class="codex-grid">${entries}</section></main>`;
+  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>The Codex</h1><p>Records filed on this case. Your initial reading stays attached to each one.</p></section><section class="codex-grid">${entries}</section></main>`;
 }
 
 // Aggregates progress.skillMastery (one upserted entry per graded quest

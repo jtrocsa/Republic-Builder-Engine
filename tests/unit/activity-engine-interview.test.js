@@ -384,7 +384,7 @@ describe("rendering", () => {
 
     const logged = actInterview(activity(), asked, { type: "log", speaker: "elder" });
     const after = renderInterviewInline(activity(), logged, "elder");
-    expect(after).toContain("In your notebook");
+    expect(after).toContain("In your Field Notebook");
     expect(after).not.toContain('data-activity-action="log"');
   });
 
@@ -403,7 +403,7 @@ describe("rendering", () => {
     });
     state = askAndLog(state, "elder", "grows");
     const markup = renderInterview(activity(), state);
-    expect(markup).toContain("Heard, not logged");
+    expect(markup).toContain("Heard — not recorded");
     expect(markup).toContain("is-useful");
     expect(markup).toContain("is-unasked");
   });

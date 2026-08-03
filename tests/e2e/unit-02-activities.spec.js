@@ -233,7 +233,9 @@ test.describe("INTERVIEW, at Riverbend", () => {
     await expect(bubble.locator(".field-interview__answer")).toHaveClass(/is-useful/);
 
     await bubble.locator(".field-interview__log").click();
-    await expect(bubble.locator(".field-interview__logged")).toContainText("In your notebook");
+    await expect(bubble.locator(".field-interview__logged")).toContainText(
+      "In your Field Notebook"
+    );
     await expect(page.locator(".field-tracker__progress b")).toHaveText("4/8");
   });
 

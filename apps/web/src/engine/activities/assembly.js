@@ -414,7 +414,8 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
   ${boards}
   ${renderCloser(activity.closer, state.filed, {
     locked: !solved,
-    lockedNote: "Finish the reconstruction before you decide what it can evidence.",
+    lockedNote:
+      activity.lockedNote || "Finish the reconstruction before you decide what it can support.",
   })}
 </section>`;
 }

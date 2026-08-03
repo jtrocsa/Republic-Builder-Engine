@@ -207,7 +207,9 @@ export function renderTrace(activity, state = defaultTraceState()) {
   <ol class="activity-legs">${legs}</ol>
   ${renderCloser(activity.closer, state.filed, {
     locked: !logged,
-    lockedNote: "Log every leg before you file — including the ones the record cannot establish.",
+    lockedNote:
+      activity.lockedNote ||
+      "Account for every leg before you file — including the ones this record does not support.",
   })}
 </section>`;
 }

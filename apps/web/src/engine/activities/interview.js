@@ -365,8 +365,8 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
     !answer || !answer.authored
       ? ""
       : logged.includes(showing)
-        ? `<p class="field-interview__logged">✓ In your notebook</p>`
-        : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Log this response</button>`;
+        ? `<p class="field-interview__logged">✓ In your Field Notebook</p>`
+        : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Add to Field Notebook</button>`;
   return `<div class="field-interview">
   ${
     answer
@@ -403,7 +403,7 @@ function notebookTable(activity, state, speakers) {
             return `<td class="${answer.useful ? "is-useful" : "is-flat"}">${mark}${escapeHtml(answer.text)}</td>`;
           }
           if (asked.includes(question.id)) {
-            return `<td class="is-heard"><span>Heard, not logged</span></td>`;
+            return `<td class="is-heard"><span>Heard — not recorded</span></td>`;
           }
           return `<td class="is-unasked"><span class="visually-hidden">Not asked</span></td>`;
         })
@@ -456,8 +456,12 @@ export function renderInterview(activity, state = defaultInterviewState()) {
   ${panels}
   ${renderCloser(activity.closer, state.filed, {
     locked: !coverage.met,
+    // The default is deliberately placeless. The literal that used to sit here read "Every person
+    // on this *island*…" — a fact about the Caribbean, in a folder whose rule is that it holds
+    // none. Whoever authored the island can say so through `lockedNote`.
     lockedNote:
-      "Every person on this island is holding one thing worth writing down. Find the rest before you file.",
+      activity.lockedNote ||
+      "There is more testimony worth writing down. Gather the rest before you file.",
   })}
 </section>`;
 }

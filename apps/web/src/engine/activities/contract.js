@@ -104,6 +104,16 @@ export const COMMON_ACTIVITY_FIELDS = {
   briefing: BriefingSchema.nullable().default(null),
   howItWorks: HowItWorksSchema.optional(),
   terms: TermsSchema.optional(),
+  // What the closer says while it is still locked — "you are not finished, and here is what
+  // finished looks like."
+  //
+  // This is content because the four engines were each carrying their own sentence, and one of
+  // them had a fact in it: INTERVIEW's read "Every person on this *island* is holding one thing
+  // worth writing down," which is an engine that knows it is on an island. `engine/`'s whole rule
+  // is that it knows nothing about the subject, so the sentence belongs to whoever authored the
+  // island. Each engine keeps its own literal as the fallback, so an activity that declares
+  // nothing renders exactly as it did before.
+  lockedNote: z.string().min(1).optional(),
 };
 
 /**

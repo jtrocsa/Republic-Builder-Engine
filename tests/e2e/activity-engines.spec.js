@@ -110,7 +110,9 @@ test.describe("INTERVIEW, out on the map", () => {
     expect(progress.sourceActivities["taino-context"].state.logged["taino-child"]).toBeUndefined();
 
     await bubble.locator(".field-interview__log").click();
-    await expect(bubble.locator(".field-interview__logged")).toContainText("In your notebook");
+    await expect(bubble.locator(".field-interview__logged")).toContainText(
+      "In your Field Notebook"
+    );
     await expect(bubble.locator(".field-interview__log")).toHaveCount(0);
 
     progress = await readProgress(page);
@@ -280,7 +282,9 @@ test.describe("ASSEMBLY", () => {
 });
 
 test.describe("DISCREPANCY", () => {
-  test("opens the error-or-design question only once the verdict is landed", async ({ page }) => {
+  test("opens the why-does-it-differ question only once the verdict is landed", async ({
+    page,
+  }) => {
     await seedProgress(page, {
       ...CASE_001,
       currentScreen: "discrepancy",
@@ -294,13 +298,14 @@ test.describe("DISCREPANCY", () => {
     // The letter itself, and who it is for, before any of it is broken into claims.
     await expect(page.locator(".activity-transcript")).toContainText("Hispaniola is a marvel");
     await expect(page.locator(".activity-verdict-prompt")).toContainText(
-      "support it, contradict it"
+      "what the evidence you gathered on the island actually does to it"
     );
 
     const claim = page.locator(".activity-claim").filter({ hasText: "great mines of gold" });
     await expect(claim.locator(".activity-gap")).toHaveCount(0);
 
-    // A wrong verdict must not open it — being shown "error or design?" would give the answer away.
+    // A wrong verdict must not open it — being shown "why does it differ?" would give the answer
+    // away, since the question only makes sense about a claim the record does not simply support.
     await claim.locator('[data-verdict="supported"]').click();
     await expect(claim.locator(".activity-gap")).toHaveCount(0);
 
