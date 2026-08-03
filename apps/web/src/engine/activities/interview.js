@@ -27,11 +27,14 @@ import { z } from "zod";
 import {
   COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
+  actNotebook,
   checkUniqueIds,
   closerResult,
   closerSkillOutcomes,
   escapeHtml,
+  notebookKept,
   renderCloser,
+  renderNotebook,
 } from "./contract.js";
 
 const AnswerSchema = z.object({
@@ -166,9 +169,14 @@ export function defaultInterviewState() {
   // asked[speakerId] is ordered and the last entry is what the bubble is
   // showing, which is how re-reading an earlier answer costs no extra state:
   // asking again moves that question to the end rather than duplicating it.
-  // logged[speakerId] is the notebook, and is deliberately a separate list —
-  // everything downstream counts logged, never asked.
-  return { asked: {}, logged: {}, filed: null };
+  // logged[speakerId] is what the player wrote down, and is deliberately a
+  // separate list — everything downstream counts logged, never asked.
+  //
+  // `notebook.kept` is the third and narrowest list: of everything written down,
+  // which few pieces the player will stand behind. Only read when the activity
+  // declares a `notebook`; absent on every save written before Phase 72, which is
+  // why every reader of it goes through contract.js's defensive accessor.
+  return { asked: {}, logged: {}, filed: null, notebook: { kept: [] } };
 }
 
 /** @param {ReturnType<typeof defaultInterviewState>} [state] */
@@ -250,6 +258,11 @@ export function interviewSummary(activity, state = defaultInterviewState()) {
  * @param {{ type: string, speaker?: string, question?: string, option?: string }} action
  */
 export function actInterview(activity, state = defaultInterviewState(), action = { type: "" }) {
+  // The Field Notebook's two verbs first. It returns the same state reference for anything it does
+  // not own, so this falls straight through for `ask`/`log`/`file`.
+  const notebook = actNotebook(activity, state, action, interviewFindings(activity, state));
+  if (notebook !== state) return notebook;
+
   if (action.type === "ask") {
     const speaker = activity.speakers.find((item) => item.id === action.speaker);
     const question = activity.questions.find((item) => item.id === action.question);
@@ -282,10 +295,34 @@ export function actInterview(activity, state = defaultInterviewState(), action =
     // complete.
     if (!interviewCoverage(activity, state).met) return state;
     const option = activity.closer.options.find((item) => item.id === action.option);
+    // Filing an unsupported conclusion is deliberately allowed — the closer answers with what the
+    // evidence does not carry, which is the feedback worth having. `isComplete` is what withholds
+    // the win.
     return option ? { ...state, filed: option.id } : state;
   }
 
   return state;
+}
+
+/**
+ * What this interview has surfaced that is worth carrying: every useful answer the player logged.
+ *
+ * Split out of `interviewOutcome()` so the shared Field Notebook can be handed the list without
+ * `contract.js` learning what a speaker is.
+ *
+ * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
+ * @param {ReturnType<typeof defaultInterviewState>} [state]
+ */
+export function interviewFindings(activity, state = defaultInterviewState()) {
+  const findings = [];
+  activity.speakers.forEach((speaker) => {
+    loggedFor(state, speaker.id).forEach((questionId) => {
+      const answer = interviewAnswer(speaker, questionId);
+      if (!answer.useful) return;
+      findings.push({ id: `${speaker.id}:${questionId}`, text: answer.text, from: speaker.name });
+    });
+  });
+  return findings;
 }
 
 /**
@@ -451,9 +488,11 @@ export function renderInterview(activity, state = defaultInterviewState()) {
         .join("")
     : notebookTable(activity, state, activity.speakers);
 
+  const findings = interviewFindings(activity, state);
   return `<section class="activity-board activity-board--interview">
   <div class="activity-progress">${goals}</div>
   ${panels}
+  ${renderNotebook(activity, state, findings)}
   ${renderCloser(activity.closer, state.filed, {
     locked: !coverage.met,
     // The default is deliberately placeless. The literal that used to sit here read "Every person
@@ -462,6 +501,7 @@ export function renderInterview(activity, state = defaultInterviewState()) {
     lockedNote:
       activity.lockedNote ||
       "There is more testimony worth writing down. Gather the rest before you file.",
+    kept: notebookKept(activity, state, findings),
   })}
 </section>`;
 }
@@ -471,9 +511,9 @@ export function renderInterview(activity, state = defaultInterviewState()) {
  * @param {ReturnType<typeof defaultInterviewState>} [state]
  */
 export function isInterviewComplete(activity, state = defaultInterviewState()) {
-  return (
-    interviewCoverage(activity, state).met && closerResult(activity.closer, state.filed).correct
-  );
+  const kept = notebookKept(activity, state, interviewFindings(activity, state));
+  const result = closerResult(activity.closer, state.filed, kept);
+  return interviewCoverage(activity, state).met && result.correct && result.supported;
 }
 
 /**
@@ -481,16 +521,10 @@ export function isInterviewComplete(activity, state = defaultInterviewState()) {
  * @param {ReturnType<typeof defaultInterviewState>} [state]
  */
 export function interviewOutcome(activity, state = defaultInterviewState()) {
-  const findings = [];
-  activity.speakers.forEach((speaker) => {
-    loggedFor(state, speaker.id).forEach((questionId) => {
-      const answer = interviewAnswer(speaker, questionId);
-      if (!answer.useful) return;
-      findings.push({ id: `${speaker.id}:${questionId}`, text: answer.text, from: speaker.name });
-    });
-  });
+  const findings = interviewFindings(activity, state);
   return {
     findings,
+    evidence: notebookKept(activity, state, findings),
     skillOutcomes: closerSkillOutcomes(activity.id, activity.closer, state.filed),
   };
 }

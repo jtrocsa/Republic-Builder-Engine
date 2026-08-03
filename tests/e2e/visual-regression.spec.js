@@ -307,6 +307,12 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page.locator(".activity-board--interview")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("activity-interview-riverbend"));
 
+    // The Field Notebook (Phase 72). Baselined on the element rather than the viewport, because it
+    // sits below the fold on every activity screen — which is exactly why it shipped without moving
+    // a single one of the other baselines, and why it needs one of its own. Eight accounts taken
+    // makes it the fullest the panel gets in shipped content.
+    await expect(page.locator(".evidence-notebook")).toHaveScreenshot(snap("field-notebook"));
+
     await setScreen(page, {
       currentScreen: "discrepancy",
       activeCaseId: "case-004",

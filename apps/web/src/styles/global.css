@@ -5840,6 +5840,14 @@ dd {
 .activity-why.is-locked {
   font-style: italic;
 }
+/* Filed the defensible conclusion without the evidence to argue it. Deliberately neither the green
+   nor the red: the player has not made a mistake, they have not finished. Amber, from the palette's
+   own --c-warning, is the third thing. */
+.activity-why.is-unsupported {
+  border-left-color: var(--c-warning);
+  background: rgba(var(--c-gold-rgb), 0.12);
+  color: #fbeecb;
+}
 
 /* --- the closer: the one graded moment every engine ends on --- */
 .activity-closer {
@@ -5895,6 +5903,122 @@ dd {
 .activity-option.is-wrong {
   border-color: var(--c-error);
   background: rgba(178, 75, 75, 0.18);
+}
+.activity-option.is-unsupported {
+  border-color: var(--c-warning);
+  background: rgba(var(--c-gold-rgb), 0.14);
+}
+/* --- the Field Notebook: what you found, and what of it you will stand behind ---
+
+   Its own root class, never an `.activity-board` variant. That class is shared with the practice
+   check, Archive Challenges and the ten non-map missions, and an unscoped rule on it re-lays every
+   quest list in the game — which is exactly what happened in Phase 68 with a bare `display: grid`.
+   Rendered by all four engines, immediately above the closer. */
+.evidence-notebook {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--c-radius-lg);
+  background: rgba(var(--c-black-rgb), 0.2);
+}
+.evidence-notebook h3 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.96rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-secondary);
+}
+.evidence-notebook h3 em {
+  flex: none;
+  font-style: normal;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--gold);
+}
+.evidence-notebook__prompt,
+.evidence-notebook__empty,
+.evidence-notebook__full {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
+.evidence-notebook__empty {
+  font-style: italic;
+  opacity: 0.75;
+}
+.evidence-notebook__full {
+  padding: 9px 12px;
+  border-left: 3px solid var(--c-warning);
+  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
+  background: rgba(var(--c-gold-rgb), 0.1);
+  color: #fbeecb;
+}
+.evidence-notebook__entries {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.evidence-notebook__entry {
+  display: grid;
+  gap: 7px;
+  justify-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-left: 3px solid var(--activity-edge);
+  border-radius: 0 var(--c-radius-md) var(--c-radius-md) 0;
+  background: rgba(var(--c-white-rgb), 0.04);
+}
+.evidence-notebook__entry.is-kept {
+  border-left-color: var(--gold);
+  background: rgba(var(--c-gold-rgb), 0.09);
+}
+.evidence-notebook__entry p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+.evidence-notebook__entry cite {
+  font-size: 0.78rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-secondary);
+  opacity: 0.8;
+}
+.evidence-notebook__keep,
+.evidence-notebook__release {
+  padding: 6px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-pill);
+  background: rgba(var(--c-white-rgb), 0.05);
+  color: var(--c-text-secondary);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    border-color var(--c-dur-fast) ease,
+    background var(--c-dur-fast) ease;
+}
+.evidence-notebook__keep:hover:not(:disabled),
+.evidence-notebook__keep:focus-visible,
+.evidence-notebook__release:hover,
+.evidence-notebook__release:focus-visible {
+  border-color: var(--c-border-gold);
+  color: var(--c-text);
+}
+.evidence-notebook__keep:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 .activity-footer {
   display: grid;

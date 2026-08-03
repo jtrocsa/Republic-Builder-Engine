@@ -86,6 +86,31 @@ export const TermsSchema = z
   .min(1);
 
 /**
+ * The Field Notebook: how much of what you found you are allowed to carry.
+ *
+ * Declaring this turns the notebook from a review panel into a decision. Without it every finding
+ * is kept, which is what all six pre-Phase-72 activities do and what they keep doing.
+ *
+ * `capacity` deliberately caps what you **keep**, not what you **gather**. Both shipped interviews
+ * ask for every useful answer on the map (`requires.useful === speakers.length`), and that is the
+ * right shape for gathering — walking past a witness should not be a strategy. The judgement worth
+ * teaching happens afterwards: of everything you now hold, which few pieces will you stand behind?
+ * That is the Field Notebook / Codex distinction as a mechanic rather than a slogan.
+ *
+ * Declared above COMMON_ACTIVITY_FIELDS rather than beside its own functions further down: a `const`
+ * is not hoisted, and reading one from the object literal below is a temporal-dead-zone
+ * `ReferenceError` that takes every engine down at import. Same trap as a field interior read from
+ * inside the `FIELD_MAPS` literal.
+ */
+export const NotebookSchema = z.object({
+  capacity: z.number().int().min(1, "a notebook with no room is not a notebook"),
+  // The standing instruction above the list — what this mission wants kept, in its own words.
+  prompt: z.string().min(1).optional(),
+  // What the panel says before anything has been found.
+  emptyNote: z.string().min(1).optional(),
+});
+
+/**
  * The fields every engine carries regardless of its mechanic, spread into each
  * engine's own `z.object({...})` before its `.superRefine()`.
  *
@@ -104,6 +129,7 @@ export const COMMON_ACTIVITY_FIELDS = {
   briefing: BriefingSchema.nullable().default(null),
   howItWorks: HowItWorksSchema.optional(),
   terms: TermsSchema.optional(),
+  notebook: NotebookSchema.optional(),
   // What the closer says while it is still locked — "you are not finished, and here is what
   // finished looks like."
   //
@@ -139,6 +165,18 @@ export const ClosingChoiceSchema = z
           text: z.string().min(1, "closer option text is required"),
           correct: z.boolean(),
           why: z.string().min(1, "every closer option needs a `why`, including the wrong ones"),
+          // Finding ids this conclusion needs in the Field Notebook before it is
+          // *supported*, as opposed to merely chosen.
+          //
+          // This is the difference between grading a click and grading an argument. A player can
+          // land the defensible conclusion by elimination while carrying nothing that establishes
+          // it; without this the activity calls that a win, which teaches that the conclusion is
+          // the answer and the evidence was scenery. Absent or empty means the option needs no
+          // particular evidence, which is every option shipped so far.
+          requiresEvidence: z.array(z.string().min(1)).optional(),
+          // What to say when this conclusion is filed without the evidence above — the "plausible,
+          // but nothing you kept establishes it" note. Only ever reachable with `requiresEvidence`.
+          unsupportedNote: z.string().min(1).optional(),
         })
       )
       .min(2, "a closer needs at least two options"),
@@ -165,6 +203,130 @@ export const ClosingChoiceSchema = z
       }
     });
   });
+
+/** Defensive read: a save written before this field existed has no `notebook` on its state. */
+function keptIdsOf(state) {
+  const kept = state?.notebook?.kept;
+  return Array.isArray(kept) ? kept : [];
+}
+
+/**
+ * The findings the player is actually carrying, in the order they chose them.
+ *
+ * An activity that declares no `notebook` keeps everything — there is no selection step to make,
+ * so the panel is a review of what the mission surfaced rather than a set of decisions.
+ *
+ * @param {{ notebook?: { capacity: number } }} activity
+ * @param {object} [state]
+ * @param {{ id: string, text: string, from?: string }[]} [findings]
+ */
+export function notebookKept(activity, state, findings = []) {
+  if (!activity.notebook) return findings;
+  return keptIdsOf(state)
+    .map((id) => findings.find((finding) => finding.id === id))
+    .filter(Boolean);
+}
+
+/**
+ * The two Field Notebook verbs, shared by all four engines.
+ *
+ * Returns the identical state object for anything it does not handle, which is what lets an engine
+ * delegate to it first and fall through — and is the same refusal contract the host relies on
+ * (`if (next === entry.state) return;`).
+ *
+ * A full notebook refuses `keep` rather than evicting silently. Choosing what to drop is the whole
+ * point of the cap, so it has to be a move the player makes.
+ *
+ * @param {{ notebook?: { capacity: number } }} activity
+ * @param {object} state
+ * @param {{ type: string, finding?: string }} action
+ * @param {{ id: string }[]} findings
+ */
+export function actNotebook(activity, state, action = { type: "" }, findings = []) {
+  if (!activity.notebook) return state;
+  if (action.type !== "keep" && action.type !== "release") return state;
+  const kept = keptIdsOf(state);
+
+  if (action.type === "keep") {
+    // Only something the mission has actually surfaced can be kept — otherwise the closer screen
+    // becomes a way to fill the notebook with findings the player never earned.
+    if (!findings.some((finding) => finding.id === action.finding)) return state;
+    if (kept.includes(action.finding)) return state;
+    if (kept.length >= activity.notebook.capacity) return state;
+    return { ...state, notebook: { ...state.notebook, kept: [...kept, action.finding] } };
+  }
+
+  if (!kept.includes(action.finding)) return state;
+  return {
+    ...state,
+    notebook: { ...state.notebook, kept: kept.filter((id) => id !== action.finding) },
+  };
+}
+
+/**
+ * The Field Notebook, rendered — beat 4 of the mission rhythm, and the thing a player reviews
+ * before they decide anything.
+ *
+ * Rendered by the engine rather than the host, because the closer lives inside each engine's own
+ * `render()` and a host-injected panel would land underneath it — reviewing your evidence after
+ * you filed your conclusion reads backwards.
+ *
+ * `.evidence-notebook` is its own root class, not an `.activity-board` variant: that class is
+ * shared with the practice check, Archive Challenges and non-map missions, and styling through it
+ * re-lays every quest list in the game.
+ *
+ * @param {{ notebook?: { capacity: number, prompt?: string, emptyNote?: string } }} activity
+ * @param {object} [state]
+ * @param {{ id: string, text: string, from?: string }[]} [findings]
+ */
+export function renderNotebook(activity, state, findings = []) {
+  const selectable = !!activity.notebook;
+  const kept = notebookKept(activity, state, findings);
+  const held = new Set(kept.map((finding) => finding.id));
+  const capacity = activity.notebook?.capacity || 0;
+  const full = selectable && kept.length >= capacity;
+
+  const count = selectable
+    ? `<em>${kept.length} of ${capacity}</em>`
+    : findings.length
+      ? `<em>${findings.length}</em>`
+      : "";
+
+  const entries = findings
+    .map((finding) => {
+      const isKept = held.has(finding.id);
+      const control = !selectable
+        ? ""
+        : isKept
+          ? `<button type="button" class="evidence-notebook__release" data-activity-action="release" data-finding="${escapeHtml(finding.id)}">Release</button>`
+          : `<button type="button" class="evidence-notebook__keep" data-activity-action="keep" data-finding="${escapeHtml(finding.id)}"${full ? " disabled" : ""}>Add to Field Notebook</button>`;
+      return `<li class="evidence-notebook__entry${selectable && isKept ? " is-kept" : ""}">
+      <p>${escapeHtml(finding.text)}</p>
+      ${finding.from ? `<cite>${escapeHtml(finding.from)}</cite>` : ""}
+      ${control}
+    </li>`;
+    })
+    .join("");
+
+  const body = findings.length
+    ? `<ul class="evidence-notebook__entries">${entries}</ul>`
+    : `<p class="evidence-notebook__empty">${escapeHtml(
+        activity.notebook?.emptyNote || "Nothing yet. What you gather on this record collects here."
+      )}</p>`;
+
+  // Said only when it binds. A capacity note printed from the start reads as a warning about a
+  // limit the player has not met and cannot yet picture.
+  const fullNote = full
+    ? `<p class="evidence-notebook__full">Your Field Notebook is full. Release an entry to make room — and be able to say why the new one is stronger.</p>`
+    : "";
+
+  return `<section class="evidence-notebook">
+  <h3>Field Notebook ${count}</h3>
+  ${activity.notebook?.prompt ? `<p class="evidence-notebook__prompt">${escapeHtml(activity.notebook.prompt)}</p>` : ""}
+  ${body}
+  ${fullNote}
+</section>`;
+}
 
 /**
  * Shared id-uniqueness check. Every engine has at least one array whose ids are
@@ -195,12 +357,28 @@ export function checkUniqueIds(items, ctx, label, path = []) {
 /**
  * How a filed closer graded.
  *
+ * `correct` and `supported` are two different questions and an activity is only finished when both
+ * are yes. `correct` is whether this is the conclusion the record will bear; `supported` is whether
+ * the player is carrying what it takes to argue it. An option that declares no `requiresEvidence`
+ * is supported by definition — which is every option authored before Phase 72, so this is a no-op
+ * for them.
+ *
+ * `kept` defaults to empty and the check is fail-closed: a conclusion that names evidence it does
+ * not have is unsupported, including when a caller forgot to pass the notebook.
+ *
  * @param {import("zod").infer<typeof ClosingChoiceSchema>} closer
  * @param {string|null|undefined} filedId
+ * @param {{ id: string }[]} [kept]
  */
-export function closerResult(closer, filedId) {
+export function closerResult(closer, filedId, kept = []) {
   const option = closer.options.find((item) => item.id === filedId) || null;
-  return { filed: !!option, correct: !!option?.correct, option };
+  const required = option?.requiresEvidence;
+  const held = new Set((Array.isArray(kept) ? kept : []).map((finding) => finding.id));
+  const supported =
+    !option || !Array.isArray(required) || required.length === 0
+      ? !!option
+      : required.every((id) => held.has(id));
+  return { filed: !!option, correct: !!option?.correct, supported, option };
 }
 
 /**
@@ -213,19 +391,32 @@ export function closerResult(closer, filedId) {
  *
  * @param {import("zod").infer<typeof ClosingChoiceSchema>} closer
  * @param {string|null|undefined} filedId
- * @param {{ locked?: boolean, lockedNote?: string }} [options]
+ * @param {{ locked?: boolean, lockedNote?: string, kept?: { id: string }[] }} [options]
  */
-export function renderCloser(closer, filedId, { locked = false, lockedNote = "" } = {}) {
-  const { option, correct } = closerResult(closer, filedId);
+export function renderCloser(closer, filedId, { locked = false, lockedNote = "", kept = [] } = {}) {
+  const { option, correct, supported } = closerResult(closer, filedId, kept);
   const options = closer.options
     .map((item) => {
       const chosen = item.id === filedId;
-      const state = chosen ? (item.correct ? " is-correct" : " is-wrong") : "";
+      // A chosen option that is right but unsupported is neither of the two existing tones. It
+      // reads as a third state on purpose: you have not failed, and you are not finished.
+      const state = chosen
+        ? item.correct
+          ? supported
+            ? " is-correct"
+            : " is-unsupported"
+          : " is-wrong"
+        : "";
       return `<button type="button" class="activity-option${state}" data-activity-action="file" data-option="${escapeHtml(item.id)}" aria-pressed="${chosen ? "true" : "false"}"${locked ? " disabled" : ""}>${escapeHtml(item.text)}</button>`;
     })
     .join("");
   const verdict = option
-    ? `<p class="activity-why ${correct ? "is-correct" : "is-wrong"}">${escapeHtml(option.why)}</p>`
+    ? !supported
+      ? `<p class="activity-why is-unsupported">${escapeHtml(
+          option.unsupportedNote ||
+            "This may be defensible, but nothing you kept in your Field Notebook establishes it. Go back for the evidence, or file a conclusion your evidence can carry."
+        )}</p>`
+      : `<p class="activity-why ${correct ? "is-correct" : "is-wrong"}">${escapeHtml(option.why)}</p>`
     : locked && lockedNote
       ? `<p class="activity-why is-locked">${escapeHtml(lockedNote)}</p>`
       : "";

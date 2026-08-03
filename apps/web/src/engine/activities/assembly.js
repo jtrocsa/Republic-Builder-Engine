@@ -23,11 +23,14 @@ import { z } from "zod";
 import {
   COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
+  actNotebook,
   checkUniqueIds,
   closerResult,
   closerSkillOutcomes,
   escapeHtml,
+  notebookKept,
   renderCloser,
+  renderNotebook,
 } from "./contract.js";
 
 const SlotSchema = z.object({
@@ -181,7 +184,7 @@ export const AssemblyActivitySchema = z
   });
 
 export function defaultAssemblyState() {
-  return { placed: {}, selected: null, filed: null };
+  return { placed: {}, selected: null, filed: null, notebook: { kept: [] } };
 }
 
 function placedOn(state, boardId) {
@@ -228,6 +231,11 @@ export function boardOpen(activity, board, state = defaultAssemblyState()) {
  * @param {{ type: string, board?: string, slot?: string, fragment?: string, option?: string }} action
  */
 export function actAssembly(activity, state = defaultAssemblyState(), action = { type: "" }) {
+  // Before the board lookup: a Field Notebook verb carries no board, and the guard below would
+  // wave it through into a chain of `if`s that all miss it.
+  const notebook = actNotebook(activity, state, action, assemblyFindings(activity, state));
+  if (notebook !== state) return notebook;
+
   const board = activity.boards.find((item) => item.id === action.board);
   // Guarded in the reducer, not only by the rendered `disabled`: a locked board's
   // controls are a hint, and a fragment placed into one before its prerequisite
@@ -410,14 +418,29 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
     })
     .join("");
 
+  const findings = assemblyFindings(activity, state);
   return `<section class="activity-board activity-board--assembly">
   ${boards}
+  ${renderNotebook(activity, state, findings)}
   ${renderCloser(activity.closer, state.filed, {
     locked: !solved,
     lockedNote:
       activity.lockedNote || "Finish the reconstruction before you decide what it can support.",
+    kept: notebookKept(activity, state, findings),
   })}
 </section>`;
+}
+
+/**
+ * What the reconstruction has surfaced: one entry per board the player has actually rebuilt.
+ *
+ * @param {import("zod").infer<typeof AssemblyActivitySchema>} activity
+ * @param {ReturnType<typeof defaultAssemblyState>} [state]
+ */
+export function assemblyFindings(activity, state = defaultAssemblyState()) {
+  return activity.boards
+    .filter((board) => boardStatus(board, state).solved)
+    .map((board) => ({ id: board.id, text: board.label, from: activity.title }));
 }
 
 /**
@@ -425,9 +448,12 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
  * @param {ReturnType<typeof defaultAssemblyState>} [state]
  */
 export function isAssemblyComplete(activity, state = defaultAssemblyState()) {
+  const kept = notebookKept(activity, state, assemblyFindings(activity, state));
+  const result = closerResult(activity.closer, state.filed, kept);
   return (
     activity.boards.every((board) => boardStatus(board, state).solved) &&
-    closerResult(activity.closer, state.filed).correct
+    result.correct &&
+    result.supported
   );
 }
 
@@ -436,11 +462,10 @@ export function isAssemblyComplete(activity, state = defaultAssemblyState()) {
  * @param {ReturnType<typeof defaultAssemblyState>} [state]
  */
 export function assemblyOutcome(activity, state = defaultAssemblyState()) {
-  const findings = activity.boards
-    .filter((board) => boardStatus(board, state).solved)
-    .map((board) => ({ id: board.id, text: board.label, from: activity.title }));
+  const findings = assemblyFindings(activity, state);
   return {
     findings,
+    evidence: notebookKept(activity, state, findings),
     skillOutcomes: closerSkillOutcomes(activity.id, activity.closer, state.filed),
   };
 }

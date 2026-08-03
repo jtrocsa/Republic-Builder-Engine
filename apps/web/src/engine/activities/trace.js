@@ -28,11 +28,14 @@ import { z } from "zod";
 import {
   COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
+  actNotebook,
   checkUniqueIds,
   closerResult,
   closerSkillOutcomes,
   escapeHtml,
+  notebookKept,
   renderCloser,
+  renderNotebook,
 } from "./contract.js";
 
 export const TraceActivitySchema = z
@@ -123,7 +126,7 @@ export const TraceActivitySchema = z
   });
 
 export function defaultTraceState() {
-  return { ledger: {}, filed: null };
+  return { ledger: {}, filed: null, notebook: { kept: [] } };
 }
 
 /**
@@ -150,6 +153,9 @@ export function traceLogged(activity, state = defaultTraceState()) {
  * @param {{ type: string, leg?: string, effect?: string, option?: string }} action
  */
 export function actTrace(activity, state = defaultTraceState(), action = { type: "" }) {
+  const notebook = actNotebook(activity, state, action, traceFindings(activity, state));
+  if (notebook !== state) return notebook;
+
   if (action.type === "log") {
     const leg = activity.legs.find((item) => item.id === action.leg);
     const effect = activity.effects.find((item) => item.id === action.effect);
@@ -205,13 +211,28 @@ export function renderTrace(activity, state = defaultTraceState()) {
     ${activity.subject.note ? `<p class="activity-note">${escapeHtml(activity.subject.note)}</p>` : ""}
   </div>
   <ol class="activity-legs">${legs}</ol>
+  ${renderNotebook(activity, state, traceFindings(activity, state))}
   ${renderCloser(activity.closer, state.filed, {
     locked: !logged,
     lockedNote:
       activity.lockedNote ||
       "Account for every leg before you file — including the ones this record does not support.",
+    kept: notebookKept(activity, state, traceFindings(activity, state)),
   })}
 </section>`;
+}
+
+/**
+ * What the trace has surfaced: one entry per leg the player has entered correctly, including the
+ * legs whose correct answer is that the record does not reach that far.
+ *
+ * @param {import("zod").infer<typeof TraceActivitySchema>} activity
+ * @param {ReturnType<typeof defaultTraceState>} [state]
+ */
+export function traceFindings(activity, state = defaultTraceState()) {
+  return activity.legs
+    .filter((leg) => legStatus(activity, leg, state).correct)
+    .map((leg) => ({ id: leg.id, text: leg.why, from: leg.actor }));
 }
 
 /**
@@ -219,7 +240,9 @@ export function renderTrace(activity, state = defaultTraceState()) {
  * @param {ReturnType<typeof defaultTraceState>} [state]
  */
 export function isTraceComplete(activity, state = defaultTraceState()) {
-  return traceLogged(activity, state) && closerResult(activity.closer, state.filed).correct;
+  const kept = notebookKept(activity, state, traceFindings(activity, state));
+  const result = closerResult(activity.closer, state.filed, kept);
+  return traceLogged(activity, state) && result.correct && result.supported;
 }
 
 /**
@@ -227,11 +250,10 @@ export function isTraceComplete(activity, state = defaultTraceState()) {
  * @param {ReturnType<typeof defaultTraceState>} [state]
  */
 export function traceOutcome(activity, state = defaultTraceState()) {
-  const findings = activity.legs
-    .filter((leg) => legStatus(activity, leg, state).correct)
-    .map((leg) => ({ id: leg.id, text: leg.why, from: leg.actor }));
+  const findings = traceFindings(activity, state);
   return {
     findings,
+    evidence: notebookKept(activity, state, findings),
     skillOutcomes: closerSkillOutcomes(activity.id, activity.closer, state.filed),
   };
 }

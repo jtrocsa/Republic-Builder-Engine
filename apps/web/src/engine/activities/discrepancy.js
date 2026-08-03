@@ -25,11 +25,14 @@ import { z } from "zod";
 import {
   COMMON_ACTIVITY_FIELDS,
   ClosingChoiceSchema,
+  actNotebook,
   checkUniqueIds,
   closerResult,
   closerSkillOutcomes,
   escapeHtml,
+  notebookKept,
   renderCloser,
+  renderNotebook,
 } from "./contract.js";
 
 const LabelledSchema = z.object({
@@ -157,7 +160,7 @@ export const DiscrepancyActivitySchema = z
   });
 
 export function defaultDiscrepancyState() {
-  return { verdicts: {}, gaps: {}, filed: null };
+  return { verdicts: {}, gaps: {}, filed: null, notebook: { kept: [] } };
 }
 
 /**
@@ -217,6 +220,9 @@ export function discrepancySettled(activity, state = defaultDiscrepancyState()) 
  * @param {{ type: string, claim?: string, verdict?: string, gap?: string, option?: string }} action
  */
 export function actDiscrepancy(activity, state = defaultDiscrepancyState(), action = { type: "" }) {
+  const notebook = actNotebook(activity, state, action, discrepancyFindings(activity, state));
+  if (notebook !== state) return notebook;
+
   if (action.type === "verdict") {
     const claim = activity.claims.find((item) => item.id === action.claim);
     const verdict = activity.verdicts.find((item) => item.id === action.verdict);
@@ -322,11 +328,26 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
       <ul class="activity-observations">${observations}</ul>
     </aside>
   </div>
+  ${renderNotebook(activity, state, discrepancyFindings(activity, state))}
   ${renderCloser(activity.closer, state.filed, {
     locked: !settled,
     lockedNote: activity.lockedNote || "Settle every line of the record before you file.",
+    kept: notebookKept(activity, state, discrepancyFindings(activity, state)),
   })}
 </section>`;
+}
+
+/**
+ * What the audit has surfaced: one entry per claim the player has settled, both verdict and — where
+ * the verdict called for one — the reason the record differs.
+ *
+ * @param {import("zod").infer<typeof DiscrepancyActivitySchema>} activity
+ * @param {ReturnType<typeof defaultDiscrepancyState>} [state]
+ */
+export function discrepancyFindings(activity, state = defaultDiscrepancyState()) {
+  return activity.claims
+    .filter((claim) => claimStatus(activity, claim, state).settled)
+    .map((claim) => ({ id: claim.id, text: claim.why, from: activity.record.attribution }));
 }
 
 /**
@@ -334,7 +355,9 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
  * @param {ReturnType<typeof defaultDiscrepancyState>} [state]
  */
 export function isDiscrepancyComplete(activity, state = defaultDiscrepancyState()) {
-  return discrepancySettled(activity, state) && closerResult(activity.closer, state.filed).correct;
+  const kept = notebookKept(activity, state, discrepancyFindings(activity, state));
+  const result = closerResult(activity.closer, state.filed, kept);
+  return discrepancySettled(activity, state) && result.correct && result.supported;
 }
 
 /**
@@ -342,11 +365,10 @@ export function isDiscrepancyComplete(activity, state = defaultDiscrepancyState(
  * @param {ReturnType<typeof defaultDiscrepancyState>} [state]
  */
 export function discrepancyOutcome(activity, state = defaultDiscrepancyState()) {
-  const findings = activity.claims
-    .filter((claim) => claimStatus(activity, claim, state).settled)
-    .map((claim) => ({ id: claim.id, text: claim.why, from: activity.record.attribution }));
+  const findings = discrepancyFindings(activity, state);
   return {
     findings,
+    evidence: notebookKept(activity, state, findings),
     skillOutcomes: closerSkillOutcomes(activity.id, activity.closer, state.filed),
   };
 }

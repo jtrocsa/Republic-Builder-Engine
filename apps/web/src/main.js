@@ -10223,6 +10223,7 @@ function handleActivityAction(control, overrides = {}) {
     leg: data.leg,
     effect: data.effect,
     option: data.option,
+    finding: data.finding,
   });
   // Every engine's reducer returns the state object unchanged for an action it refuses (out of
   // range, gated, unknown). Re-rendering on those would flicker the screen and, on the field,
