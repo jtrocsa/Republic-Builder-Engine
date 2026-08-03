@@ -336,26 +336,48 @@ export const PLANNED_MAPS = [
     ],
   },
 
-  // ---------------------------------------------------------------------------- Hub
+  // ---------------------------------------------------------------------------- Meridian
+  //
+  // This entry replaced `institute-archive-restyle`, which named these same four sheets as a
+  // candidate restyle of *Chronicle's* hub. Phase 79 reassigned them — see decision log 0062 and
+  // docs/art/MERIDIAN-VISUAL-IDENTITY.md §2.
+  //
+  // The reason is worth keeping next to the sheet list, because the sheets on their own read like
+  // an obvious Chronicle upgrade and someone will propose it again. Meridian is the rival
+  // institute, and the art has to separate the two before any dialogue does. The separation the
+  // concept plates settled on is resources and upkeep, not geometry: Chronicle converted an old
+  // building and keeps mending it (the Medieval Tavern family — rustic wood, torch sconces,
+  // stone), Meridian built theirs and can afford to (dark panelling, parquet, glazed cases,
+  // gaslight). Spending these four sheets on Chronicle's hub would erase that distinction the
+  // moment Meridian's first room ships, and Chronicle would have nothing left to be told apart by.
+  //
+  // So Chronicle keeping its tavern warmth is the point now, not the compromise the retired entry
+  // recorded it as. Do not re-propose the hub restyle without re-opening 0062.
   {
-    id: "institute-archive-restyle",
+    id: "meridian-interior",
     period: null,
     status: "candidate",
     intent:
-      "A period-appropriate scholarly interior for the Institute, replacing the Medieval Tavern " +
-      "furniture currently dressing archive-room.tmj and hallway.tmj.",
+      "A Meridian Institute interior: the rival organisation's own space, purpose-built and " +
+      "recently, against Chronicle's converted-and-mended one.",
     sheets: [
-      "office/3.png", // double-sided library shelving stacks
+      "office/3.png", // double-sided archive shelving stacks, ranked
       "office/4.png", // dark wood-panelled walls
-      "19th Century European City/tile-B-04.png", // parquet, bookcases, writing desk, globe
-      "Steampunk/5.png", // card-catalogue cabinets, globes, brass telescopes, chalkboard easel
+      "19th Century European City/tile-B-04.png", // parquet and inlaid floors, bookcases, writing desk, globe
+      "Steampunk/5.png", // card-catalogue cabinets, globes, brass telescopes, gas lamps
     ],
+    gap: "prop.meridian.anchorRing",
     notes:
-      "CANDIDATE, not scheduled. This closes the 'modern institute interior' GAP the style guide " +
-      "has carried since decision log 0030 — which was recorded when the only candidate was the " +
-      "off-grid `Modern Interiors` pack. `office` is on-grid and in the painted family, so the " +
-      "gap is now technically fillable. Restyling the hub is a visual redesign that needs its " +
-      "own sign-off; naming the tiles does not authorise doing it.",
+      "CANDIDATE, not scheduled. The four sheets cover every environment element in the concept " +
+      "plates except three props, and all four are already CANONICAL in the tile catalog, so no " +
+      "whitelist change is needed. `Steampunk` stays a prop quarry, never a base pack. " +
+      "The registered gap is the anchor ring — nothing in 250 sheets is it, and it carries the " +
+      "shared anchor-glass material that makes Meridian read as descended from Chronicle. Two " +
+      "more props need commissioning but do not block a build: a circular map table larger than " +
+      "Chronicle's 2x3 Navigation Table, and horizontal glass-topped chart cases (tile-B-04's " +
+      "glazed cabinets are upright). See docs/art/MERIDIAN-ASSET-BRIEF.md §3 for sizes and " +
+      "prompt guidance. Building the room is a separate decision with its own sign-off; naming " +
+      "the tiles does not authorise doing it.",
   },
 ];
 

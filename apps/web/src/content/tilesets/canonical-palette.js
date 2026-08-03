@@ -286,6 +286,20 @@ export const GAPS = [
   "architecture.plantation.greatHouse", // Greek Revival columned house. Fields and quarters are
   // covered (farm + Wild West tile-B-08); the great house is not.
   "streetscape.midCentury", // 1950s-specific. Highway Rest Area / Modern Park read contemporary.
+  // --- Meridian Institute props (Phase 79, decision log 0062) ---------------------------------
+  // The rival institute's interior is covered by office/3, office/4, 19thC tile-B-04 and
+  // Steampunk/5 — see `meridian-interior` in maps/planned-maps.js. These three props are what
+  // those four sheets cannot supply. Sizes and prompt guidance in docs/art/MERIDIAN-ASSET-BRIEF.md.
+  "prop.meridian.anchorRing", // Concentric brass rings around a disc of pale cyan anchor glass.
+  // Nothing in 250 sheets is this, and it is the object carrying the shared material that makes
+  // Meridian read as descended from Chronicle — so it blocks a faithful build rather than merely
+  // impoverishing one. Two states: improvised on a floor stand (2x2), installed on a dais (3x4).
+  "prop.meridian.mapTable", // Circular council table, 3x5. Deliberately larger than Chronicle's
+  // 2x3 `navigationTable` (Island survival/5) — reusing that one collapses the faction read at
+  // the single prop a player is most likely to compare.
+  "prop.meridian.chartCase", // Horizontal glass-topped case lit from within, 2x1, two or three
+  // variants. 19thC tile-B-04's glazed cabinets are upright furniture and read as a library;
+  // these are what make a room read as an evidence archive.
 ];
 
 /** Every distinct sheet path this palette references. Used by the palette integrity test. */

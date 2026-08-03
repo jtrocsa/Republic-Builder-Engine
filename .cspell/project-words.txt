@@ -316,6 +316,8 @@ Sepúlveda
 Shockoe
 shortcutting
 sidepanel
+sightline
+sightlines
 simurai
 sindresorhus
 Skanawati

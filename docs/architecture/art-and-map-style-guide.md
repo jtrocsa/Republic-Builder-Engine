@@ -283,8 +283,28 @@ yet actioned. It was recorded when the only candidate was the off-grid `Modern I
 `office/3.png` (double-sided library shelving), `office/4.png` (dark panelled walls),
 `19th Century European City/tile-B-04.png` (parquet, bookcases, writing desk) and `Steampunk/5.png`
 (card-catalogue cabinets, globes, brass telescopes) are all on-grid and in the painted family.
-Recorded as the `institute-archive-restyle` candidate in `planned-maps.js`. **Restyling the hub is
-a visual redesign needing its own sign-off — naming the tiles does not authorise doing it.**
+
+**Those four sheets are now assigned to the Meridian Institute, not to Chronicle** (Phase 79,
+decision log `0062`). They were registered as `institute-archive-restyle`, a candidate restyle of
+Chronicle's hub; that entry is retired and `meridian-interior` carries the same sheets. The reason
+is that the art has to tell the two institutes apart before any dialogue does, and the separation
+the concept plates settled on is **resources and upkeep, not geometry**: Chronicle converted an old
+building and keeps mending it, Meridian built theirs and can afford to. Spending this sheet set on
+Chronicle's hub would erase that distinction the moment Meridian's first room ships. **Chronicle
+keeping its Medieval Tavern warmth is the point now, not the compromise** decision log `0030`
+recorded it as — so do not re-propose the hub restyle without re-opening `0062`. Building the
+Meridian room is still a visual redesign needing its own sign-off; naming the tiles does not
+authorise doing it.
+
+Three **Meridian props** are newly registered gaps, because those four sheets cannot supply them.
+Sizes and prompt guidance live in [`../art/MERIDIAN-ASSET-BRIEF.md`](../art/MERIDIAN-ASSET-BRIEF.md)
+§3.
+
+| Gap                      | Detail                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Meridian anchor ring** | Concentric brass rings around a disc of pale cyan anchor glass. Nothing in 250 sheets. It carries the shared material that makes Meridian read as descended from Chronicle, so it **blocks a faithful build** rather than merely impoverishing one. Two states: improvised on a floor stand (2×2), installed on a dais (3×4). Describe the geometry, not the object — the chevaux-de-frise below is what happens otherwise. |
+| **Meridian map table**   | Circular council table, 3×5. Deliberately larger than Chronicle's 2×3 `navigationTable` (`Island survival/5`), which is the single prop a player is most likely to compare — reusing it collapses the faction read.                                                                                                                                                                                                         |
+| **Meridian chart case**  | Horizontal glass-topped case lit from within, 2×1, two or three variants. `19thC/tile-B-04`'s glazed cabinets are upright and read as a library; these are what make a room read as an evidence archive.                                                                                                                                                                                                                    |
 
 ## Camera & dialogue conventions — deliberately not redesigned
 

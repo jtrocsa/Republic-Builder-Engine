@@ -9,6 +9,14 @@ Read [`CHARACTER-SPRITESHEET-STANDARD.md`](./CHARACTER-SPRITESHEET-STANDARD.md) 
 [`CHARACTER-CAST-SPEC.md`](./CHARACTER-CAST-SPEC.md) for the generation parameters — this file adds
 Meridian on top of both and contradicts neither.
 
+> **Revised in Phase 79 against five concept plates** — decision log `0062`. The plates inverted §2's
+> housing table and revised §3's palette; §4 and §7 follow from those. The owner's direction was that
+> the art outranks the description, which is the right way round for a document written before any
+> art existed. What the plates did **not** touch — §2's shared-glass rule, §3's teal separation
+> caution, §5's insignia ladder and §6's sprite contract — is unchanged and was re-checked against
+> them. What to build from is [`MERIDIAN-ASSET-BRIEF.md`](./MERIDIAN-ASSET-BRIEF.md); this file stays
+> the _why_.
+
 ---
 
 ## 1. The one idea
@@ -43,17 +51,47 @@ since Phase 44. Phase 7 aliases it rather than inventing a second one:
 ```
 
 **Anchor glass is not a Meridian colour and never becomes one.** The difference between the two
-institutes is the _housing_ around the glass, never the glass:
-
-|         | Chronicle                               | Meridian                                 |
-| ------- | --------------------------------------- | ---------------------------------------- |
-| Housing | Brass, bronze, wood, archival case work | Dark iron, oxidized copper, dark leather |
-| Cut     | Circular, layered, set into a frame     | Thin geometric strips, directional       |
-| Form    | Fixed, heavy, repaired                  | Folding, rotating, portable              |
-| Reads   | Old and cared for                       | New, exact, made to be carried           |
+institutes is the _housing_ around the glass, never the glass.
 
 Do not introduce a second fictional substance. Anchor glass is enough, and a second one would be a
 new term to teach for no gain — `CHRONICLE-CANON.md` §8.
+
+### The housing: converted versus built
+
+The concept plates revised this table, and the version they replaced is worth restating because it
+is the mistake a future pass will make again. It gave Chronicle _brass, bronze, wood, archival case
+work_ and _circular, layered_, and gave Meridian _dark iron_, _thin geometric strips_ and _folding,
+portable_ — a warm old institution against a cold new one. Two things were wrong with it. The plates
+show Meridian holding all four of the terms it had assigned to Chronicle. And the Chronicle column
+was not a description of Chronicle either: the shipped Institute is the **Medieval Tavern** family —
+rustic wood shelving, torch sconces, stone — with no brass case work anywhere in it. It described a
+Chronicle that does not exist in order to contrast it against a Meridian nobody had drawn yet.
+
+|             | Chronicle                                              | Meridian                                                                 |
+| ----------- | ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Materials   | Rustic wood, stone, tavern-weight shelving, torchlight | Dark panelled hardwood, parquet and inlaid stone, glazed cases, gaslight |
+| Scale       | Small rooms, furniture against the walls               | Halls, mezzanines, long sightlines, stations out on the floor            |
+| Instruments | Few, fixed, repaired, one to a room                    | Many, matched, ranked in rows, a monumental one on the axis              |
+| Upkeep      | Visibly mended and made do with                        | Maintained, polished, specified                                          |
+| Reads       | Somebody's old building, put to work                   | Purpose-built, and recently                                              |
+
+**Read the difference as resources and upkeep, not as geometry.** Chronicle converted an old
+building and has been repairing it since; Meridian built theirs and can afford to. Both use
+circular, layered, brass-framed instruments — Meridian's are newer, larger, better lit and better
+funded, which is §1's _slightly ahead of Chronicle_ expressed as a budget rather than as a shape.
+
+That is a harder line to draw than warm-brass-against-cold-iron, and it is the right one. The two
+are the same institution one generation apart, and the art should make a player uneasy about which
+of them they are standing in **before** any dialogue tells them. A Meridian built out of villain
+materials answers that question in the first frame and throws away the only thing the shared
+ancestry was for.
+
+**The practical consequence, and it is load-bearing.** `office/3` + `office/4` +
+`19th Century European City/tile-B-04` + `Steampunk/5` was registered in `planned-maps.js` as
+`institute-archive-restyle`, a candidate to re-dress **Chronicle's** hub as a scholarly interior.
+That sheet set is Meridian's look now. Spending it on Chronicle would erase the table above the
+moment Meridian's first room ships — so it is reassigned to `meridian-interior`, and Chronicle
+keeping its tavern warmth becomes the point rather than the compromise that entry recorded it as.
 
 ## 3. Palette
 
@@ -61,14 +99,31 @@ Restrained, and readable at pixel-art sizes. These are proposed token names for 
 the `--c-*` channel convention in `global.css` rather than replacing anything.
 
 ```css
---c-meridian: #1f4a4e; /* dark teal — primary */
---c-meridian-deep: #12312f; /* blue-black — shadow */
---c-meridian-fabric: #4a7c6f; /* muted sea green — secondary fabric and equipment */
---c-meridian-copper: #9a6b46; /* oxidized / desaturated brass — hardware */
+--c-meridian: #1f4a4e; /* dark teal — primary, panelled walls and floor */
+--c-meridian-deep: #101b22; /* brown-black — shadow */
+--c-meridian-fabric: #27384c; /* coat navy — uniform outer layer */
+--c-meridian-lining: #4a7c6f; /* muted sea green — lining, cuffs, collar accents */
+--c-meridian-brass: #b8873f; /* polished brass — hardware, frames, fittings */
+--c-meridian-brass-lit: #d9a95c; /* brass highlight under lamp or glass */
 --c-meridian-ivory: #e8e2d2; /* documents, markings, interface contrast */
 ```
 
-A caution the palette audit turned up: Chronicle already owns a **bright** teal
+**Three changed against the plates, and one was renamed.** `--c-meridian-deep` was a green-black
+(`#12312f`); the plates shadow brown-black, so it warms. `--c-meridian-fabric` was a muted sea green
+(`#4a7c6f`), which is the **lining** in the plates and not the coat — the coat is navy, so `fabric`
+takes the navy and the sea green keeps its value under the honest name `--c-meridian-lining`.
+`--c-meridian-copper` was an _oxidized_ brass (`#9a6b46`) and is renamed `--c-meridian-brass` and
+brightened, because polished-not-oxidized is precisely the "Meridian built theirs" signal §2 now
+turns on — a Meridian whose fittings are going green is a Meridian that cannot pay for its own
+upkeep, which is Chronicle's characterisation, not theirs. `--c-meridian` and `--c-meridian-ivory`
+were already right and are untouched.
+
+These are read off compressed renders. **Sample the final values from the source plates when the
+tokens are actually written into `global.css`**, and treat the hexes above as the intent rather than
+as measurements.
+
+The caution the palette audit turned up survives the revision intact, and the plates obey it:
+Chronicle already owns a **bright** teal
 (`--c-teal-rgb: 126, 221, 214`) as an accent. Meridian's teal must stay clearly **darker and more
 desaturated**, or the two read as the same institution on a small sprite. `#1f4a4e` against
 `#7eddd6` is a comfortable separation; anything lighter than roughly `#2d6a6a` is not.
@@ -78,16 +133,35 @@ sterile white science-fiction rooms, or costumes resembling superheroes or power
 
 ## 4. Shapes, motifs, materials
 
-**Shapes.** Long vertical lines. Compass and meridian-line motifs. Divided circles. Clean diagonals.
-Narrow pointed forms. Equipment aligned to a grid rather than arranged by habit.
+**Shapes.** Compass roses and meridian lines — inlaid into floors, cut into table tops, worked into
+frames. Divided circles. Concentric rings. A strong central axis a room is laid out along. Equipment
+**ranked in matched rows rather than arranged by habit**, which is the surviving half of the
+sentence this section used to carry.
 
-Chronicle stays circular, layered, warm and archival. Meridian is cleaner, directional, intentional.
-Where Chronicle's props look like they accumulated, Meridian's look like they were specified.
+The half that did not survive: _"where Chronicle's props look like they accumulated, Meridian's look
+like they were specified."_ Meridian accumulates too — the plates are full of stacked paper, loaded
+shelves and ladders. The difference is **what happens to the accumulation**, and it moves along §7's
+arc: at the improvised end it is piled on every surface, and by the evidence-room stage it is filed,
+catalogued, put behind glass and lit. A Meridian with no paper in it is a Meridian that is not doing
+the work the story says it does.
 
-**Materials.** Dark leather. Weathered teal fabric. Oxidized copper. Dark iron. Thin anchor-glass
-strips. Folding measuring tools, mechanical compasses, map cases. Field notebooks narrower and more
-orderly than Chronicle's. Equipment built to **alter or redirect** an imprint, where Chronicle's only
-observes — that functional difference should be visible in the silhouette of the tool.
+**Materials.** Dark panelled hardwood. Parquet, block and inlaid-medallion floors. Polished brass
+and bronze — frames, rails, fittings, instrument bodies. Dark leather seating. Coat navy with sea
+green at the lining. Glazed and glass-topped cases lit from within. Gaslight and lamp glass rather
+than open flame. Anchor glass set in **heavy brass rings**, concentric and layered, not in thin
+strips.
+
+Dark iron survives as a **secondary** — structure, bracing, the underside of things — rather than as
+the primary read it used to be.
+
+The portable kit is unchanged and the plates confirm every item of it: folding measuring tools,
+mechanical compasses, map and instrument cases, field notebooks narrower and more orderly than
+Chronicle's. Equipment built to **alter or redirect** an imprint, where Chronicle's only observes —
+that functional difference should be visible in the silhouette of the tool.
+
+So Meridian is monumental **where it is installed** and compact where it travels, and the two do not
+contradict: a field station carries the folding version of the thing the headquarters has built four
+storeys of.
 
 ## 5. The insignia
 
@@ -121,6 +195,25 @@ from any facing.
 
 **Avoid** long robes (they destroy a walk cycle), oversized props, capes, modern tactical gear, and
 small accessories that vanish at sprite scale. Avoid any full Meridian branding in the early units.
+
+### Reading the costume plate, and where it must be corrected
+
+The fifth concept plate is the costume reference: three figures in navy coats with sea green at the
+collar and lining, brown leather, and a brass compass, a folding instrument and a map case shown
+beside them. **Colour, materials and kit are right and are what §3 and §4 were revised against.**
+Two things on it do not survive contact with the shipped sprite contract, and neither is negotiable:
+
+- **The coats are ankle-length and near-symmetrical.** Both fail the paragraph above for the reason
+  it gives. Shorten to mid-length and put deliberate weight on one shoulder — the asymmetry is the
+  whole identification mechanism at 45 pixels of body, and a symmetrical floor-length coat is the
+  one silhouette that reads identically from all four facings while walking badly in each.
+- **The compass, case and chest must not become held props.** They are excellent insignia and
+  set-dressing reference. As carried items they exceed the canvas, and `canonicalCanvas()` in
+  `scripts/assets/build-character-sheets.js` **clips rather than resizes** — so an oversized prop is
+  cut off mid-object on all 8 strips, not accommodated. Put the instrument at the belt or chest, per
+  the silhouette paragraph.
+
+Everything else on the plate can be ordered as drawn.
 
 ### Two states, two sheet keys
 
@@ -190,6 +283,29 @@ purpose and drifted from it.
 
 The visual arc across those five: improvised → confident → wealthy → divided → exposed.
 
+**The concept plates sample three points on that arc**, which is the most useful thing about them —
+the arc was written before them and they landed on it without being asked to. Read them as reference
+plates for the spaces they match:
+
+| Plate                                                                        | Space                                       | Arc position      |
+| ---------------------------------------------------------------------------- | ------------------------------------------- | ----------------- |
+| Cluttered workshop, a brass ring on a stand, paper on every surface          | #1/#2 field station and observation chamber | improvised        |
+| Vaulted archive of ranked map drawers, ladders, lamps                        | #3 evidence room                            | confident         |
+| Round council chamber, chandelier, great circular map table, leather seating | #4 client-facing planning room              | wealthy           |
+| Grand hall, mezzanine, monumental anchor ring, staff at matched stations     | #5 headquarters                             | wealthy → divided |
+
+Nothing in the plates shows #5's **divided** or the arc's **exposed** end, and that is the gap to
+brief when those spaces come up: the same room, the same materials, the same money, with the split
+showing as territory rather than as damage.
+
 **Build the modular language first, not the buildings.** Phase 7 produces materials, props and
 motifs that later spaces reuse. Building five environments before the language is settled would mean
 five sets of one-off art, which is the mistake the canonical tile palette exists to prevent.
+
+**And a warning about these plates specifically.** Their strongest quality is _vertical_ — mezzanine
+galleries, vaults, arches, chandeliers, ceiling height. A 48px top-down camera shows none of it. The
+translation into a playable room is **floor plan, floor pattern and prop density**: a wide hall laid
+out along one inlaid axis, matched stations ranked either side, and the monumental instrument at the
+end of the sightline. Brief the plates for their materials and their arrangement, never for their
+elevation, or the built room will read as a disappointment against art that promised something the
+engine cannot draw.
