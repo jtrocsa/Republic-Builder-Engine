@@ -101,6 +101,15 @@ Beyond Author Mode's content overrides, Chronicle now has real teacher-facing to
 - `docs/architecture/PLATFORM-ARCHITECTURE-PROPOSAL.md` — the long-term multi-subject-platform design (domains, data models, migration phases). Describes **future direction, not current implementation** — `PlatformCore`, `WorldComposition`, `QuestEngine`'s renderer/evaluation registries, `WorldRuntime`, the full 7-repository persistence layer, and `packs/<subject>/` extraction are all documented here as where the architecture is headed, not code that exists or should be scaffolded yet.
 - `docs/architecture/ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` — a skeptical pass that cuts the proposal above down to what a solo developer should actually build near-term. **This is the binding scope document, not the proposal** — when the two disagree on what to build _now_, follow the review, not the proposal.
 
+### Story canon (Phase 78, decision log `0061`)
+
+The frame story lives in focused documents, not here. Read them before writing narrative, a cutscene, or Meridian art — and note that **ordinary historical uncertainty is never temporal drift**, which is the line all four exist to hold:
+
+- `docs/design/CHRONICLE-CANON.md` — the five travel rules, the Original Drift, Chronicle vs. the Meridian Institute, banned phrasing, and which ideas are canonical / provisional / deferred.
+- `docs/design/MAP-NARRATIVE-STRUCTURE.md` — Missions (locked map story) vs. **Field Assignments** (the six teacher-editable slots), and the Era Record as a derived view.
+- `docs/design/THE-FIELD-LIAISON.md` and `docs/design/CUTSCENE-AND-DIALOGUE-CONVENTIONS.md` — the recurring helper, and what a scripted scene must tear down.
+- `docs/art/MERIDIAN-VISUAL-IDENTITY.md` — Meridian's palette and the Liaison's PixelLab spec.
+
 **Near-term architecture is deliberately minimal**, per the review: keep working code where it already lives (`main.js`, `content/*.js`) and add thin wrappers/tests/schemas around it rather than moving it. Concretely:
 
 - **Vitest and Zod are the only approved immediate major dependencies.** Both are adopt-now, zero-POC-required.

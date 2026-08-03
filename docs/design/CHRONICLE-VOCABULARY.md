@@ -115,9 +115,28 @@ list is the pre-Phase-76 design and re-creates the odd-one-out problem on the ot
 | **Map**              | The main historical setting for that unit                    |
 | **Arc**              | The connected local story told across missions on a map      |
 | **Mission**          | One playable investigation using a core engine               |
+| **Field Assignment** | Teacher-selected supporting work, outside the map            |
+| **Era Record**       | The accumulated record for one unit                          |
 | **Variant**          | The configuration of that engine (see §3)                    |
 | **Mission Question** | The historical inquiry guiding the mission                   |
 | **Anomaly**          | Evidence the historical record may have been interfered with |
+
+**Mission** and **Field Assignment** are the locked/editable split, named in Phase 78 (decision log
+`0061`). A mission is map story and no teacher can change it; a Field Assignment is the six
+teacher-editable `slot_kind` values, which had no student-facing name before. The distinction is
+narrative function, not a permission model — _missions recover the essential record, Field
+Assignments strengthen the Era Record_ — and **"Core Operation" was considered as a third name for a
+mission and rejected**. **Era Record** is a derived view over existing progress, never a second
+tracker. See [`MAP-NARRATIVE-STRUCTURE.md`](./MAP-NARRATIVE-STRUCTURE.md).
+
+**Anomaly** is the narrowest word in this table and the easiest to spend. It means interference —
+never bias, disagreement, a gap, an unreliable witness, or an ordinary mistake, all of which the
+four classifications above already name. [`CHRONICLE-CANON.md`](./CHRONICLE-CANON.md) §6 maps every
+ordinary evidence problem to its evidence word, and bans six phrases outright (_temporal integrity_,
+_quantum record_, _anchor instability_, _causal resonance_, _timeline corruption_, _one true
+timeline_); `tests/unit/chronicle-canon.test.js` fails on any of them reaching shipped code. That
+file is the world, this file is the interface strings, and CLAUDE.md's fixed vocabulary outranks
+both.
 
 ### The arc
 

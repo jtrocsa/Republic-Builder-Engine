@@ -261,6 +261,7 @@ playtest
 playtesting
 playthrough
 plessy
+pointerdown
 porta
 Portilla
 Postg
@@ -279,6 +280,7 @@ rects
 regenerable
 renderorder
 replanner
+replayable
 requerimiento
 Requerimiento's
 rerunnable
