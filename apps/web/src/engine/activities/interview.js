@@ -43,6 +43,19 @@ const AnswerSchema = z.object({
   // false, so the flat answers cost nothing to author — an author writes
   // `useful: true` on the handful that carry the mission.
   useful: z.boolean().default(false),
+  /**
+   * What this answer sends you to find out, in the player's own voice rather than the speaker's.
+   *
+   * One string on the answer that produces it, deliberately not a top-level `leads` array: a
+   * separate list is a second graph to keep in sync with the first, and the thing it would grow
+   * into is a dialogue engine. There is nothing to resolve here — a lead is a sentence, and the
+   * player does the resolving.
+   *
+   * The lead a mission most wants is the one that reaches *past* it. A servant mentioning the
+   * letter he is half-way through writing home is how an interview hands over to an audit two
+   * records later, and it costs one line on an answer the player has already earned.
+   */
+  lead: z.string().min(1).optional(),
 });
 
 const SpeakerSchema = z.object({
@@ -359,9 +372,19 @@ export function interviewAnswer(speaker, questionId) {
   // so there is nothing in it to write down. Both the log control and the reducer
   // key off this.
   const authored = (speaker.answers || {})[questionId];
+  // Normalized rather than passed through, so every caller gets the same shape whether the answer
+  // was authored or is the speaker's fallback. Anything a renderer needs has to be named here — a
+  // field left off this object is invisible to the whole engine, which is how `lead` shipped
+  // unreadable on its first attempt.
   return authored
-    ? { text: authored.text, useful: authored.useful === true, authored: true }
-    : { text: speaker.fallback, useful: false, authored: false };
+    ? {
+        text: authored.text,
+        useful: authored.useful === true,
+        lead: authored.lead || "",
+        authored: true,
+      }
+    : // A fallback is a stage direction, and a stage direction cannot hand over a lead.
+      { text: speaker.fallback, useful: false, lead: "", authored: false };
 }
 
 /**
@@ -404,6 +427,13 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
       : logged.includes(showing)
         ? `<p class="field-interview__logged">✓ In your Field Notebook</p>`
         : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Add to Field Notebook</button>`;
+  // A lead shows only once the answer is in the notebook. Hearing something and carrying it are two
+  // moves everywhere else in this engine, and a lead handed over on the strength of a question you
+  // walked away from would be the one place that rule did not hold.
+  const lead =
+    answer?.lead && logged.includes(showing)
+      ? `<p class="field-interview__lead">${escapeHtml(answer.lead)}</p>`
+      : "";
   return `<div class="field-interview">
   ${
     answer
@@ -411,6 +441,7 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
       : ""
   }
   ${keep}
+  ${lead}
   <div class="field-interview__questions" role="group" aria-label="Questions you can ask">${chips}</div>
 </div>`;
 }
@@ -437,7 +468,10 @@ function notebookTable(activity, state, speakers) {
             // The tick is the "I secured the right one" signal the first
             // playtest asked for by name.
             const mark = answer.useful ? `<i aria-hidden="true">✓</i>` : "";
-            return `<td class="${answer.useful ? "is-useful" : "is-flat"}">${mark}${escapeHtml(answer.text)}</td>`;
+            // The lead travels with the answer into the notebook, because that is where a player
+            // comes back to work out where to go next.
+            const lead = answer.lead ? `<b class="is-lead">${escapeHtml(answer.lead)}</b>` : "";
+            return `<td class="${answer.useful ? "is-useful" : "is-flat"}">${mark}${escapeHtml(answer.text)}${lead}</td>`;
           }
           if (asked.includes(question.id)) {
             return `<td class="is-heard"><span>Heard — not recorded</span></td>`;

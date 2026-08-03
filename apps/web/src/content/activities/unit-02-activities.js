@@ -211,6 +211,7 @@ const BY_WHOSE_HEAD = {
         passage: {
           text: "I enter every soul that comes off a ship at this landing. Name, ship, date, and who paid the freight — all four on one line, because the fourth is the one the patent office wants. The man who paid is the man the fifty acres go to, and I write both facts in the same hand at the same moment. Nobody in eleven years has asked me to write it any other way.",
           useful: true,
+          lead: "The same book records the cargo as well as the people. Ask him for the casks.",
         },
         // Load-bearing: the audit keys an optional observation off it. Trimmed, not cut.
         land: {
@@ -238,6 +239,10 @@ const BY_WHOSE_HEAD = {
         owed: {
           text: "Seven years, and I am four into them. At the end there are freedom dues — corn, and a suit of clothes, and I am my own man. Here is the part nobody says out loud: the fifty acres my crossing earned were granted the week I landed. They were never mine. They went to whoever held the paper, and my seven years are what he paid for them.",
           useful: true,
+          // Chains this interview to the audit two records later. He is holding the letter; the
+          // gate on `riverbend-letter` already requires this record, and this is the sentence that
+          // makes the gate read as a lead rather than as a lock.
+          lead: "He has a letter half-written to his parents in his coat. Read it against what the settlement told you.",
         },
       },
     },
@@ -257,6 +262,11 @@ const BY_WHOSE_HEAD = {
         owed: {
           text: "The Englishman in the next field owes seven years and can tell you the date they end. I was traded here for provisions and set to this ground, and no one has told me a number. I am not counting down to anything that anybody has named. Write that down as it stands — do not tidy it.",
           useful: true,
+          // The third lead, and the one that goes nowhere. Two of Riverbend's leads hand off to the
+          // next record; this one hands off to an absence, because that is what the surviving
+          // documents do. A lead system where every thread resolves teaches that the archive always
+          // has an answer somewhere.
+          lead: "There is no record at Riverbend that says what he is. Check the clerk's book and find out that it does not say either.",
         },
       },
     },
@@ -402,6 +412,16 @@ const NOTHING_TO_BE_GOTTEN = {
   openQuestions: [
     "Whether Frethorne survived. The letter is his last known trace, and the Virginia Company records that preserve it do not follow him.",
   ],
+  // The arc close is authored twice — here and on the ledger — because the field gates only one of
+  // Riverbend's three records, so a player can finish on either of these two and never on the
+  // charter. It fires wherever they actually ended. Same argument, the voice of whoever is standing
+  // there. Pinned by tests/unit/activity-content.test.js.
+  arcClose: {
+    speaker: "indentured-servant",
+    line: "A patent, a wharf book, and this. Three men wrote them and not one of them sat down to write about us.",
+    established:
+      "Riverbend's three records are one arrangement described by three people who each thought they were recording something else. The patent records who paid the passage. The wharf book records where the value goes once the work is finished. And this letter records what the arrangement feels like from inside it, written by a man who cannot see its cause from where he stands. In none of the three is the person doing the work the subject — and that is not concealment. It is what a labor system looks like in the documents an economy keeps about itself.",
+  },
   codexFiling: {
     summary:
       "Frethorne is an excellent witness to his own condition and a poor one to its causes. The hunger and the fear are exactly as reported; the country is not what is killing him, and the arrangement that is, he is standing inside.",
@@ -685,6 +705,22 @@ const ONE_HOGSHEAD = {
   openQuestions: [
     "What this particular cask sold for. The account records the consignment, not the London price, and the planter would not learn it for months either.",
   ],
+  // Riverbend's one anomaly, and the whole unit gets exactly one (Phase 77, decision log `0060`).
+  // Deliberately archival rather than fantastical: an altered figure in a wharf book is the most
+  // ordinary thing in the world, and every ordinary explanation for it is available. What is not
+  // ordinary is the hand. This is the first thread of the frame's own plot and it is not resolved
+  // here, or anywhere yet.
+  anomaly: {
+    noticed:
+      "The entry reads fourteen hogsheads. The page was scraped before the ink went on, and under it the figure was fifteen — in a hand that rules its letters differently from every other line in this book.",
+    note: "Skimming, spoilage, a cask broken on the landing, plain arithmetic: any of them accounts for one hogshead going missing from a wharf book, and none of them would be worth writing down. The correction is the part that does not fit. The clerk has ruled every line in this book himself for eleven years and says so twice without being asked. Somebody else has been in it. File the record as it stands and flag the page.",
+  },
+  arcClose: {
+    speaker: "wharf-clerk",
+    line: "A patent, a letter home, and my book. Three different men wrote them for three different reasons and not one of us sat down to write about the labor.",
+    established:
+      "Riverbend's three records are one arrangement described by three people who each thought they were recording something else. The patent records who paid the passage. The letter records what the arrangement feels like from inside it, by a man who cannot see its cause from where he stands. The wharf book records where the value goes once the work is finished. In none of the three is the person doing the work the subject — and that is not concealment. It is what a labor system looks like in the documents an economy keeps about itself.",
+  },
   codexFiling: {
     summary:
       "Duty taken before the planter sees anything, proceeds returned as credit rather than coin, a return cargo chosen in London a season ahead. One entry is enough to show how Chesapeake planters became owed to English merchants with nothing illegal happening.",

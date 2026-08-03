@@ -10246,11 +10246,43 @@ function missionDebriefScreen(kind, source, activity, entry) {
       ).join("")}</dl></section>`
     : "";
 
+  // The three records of a case turning out to be one story. Gated on the whole case being filed
+  // rather than on this being "the last" mission — a player who finishes in a different order still
+  // gets it, wherever they actually ended.
+  const arc =
+    activity.arcClose && caseArcFiled(source.id)
+      ? `<section class="mission-debrief__arc"><h2>What the three records make together</h2><blockquote><p>${esc(activity.arcClose.line)}</p>${activity.arcClose.speaker ? `<cite>${esc(fieldNpcName(activity.arcClose.speaker))}</cite>` : ""}</blockquote><p>${esc(activity.arcClose.established)}</p></section>`
+      : "";
+
+  // Something on the record that should not be there. Last on the screen on purpose: it is the one
+  // thing the mission does not resolve, and it should be the note the player leaves on.
+  const anomaly = activity.anomaly
+    ? `<section class="mission-debrief__anomaly"><h2>Flagged for the Institute</h2><p class="mission-debrief__noticed">${esc(activity.anomaly.noticed)}</p><p>${esc(activity.anomaly.note)}</p></section>`
+    : "";
+
   const onward = `<button class="btn btn-gold mission-brief__begin" data-action="mission-debriefed" data-source="${esc(source.id)}">Open ${esc(source.title)} →</button>`;
 
   return `${chrome()}<main class="shell mission-brief mission-debrief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${onward}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${activityKicker(kind)}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${conclusion}<section class="mission-debrief__found"><h2>What the evidence supports</h2><p>${esc(activity.debrief.established)}</p></section><section class="mission-debrief__open"><h2>What it cannot settle</h2><ul>${unresolved
     .map((line) => `<li>${esc(line)}</li>`)
-    .join("")}</ul></section>${record}</section></main>`;
+    .join("")}</ul></section>${arc}${record}${anomaly}</section></main>`;
+}
+
+/**
+ * Whether every mission on this record's case is now in the Codex.
+ *
+ * The gate on an arc close. Reads `progress.codex` rather than `sourceActivities`, so it means
+ * "filed with a conclusion the evidence could carry" and not merely "the screen was visited" — the
+ * same bar the Codex itself uses (decision log `0058`). A case with only one activity is trivially
+ * complete, which is correct: an arc of one is a mission, and it simply has no `arcClose` to show.
+ */
+function caseArcFiled(sourceId) {
+  const caseId = caseIdForSource(sourceId);
+  if (!caseId) return false;
+  const activities = sourcesForCase(caseId)
+    .map((source) => activityFor(source.id))
+    .filter(Boolean);
+  if (!activities.length) return false;
+  return activities.every((activity) => !!progress.codex?.[activity.id]);
 }
 
 /**

@@ -398,6 +398,66 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page.locator(".activity-leg").first()).toHaveScreenshot(
       snap("activity-trace-leg")
     );
+
+    // The arc close and the anomaly (Phase 77) — the two bands that only exist at the end of a
+    // case. Both sit below a debrief that is already long, so both are shot on the element. Seeded
+    // with all three Riverbend records filed, which is the only state the arc band renders in.
+    await setScreen(page, {
+      currentScreen: "trace",
+      activeCaseId: "case-004",
+      activeActivitySourceId: "riverbend-ledger",
+      caseEvidence: { "case-004": ["riverbend-charter"] },
+      sourceActivities: {
+        "riverbend-charter": {
+          state: { asked: RIVERBEND_ACCOUNTS, logged: RIVERBEND_ACCOUNTS, filed: "by-the-head" },
+          completed: true,
+          briefed: true,
+          debriefed: true,
+        },
+        "riverbend-letter": {
+          state: {
+            verdicts: {
+              "sickness-country": "contradicted",
+              "nothing-gotten": "contradicted",
+              gruel: "supported",
+              limbs: "supported",
+              "thirty-two": "cannot-tell",
+            },
+            gaps: { "sickness-country": "he-was-wrong", "nothing-gotten": "not-one-place" },
+            filed: "position",
+          },
+          completed: true,
+          briefed: true,
+          debriefed: true,
+        },
+        "riverbend-ledger": {
+          state: {
+            ledger: {
+              curing: "labor-cost",
+              entering: "crown-revenue",
+              crossing: "planter-credit",
+              returning: "merchant-control",
+            },
+            support: {
+              curing: "not-shown",
+              entering: "established",
+              crossing: "established",
+              returning: "inferred",
+            },
+            notebook: { kept: ["entering", "crossing", "returning"] },
+            filed: "dependence",
+          },
+          completed: true,
+          briefed: true,
+          debriefed: false,
+        },
+      },
+    });
+    await expect(page.locator(".mission-debrief__arc")).toBeVisible();
+    await expect(page.locator(".mission-debrief__arc")).toHaveScreenshot(snap("mission-arc-close"));
+    await expect(page.locator(".mission-debrief__anomaly")).toHaveScreenshot(
+      snap("mission-anomaly")
+    );
   });
 
   test("field: Philadelphia gathering ground (Unit 3)", async ({ page }) => {

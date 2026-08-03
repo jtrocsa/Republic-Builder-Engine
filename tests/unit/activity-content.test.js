@@ -180,6 +180,54 @@ describe("activity content: the rules every authored mission is held to", () => 
     }
   });
 
+  it("closes Riverbend's arc wherever the player actually ends it", () => {
+    // The arc close rides the debrief of whichever mission is finished last, gated by the host on
+    // the whole case being in the Codex. Riverbend gates only one of its three records (the letter
+    // needs the charter), so the last mission is always the letter or the ledger and never the
+    // charter — both of those must carry an `arcClose` or a player finishing in the other order
+    // gets nothing. Authoring it on one is the bug this test exists to catch.
+    const riverbend = UNIT_02_ACTIVITIES;
+    expect(riverbend["riverbend-letter"].arcClose?.established).toBeTruthy();
+    expect(riverbend["riverbend-ledger"].arcClose?.established).toBeTruthy();
+    // And they must say the same thing, or the arc has two different meanings depending on route.
+    const claim = (text) => text.replace(/\s+/g, " ").trim();
+    expect(claim(riverbend["riverbend-letter"].arcClose.established)).toContain(
+      "one arrangement described by three people who each thought they were recording something else"
+    );
+    expect(claim(riverbend["riverbend-ledger"].arcClose.established)).toContain(
+      "one arrangement described by three people who each thought they were recording something else"
+    );
+  });
+
+  it("plants at most one anomaly per unit", () => {
+    // An anomaly is the frame's own plot leaking into a historical record, and its whole force is
+    // scarcity. Two per map and it is a collectible; one per map and it is a thing that happened.
+    for (const { unitId, activities } of AUTHORED_UNITS) {
+      const flagged = entriesOf(activities).filter(([, activity]) => activity.anomaly);
+      expect(flagged.length, `${unitId} flags ${flagged.length} anomalies`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("keeps a lead on an answer the player can actually earn", () => {
+    // A lead only renders once its answer is in the Field Notebook, and only an *authored* answer
+    // can be logged at all — a fallback is a stage direction. A lead on an unauthored pair would be
+    // permanently unreachable, which is the same family of dead content as Phase 71's `fallback`
+    // and Phase 72's unprinted `note`.
+    for (const { activities } of AUTHORED_UNITS) {
+      for (const [sourceId, activity] of ofKind(activities, "interview")) {
+        for (const speaker of activity.speakers) {
+          for (const [questionId, answer] of Object.entries(speaker.answers || {})) {
+            if (!answer.lead) continue;
+            expect(
+              answer.useful,
+              `${sourceId}: ${speaker.id}'s lead on "${questionId}" hangs off an answer worth nothing, so a player has no reason to keep it`
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
   it("keeps `variant` a label, with no engine branching on it", () => {
     // `variant` names a mission's shape inside its engine family — "Ask the Right Question", "Follow
     // the Shipment". The registry's whole value is that adding an engine is one more entry in

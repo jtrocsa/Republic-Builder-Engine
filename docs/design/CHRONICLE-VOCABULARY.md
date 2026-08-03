@@ -119,6 +119,29 @@ list is the pre-Phase-76 design and re-creates the odd-one-out problem on the ot
 | **Mission Question** | The historical inquiry guiding the mission                   |
 | **Anomaly**          | Evidence the historical record may have been interfered with |
 
+### The arc
+
+Added Phase 77 (decision log `0060`).
+
+| Term          | Means                                                                           |
+| ------------- | ------------------------------------------------------------------------------- |
+| **Lead**      | One line on an answer, pointing at what to find out next                        |
+| **Arc close** | What a case's records make together, said on whichever mission is finished last |
+| **Anomaly**   | Something on the page that should not be there. Observed, never solved          |
+
+Three rules, all of them enforced by `tests/unit/activity-content.test.js`:
+
+- **A lead hangs off a `useful` answer.** A lead only renders once its answer is in the Field
+  Notebook, and nobody keeps a throwaway answer — so a lead anywhere else is unreachable content.
+- **Not every lead resolves.** Riverbend has three: two hand off to the next record, one hands off
+  to an absence. A lead system where every thread lands teaches that the archive always has an
+  answer somewhere, which is the opposite of the point.
+- **One anomaly per unit.** Two per map is a collectible; one is a thing that happened.
+
+An arc close is authored on **every mission a player could finish last**, not on "the third one" —
+the host gates it on the whole case being filed, and a case that gates fewer records than it has has
+more than one possible ending.
+
 ### The Codex
 
 Added Phase 75 (decision log `0058`), when the Codex stopped being one case's satchel.

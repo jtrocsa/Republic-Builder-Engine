@@ -145,6 +145,10 @@ describe("interviewAnswer — the sparse matrix", () => {
     expect(interviewAnswer(elder, "grows")).toEqual({
       text: "Cassava, and maize after it.",
       useful: true,
+      // Normalized to "" rather than left off, so every caller gets the same shape. A field absent
+      // from this object is invisible to the whole engine — which is how `lead` shipped unreadable
+      // on its first attempt in Phase 77.
+      lead: "",
       authored: true,
     });
   });
@@ -160,6 +164,8 @@ describe("interviewAnswer — the sparse matrix", () => {
     expect(interviewAnswer(elder, "gold")).toEqual({
       text: "She waits for a better question.",
       useful: false,
+      // A fallback is a stage direction, and a stage direction cannot hand over a lead.
+      lead: "",
       authored: false,
     });
   });
@@ -424,5 +430,63 @@ describe("rendering", () => {
     expect(
       renderInterview(hostile, actInterview(hostile, state, { type: "log", speaker: "elder" }))
     ).not.toContain("<script>");
+  });
+});
+
+// Leads (Phase 77, decision log 0060). One string on the answer that produces it — deliberately not
+// a top-level list, which would be a second graph to keep in sync with the first.
+describe("an answer that sends you somewhere", () => {
+  const withLead = () => {
+    const a = activity();
+    a.speakers[0].answers.grows.lead = "Ask the clerk what he wrote in the book.";
+    return a;
+  };
+
+  const askOnly = (a) =>
+    actInterview(a, defaultInterviewState(), {
+      type: "ask",
+      speaker: a.speakers[0].id,
+      question: "grows",
+    });
+
+  const askAndLog = (a) => {
+    const asked = askOnly(a);
+    return actInterview(a, asked, { type: "log", speaker: a.speakers[0].id, question: "grows" });
+  };
+
+  it("withholds the lead until the answer is in the notebook (normal case)", () => {
+    // Hearing and keeping are two moves everywhere else in this engine. A lead handed over on the
+    // strength of a question the player walked away from would be the one place that did not hold.
+    const a = withLead();
+    expect(renderInterviewInline(a, askOnly(a), a.speakers[0].id)).not.toContain(
+      "Ask the clerk what he wrote"
+    );
+    expect(renderInterviewInline(a, askAndLog(a), a.speakers[0].id)).toContain(
+      "Ask the clerk what he wrote"
+    );
+  });
+
+  it("carries the lead into the notebook table beside its answer (normal case)", () => {
+    const a = withLead();
+    const markup = renderInterview(a, askAndLog(a));
+    expect(markup).toContain('<b class="is-lead">');
+    expect(markup).toContain("Ask the clerk what he wrote");
+  });
+
+  it("renders nothing extra for an answer with no lead (regression case)", () => {
+    // Every answer shipped before this phase, and the reason the field is optional.
+    const a = activity();
+    expect(renderInterviewInline(a, askAndLog(a), a.speakers[0].id)).not.toContain(
+      "field-interview__lead"
+    );
+    expect(renderInterview(a, askAndLog(a))).not.toContain("is-lead");
+  });
+
+  it("does not make a lead into evidence (boundary case)", () => {
+    // A lead is a sentence pointing somewhere, not something gathered. It must not turn up as a
+    // finding, or the Field Notebook starts filling with directions instead of testimony.
+    const a = withLead();
+    const findings = interviewOutcome(a, askAndLog(a)).findings;
+    expect(findings.every((finding) => !finding.text.includes("Ask the clerk"))).toBe(true);
   });
 });

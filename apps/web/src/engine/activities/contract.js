@@ -179,6 +179,43 @@ export const CodexFilingSchema = z.object({
 });
 
 /**
+ * Something on this record that should not be there.
+ *
+ * The one piece of the frame's own plot that lives on a mission, and it is deliberately two flat
+ * strings: `noticed` is what a careful reader would spot on the page, `note` is what a Chronicler
+ * makes of it. No id, no state, no branching — an anomaly is *observed*, not solved, and the moment
+ * it becomes a puzzle with an answer it stops being unsettling.
+ *
+ * `engine/` never learns what an anomaly means. The host prints it at the end of the debrief and
+ * that is the whole of the machinery.
+ */
+export const AnomalySchema = z.object({
+  noticed: z
+    .string()
+    .min(1, "anomaly.noticed is required — what is on the page that should not be"),
+  note: z.string().min(1, "anomaly.note is required — what a Chronicler makes of it"),
+});
+
+/**
+ * What the *last* mission of a case says once the others are filed.
+ *
+ * An arc is three records that turn out to be one story, and the moment worth marking is the moment
+ * the third one lands. Rather than build a screen for it, this rides the debrief the player is
+ * already reading, gated by the host on every activity in the case being in the Codex.
+ *
+ * Which means it is not "the third mission's" property in any hard sense — author it on whichever
+ * mission a player is most likely to finish last, and if they finish in another order it fires
+ * wherever they actually ended. That is the right behaviour: the arc closes when the arc closes.
+ */
+export const ArcCloseSchema = z.object({
+  speaker: z.string().min(1).optional(),
+  line: z.string().min(1, "arcClose.line is required — somebody has to say it"),
+  established: z
+    .string()
+    .min(1, "arcClose.established is required — what the three records together support"),
+});
+
+/**
  * The fields every engine carries regardless of its mechanic, spread into each
  * engine's own `z.object({...})` before its `.superRefine()`.
  *
@@ -214,6 +251,8 @@ export const COMMON_ACTIVITY_FIELDS = {
   // a question rather than a tick.
   openQuestions: z.array(z.string().min(1)).optional(),
   debrief: DebriefSchema.optional(),
+  anomaly: AnomalySchema.optional(),
+  arcClose: ArcCloseSchema.optional(),
   historicalRecord: HistoricalRecordSchema.optional(),
   codexFiling: CodexFilingSchema.optional(),
   howItWorks: HowItWorksSchema.optional(),
