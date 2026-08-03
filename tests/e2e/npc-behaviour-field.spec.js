@@ -54,6 +54,8 @@ test("Riverbend's cast goes about its business", async ({ page }) => {
   // meetinghouse door, the smith at his fire, and the three watch posts. Named here rather than
   // derived, because the point of the test is that the authored intent survived to the screen.
   const STATIONED = [
+    // The Field Liaison is Chronicle's, not the settlement's, and waits where the player lands.
+    "liaison",
     "settlement-minister",
     "settlement-smith",
     "settlement-watch-gate",
@@ -62,7 +64,7 @@ test("Riverbend's cast goes about its business", async ({ page }) => {
   ];
 
   const ids = samples[0].map((npc) => npc.id);
-  expect(ids.length, "Riverbend's whole cast is on the map").toBe(15);
+  expect(ids.length, "Riverbend's whole cast is on the map").toBe(16);
 
   const trackOf = (id) => samples.map((sample) => sample.find((npc) => npc.id === id));
   const rangeOf = (id) => {

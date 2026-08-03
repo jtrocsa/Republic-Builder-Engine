@@ -201,17 +201,32 @@ small accessories that vanish at sprite scale. Avoid any full Meridian branding 
 The fifth concept plate is the costume reference: three figures in navy coats with sea green at the
 collar and lining, brown leather, and a brass compass, a folding instrument and a map case shown
 beside them. **Colour, materials and kit are right and are what §3 and §4 were revised against.**
-Two things on it do not survive contact with the shipped sprite contract, and neither is negotiable:
 
-- **The coats are ankle-length and near-symmetrical.** Both fail the paragraph above for the reason
-  it gives. Shorten to mid-length and put deliberate weight on one shoulder — the asymmetry is the
-  whole identification mechanism at 45 pixels of body, and a symmetrical floor-length coat is the
-  one silhouette that reads identically from all four facings while walking badly in each.
+**Read the three figures separately — an earlier revision of this section did not, and got one of
+them wrong.** It said flatly that "the coats are ankle-length and near-symmetrical" and that all
+three therefore fail the silhouette paragraph above. That holds for two of them:
+
+- **The left figure** — long open navy coat, teal lining, cross-body map satchel. The most
+  "travelling agent" of the three and the coat is ankle-length.
+- **The right figure** — the longest and most formal, brocade waistcoat, cravat, chest emblem. Reads
+  as senior staff rather than as anyone who works in a field.
+
+Both need shortening to mid-length with deliberate weight on one shoulder, for the reason the
+silhouette paragraph gives: a symmetrical floor-length coat is the one silhouette that reads
+identically from all four facings while walking badly in each.
+
+**The centre figure needs neither correction, and is Emery Voss.** Cream full sleeves under a dark
+leather sleeveless over-jerkin, a knee-length coat, belt kit, and a patch on one shoulder only —
+already mid-length, already asymmetrical, already field-practical. It is the figure the settled
+costume below is built from.
+
+One correction does apply to all three:
+
 - **The compass, case and chest must not become held props.** They are excellent insignia and
   set-dressing reference. As carried items they exceed the canvas, and `canonicalCanvas()` in
   `scripts/assets/build-character-sheets.js` **clips rather than resizes** — so an oversized prop is
   cut off mid-object on all 8 strips, not accommodated. Put the instrument at the belt or chest, per
-  the silhouette paragraph.
+  the silhouette paragraph. The centre figure's folding lens is the specific thing to drop.
 
 Everything else on the plate can be ordered as drawn.
 
@@ -229,24 +244,92 @@ The reveal must read as _details that were already there_, not a costume swap. P
 the revealed version first, then cover it up to produce the Chronicle-facing one. Doing it the other
 way round produces two characters who happen to share a haircut.
 
+**That instruction is not literally executable against a text-to-sprite generator**, which cannot
+cover anything up. What gets the rule's actual benefit is writing **both** descriptions before
+ordering either, as one costume with two states, and generating only the one that ships. Both are
+written below.
+
+### The settled costume
+
+Emery Voss **reads as a woman** — decided in Phase 80b, and previously left open here and in
+`THE-FIELD-LIAISON.md` §1. The registry key stays `liaison` regardless, so nothing in code depends
+on it. The separation that matters is not from the Director but from **Dr. Amani Soto**, who is also
+a woman with her hair up, in dark clothing, standing in the same room. The cream upper body is what
+does that work, and it is the plate's own answer rather than an invention.
+
+Written in the roster shape every shipped character used (`reports/pixellab-staging/_tools/`): a
+positive `prompt` sent to PixelLab as `description`, and an `avoid` list that **is never sent** —
+PixelLab has no negative-prompt parameter, so `avoid` is the visual review checklist.
+
+**`liaison` — Chronicle-facing. This is the one that ships.**
+
+> Adult woman in her early thirties, travelling field agent. Lean practical build, medium brown hair
+> pinned up off the collar. Cream linen shirt with full sleeves, under a dark brown leather
+> sleeveless over-jerkin cut asymmetrically with a reinforced panel and strap across one shoulder
+> only. Open knee-length dark navy wool coat with muted sea-green lining showing at the turned cuffs
+> and collar. Dark trousers, wide brown leather belt carrying a narrow brass-capped instrument case
+> at the hip, tall brown leather boots. A small muted teal band at the collar, continuing over the
+> shoulder so it is visible from behind. Hard-wearing clothing, moderately worn.
+
+`avoid`: ankle-length coat, floor-length robe, cape, symmetrical uniform, held props, magnifying
+glass in hand, shoulder bag, satchel, insignia, badge, emblem, compass rose, bright cyan, modern
+tactical gear, goggles, hat, armour, weapon.
+
+Three of those are load-bearing rather than taste. **No held props** — `canonicalCanvas()` clips.
+**No ankle-length coat** — see the two corrected figures above. **No bright cyan** — Chronicle owns
+`--c-teal-rgb: 126, 221, 214`, §3 puts the floor for Meridian's teal at roughly `#2d6a6a`, and
+anything lighter makes the two institutions read as one on a 48-pixel sprite.
+
+**No insignia, and that is canon rather than a prompt preference.** Units 1–2 are the "trusted
+helper" floor of the reveal ladder: Voss carries no visible mark there, and
+`tests/unit/field-liaison.test.js` fails if a shipped line mentions Meridian. The Meridian scheme
+still shapes the whole costume — navy coat, sea-green lining, brass fittings, the plate's silhouette
+— which is exactly what makes the reveal land later.
+
+**`liaison-meridian` — revealed. Written now, generated later.**
+
+> The same woman, same face, same hair, same boots, same coat pattern. The navy coat turned to show
+> the muted sea-green lining fully across the chest. The leather shoulder panel now carrying the
+> Meridian compass-rose mark. Brass fittings polished and bright rather than dulled. Pale cyan light
+> in the glass of the belt instrument, used sparingly.
+
+Same `avoid` list minus insignia, badge, emblem and compass rose.
+
 ### PixelLab generation spec
 
 Bound by the shipped contract. Every value below is taken from the real pipeline, not assumed.
 
-| Parameter      | Value                                                                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------- |
-| `size`         | **40** — this is a body-height argument, _not_ the canvas. 88 is wrong; see `CHARACTER-CAST-SPEC.md` |
-| `view`         | `low top-down`                                                                                       |
-| `outline`      | `single color black outline`                                                                         |
-| `shading`      | `detailed shading`                                                                                   |
-| `detail`       | `high detail`                                                                                        |
-| `proportions`  | `{"type": "preset", "name": "heroic"}`                                                               |
-| Rotations      | 8 returned; the game uses 4                                                                          |
-| Walk animation | `walking-8-frames` **template — not `v3`**                                                           |
+| Parameter             | Value                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `size`                | **40** — this is a body-height argument, _not_ the canvas. 88 is wrong; see `CHARACTER-CAST-SPEC.md` |
+| `view`                | `low top-down`                                                                                       |
+| `outline`             | `single color black outline`                                                                         |
+| `shading`             | `detailed shading`                                                                                   |
+| `detail`              | `high detail`                                                                                        |
+| `proportions`         | `{"type": "preset", "name": "heroic"}`                                                               |
+| Rotations             | 8 returned (`n_directions: 8`); the game uses 4                                                      |
+| `mode`                | `standard`                                                                                           |
+| `text_guidance_scale` | `8`                                                                                                  |
+| Walk animation        | `walking-8-frames` **template — not `v3`**                                                           |
+
+The three rows below `proportions` come from `reports/pixellab-staging/ledger.json`'s
+`run.createParams` — what the 22-character run actually sent, rather than what
+`reports/pixellab-staging/_tools/roster.mjs` still has frozen at the stale `size: 88`.
 
 **Why the template and not `v3`.** v3 draws the back view receding: the body climbs 4–6 px up the
 canvas across the north cycle and snaps back at the loop point, which reads in game as a limp. The
-template also fixes the frame count at 8.
+template also fixes the frame count at 8. Note that the staging run **did** use v3, so its ledger is
+the source for the create parameters and not for the animation ones.
+
+**Voss also needs a `breathing-idle`, 4 frames.** They are a stationed hub character standing beside
+the player at close range, which is the exact case `director`/`amani`/`julian` all carry
+`idleColumns: 5` for — Phase 64's finding was that a stationed body without one reads as furniture.
+
+**The account caps at 8 concurrent jobs**, and `create_character` reports that condition as a
+misleading "Generation failed due to heavy load" where `animate_character` reports it honestly. That
+one message accounted for essentially all 32 retries in the overnight run. Working rule from that
+report: **creates only succeed when the animation queue is fully drained.** Failed generations are
+not charged.
 
 **Canvas.** The build packs to the pinned **48×56** canvas, feet on row 49, standing body 45 rows.
 `canonicalCanvas()` clamps rather than resizing the cast, so a long prop on a new character is

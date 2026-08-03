@@ -5486,6 +5486,12 @@ dd {
   border-color: rgba(var(--c-gold-rgb), 0.48);
   color: #ffefbd;
 }
+/* The Field Liaison is the only person on a field map who is not of the period, and the pill says
+   so in the Institute's teal rather than in either faction's colour. */
+.field-npc--chronicle span {
+  border-color: rgba(126, 200, 202, 0.5);
+  color: #dff5f4;
+}
 .spanish-ship {
   left: 122px !important;
   top: 290px !important;

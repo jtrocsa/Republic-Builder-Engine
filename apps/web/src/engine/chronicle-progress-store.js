@@ -68,6 +68,11 @@ export const DEFAULT_PROGRESS = {
     streakDays: 0,
     lastCompletedDate: null,
   },
+  // The frame story's only persisted state. `liaisonTrust` is a small bounded integer that selects
+  // which of the Field Liaison's lines plays — tone, never which scenes exist, and never anything
+  // curricular (docs/design/THE-FIELD-LIAISON.md §5). `flags` holds one-shot narrative booleans and
+  // is deliberately empty: a flag goes in when something reads it, not before.
+  story: { liaisonTrust: 0, flags: {} },
   // `trackerCollapsed`: whether the field's Mission Tracker checklist is folded to its header.
   // Persisted rather than ephemeral so collapsing it once holds across screen changes and sessions.
   settings: { miniGamesEnabled: true, trackerCollapsed: false },
@@ -115,6 +120,11 @@ export function readProgress() {
           ...(saved.archiveRotation?.itemStates || {}),
         },
         queue: Array.isArray(saved.archiveRotation?.queue) ? saved.archiveRotation.queue : [],
+      },
+      story: {
+        ...DEFAULT_PROGRESS.story,
+        ...(saved.story || {}),
+        flags: { ...DEFAULT_PROGRESS.story.flags, ...(saved.story?.flags || {}) },
       },
       settings: { ...DEFAULT_PROGRESS.settings, ...(saved.settings || {}) },
       miniGameScores: {

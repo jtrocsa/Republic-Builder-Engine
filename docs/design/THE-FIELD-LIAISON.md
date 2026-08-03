@@ -3,15 +3,24 @@
 The player's recurring helper across the whole game, and the one character whose loyalty is not what
 it appears to be.
 
-Written in Phase 78 alongside decision log `0061`. **Everything here is provisional** — see
-[`CHRONICLE-CANON.md`](./CHRONICLE-CANON.md) §9. No content ships from this document; it exists so
-Phases 8–13 build one character rather than three.
+Written in Phase 78 alongside decision log `0061`. **Phase 80 shipped the character** — the
+Institute post, both field posts and `progress.story` are real, and `CHRONICLE-CANON.md` §9 has
+moved Voss and the name to canonical. See decision log `0063`. Everything about the **reveal**
+remains provisional or deferred: the Meridian connection, its placement, and §7's list.
 
 ---
 
 ## 1. Who they are
 
-**Role:** Field Liaison. **Name:** Emery Voss. **Pronouns:** they/them until deliberately decided.
+**Role:** Field Liaison. **Name:** Emery Voss. **Pronouns:** they/them.
+
+**Presentation: Voss reads as a woman**, decided in Phase 80b when the sprite had to be ordered and
+a generator needed a body to draw. This settles how the character _looks_ and nothing else — the
+pronouns above are unchanged, and §7's deferred list keeps biography and family exactly where they
+were. The separation that mattered was not from the Director but from **Dr. Amani Soto**, who is
+also a woman with her hair up in dark clothing and stands in the same room; the costume's cream
+upper body is what tells them apart at 48 pixels. See
+[`MERIDIAN-VISUAL-IDENTITY.md`](../art/MERIDIAN-VISUAL-IDENTITY.md) §6 for the settled costume.
 
 The name follows the cast's convention — first name plus surname, no title for non-academic staff,
 short enough to read in a name pill under a 48-pixel sprite. It sits clear of Rowan Hale, Amani Soto
@@ -136,8 +145,10 @@ Rules that keep this maintainable:
 - **Nothing gates curriculum.** Trust never changes which history a student sees, what a mission
   asks, or whether a unit can be completed. It changes how a character talks to them.
 
-`progress.story` does not exist yet. **Specified here, added in Phase 8**, extending
-`DEFAULT_PROGRESS` and `readProgress()`'s merge in the ordinary way.
+`progress.story` **shipped in Phase 80**, extending `DEFAULT_PROGRESS` and `readProgress()`'s merge
+in the ordinary way. `liaisonTrust` counts debriefed missions and is clamped at `MAX_LIAISON_TRUST`;
+three bands (0, 1–2, 3+) select which Institute line plays, via the exported pure `liaisonLine()`.
+`flags` is still empty, per the rule above.
 
 ## 6. Integration points
 
@@ -166,7 +177,7 @@ of the Archive Room approach lane (columns 11–12), and of the tutorial tour's 
 
 ## 7. Deferred
 
-Do not resolve while writing something else: Voss's biography, gender, and family; their exact
+Do not resolve while writing something else: Voss's biography and family; their exact
 recruitment by Meridian; whether they knew about the Original Drift before the player; their final
 allegiance; and the closing scene. Each has content consequences and each is listed in
 `CHRONICLE-CANON.md` §9 as deliberately unwritten.

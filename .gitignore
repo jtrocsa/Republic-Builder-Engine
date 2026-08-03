@@ -10,3 +10,7 @@ coverage/
 test-results/
 reports/
 apps/web/src/assets/generated/
+# Per-machine Claude Code settings. Holds PIXELLAB_SECRET, which .mcp.json expands into the
+# PixelLab MCP server's Authorization header — the committed .mcp.json carries the variable name
+# only, never the token.
+.claude/settings.local.json

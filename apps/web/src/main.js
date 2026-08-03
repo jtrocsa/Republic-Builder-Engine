@@ -910,6 +910,12 @@ const CHARACTER_SHEETS = {
   director: characterSheet("institute/director-rowan-hale", 7, { idleColumns: 5 }),
   amani: characterSheet("institute/researcher-amani-soto", 9, { idleColumns: 5 }),
   julian: characterSheet("institute/professor-julian-park", 9, { idleColumns: 5 }),
+  // The Field Liaison, and the fourth body in the Main Hall. `idleColumns: 5` for the same reason
+  // the three above have it — she is stationed, and the player stands next to her at close range.
+  // The costume is deliberately short-jacketed over a pale shirt: Dr. Soto is already a tall dark
+  // full-length coat in this room, and the two read as one silhouette at 48px if Voss wears another.
+  // See docs/art/MERIDIAN-VISUAL-IDENTITY.md §6.
+  liaison: characterSheet("institute/field-liaison-emery-voss", 9, { idleColumns: 5 }),
   // Player appearances.
   "chronicler-a": characterSheet(`${FIELD}/chronicler-a`, 9),
   "chronicler-b": characterSheet(`${FIELD}/chronicler-b`, 9),
@@ -1082,6 +1088,16 @@ const FIELD_MOVE_KEYS = {
 };
 const FIELD_NPCS = [
   {
+    id: "liaison",
+    x: 31.5,
+    y: 23.5,
+    group: "chronicle",
+    name: "Emery Voss",
+    label: "Field Liaison",
+    sprite: "liaison",
+    text: "Walk it before you write it. You will get one account from the Admiral's table and another from the village, and the gap between the two is not a problem to solve — it is the thing you were sent to record.",
+  },
+  {
     id: "taino-elder",
     x: 30.0,
     y: 13.5,
@@ -1170,6 +1186,15 @@ const FIELD_NPCS = [
 // coordinate a few tenths inside a stamp costs nobody anything. That is the property Phase 61
 // established when it deleted 21 hand-checked four-waypoint rectangles, and routes keep it.
 const FIELD_NPC_BEHAVIOURS = {
+  // Down the shore south-east of the arrival point, facing back up at it. A station rather than a
+  // route, so a player who walks off first and comes back still finds them.
+  //
+  // The post matters more than it looks. A stationed body is solid to the player, and the first two
+  // tried were both in the way: (26.0,21.5) is two tiles due west of the spawn, which walls off one
+  // of the four directions anybody presses first, and (25.5,19.5) sat in the corridor every walk
+  // north to the village uses — it took two unrelated e2e specs down and they came back the moment
+  // Voss moved. South-east is the one quadrant nothing on this map needs.
+  liaison: { kind: "station", at: { x: 31.5, y: 23.5 }, facing: "up" },
   // The village-observation content describes her as the person others bring decisions to. Someone
   // being consulted stays put.
   "taino-elder": { kind: "station", at: { x: 30.0, y: 13.5 }, facing: "down" },
@@ -1381,6 +1406,16 @@ const FIELD_SOURCE_POINTS = {
 // ---- Unit 2 field: Riverbend Settlement ----
 const UNIT2_FIELD_NPCS = [
   {
+    id: "liaison",
+    x: 24.0,
+    y: 17.0,
+    group: "chronicle",
+    name: "Emery Voss",
+    label: "Field Liaison",
+    sprite: "liaison",
+    text: "Everyone here will tell you the settlement is working. Ask them who it is working for — the answer moves depending on whose name is on a contract, and whether they signed it themselves.",
+  },
+  {
     id: "settlement-minister",
     x: 26.0,
     y: 11.5,
@@ -1567,6 +1602,11 @@ const UNIT2_FIELD_NPCS = [
 // down column 26, and the barn spur down column 40 — and a `route` costs road cells a quarter of
 // open ground, so anyone whose stops sit at either end of one of them walks it without being told.
 const UNIT2_FIELD_NPC_BEHAVIOURS = {
+  // North-west of the arrival point, in the open strip above the dockside stores. Deliberately off
+  // the village spine: a station is injected into the nav grid as `occupied`, and the first post
+  // tried — (28.5,20), by the spine junction — re-planned the goodwife's route straight through the
+  // burgess's ground. A body standing in a corridor moves whoever walks it.
+  liaison: { kind: "station", at: { x: 24.0, y: 17.0 }, facing: "right" },
   // At the meetinghouse door, which is what a minister is. He also carries `riverbend-charter`, so
   // a player who was told to find him finds him where they were told.
   "settlement-minister": { kind: "station", at: { x: 26.0, y: 11.5 }, facing: "down" },
@@ -2686,7 +2726,33 @@ export const HUB_BLOCK_RECTS = INSTITUTE_HALL_BLOCKS;
 // header names them as load-bearing in the other direction too. Each target sits on the *face* of
 // the object it belongs to; the player stands roughly 0.6 tiles clear of it, which is inside
 // targetReach() and outside the object's collision rect.
+// The Field Liaison's trust ladder. `liaisonTrust` counts missions the player has debriefed, capped
+// so the tone can never run off the end of the authored lines — six is every mission the two
+// authored units have. The bands are deliberately coarse: trust selects which line plays, never
+// which scenes exist and nothing curricular (docs/design/THE-FIELD-LIAISON.md §5).
+export const MAX_LIAISON_TRUST = 6;
+/** Which of the Liaison's Institute lines a trust score plays. Pure, and exported for tests. */
+export function liaisonLine(trust) {
+  if (trust >= 3)
+    return "You have enough filed that I can stop handing you procedure. So, honestly: a fair amount of what the Institute calls a settled record is only a well-kept one. When the evidence will not close a question, write that it will not — I would rather read that than something tidy.";
+  if (trust >= 1)
+    return "You are filing. Good. What to watch for now is the distance between what a record says and what it leaves out. The second one is harder to notice and it is usually the more interesting of the two.";
+  return "First run is the one people overthink. You are not out there to fix anything — you are out there to come back with a record that holds up. If somebody tells you a thing you cannot check, write down that you could not check it. That counts.";
+}
 export const HUB_TARGETS = {
+  liaison: {
+    // The east half of the north cross-aisle (rows 4-5 are open wall to wall), clear of the three
+    // hazards THE-FIELD-LIAISON.md §6 names: 2.5 tiles east of the Archive Room approach lane at
+    // cols 11-12, five tiles east of Amani's shelf route, and four rows north of both the Director's
+    // post and Julian's south-aisle circuit. Close enough to the lane that a player walking up to
+    // the Archive Room passes them. Row 4 and not 4.6: the foot box is 0.5 tall, and 4.6 put its
+    // last 0.04 across the reading stool stamped at (14,5).
+    x: 14.5,
+    y: 4.5,
+    name: "Emery Voss",
+    role: "Field Liaison",
+    dialogue: () => liaisonLine(progress.story.liaisonTrust),
+  },
   director: {
     // The central opening in front of the foyer entrance — the first thing in front of the player
     // when they walk in, which is what a greeter should be.
@@ -3163,6 +3229,10 @@ export const HUB_NPC_BEHAVIOURS = {
       { x: 9.5, y: 4.5, facing: "up", pauseMs: [1500, 2900] },
     ],
   },
+  // Stationed rather than routed: a liaison waiting to see somebody off stands where they can be
+  // found. Their sheet declares `idleColumns: 5`, so standing here plays a breathing cycle rather
+  // than holding one frame — the same treatment the other three staff in this room get.
+  liaison: { kind: "station", at: { x: 14.5, y: 4.5 }, facing: "down" },
   // The south aisle end to end, between the foyer runner and the Navigation Table dais, on row 9
   // rather than row 8 so the circuit passes south of the stools instead of through them.
   julian: {
@@ -8654,7 +8724,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -11921,6 +11991,10 @@ function handleFieldClick(target, action) {
     const sourceId = target.dataset.source;
     if (!activityFor(sourceId)) return true;
     const entry = ensureSourceActivity(sourceId);
+    // The one place `liaisonTrust` moves. `debriefed` already makes this a one-shot per record, so
+    // re-reading a debrief cannot farm it, and the clamp keeps the tone inside the authored bands.
+    if (!entry.debriefed)
+      progress.story.liaisonTrust = Math.min(progress.story.liaisonTrust + 1, MAX_LIAISON_TRUST);
     entry.debriefed = true;
     // Then exactly what "open-activity-source" does. The debrief has replaced the board's
     // completion footer, so it has to carry the player the same way onward — into the record

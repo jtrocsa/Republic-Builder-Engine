@@ -84,8 +84,13 @@ for (const [surface, screen, seed, playerId] of [
 // reads as "why is the Taíno gardener wearing a fedora".
 // One test per map rather than one loop: seedProgress() deliberately only writes into an empty
 // localStorage key, so re-seeding inside a single test would keep the first map's save.
+// The Field Liaison is on both authored maps and is pinned here twice. This constant held the
+// placeholder sheet Voss borrowed until Phase 80b generated her own — the two lines below are what
+// failed until the real art landed, which is exactly what they were for.
+const LIAISON_SHEET = "field-liaison-emery-voss";
 const SHEETS_BY_CASE = {
   "case-001": {
+    liaison: LIAISON_SHEET,
     "taino-elder": "npc-caribbean-woman",
     "taino-gardener": "npc-caribbean-woman",
     "taino-fisher": "npc-caribbean-man",
@@ -95,6 +100,7 @@ const SHEETS_BY_CASE = {
     "taino-child": "npc-caribbean-child",
   },
   "case-004": {
+    liaison: LIAISON_SHEET,
     "settlement-minister": "npc-jamestown-gentleman",
     "indentured-servant": "npc-jamestown-servant",
     "settlement-burgess": "npc-jamestown-gentleman",
@@ -143,8 +149,18 @@ for (const [caseId, sheets] of Object.entries(SHEETS_BY_CASE)) {
             .querySelector(".character-sprite")
             .style.getPropertyValue("--sprite-sheet")
             .match(
-              /(npc-[a-z-]+|legacy-[a-z]+|chronicler-[ab]|director-[a-z-]+)-(?:down|up|left|right)\.png/
-            ) || [null, "MISSING"])[1],
+              // `field-liaison-` is its own alternative rather than folded into a looser pattern:
+              // Voss is the only cast member whose stem starts with neither `npc-` nor a role word,
+              // and widening this to `[a-z-]+` would stop it catching a genuinely missing sheet.
+              /(npc-[a-z-]+|legacy-[a-z]+|chronicler-[ab]|director-[a-z-]+|field-liaison-[a-z-]+)-(?:down|up|left|right)\.png/
+              // A character with an `idleColumns` sheet is drawn from `<stem>-idle-<direction>.png`
+              // while it stands, and the greedy stem above captures that suffix. Voss is the first
+              // NPC on a *field* map to declare a breathing idle, so this branch had never been
+              // reached before Phase 80b — the placeholder they borrowed had no idle sheet, which is
+              // why this passed with borrowed art and failed with their own. Strip it here rather
+              // than exclude `-idle` in the pattern: which cycle is playing at the sampled frame is
+              // a timing question, and the claim under test is whose art it is.
+            ) || [null, "MISSING"])[1].replace(/-idle$/, ""),
         ])
       )
     );

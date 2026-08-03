@@ -1,0 +1,117 @@
+// Emery Voss, in the three places they stand.
+//
+// The Field Liaison debuted in Phase 80 with no new engine system — a HUB_TARGETS entry, a
+// behaviour, two FIELD_NPCS rows and one `progress.story` object. That is exactly why it needs a
+// spec: every piece of it is an addition to a table something else already iterates, so nothing
+// here would fail loudly if a later re-lay dropped one. The trust half in particular is invisible
+// to a unit test — liaisonLine() is pure and covered there, but whether the Institute dialogue
+// actually reads `progress.story.liaisonTrust` is a wiring question.
+
+import { expect, test } from "@playwright/test";
+
+import {
+  loadSeededSave,
+  seedProgress,
+  walkToHubNpc,
+  walkToHubTarget,
+  walkToNpc,
+} from "./helpers/progress-seed.js";
+
+const NEW_LINE = "First run is the one people overthink";
+const SEASONED_LINE = "I can stop handing you procedure";
+
+async function enterMainHall(page, overrides = {}) {
+  await seedProgress(page, {
+    currentScreen: "institute",
+    currentHubRoom: "main",
+    tutorial: { step: "complete", completed: true, skipped: false },
+    ...overrides,
+  });
+  await loadSeededSave(page);
+  await expect(page.locator("#institutePlayer")).toBeVisible();
+}
+
+test.describe("the Field Liaison at the Institute", () => {
+  test("stands in the Main Hall and speaks the untrusted line on a fresh save", async ({
+    page,
+  }) => {
+    await enterMainHall(page);
+
+    const voss = page.locator('[data-hub-npc="liaison"]');
+    await expect(voss).toBeVisible();
+    await expect(voss).toContainText("Emery Voss");
+
+    expect(await walkToHubNpc(page, "liaison")).toBe(true);
+    await page.keyboard.press("e");
+
+    const dialogue = page.locator(".hub-dialogue");
+    await expect(dialogue).toBeVisible();
+    await expect(dialogue).toContainText("Emery Voss");
+    await expect(dialogue).toContainText("Field Liaison");
+    await expect(dialogue).toContainText(NEW_LINE);
+  });
+
+  test("speaks a different line once the player has filed a few missions", async ({ page }) => {
+    await enterMainHall(page, { story: { liaisonTrust: 3, flags: {} } });
+
+    expect(await walkToHubNpc(page, "liaison")).toBe(true);
+    await page.keyboard.press("e");
+
+    const dialogue = page.locator(".hub-dialogue");
+    await expect(dialogue).toBeVisible();
+    await expect(dialogue).toContainText(SEASONED_LINE);
+    await expect(dialogue).not.toContainText(NEW_LINE);
+  });
+
+  // Voss stands in the north cross-aisle at (14.5,4.5), two and a half tiles east of the cols 11-12
+  // lane. A station is a solid body to the player and is injected into the hub nav grid as occupied,
+  // so the browser question is whether the room still works around them.
+  test("leaves the Archive Room approach open from beside Voss", async ({ page }) => {
+    await enterMainHall(page);
+
+    expect(await walkToHubNpc(page, "liaison")).toBe(true);
+    expect(await walkToHubTarget(page, "archiveDoor")).toBe(true);
+  });
+
+  // From the foyer, not from Voss. The route from the cross-aisle to the dais has to go back west
+  // to the cols 9-12 lane, south, then east — two turns around the Navigation Table's own footprint,
+  // which is more than the walk helper's slide heuristic is (or should be) able to do. The claim
+  // worth making is that the table is still reachable at all with a fourth body in the room.
+  test("leaves the Navigation Table reachable", async ({ page }) => {
+    await enterMainHall(page);
+
+    expect(await walkToHubTarget(page, "table")).toBe(true);
+  });
+});
+
+test.describe("the Field Liaison in the field", () => {
+  test("meets the Chronicler on the Caribbean shore", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-001",
+      unlockedCaseIds: ["case-001"],
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    const voss = page.locator('[data-npc="liaison"]');
+    await expect(voss).toBeVisible();
+
+    expect(await walkToNpc(page, "liaison")).toBe(true);
+    await page.keyboard.press("e");
+
+    await expect(page.locator(".field-speech-bubble")).toContainText("Walk it before you write it");
+  });
+
+  test("is posted at Riverbend too", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-004",
+      unlockedCaseIds: ["case-001", "case-004"],
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    await expect(page.locator('[data-npc="liaison"]')).toBeVisible();
+  });
+});

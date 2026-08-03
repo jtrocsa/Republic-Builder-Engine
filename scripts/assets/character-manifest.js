@@ -84,6 +84,30 @@ export const CHARACTERS = [
     },
   },
 
+  // The Field Liaison, Emery Voss. Generated in Phase 80b against the fifth Meridian concept plate
+  // — see docs/art/MERIDIAN-VISUAL-IDENTITY.md §6 for the costume and the prompt that produced it.
+  //
+  // No `walk` map, unlike the three staff above: this one came in through the bulk archive path
+  // (`walkGroup`/`idleGroup` name the animation groups in metadata.json), which needs only the
+  // character id. That is the newer of the two routes build-character-sheets.js supports and the
+  // one the Unit 4/5 cast uses.
+  //
+  // Two abandoned creates are recorded here so neither is mistakenly adopted later. Both were the
+  // same failure — the costume, not the pipeline. 28a13d53-f098-44bc-9e83-c9fdaa2f9156 dropped the
+  // coat entirely (three garment layers is more than 45 pixels of body can hold), and
+  // e9ecca13-f6e8-454f-92c3-14515e060f57 produced a full-length coat that read as Dr. Soto's
+  // silhouette from across the Main Hall.
+  {
+    key: "liaison",
+    stem: "institute/field-liaison-emery-voss",
+    name: "Emery Voss",
+    id: "d7ba9b23-1096-4e05-b24b-5fd33c4dc82f",
+    frames: 8,
+    walkGroup: "walking",
+    idleGroup: "breathing-idle",
+    idleFrames: 4,
+  },
+
   // ---- Player --------------------------------------------------------------------------------
   {
     key: "chronicler-a",
