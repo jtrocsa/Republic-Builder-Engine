@@ -67,6 +67,11 @@ const QUESTION_NOBODY_ASKED = {
   openQuestions: [
     "How many people were living on Hispaniola in 1492. You were on one shore for one afternoon, and the estimates historians work from differ by an order of magnitude.",
   ],
+  codexFiling: {
+    summary:
+      "Seven people on one shore held a farming system, a way of deciding things and a three-island trade route. The Spanish account carries none of it, because nobody asked.",
+    tags: ["Whose account is this", "What the record leaves out", "Counting people"],
+  },
   historicalRecord: {
     documented: [
       "Taíno conuco agriculture: yuca heaped into mounds with maize between and batata beneath, worked ground rather than wild ground.",
@@ -333,6 +338,11 @@ const UNIVERSALIS = {
   openQuestions: [
     "Whether Waldseemüller changed his mind. He dropped the name from his 1513 map without explaining why, and historians have been reading that silence ever since.",
   ],
+  codexFiling: {
+    summary:
+      "Reassembled, the sheet shows its own edge of knowledge: inherited Ptolemy in the east, coasts drawn from living sailors' reports in the west, stopping exactly where the reports stopped.",
+    tags: ["Whose account is this", "What the record leaves out", "Written to persuade"],
+  },
   historicalRecord: {
     documented: [
       "The 1507 Universalis cosmographia, printed in twelve sheets to be pasted into a wall map roughly 1.3 by 2.4 metres.",
@@ -587,6 +597,17 @@ const WHAT_WILL_BE_USEFUL = {
   openQuestions: [
     "Which surviving version of this letter is closest to what Columbus wrote. It circulated in several printings and translations within a year, and the wording differs between them.",
   ],
+  codexFiling: {
+    summary:
+      "Every line the island fails to bear out fails in the same direction — toward a place worth returning to, with people worth setting to work. The letter is reliable evidence of what its author needed funded.",
+    tags: [
+      "Whose account is this",
+      "Written to persuade",
+      "Who pays for the voyage",
+      "Who does the work",
+    ],
+    seeAlso: ["case-001-interview-what-was-asked"],
+  },
   historicalRecord: {
     documented: [
       "The 1493 letter reporting on the first voyage, printed and reprinted across Europe within months of his return.",

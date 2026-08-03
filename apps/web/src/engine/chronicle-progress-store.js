@@ -36,6 +36,12 @@ export const DEFAULT_PROGRESS = {
   // absent on pre-Phase-71 saves, which is why it is read as falsy rather than merged in here.
   sourceActivities: {},
   activeActivitySourceId: null,
+  // The Codex: one entry per mission filed with a conclusion its evidence could carry, keyed by
+  // activity id and kept permanently. Unlike everything above it, this is not scoped to a case — it
+  // is the only save state that survives leaving one, which is the whole point of it. Entries are
+  // snapshots taken at filing time (see engine/codex-archive.js), so nothing here has to be kept in
+  // sync with the activity state that produced it. Needs its merge entry in readProgress() below.
+  codex: {},
   archiveChallenges: {},
   submissions: {},
   activityState: {},
@@ -89,6 +95,10 @@ export function readProgress() {
       exchangeLedger: { ...DEFAULT_PROGRESS.exchangeLedger, ...(saved.exchangeLedger || {}) },
       foundingLedger: { ...DEFAULT_PROGRESS.foundingLedger, ...(saved.foundingLedger || {}) },
       sourceActivities: { ...DEFAULT_PROGRESS.sourceActivities, ...(saved.sourceActivities || {}) },
+      // Not optional. The spread above is shallow, so an object-valued key with no line here is
+      // replaced wholesale by `saved` — which is fine until the day the default stops being empty,
+      // and is silently wrong the moment anything is read from it before a save has ever happened.
+      codex: { ...DEFAULT_PROGRESS.codex, ...(saved.codex || {}) },
       archiveChallenges: {
         ...DEFAULT_PROGRESS.archiveChallenges,
         ...(saved.archiveChallenges || {}),

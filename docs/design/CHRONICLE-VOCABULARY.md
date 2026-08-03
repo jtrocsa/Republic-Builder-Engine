@@ -100,6 +100,25 @@ determine why" exists so a student is never forced to guess at an author's inten
 | **Mission Question** | The historical inquiry guiding the mission                   |
 | **Anomaly**          | Evidence the historical record may have been interfered with |
 
+### The Codex
+
+Added Phase 75 (decision log `0058`), when the Codex stopped being one case's satchel.
+
+| Term                | Means                                                                           |
+| ------------------- | ------------------------------------------------------------------------------- |
+| **Filed record**    | One mission closed with a conclusion its evidence could carry. The Codex's unit |
+| **Thread**          | A tag two or more filed records share — what the Cross-references section names |
+| **Cross-reference** | Two filed records the archive has noticed are about the same question           |
+
+**A tag must be carried by at least two activities.** A tag is the only mechanism connecting a
+mission in one unit to a mission in another, so one used by a single activity is either decoration
+or — much more often — a typo of a tag that does connect. Both fail silently. Pinned by
+`tests/unit/activity-content.test.js`.
+
+Tags are sentences a student would recognize, not slugs: "Who does the work", "What the record
+leaves out". They are matched by exact string, so the phrasing _is_ the id — §4's rule applies to
+them, and rewording a shipped tag silently splits its thread in two.
+
 ---
 
 ## 3. `variant` is a label — no code branches on it

@@ -116,6 +116,16 @@ import {
 } from "./engine/activities/index.js";
 import { UNIT_01_ACTIVITIES } from "./content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "./content/activities/unit-02-activities.js";
+// The Codex's own arithmetic, kept pure and out here: what a filed record looks like, and how two
+// of them relate. main.js keeps the wiring and the screen.
+import {
+  buildCodexEntry,
+  codexByUnit,
+  codexCrossReferences,
+  codexEntries,
+  codexSeeAlso,
+  codexStats,
+} from "./engine/codex-archive.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
@@ -10317,7 +10327,7 @@ function handleActivityAction(control, overrides = {}) {
   // close the dialogue bubble the player is reading.
   if (next === entry.state) return;
   entry.state = next;
-  recordActivityOutcomes(activity, entry.state);
+  recordActivityOutcomes(activity, entry.state, sourceId);
   playQuestSfx(sourceId);
   save();
   render();
@@ -10326,26 +10336,131 @@ function handleActivityAction(control, overrides = {}) {
 // The activity twin of recordSkillOutcomes(). Activities report the same
 // { key, skillCategory, correct } shape quest types do, so the mastery record needs no new
 // concepts — only a second door into it.
-function recordActivityOutcomes(activity, state) {
+//
+// Also the one place a finished mission reaches the Codex. It was already the single consumer of
+// activityOutcome(), which is why the filing hangs here rather than off the closer: one call site,
+// and every path that can complete an activity already runs through it.
+function recordActivityOutcomes(activity, state, sourceId) {
   if (isPreviewingContent()) return;
-  activityOutcome(activity.kind, activity, state).skillOutcomes.forEach((outcome) => {
-    if (!outcome.skillCategory) return;
-    const correct = !!outcome.correct;
-    const existing = progress.skillMastery[outcome.key];
+  const outcome = activityOutcome(activity.kind, activity, state);
+  outcome.skillOutcomes.forEach((skillOutcome) => {
+    if (!skillOutcome.skillCategory) return;
+    const correct = !!skillOutcome.correct;
+    const existing = progress.skillMastery[skillOutcome.key];
     if (
       existing &&
-      existing.skillCategory === outcome.skillCategory &&
+      existing.skillCategory === skillOutcome.skillCategory &&
       existing.correct === correct
     ) {
       return;
     }
-    progress.skillMastery[outcome.key] = {
-      skillCategory: outcome.skillCategory,
+    progress.skillMastery[skillOutcome.key] = {
+      skillCategory: skillOutcome.skillCategory,
       correct,
       questType: activity.kind,
       updatedAt: new Date().toISOString(),
     };
   });
+  fileToCodex(activity, state, sourceId, outcome);
+}
+
+/**
+ * File a finished mission into the Codex.
+ *
+ * Gated on `isActivityComplete`, which for every engine means the closer is both *correct* and
+ * *supported* — the conclusion the record will bear, argued from evidence the player is actually
+ * carrying. That is what "what you can defend" means as a condition rather than a slogan.
+ *
+ * Deliberately never unfiles. Completion is an event: a player who afterwards reopens the mission
+ * and releases a notebook entry has not un-established what they established, and watching a record
+ * vanish from the Archive would teach the opposite. Re-completing refreshes the snapshot but keeps
+ * the original `filedAt`, so the archive stays in the order things happened.
+ *
+ * An activity with no `codexFiling` files nothing. Every screen below reads `progress.codex`, so an
+ * unauthored mission is simply absent rather than a half-entry with no catalogue line.
+ *
+ * @returns {boolean} whether anything changed — backfillCodex() needs to know before it saves.
+ */
+function fileToCodex(activity, state, sourceId, outcome = null) {
+  if (!activity?.codexFiling || !sourceId) return false;
+  if (!isActivityComplete(activity.kind, activity, state)) return false;
+  const result = outcome || activityOutcome(activity.kind, activity, state);
+  const source = sourceById(sourceId);
+  const kase = caseById(caseIdForSource(sourceId));
+  const unit = kase ? unitForCase(kase.id) : null;
+  const filed = activity.closer.options.find((option) => option.id === state?.filed);
+  const entry = buildCodexEntry({
+    activityId: activity.id,
+    kind: activity.kind,
+    variant: activity.variant,
+    title: activity.title,
+    missionQuestion: activity.missionQuestion,
+    summary: activity.codexFiling.summary,
+    sourceId,
+    sourceTitle: source?.title,
+    caseId: kase?.id,
+    caseLabel: kase ? caseNumberLabel(kase) || resolvedCaseName(kase) : "",
+    unitId: unit?.id,
+    unitLabel: unit ? resolvedUnitTitle(unit) : "",
+    conclusion: filed?.text,
+    why: filed?.why,
+    supported: true,
+    // The kept subset, not everything the mission surfaced. A record's evidence is what the player
+    // chose to stand behind — for an activity with no notebook cap that is all of it, which is the
+    // correct reading of "kept everything" rather than a special case.
+    evidence: (result.evidence || []).map((finding) => ({
+      id: finding.id,
+      text: finding.text,
+      from: finding.from || "",
+    })),
+    openQuestions: [
+      activity.debrief?.remains,
+      ...(Array.isArray(activity.openQuestions) ? activity.openQuestions : []),
+    ].filter(Boolean),
+    tags: activity.codexFiling.tags,
+    seeAlso: activity.codexFiling.seeAlso,
+    filedAt: progress.codex?.[activity.id]?.filedAt || new Date().toISOString(),
+  });
+  if (!entry) return false;
+  progress.codex ??= {};
+  const before = JSON.stringify(progress.codex[activity.id] || null);
+  progress.codex[activity.id] = entry;
+  return before !== JSON.stringify(entry);
+}
+
+/**
+ * Which case a source belongs to.
+ *
+ * Not `activeFieldCaseId()`: the backfill runs at boot with whatever case happens to be active, and
+ * a Codex that stamped every Riverbend record "Case 1.01" would be worse than no label at all.
+ */
+function caseIdForSource(sourceId) {
+  for (const [caseId, sources] of Object.entries(UNIT_SOURCES)) {
+    if (sources.some((source) => source.id === sourceId)) return caseId;
+  }
+  return null;
+}
+
+/**
+ * Make an existing save whole.
+ *
+ * The Codex is new, and every player who has already finished a mission finished it into a key that
+ * did not exist. This walks what they have and files what qualifies, once, at boot. It is not a
+ * migration in the schema sense — nothing is rewritten, and re-running it is a no-op — so it stays
+ * in place rather than being versioned behind a flag.
+ */
+function backfillCodex() {
+  if (isPreviewingContent()) return;
+  let changed = false;
+  Object.entries(ACTIVITIES_BY_SOURCE).forEach(([sourceId, activity]) => {
+    const state = progress.sourceActivities?.[sourceId]?.state;
+    if (!state) return;
+    if (fileToCodex(activity, state, sourceId)) changed = true;
+  });
+  // Only save on a real change. An unconditional write here would bump `lastSavedAt` on every boot,
+  // which is the field progress-repository.js resolves remote-vs-local conflicts with — a save that
+  // is newer for no reason wins against a genuinely newer one from another device.
+  if (changed) save();
 }
 
 function practiceCheckScreen() {
@@ -10621,15 +10736,94 @@ function sourceReader() {
   return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1>${promptSection}${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>${esc(sealedNote)}</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Filed in the Codex ✓" : "File in the Codex →"}</button></section></main>`;
 }
 
+/**
+ * The Codex — three sections, and only the first of them belongs to the case you are standing in.
+ *
+ * Until Phase 75 this whole screen was the first section: the sources you had secured on the
+ * current case, described in its own copy as "temporary records," gone the moment you left. That is
+ * a satchel, and the narrative copy has always promised the Archive's memory instead. The other two
+ * sections are that promise: every mission you closed with a defensible conclusion, kept
+ * permanently, and the threads that run between them.
+ *
+ * Kept as the `codex` screen id with both existing entry points untouched — this is the same screen
+ * doing more, not a new one.
+ */
 function codexScreen() {
   const codexCaseId = activeFieldCaseId();
-  const entries = sourcesForCase(codexCaseId)
+  const satchel = sourcesForCase(codexCaseId)
     .map((source) => {
       const secured = hasEvidence(codexCaseId, source.id);
-      return `<article class="codex-entry ${secured ? "" : "locked"}"><span>${esc(source.type)}</span><h2>${esc(source.title)}</h2><p>${secured ? esc(progress.responses[source.id] || "Evidence record secured.") : "Secure this record in the field to add it to the Codex."}</p>${secured ? `<button class="text-button" data-action="open-source" data-source="${source.id}" data-origin="codex">Open record →</button>` : ""}</article>`;
+      // h3, not h2: the satchel is a section of this screen now rather than the whole of it, and its
+      // cards sit under the section's own heading.
+      return `<article class="codex-entry ${secured ? "" : "locked"}"><span>${esc(source.type)}</span><h3>${esc(source.title)}</h3><p>${secured ? esc(progress.responses[source.id] || "Evidence record secured.") : "Secure this record in the field to add it to the Codex."}</p>${secured ? `<button class="text-button" data-action="open-source" data-source="${source.id}" data-origin="codex">Open record →</button>` : ""}</article>`;
     })
     .join("");
-  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>The Codex</h1><p>Records filed on this case. Your initial reading stays attached to each one.</p></section><section class="codex-grid">${entries}</section></main>`;
+
+  const entries = codexEntries(progress.codex);
+  const stats = codexStats(entries);
+  const tally = entries.length
+    ? `<p class="codex-tally"><b>${stats.records}</b> ${stats.records === 1 ? "record" : "records"} filed · <b>${stats.units}</b> ${stats.units === 1 ? "unit" : "units"} · <b>${stats.threads}</b> ${stats.threads === 1 ? "thread" : "threads"}</p>`
+    : "";
+
+  const filed = entries.length
+    ? codexByUnit(entries)
+        .map(
+          (group) =>
+            `<section class="codex-unit"><h3>${esc(group.unitLabel || "Unfiled")}</h3>${group.entries
+              .map((entry) => codexRecordMarkup(entry, entries))
+              .join("")}</section>`
+        )
+        .join("")
+    : `<p class="codex-empty">Nothing filed yet. Close a mission with a conclusion your evidence can carry, and it is preserved here for the rest of the course.</p>`;
+
+  const threads = codexCrossReferences(entries);
+  const crossRefs = threads.length
+    ? `<div class="codex-threads">${threads
+        .map(
+          (thread) =>
+            `<article class="codex-thread${thread.spansUnits ? " spans-units" : ""}"><h3>${esc(thread.tag)}</h3>${thread.spansUnits ? `<p class="codex-thread__span">Across ${new Set(thread.entries.map((entry) => entry.unitId)).size} units</p>` : ""}<ul>${thread.entries
+              .map(
+                (entry) =>
+                  `<li><b>${esc(entry.title)}</b>${entry.caseLabel ? `<span>${esc(entry.caseLabel)}</span>` : ""}</li>`
+              )
+              .join("")}</ul></article>`
+        )
+        .join("")}</div>`
+    : `<p class="codex-empty">${
+        entries.length
+          ? "One record cannot cross-reference itself. File a second and the Archive will start showing you where your investigations meet."
+          : "The Archive cross-references your filed records against each other. There is nothing to compare yet."
+      }</p>`;
+
+  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>The Codex</h1><p>What you can defend. Records you file stay here — across every case, for the whole course.</p>${tally}</section><section class="codex-section"><h2>This case</h2><p class="codex-section__note">Sources you secured in the field. Your initial reading stays attached to each one.</p><div class="codex-grid">${satchel}</div></section><section class="codex-section"><h2>Filed records</h2><p class="codex-section__note">Missions you closed with a conclusion your evidence could carry.</p>${filed}</section><section class="codex-section"><h2>Cross-references</h2><p class="codex-section__note">Where two of your filed records turn out to be about the same question.</p>${crossRefs}</section></main>`;
+}
+
+/** One filed record, as it reads in the Archive. */
+function codexRecordMarkup(entry, entries) {
+  const eyebrow = [entry.caseLabel, ACTIVITY_ENGINE_LABELS[entry.kind]].filter(Boolean).join(" · ");
+  const evidence = entry.evidence.length
+    ? `<div class="codex-record__evidence"><h4>What you kept</h4><ul>${entry.evidence
+        .map(
+          (finding) =>
+            `<li>${esc(finding.text)}${finding.from ? `<cite>${esc(finding.from)}</cite>` : ""}</li>`
+        )
+        .join("")}</ul></div>`
+    : "";
+  const open = entry.openQuestions.length
+    ? `<div class="codex-record__open"><h4>Still open</h4><ul>${entry.openQuestions
+        .map((line) => `<li>${esc(line)}</li>`)
+        .join("")}</ul></div>`
+    : "";
+  const tags = entry.tags.length
+    ? `<ul class="codex-record__tags">${entry.tags.map((tag) => `<li>${esc(tag)}</li>`).join("")}</ul>`
+    : "";
+  // Only pointers the player can actually follow. codexSeeAlso() drops anything not yet filed, so
+  // this line appears the moment both ends of a connection exist and never before.
+  const related = codexSeeAlso(entry, entries);
+  const seeAlso = related.length
+    ? `<p class="codex-record__see-also"><b>See also</b> ${related.map((other) => esc(other.title)).join(" · ")}</p>`
+    : "";
+  return `<article class="codex-record">${eyebrow ? `<p class="codex-record__eyebrow">${ACTIVITY_ENGINE_ICONS[entry.kind] || ""}<span>${esc(eyebrow)}</span></p>` : ""}<h4 class="codex-record__title">${esc(entry.title)}</h4>${entry.missionQuestion ? `<p class="codex-record__question">${esc(entry.missionQuestion)}</p>` : ""}<p class="codex-record__summary">${esc(entry.summary)}</p>${entry.conclusion ? `<p class="codex-record__conclusion"><b>You filed</b> ${esc(entry.conclusion)}</p>` : ""}${evidence}${open}${tags}${seeAlso}</article>`;
 }
 
 // Aggregates progress.skillMastery (one upserted entry per graded quest
@@ -13170,5 +13364,8 @@ if (app) {
   document.addEventListener("cancel", handleManageContentDialogNativeClose, true);
   window.addEventListener("beforeunload", handleWindowBeforeUnload);
 
+  // Before the first render, so a player who finished missions before the Codex existed opens it
+  // to their own work rather than to an empty archive. A no-op on every boot after the first.
+  backfillCodex();
   render();
 }

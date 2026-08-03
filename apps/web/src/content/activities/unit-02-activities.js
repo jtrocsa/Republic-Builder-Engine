@@ -74,6 +74,20 @@ const BY_WHOSE_HEAD = {
     "Whether the Africans landed at Point Comfort in 1619 were held as servants or as slaves. The Virginia statutes that define hereditary slavery come decades later, and historians read the intervening years differently.",
     "How Tsenacommacah's own leadership understood the English land grants. Nothing you gathered records a Powhatan account of the patents themselves.",
   ],
+  codexFiling: {
+    summary:
+      "Fifty acres for every person transported, granted to whoever paid the passage. Everyone at Riverbend describes the same rule from a different position — the servant, the burgess, the clerk who writes both facts in one line.",
+    tags: [
+      "Whose account is this",
+      "What the record leaves out",
+      "Who does the work",
+      "Who pays for the voyage",
+    ],
+    // Cross-unit, and the strongest single link in the archive: the Caribbean letter argued that a
+    // place was worth returning to because there were people there worth setting to work. This is
+    // that argument written into land law a generation later, in a hand that finds it unremarkable.
+    seeAlso: ["case-001-discrepancy-what-will-be-useful"],
+  },
   historicalRecord: {
     documented: [
       "The headright system: fifty acres granted for every person transported, to whoever paid the passage. Set out in the Virginia Company's 1618 Instructions to Governor George Yeardley.",
@@ -388,6 +402,12 @@ const NOTHING_TO_BE_GOTTEN = {
   openQuestions: [
     "Whether Frethorne survived. The letter is his last known trace, and the Virginia Company records that preserve it do not follow him.",
   ],
+  codexFiling: {
+    summary:
+      "Frethorne is an excellent witness to his own condition and a poor one to its causes. The hunger and the fear are exactly as reported; the country is not what is killing him, and the arrangement that is, he is standing inside.",
+    tags: ["Whose account is this", "Written to persuade", "Who does the work", "Counting people"],
+    seeAlso: ["case-004-interview-by-whose-head"],
+  },
   historicalRecord: {
     documented: [
       "Richard Frethorne's letter to his parents, March 20, 1623, preserved because the Virginia Company kept it and reprinted in Kingsbury's Records of the Virginia Company.",
@@ -665,6 +685,14 @@ const ONE_HOGSHEAD = {
   openQuestions: [
     "What this particular cask sold for. The account records the consignment, not the London price, and the planter would not learn it for months either.",
   ],
+  codexFiling: {
+    summary:
+      "Duty taken before the planter sees anything, proceeds returned as credit rather than coin, a return cargo chosen in London a season ahead. One entry is enough to show how Chesapeake planters became owed to English merchants with nothing illegal happening.",
+    tags: ["What the record leaves out", "Who does the work", "Who pays for the voyage"],
+    // The page opens at the landing with the casks already weighed. Who made them is a question this
+    // record cannot answer and the interview can — which is the point of filing them side by side.
+    seeAlso: ["case-004-interview-by-whose-head"],
+  },
   historicalRecord: {
     documented: [
       "The consignment system: Chesapeake tobacco shipped to a London merchant to be sold on the planter's behalf, paid out months later minus charges, with the planter carrying the risk.",

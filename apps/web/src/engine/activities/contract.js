@@ -151,6 +151,34 @@ export const HistoricalRecordSchema = z.object({
 });
 
 /**
+ * What this mission leaves behind in the Codex once it is filed.
+ *
+ * The Field Notebook records what you found; the Codex records what you can defend. A finished
+ * mission is one filed record in a permanent archive that outlives the case, and this is what that
+ * record says about itself.
+ *
+ * `tags` are the whole point. They are opaque strings — this folder never learns that "Who does the
+ * work" is a labor-systems thread — and a tag shared by two filed records is how the Codex says two
+ * separate investigations are about the same thing. That is the only mechanism in the game that
+ * connects a mission in one unit to a mission in another, which is why a tag used by exactly one
+ * activity is an authoring error rather than a label (pinned by tests/unit/activity-content.test.js).
+ *
+ * `seeAlso` is the stronger, explicit form: activity ids this record speaks directly to. Resolved
+ * against *filed* records only, so a pointer appears when the player has both ends of it and never
+ * spoils a mission they have not played.
+ */
+export const CodexFilingSchema = z.object({
+  summary: z
+    .string()
+    .min(1, "codexFiling.summary is required — the catalogue line for this record"),
+  tags: z
+    .array(z.string().min(1))
+    .min(1, "a filed record with no tags cannot connect to anything")
+    .max(4, "four threads is plenty — a record tagged with everything connects to nothing"),
+  seeAlso: z.array(z.string().min(1)).optional(),
+});
+
+/**
  * The fields every engine carries regardless of its mechanic, spread into each
  * engine's own `z.object({...})` before its `.superRefine()`.
  *
@@ -187,6 +215,7 @@ export const COMMON_ACTIVITY_FIELDS = {
   openQuestions: z.array(z.string().min(1)).optional(),
   debrief: DebriefSchema.optional(),
   historicalRecord: HistoricalRecordSchema.optional(),
+  codexFiling: CodexFilingSchema.optional(),
   howItWorks: HowItWorksSchema.optional(),
   terms: TermsSchema.optional(),
   notebook: NotebookSchema.optional(),

@@ -2067,17 +2067,245 @@ dd {
   color: #efcd71;
   font-size: 0.82rem;
 }
+/* The Codex was one centred panel when it held one case's sources. It is now a document with three
+   sections and has to start at the top and run down — `align-content: center` pushed the masthead
+   into the middle of the viewport as soon as the archive had anything in it. */
 .codex-shell {
   display: grid;
-  align-content: center;
+  align-content: start;
+  gap: 34px;
 }
+/* `width: 100%` is load-bearing, and was measured rather than reasoned about. A grid item with
+   `margin: auto` does not stretch — the auto margins win over `justify-self: stretch` and size it to
+   max-content — so this box was 641px wide (the width of the words "The Codex") and sat 229px right
+   of every section under it. Invisible while the screen was one centred grid; a misalignment the
+   moment it became a document. */
 .codex-head {
   max-width: 1100px;
+  width: 100%;
   margin: auto;
+}
+.codex-tally {
+  margin: 14px 0 0;
+  font-size: 0.86rem;
+  letter-spacing: 0.05em;
+  color: var(--c-text-secondary);
+}
+.codex-tally b {
+  color: var(--gold);
+}
+.codex-section {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.codex-section > h2 {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.codex-section__note {
+  margin: 6px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
+.codex-empty {
+  margin: 16px 0 0;
+  font-size: 0.88rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+  opacity: 0.85;
+}
+.codex-unit {
+  margin-top: 20px;
+}
+.codex-unit > h3 {
+  margin: 0 0 10px;
+  font:
+    700 1rem "Spectral",
+    serif;
+  color: #fff0c7;
+}
+/* One filed record. Deliberately not a `.codex-entry` variant: that class is the per-case satchel
+   above, and the two are different things standing next to each other on the same screen. */
+.codex-record {
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 13px;
+  background: rgba(5, 33, 47, 0.72);
+}
+.codex-record__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  color: var(--gold);
+  font:
+    700 0.6rem "Cinzel",
+    serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.codex-record__eyebrow svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.codex-record__title {
+  margin: 0;
+  font:
+    700 1.06rem "Spectral",
+    serif;
+  color: #fff0c7;
+}
+.codex-record__question {
+  margin: 5px 0 0;
+  font-size: 0.86rem;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--c-text-secondary);
+}
+.codex-record__summary {
+  margin: 9px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+.codex-record__conclusion {
+  margin: 9px 0 0;
+  font-size: 0.87rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
+.codex-record__conclusion b,
+.codex-record__see-also b {
+  margin-right: 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.codex-record__evidence,
+.codex-record__open {
+  margin-top: 12px;
+}
+.codex-record__evidence h4,
+.codex-record__open h4 {
+  margin: 0 0 5px;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--c-text-secondary);
+}
+.codex-record__evidence ul,
+.codex-record__open ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+}
+.codex-record__evidence li,
+.codex-record__open li {
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--c-text-secondary);
+}
+.codex-record__evidence cite {
+  display: block;
+  font-size: 0.74rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  opacity: 0.8;
+}
+.codex-record__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.codex-record__tags li {
+  padding: 3px 9px;
+  border: 1px solid rgba(239, 204, 123, 0.32);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: #e8c46e;
+}
+.codex-record__see-also {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--c-text-secondary);
+}
+.codex-threads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 11px;
+  margin-top: 18px;
+}
+.codex-thread {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(5, 33, 47, 0.6);
+}
+/* A thread the player found in two different units is the whole argument for the Codex existing,
+   so it is the one that gets the gold edge. */
+.codex-thread.spans-units {
+  border-color: rgba(239, 204, 123, 0.44);
+  background: rgba(21, 52, 66, 0.72);
+}
+.codex-thread h3 {
+  margin: 0;
+  font:
+    700 0.95rem "Spectral",
+    serif;
+  color: #fff0c7;
+}
+.codex-thread__span {
+  margin: 3px 0 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.codex-thread ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.codex-thread li {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--c-text-secondary);
+}
+.codex-thread li b {
+  display: block;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.codex-thread li span {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 .codex-grid {
   max-width: 1100px;
-  margin: 28px auto;
+  margin: 18px auto 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 13px;
@@ -2099,7 +2327,7 @@ dd {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.codex-entry h2 {
+.codex-entry h3 {
   margin: 8px 0;
   color: #fff0c7;
   font:
@@ -5443,7 +5671,7 @@ dd {
    ============================================================ */
 /* Scoped to the activity host's own shell by its data attribute, not to `.activity-shell` — that
    class is shared with the Archive Challenges shell, the practice check and non-map missions, and
-   an unscoped `align-items` here unstretched all three of their left-hand panels. */
+   an unscoped `align-items` here dropped the stretch off all three of their left-hand panels. */
 .activity-shell[data-activity-source] {
   --activity-grain: none;
   --activity-edge: rgba(var(--c-gold-rgb), 0.3);
@@ -5455,7 +5683,7 @@ dd {
    up: `.activity-copy h1`'s clamp is sized off the viewport (4.2vw ≈ 57px at 1366) and this heading
    wraps inside a ~290px column, so `overflow-wrap: break-word` did the only thing left to it and
    split "Universalis" across two lines mid-word. The Investigation Challenge shares the column and
-   the defect — it was breaking "Begin Investigatio / n". */
+   the defect — it was breaking the last letter of "Begin Investigation" onto a line of its own. */
 .activity-shell[data-activity-source] .activity-copy h1,
 .investigation-shell .activity-copy h1 {
   font-size: clamp(1.9rem, 2.4vw, 3rem);

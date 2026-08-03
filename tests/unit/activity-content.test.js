@@ -123,6 +123,63 @@ describe("activity content: the rules every authored mission is held to", () => 
     }
   });
 
+  it.each(AUTHORED_UNITS)("$unitId files every mission into the Codex", ({ activities }) => {
+    // The Codex is what survives leaving a case, and a mission with no `codexFiling` leaves nothing
+    // behind — it is played, finished, and forgotten by the only screen that spans the course.
+    for (const [sourceId, activity] of entriesOf(activities)) {
+      expect(activity.codexFiling?.summary, `${sourceId} files nothing to the Codex`).toBeTruthy();
+      expect(
+        activity.codexFiling.tags?.length,
+        `${sourceId} is filed with no tags`
+      ).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("makes every Codex tag a connection rather than a label", () => {
+    // A tag carried by exactly one activity can never appear in the Codex's cross-references, so it
+    // is decoration — and, much more often, it is a typo of a tag that does connect ("Who does the
+    // work" against "Who did the work"). Both failures are silent at runtime: the archive simply
+    // shows one fewer thread than the author thought they had wired.
+    //
+    // Deliberately checked across all authored units at once rather than per unit. A thread that
+    // only ever runs inside one case is legal; a thread with one end is not.
+    const uses = new Map();
+    for (const { activities } of AUTHORED_UNITS) {
+      for (const [, activity] of entriesOf(activities)) {
+        for (const tag of activity.codexFiling?.tags || []) {
+          uses.set(tag, (uses.get(tag) || 0) + 1);
+        }
+      }
+    }
+    const orphans = [...uses.entries()].filter(([, count]) => count < 2).map(([tag]) => tag);
+    expect(
+      orphans,
+      "a Codex tag used by one activity connects nothing — tag both ends of the thread, or drop it"
+    ).toEqual([]);
+  });
+
+  it("points `seeAlso` at activities that exist", () => {
+    // An unresolvable pointer is silent by design — codexSeeAlso() drops anything not filed, which
+    // is what stops it spoiling a mission the player has not reached, and which also means a typo
+    // here never surfaces. So it surfaces at build time instead.
+    const known = new Set(
+      AUTHORED_UNITS.flatMap(({ activities }) =>
+        entriesOf(activities).map(([, activity]) => activity.id)
+      )
+    );
+    for (const { activities } of AUTHORED_UNITS) {
+      for (const [sourceId, activity] of entriesOf(activities)) {
+        for (const target of activity.codexFiling?.seeAlso || []) {
+          expect(
+            known,
+            `${sourceId} points seeAlso at "${target}", which is not an activity`
+          ).toContain(target);
+          expect(target, `${sourceId} points seeAlso at itself`).not.toBe(activity.id);
+        }
+      }
+    }
+  });
+
   it("keeps `variant` a label, with no engine branching on it", () => {
     // `variant` names a mission's shape inside its engine family — "Ask the Right Question", "Follow
     // the Shipment". The registry's whole value is that adding an engine is one more entry in

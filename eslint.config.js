@@ -62,6 +62,17 @@ export default [
     },
   },
   {
+    // tests/ runs under Vitest and Playwright, both of which are Node — a spec reads the repo off
+    // disk (`process.cwd()` + node:fs) rather than through the browser's module graph. Missing until
+    // Phase 75, which is why the filesystem scan added in Phase 74 failed no-undef.
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+  {
     // Root-level tool configs also run under plain Node, not the browser
     files: ["vite.config.js", "playwright.config.js"],
     languageOptions: {

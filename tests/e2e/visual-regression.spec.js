@@ -75,6 +75,18 @@ const RIVERBEND_ACCOUNTS = {
   "powhatan-woman": ["voice"],
 };
 
+// Case 1.01's interview with all seven accounts taken — `requires.useful: 7`, one from each person
+// on the shore. Used by the Codex baselines below, which need a finished Unit 1 mission to file.
+const CARIBBEAN_ACCOUNTS = {
+  "taino-elder": ["decides"],
+  "taino-gardener": ["grows"],
+  "taino-fisher": ["trade"],
+  "taino-child": ["grows"],
+  columbus: ["gold"],
+  "spanish-scribe": ["decides"],
+  "spanish-sailor": ["trade"],
+};
+
 // Tiled maps (Caribbean field, Archive Room, Riverbend, hallway, Common Cause) draw via
 // engine/tiled-map-loader.js's renderTiledMap(), which is async (it awaits image decode before
 // the first ctx.drawImage) — its main.js wrapper (e.g. renderCaribbeanTiledMap()) marks
@@ -762,6 +774,51 @@ test.describe("Gameplay visual-regression baselines", () => {
     await setScreen(page, { currentScreen: "codex", activeCaseId: "case-001" });
     await expect(page.locator(".codex-shell")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("codex"));
+
+    // The Codex with something in it (Phase 75). Two finished missions in two different units is
+    // the smallest save that draws every part of the screen: a unit-grouped filed record, its kept
+    // evidence, its tags, and a cross-unit thread. backfillCodex() files them at boot, so the seed
+    // only has to say the missions are finished.
+    //
+    // Both shots are on elements. The masthead's h1 is 3-5.8rem and the two new sections start well
+    // below a 1366x768 fold — a viewport shot would baseline the same top of the page the `codex`
+    // shot above already covers and none of what changed.
+    await setScreen(page, {
+      currentScreen: "codex",
+      activeCaseId: "case-001",
+      unlocked: ["case-001", "case-004"],
+      sourceActivities: {
+        "taino-context": {
+          state: {
+            asked: CARIBBEAN_ACCOUNTS,
+            logged: CARIBBEAN_ACCOUNTS,
+            filed: "questions",
+          },
+          completed: true,
+          briefed: true,
+          debriefed: true,
+        },
+        "riverbend-ledger": {
+          state: {
+            ledger: {
+              curing: "not-established",
+              entering: "crown-revenue",
+              crossing: "planter-credit",
+              returning: "merchant-control",
+            },
+            filed: "dependence",
+          },
+          completed: true,
+          briefed: true,
+          debriefed: true,
+        },
+      },
+    });
+    await expect(page.locator(".codex-record")).toHaveCount(2);
+    await expect(page.locator(".codex-section").nth(1)).toHaveScreenshot(snap("codex-filed"));
+    await expect(page.locator(".codex-section").nth(2)).toHaveScreenshot(
+      snap("codex-cross-references")
+    );
 
     await setScreen(page, { currentScreen: "reconstruction", activeCaseId: "case-001" });
     await expect(page.locator(".puzzle-shell")).toBeVisible();
