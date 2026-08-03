@@ -111,6 +111,46 @@ export const NotebookSchema = z.object({
 });
 
 /**
+ * What the mission says once it is over.
+ *
+ * `established` and `remains` are the two halves of an honest finding and both are required: a
+ * debrief that only says what was proved teaches that investigation ends in certainty. `remains` is
+ * where a mission admits what its record cannot reach.
+ *
+ * `speaker` is an opaque id, resolved by the host the same way `briefing.speaker` is, and defaults
+ * to whoever handed the record over — the person who gave you the job is the person who hears how
+ * it went.
+ */
+export const DebriefSchema = z.object({
+  speaker: z.string().min(1).optional(),
+  line: z.string().min(1, "debrief.line is required — somebody has to say it"),
+  established: z
+    .string()
+    .min(1, "debrief.established is required — what the evidence now supports"),
+  remains: z.string().min(1, "debrief.remains is required — what it still cannot settle"),
+});
+
+/**
+ * Which parts of what the player just played are real, in four named categories.
+ *
+ * This is the historical-fiction policy as a data structure. Chronicle takes real liberties — it
+ * invents composite characters, writes probable conversations, and runs the whole thing inside a
+ * time-travel frame — and the defence of doing that is being explicit about which is which at the
+ * end, rather than blurring the three together and hoping.
+ *
+ * `documented` and `fiction` are what every Chronicle mission has by construction: real history, and
+ * a Chronicler standing in it. `reconstructed` is the composite people and probable scenes.
+ * `debated` is where historians genuinely disagree — a category that exists so a mission can say
+ * "this is contested" instead of quietly picking a side.
+ */
+export const HistoricalRecordSchema = z.object({
+  documented: z.array(z.string().min(1)).min(1, "every mission rests on something documented"),
+  reconstructed: z.array(z.string().min(1)).optional(),
+  fiction: z.array(z.string().min(1)).min(1, "the Chronicle frame is fiction and should say so"),
+  debated: z.array(z.string().min(1)).optional(),
+});
+
+/**
  * The fields every engine carries regardless of its mechanic, spread into each
  * engine's own `z.object({...})` before its `.superRefine()`.
  *
@@ -127,6 +167,26 @@ export const COMMON_ACTIVITY_FIELDS = {
   // all accepted; the host reads it defensively either way, because runSchema() discards the parsed
   // output and content reaches the game as the raw imported object.
   briefing: BriefingSchema.nullable().default(null),
+  // The shape of this mission inside its engine family — "Ask the Right Question", "The Missing
+  // Page", "Follow the Shipment". A LABEL, and nothing in engine/ may branch on it: the registry's
+  // whole value is that adding an engine is one more entry in index.js, and a second dispatch axis
+  // ends that. Behaviour differences come from whichever other optional fields the content sets.
+  // Pinned by tests/unit/activity-content.test.js. See docs/design/CHRONICLE-VOCABULARY.md §3.
+  variant: z.string().min(1).optional(),
+  // The historical question this mission exists to answer, in one sentence a student could repeat.
+  // "Make the task obvious, make the answer require judgment" — this is the obvious half, and it is
+  // printed both on the way in and on the way out.
+  missionQuestion: z.string().min(1).optional(),
+  // What kind of thinking the mission is asking for, said to the student.
+  //
+  // Deliberately not `closer.skillCategory`, which is an opaque taxonomy key for the grade book and
+  // is never shown. Same subject, two audiences: one is a tag, this is a sentence.
+  thinkingMove: z.string().min(1).optional(),
+  // What the mission could not settle. Printed in the debrief, and the reason a player leaves with
+  // a question rather than a tick.
+  openQuestions: z.array(z.string().min(1)).optional(),
+  debrief: DebriefSchema.optional(),
+  historicalRecord: HistoricalRecordSchema.optional(),
   howItWorks: HowItWorksSchema.optional(),
   terms: TermsSchema.optional(),
   notebook: NotebookSchema.optional(),

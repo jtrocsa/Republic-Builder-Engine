@@ -9366,10 +9366,14 @@ function ensureSourceActivity(sourceId) {
   // `briefed`: whether the Mission Instructions screen has been cleared for this record. Absent on
   // any save written before Phase 71, which reads as falsy and shows the screen once — the intended
   // migration, since it is new UI nobody has seen.
+  // `debriefed` is the twin of `briefed` at the other end of the mission, and absent on any save
+  // written before Phase 74 for the same reason and with the same result: it reads falsy, so the
+  // screen shows once.
   const entry = (progress.sourceActivities[sourceId] ??= {
     state: null,
     completed: false,
     briefed: false,
+    debriefed: false,
   });
   const activity = activityFor(sourceId);
   // Also the migration path off the three retired screens: their saves carry
@@ -10102,12 +10106,13 @@ function activityScreen(kind) {
   if (activity.howItWorks && !entry.briefed)
     return missionInstructionsScreen(kind, source, activity);
   const complete = isActivityComplete(kind, activity, entry.state);
-  const activeCase = caseById(activeFieldCaseId());
-  const kicker = `${ACTIVITY_ENGINE_ICONS[kind] || ""}<span>${esc(
-    [activeCase ? caseNumberLabel(activeCase) : "", ACTIVITY_ENGINE_LABELS[kind]]
-      .filter(Boolean)
-      .join(" · ")
-  )}</span>`;
+  // The third state, and the mirror of the first: the mission opens on the person who handed it
+  // over and closes on what it turned out to establish. Shown the moment the closer lands, which is
+  // why the filed option's own `why` is reprinted there — a player moved off the board instantly
+  // would otherwise never read it.
+  if (complete && activity.debrief && !entry.debriefed)
+    return missionDebriefScreen(kind, source, activity, entry);
+  const kicker = activityKicker(kind);
   const board = renderActivity(kind, activity, entry.state, activityContext(activity));
   // The line that starts the activity, in the voice of whoever says it. Rendered by the host rather
   // than the engine because it belongs in the copy column, which the engine has no view of.
@@ -10134,7 +10139,7 @@ function activityScreen(kind) {
     : "";
   // The board and the footer share the shell's right-hand column, so they are wrapped rather than
   // being two more children of a two-column grid.
-  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p>${esc(activity.intro)}</p>${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
+  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p>${esc(activity.intro)}</p>${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
 }
 
 /**
@@ -10144,11 +10149,98 @@ function activityScreen(kind) {
  * failing that, whoever is carrying the record on the map; failing that, nobody — a record found on
  * a shore has no giver and the screen says so rather than borrowing someone.
  */
-function missionGiver(source, activity) {
+function missionGiver(source, activity, { speaker = null, line = "" } = {}) {
+  // An explicit speaker wins — the debrief may be heard by somebody other than whoever handed the
+  // record over, and content says so by naming them.
+  const named = fieldNpcById(speaker);
+  if (named) return { npc: named, line };
   const spoken = fieldNpcById(activity.briefing?.speaker);
-  if (spoken) return { npc: spoken, line: activity.briefing.line };
+  if (spoken) return { npc: spoken, line: line || activity.briefing.line };
   const carrier = fieldNpcById(sourceAnchorNpcId(source.id));
-  return carrier ? { npc: carrier, line: "" } : null;
+  return carrier ? { npc: carrier, line } : null;
+}
+
+// The eyebrow every state of the activity screen shares: the engine's mark, the case number and the
+// engine's own name. "Case 1.01 · The Interview".
+function activityKicker(kind) {
+  const activeCase = caseById(activeFieldCaseId());
+  return `${ACTIVITY_ENGINE_ICONS[kind] || ""}<span>${esc(
+    [activeCase ? caseNumberLabel(activeCase) : "", ACTIVITY_ENGINE_LABELS[kind]]
+      .filter(Boolean)
+      .join(" · ")
+  )}</span>`;
+}
+
+// The mission's shape inside its engine family, under the title rather than in the eyebrow.
+//
+// It went in the kicker first and wrapped mid-phrase in the activity board's 370px copy column —
+// "Case 1.01 · The Interview · Ask" / "the Right Question" — because that column is half the width
+// of the one Mission Instructions and the Debrief use. A story title with its form named beneath it
+// is also the shape the brief asked for.
+function activityVariantLine(activity) {
+  return activity?.variant ? `<p class="activity-variant">${esc(activity.variant)}</p>` : "";
+}
+
+// The four historical-fiction categories, in the order a student should read them: what is real
+// first, then what was reconstructed around it, then what Chronicle invented outright, then what
+// nobody has settled. Labels are student-facing and fixed here rather than in content, because the
+// whole value of the policy is that it reads identically in every mission.
+const HISTORICAL_RECORD_BANDS = [
+  ["documented", "Documented"],
+  ["reconstructed", "Plausible reconstruction"],
+  ["fiction", "Chronicle fiction"],
+  ["debated", "Still debated"],
+];
+
+/**
+ * Mission Debrief — the screen a finished record closes on, once.
+ *
+ * Beat 7 of the mission rhythm, and host-rendered for the same reason the briefing and the glossary
+ * are: it needs the giver's portrait, the case number and the route onward to the source reader,
+ * none of which an engine has a view of.
+ *
+ * Deliberately not a new screen id, exactly as Mission Instructions is not — this is the third
+ * state of the activity screen, gated on `debriefed`. See decision log 0054 §1 for the same
+ * argument made at the other end of the mission.
+ */
+function missionDebriefScreen(kind, source, activity, entry) {
+  const giver = missionGiver(source, activity, {
+    speaker: activity.debrief.speaker,
+    line: activity.debrief.line,
+  });
+  const plate = giver
+    ? `<figure class="mission-brief__giver"><img class="mission-brief__portrait" src="${sheetFor(giver.npc.sprite).portrait}" alt=""><figcaption><b>${esc(giver.npc.name)}</b>${giver.npc.label ? `<span>${esc(giver.npc.label)}</span>` : ""}</figcaption><blockquote><p>${esc(activity.debrief.line)}</p></blockquote></figure>`
+    : `<figure class="mission-brief__giver is-record"><div class="mission-brief__mark" aria-hidden="true">${ACTIVITY_ENGINE_ICONS[kind] || ""}</div><figcaption><b>${esc(source.title)}</b></figcaption><blockquote><p>${esc(activity.debrief.line)}</p></blockquote></figure>`;
+
+  // The conclusion the player actually filed, in their own result's words. Without this the closer's
+  // `why` is written and never read: the debrief opens the instant the closer lands.
+  const filed = activity.closer.options.find((option) => option.id === entry.state?.filed);
+  const conclusion = filed
+    ? `<section class="mission-debrief__filed"><h2>What you filed</h2><p class="mission-debrief__conclusion">${esc(filed.text)}</p><p>${esc(filed.why)}</p></section>`
+    : "";
+
+  const unresolved = [
+    activity.debrief.remains,
+    ...(Array.isArray(activity.openQuestions) ? activity.openQuestions : []),
+  ].filter(Boolean);
+
+  const record = activity.historicalRecord
+    ? `<section class="mission-debrief__record"><h2>The historical record</h2><p class="mission-debrief__record-note">Chronicle takes real liberties. Here is which is which.</p><dl>${HISTORICAL_RECORD_BANDS.map(
+        ([key, label]) => {
+          const lines = activity.historicalRecord[key];
+          if (!Array.isArray(lines) || !lines.length) return "";
+          return `<dt class="is-${key}">${esc(label)}</dt><dd><ul>${lines
+            .map((line) => `<li>${esc(line)}</li>`)
+            .join("")}</ul></dd>`;
+        }
+      ).join("")}</dl></section>`
+    : "";
+
+  const onward = `<button class="btn btn-gold mission-brief__begin" data-action="mission-debriefed" data-source="${esc(source.id)}">Open ${esc(source.title)} →</button>`;
+
+  return `${chrome()}<main class="shell mission-brief mission-debrief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${onward}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${activityKicker(kind)}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${conclusion}<section class="mission-debrief__found"><h2>What the evidence supports</h2><p>${esc(activity.debrief.established)}</p></section><section class="mission-debrief__open"><h2>What it cannot settle</h2><ul>${unresolved
+    .map((line) => `<li>${esc(line)}</li>`)
+    .join("")}</ul></section>${record}</section></main>`;
 }
 
 /**
@@ -10166,12 +10258,7 @@ function missionGiver(source, activity) {
  * a screen. `briefed` lives on the per-source activity entry beside `state` and `completed`.
  */
 function missionInstructionsScreen(kind, source, activity) {
-  const activeCase = caseById(activeFieldCaseId());
-  const kicker = `${ACTIVITY_ENGINE_ICONS[kind] || ""}<span>${esc(
-    [activeCase ? caseNumberLabel(activeCase) : "", ACTIVITY_ENGINE_LABELS[kind]]
-      .filter(Boolean)
-      .join(" · ")
-  )}</span>`;
+  const kicker = activityKicker(kind);
   const giver = missionGiver(source, activity);
   // The portrait is the character's own committed `-portrait.png` — characterSheet() builds one for
   // every member of the cast and throws at boot if a file is missing, so this can never 404.
@@ -10193,7 +10280,7 @@ function missionInstructionsScreen(kind, source, activity) {
   // click-to-continue control a player has to scroll to find is a screen that looks stuck. The
   // second is that it reads correctly there — you accept the job from the person offering it.
   const begin = `<button class="btn btn-gold mission-brief__begin" data-action="mission-briefed" data-source="${esc(source.id)}">Begin the mission →</button>`;
-  return `${chrome()}<main class="shell mission-brief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${begin}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1><p class="mission-brief__intro">${esc(activity.intro)}</p><section class="mission-brief__steps"><h2>Mission Instructions</h2><ol>${steps}</ol>${note}</section>${terms}</section></main>`;
+  return `${chrome()}<main class="shell mission-brief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${begin}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p class="mission-brief__intro">${esc(activity.intro)}</p>${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${activity.thinkingMove ? `<p class="mission-brief__move"><b>What this asks of you</b> ${esc(activity.thinkingMove)}</p>` : ""}<section class="mission-brief__steps"><h2>Mission Instructions</h2><ol>${steps}</ol>${note}</section>${terms}</section></main>`;
 }
 
 // One dispatch point for every control an engine renders. Deliberately on its own
@@ -11596,6 +11683,27 @@ function handleFieldClick(target, action) {
     const sourceId = target.dataset.source;
     if (!activityFor(sourceId)) return true;
     ensureSourceActivity(sourceId).briefed = true;
+    save();
+    render();
+    return true;
+  }
+  // The other end of the same pattern: clearing the Debrief. It also carries the player onward to
+  // the record itself, which is where the board's completion footer used to send them — the debrief
+  // has taken that footer's place, so it has to take its exit too.
+  if (action === "mission-debriefed") {
+    const sourceId = target.dataset.source;
+    if (!activityFor(sourceId)) return true;
+    const entry = ensureSourceActivity(sourceId);
+    entry.debriefed = true;
+    // Then exactly what "open-activity-source" does. The debrief has replaced the board's
+    // completion footer, so it has to carry the player the same way onward — into the record
+    // itself, with the activity closed behind them.
+    entry.completed = true;
+    playQuestSfx(sourceId);
+    openSourceId = sourceId;
+    sourceOrigin = "field";
+    progress.activeActivitySourceId = null;
+    progress.currentScreen = "source";
     save();
     render();
     return true;

@@ -5672,6 +5672,134 @@ dd {
   line-height: 1.02;
   overflow-wrap: break-word;
 }
+/* The mission's shape inside its engine family, under the story title. Shared by all three states of
+   the activity screen, which is why it is not scoped to .mission-brief. */
+.activity-variant {
+  margin: -6px 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  letter-spacing: 0.03em;
+  color: var(--c-text-secondary);
+  opacity: 0.85;
+}
+/* The activity board's copy column is a grid and its gap does this already; the brief and the
+   debrief lay their body out in flow, so the line needs its own space there. */
+.mission-brief__body .activity-variant {
+  margin-bottom: 14px;
+}
+/* The inquiry question, on the way in and on the way out. Gold-edged because it is the one line a
+   student should be able to repeat back — "make the task obvious" is this element's whole job. */
+.mission-brief__question {
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--c-border-gold);
+  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
+  background: rgba(var(--c-gold-rgb), 0.09);
+  font-family: "Spectral", serif;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+.mission-brief__move {
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
+.mission-brief__move b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* --- the Debrief: the same two-column shell as the hand-off, at the other end of the mission --- */
+.mission-debrief__filed,
+.mission-debrief__found,
+.mission-debrief__open,
+.mission-debrief__record {
+  display: grid;
+  gap: 9px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.mission-debrief__filed h2,
+.mission-debrief__found h2,
+.mission-debrief__open h2,
+.mission-debrief__record h2 {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.mission-debrief__filed p,
+.mission-debrief__found p,
+.mission-debrief__open li {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.65;
+  color: var(--c-text-secondary);
+}
+.mission-debrief__conclusion {
+  font-family: "Spectral", serif;
+  font-size: 1rem !important;
+  font-style: italic;
+  color: var(--c-text) !important;
+}
+.mission-debrief__open ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+}
+.mission-debrief__record-note {
+  margin: 0;
+  font-size: 0.84rem;
+  font-style: italic;
+  color: var(--c-text-secondary);
+  opacity: 0.8;
+}
+.mission-debrief__record dl {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+}
+/* One band per category, colour-coded so the three are told apart at a glance rather than read as
+   one list: documented is the game's success green, Chronicle fiction its gold, still-debated its
+   amber. Reconstruction sits between the first two on purpose. */
+.mission-debrief__record dt {
+  margin-top: 8px;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-text-secondary);
+}
+.mission-debrief__record dt.is-documented {
+  color: var(--c-success);
+}
+.mission-debrief__record dt.is-fiction {
+  color: var(--gold);
+}
+.mission-debrief__record dt.is-debated {
+  color: var(--c-warning);
+}
+.mission-debrief__record dd {
+  margin: 0;
+}
+.mission-debrief__record dd ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 20px;
+}
+.mission-debrief__record dd li {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
+}
 .mission-brief__intro {
   margin: 0;
   font-size: 1rem;

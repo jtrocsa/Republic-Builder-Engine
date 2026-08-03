@@ -15,6 +15,8 @@
 // Covers both authored units. Units 3-5 have no activities yet and the loops below simply find
 // nothing for them, which is the correct behaviour for this file until they do.
 
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 
 import { FIELD_MAPS } from "../../apps/web/src/main.js";
@@ -60,13 +62,82 @@ describe("activity content: the rules every authored mission is held to", () => 
     //
     // Not every activity has to have one: a record found on a shore was handed over by nobody, and
     // the screen has a deliberate third tier for that. What it may not do is name a ghost.
+    //
+    // The debrief's optional speaker is held to the same rule, and for the same reason — it renders
+    // through the same plate at the other end of the mission.
     const npcIds = new Set((FIELD_MAPS[unitId]?.npcs || []).map((npc) => npc.id));
     for (const [sourceId, activity] of entriesOf(activities)) {
-      if (!activity.briefing) continue;
-      expect(npcIds, `${sourceId} is briefed by an NPC not on this map`).toContain(
-        activity.briefing.speaker
-      );
+      if (activity.briefing) {
+        expect(npcIds, `${sourceId} is briefed by an NPC not on this map`).toContain(
+          activity.briefing.speaker
+        );
+      }
+      if (activity.debrief?.speaker) {
+        expect(npcIds, `${sourceId} is debriefed by an NPC not on this map`).toContain(
+          activity.debrief.speaker
+        );
+      }
     }
+  });
+
+  it.each(AUTHORED_UNITS)("$unitId says what each mission is asking", ({ activities }) => {
+    // "Make the task obvious, make the answer require judgment." The obvious half is one sentence,
+    // and a mission that cannot state its own question in one sentence usually does not have one.
+    for (const [sourceId, activity] of entriesOf(activities)) {
+      expect(activity.missionQuestion, `${sourceId} states no mission question`).toBeTruthy();
+      expect(
+        activity.missionQuestion.trim().endsWith("?"),
+        `${sourceId}'s mission question is not a question`
+      ).toBe(true);
+    }
+  });
+
+  it.each(AUTHORED_UNITS)("$unitId ends by saying what it could not settle", ({ activities }) => {
+    // A debrief that only reports what was proved teaches that investigation ends in certainty.
+    // `remains` is where a mission admits the edge of its own record, and it is required by the
+    // schema — asserted here because the reason is pedagogy rather than shape.
+    for (const [sourceId, activity] of entriesOf(activities)) {
+      expect(activity.debrief?.established, `${sourceId} has no debrief`).toBeTruthy();
+      expect(activity.debrief.remains, `${sourceId} settles everything`).toBeTruthy();
+    }
+  });
+
+  it.each(AUTHORED_UNITS)("$unitId labels its own fiction", ({ activities }) => {
+    // The historical-fiction policy, enforced. Chronicle invents composite people, writes probable
+    // conversations and runs the whole thing inside a time-travel frame; the defence of doing that
+    // is being explicit at the end, per mission, rather than in a disclaimer nobody reads.
+    //
+    // `documented` and `fiction` are what every Chronicle mission has by construction — real
+    // history, and a Chronicler standing in it — so both are required and neither may be empty.
+    for (const [sourceId, activity] of entriesOf(activities)) {
+      const record = activity.historicalRecord;
+      expect(record, `${sourceId} does not separate history from fiction`).toBeTruthy();
+      expect(
+        record.documented?.length,
+        `${sourceId} rests on nothing documented`
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        record.fiction?.length,
+        `${sourceId} does not own its Chronicle fiction`
+      ).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("keeps `variant` a label, with no engine branching on it", () => {
+    // `variant` names a mission's shape inside its engine family — "Ask the Right Question", "Follow
+    // the Shipment". The registry's whole value is that adding an engine is one more entry in
+    // index.js, and a second dispatch axis ends that: behaviour differences have to come from the
+    // other optional fields content sets, never from this string.
+    //
+    // Cheap to state as a rule and cheap to break by accident, so it is a test. See
+    // docs/design/CHRONICLE-VOCABULARY.md §3.
+    // Resolved off the repo root rather than import.meta.url: Vitest rewrites that to a non-file
+    // URL and readdirSync rejects it.
+    const dir = join(process.cwd(), "apps/web/src/engine/activities");
+    const offenders = readdirSync(dir)
+      .filter((file) => file.endsWith(".js"))
+      .filter((file) => /\bvariant\s*(===|!==|==|!=)/.test(readFileSync(join(dir, file), "utf8")));
+    expect(offenders, "an engine is branching on `variant`").toEqual([]);
   });
 
   it.each(AUTHORED_UNITS)("$unitId asks for one number, not two", ({ activities }) => {

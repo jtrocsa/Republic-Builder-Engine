@@ -51,6 +51,40 @@ const QUESTION_NOBODY_ASKED = {
   kind: "interview",
   id: "case-001-interview-what-was-asked",
   title: "The Question Nobody Asked",
+  variant: "Ask the Right Question",
+  missionQuestion:
+    "What did the Spanish party fail to learn about this island, and what does that failure tell you about what they came for?",
+  thinkingMove:
+    "Reading a record for what it leaves out. An absence in a source is evidence about the person who made it.",
+  debrief: {
+    speaker: "taino-child",
+    line: "You asked me what grows here. Nobody had. I have been standing in the same place the whole time.",
+    established:
+      "The islanders answer what they are asked, and they are asked almost nothing. Between them they hold a farming system, a way of deciding things, and a trade route that reaches three islands — none of which appears in what the Spanish party will carry home. The gap is not in the island's knowledge. It is in the questions.",
+    remains:
+      "Whether the Spanish party could have understood these answers if they had asked. Nothing you gathered tells you what either side was able to make of the other, and the exchange at the shore is exactly where that breaks down.",
+  },
+  openQuestions: [
+    "How many people were living on Hispaniola in 1492. You were on one shore for one afternoon, and the estimates historians work from differ by an order of magnitude.",
+  ],
+  historicalRecord: {
+    documented: [
+      "Taíno conuco agriculture: yuca heaped into mounds with maize between and batata beneath, worked ground rather than wild ground.",
+      "Taíno political structure — a cacique speaking for a village, with elders consulted — described in the Library of Congress's 1492: An Ongoing Voyage.",
+      "Inter-island canoe travel and exchange across the Greater Antilles.",
+      "Columbus's 1493 letter, its printing across Europe within months, and the funding of a second voyage on the strength of it.",
+    ],
+    reconstructed: [
+      "All seven people you spoke to. They are composites, built from what the archaeological and documentary record establishes about Taíno village life and about the men on the first voyage — not individuals anyone recorded.",
+      "The specific conversations. What they say is consistent with the evidence; that they said it to you is not.",
+    ],
+    fiction: [
+      "Chronotravel, the Chronicle Institute, and a record that can be secured before it is lost.",
+    ],
+    debated: [
+      "The pre-contact population of Hispaniola. Sixteenth-century figures and modern estimates disagree enormously, and the disagreement is itself about which sources historians trust.",
+    ],
+  },
   intro:
     "Four questions, and everyone on this island will answer only the one you actually put to them. What comes back is not a record of the island. It is a record of what you thought to ask.",
   howItWorks: {
@@ -282,6 +316,40 @@ const UNIVERSALIS = {
   kind: "assembly",
   id: "case-001-assembly-universalis",
   title: "Universalis",
+  variant: "Reconstruct a Map",
+  missionQuestion:
+    "What did European geography actually know in 1507, and how can you tell knowledge from inheritance on a single sheet?",
+  thinkingMove:
+    "Reading a document's physical form. How a thing was made is evidence about what its maker had and did not have.",
+  debrief: {
+    // No giver on the shore, so the record speaks for itself — missionGiver() falls through to the
+    // record plate and the line has to work in that voice.
+    line: "The sheet is whole again, and the western coasts still stop where nobody had sailed.",
+    established:
+      "The map is two kinds of knowledge printed side by side. The east is Ptolemy, inherited and centuries old; the western coasts are new work, drawn from voyages made within the mapmaker's own lifetime, and they end exactly where the reports ended. Reassembled, the sheet shows its own edge of knowledge — which no single fragment could.",
+    remains:
+      "Why Waldseemüller named the new landmass for Vespucci rather than Columbus. The map states the name; it does not argue for it, and the accompanying text is a separate document making a separate case.",
+  },
+  openQuestions: [
+    "Whether Waldseemüller changed his mind. He dropped the name from his 1513 map without explaining why, and historians have been reading that silence ever since.",
+  ],
+  historicalRecord: {
+    documented: [
+      "The 1507 Universalis cosmographia, printed in twelve sheets to be pasted into a wall map roughly 1.3 by 2.4 metres.",
+      "It is the first known map to print the name America, applied to the southern landmass.",
+      "One assembled copy is known to survive, held by the Library of Congress. The image you reassembled is its scan.",
+      "The eastern half follows Ptolemy's inherited geography; the western coasts are drawn from the reports of recent Atlantic voyages.",
+    ],
+    reconstructed: [
+      "The idea that this particular sheet arrived damaged and needed piecing together. The map is real and intact; the puzzle is Chronicle's framing of how you read it.",
+    ],
+    fiction: [
+      "Chronotravel, the Institute, and a record that can be reassembled by a visitor from five centuries later.",
+    ],
+    debated: [
+      "Whether Waldseemüller regretted naming the continent for Vespucci. He removed the name in 1513 and left no statement of why.",
+    ],
+  },
   intro:
     "Twelve sheets were printed to be pasted into one wall map, and almost none survived that way. Rebuild what is left of this one, then name what it shows — because one of those names had never been printed on any map before.",
   howItWorks: {
@@ -503,6 +571,40 @@ const WHAT_WILL_BE_USEFUL = {
   kind: "discrepancy",
   id: "case-001-discrepancy-what-will-be-useful",
   title: "What Will Be Useful",
+  variant: "Public Claim vs. What You Observed",
+  missionQuestion:
+    "What is Columbus's letter good evidence of — the islands it describes, or the voyage it was written to fund?",
+  thinkingMove:
+    "Sourcing. Asking who made a record, for whom, and to what end, before asking whether it is true.",
+  debrief: {
+    speaker: "columbus",
+    line: "You have your reading and I have mine. Mine is the one that goes to Castile, and mine is the one that gets a second crossing.",
+    established:
+      "The letter is a reliable record of what its author needed established, and an unreliable record of the island. Every line that fails does so in the same direction — toward a place worth returning to, with people worth setting to work. He told you the reason himself: a first crossing was funded on a promise, and a second will be funded on proof.",
+    remains:
+      "What the Taíno believed was happening at the taking of possession. The ceremony was held in Castilian in front of people with no way to know what was being claimed, and the record preserves only silence. Silence is not agreement, and nothing here can tell you which it was.",
+  },
+  openQuestions: [
+    "Which surviving version of this letter is closest to what Columbus wrote. It circulated in several printings and translations within a year, and the wording differs between them.",
+  ],
+  historicalRecord: {
+    documented: [
+      "The 1493 letter reporting on the first voyage, printed and reprinted across Europe within months of his return.",
+      "Rafael Sánchez as treasurer to Ferdinand and Isabella — the letter is addressed to the man who handles the money.",
+      "The funding of a second, far larger voyage in 1493.",
+      "The gold of the Caribbean islands was worn as ornament and traded, not mined at the scale the letter implies.",
+    ],
+    reconstructed: [
+      "Columbus at a chart table on the shore, answering questions. The letter is real; the scene in which you interrogate its author is not.",
+      "The Spanish sailor and scribe, and what they tell you about how the account was assembled.",
+    ],
+    fiction: [
+      "Chronotravel, and a Chronicler standing on the beach while the letter is being drafted.",
+    ],
+    debated: [
+      "Whether Columbus believed his own claims about the gold, or knew he was overstating them. The evidence supports the pattern; his private conviction is not recoverable.",
+    ],
+  },
   intro:
     "The letter goes to Castile whatever you do. What you decide is what the record says it is evidence of — and for each line the island does not bear out, why the two differ.",
   howItWorks: {

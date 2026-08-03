@@ -72,6 +72,10 @@ const FILED = {
     },
     completed: true,
     briefed: true,
+    // Finished *and* debriefed: this is a mission the player closed out earlier and is coming back
+    // to. A filed mission that has not been debriefed opens on the Debrief instead of the board
+    // (Phase 74), which is correct and is banked in mission-debrief.spec.js.
+    debriefed: true,
   },
 };
 

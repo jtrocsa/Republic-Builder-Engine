@@ -311,7 +311,34 @@ test.describe("Gameplay visual-regression baselines", () => {
     // sits below the fold on every activity screen — which is exactly why it shipped without moving
     // a single one of the other baselines, and why it needs one of its own. Eight accounts taken
     // makes it the fullest the panel gets in shipped content.
+    //
+    // Must be taken before the debrief seed below: filing the closer finishes the mission, and a
+    // finished mission renders the debrief instead of the board the notebook lives on.
     await expect(page.locator(".evidence-notebook")).toHaveScreenshot(snap("field-notebook"));
+
+    // The Debrief (Phase 74) — the activity screen's third state, and the only place the
+    // historical-fiction bands are drawn. Riverbend's interview is the fullest of the six.
+    await setScreen(page, {
+      currentScreen: "interview",
+      activeCaseId: "case-004",
+      activeActivitySourceId: "riverbend-charter",
+      sourceActivities: {
+        "riverbend-charter": {
+          state: { asked: RIVERBEND_ACCOUNTS, logged: RIVERBEND_ACCOUNTS, filed: "by-the-head" },
+          completed: false,
+          briefed: true,
+          debriefed: false,
+        },
+      },
+    });
+    await expect(page.locator(".mission-debrief")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-debrief"));
+    // The four historical-fiction bands, on the element — they sit below the fold, and their
+    // colour coding is the only thing telling documented history apart from Chronicle's own
+    // invention at a glance.
+    await expect(page.locator(".mission-debrief__record")).toHaveScreenshot(
+      snap("mission-debrief-record")
+    );
 
     await setScreen(page, {
       currentScreen: "discrepancy",
@@ -575,14 +602,22 @@ test.describe("Gameplay visual-regression baselines", () => {
       .click();
 
     // Lands straight on the interview now — there is no gate on this record. With the coverage
-    // bar already met by the seed, filing is the one move left before the source reader opens.
+    // bar already met by the seed, filing is the one move left.
     await expect(page.locator(".activity-board--interview")).toBeVisible();
     await page.locator('.activity-closer [data-option="questions"]').click();
-    const openSourceButton = page.locator('[data-action="open-activity-source"]');
-    await expect(openSourceButton).toBeVisible();
-    await openSourceButton.click();
+
+    // Filing a finished mission now lands on the Debrief rather than on the board with a footer
+    // (Phase 74). It carries the same exit: `mission-debriefed` marks the record and opens it,
+    // which is what `open-activity-source` used to do from the footer.
+    const onward = page.locator('[data-action="mission-debriefed"]');
+    await expect(onward).toBeVisible();
+    await onward.click();
 
     await expect(page.locator(".reader-shell")).toBeVisible();
+    // The debrief is taller than the viewport, so Playwright scrolls to reach its button and the
+    // reader inherits a few pixels of that — the app does not reset scroll between screens. A
+    // player clicking a button already in view lands at the top, which is what this baselines.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page).toHaveScreenshot(snap("source-reader"));
   });
 
@@ -614,6 +649,9 @@ test.describe("Gameplay visual-regression baselines", () => {
           },
           completed: false,
           briefed: true,
+          // Seeded past the Debrief (Phase 74). A finished mission opens on it, and this baseline is
+          // of the reader's masthead rather than of the route to it — the debrief has its own.
+          debriefed: true,
         },
       },
     });
@@ -653,6 +691,8 @@ test.describe("Gameplay visual-regression baselines", () => {
           },
           completed: false,
           briefed: true,
+          // Seeded past the Debrief, for the same reason as the multiple-choice route above.
+          debriefed: true,
         },
       },
     });

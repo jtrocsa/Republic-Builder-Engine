@@ -57,6 +57,42 @@ const BY_WHOSE_HEAD = {
   kind: "interview",
   id: "case-004-interview-by-whose-head",
   title: "By Whose Head",
+  variant: "Whose Account Do You File?",
+  missionQuestion:
+    "The charter grants fifty acres a head. Whose heads, and whose acres — and who does the grant not count at all?",
+  thinkingMove:
+    "Comparing accounts of one arrangement from the positions of the people inside it. Where a person stands changes what the same rule looks like.",
+  debrief: {
+    speaker: "wharf-clerk",
+    line: "You have it. The fifty acres follow the man who paid the freight, and I write both facts in the same hand at the same moment. Nobody in eleven years has asked me to write it any other way.",
+    established:
+      "The headright follows the payer, not the passenger. Everyone you asked confirms the same rule from a different position: the servant whose crossing earned land he will never see, the burgess whose seat in the Assembly was bought with eleven other men's passages, the clerk who enters both facts in one line. The system is not hidden. It is written down, in public, by people who can each describe their own part of it.",
+    remains:
+      "What the law said the Angolan man's status was in 1630. He is counting down to nothing anybody has named, and that is exactly what the surviving record shows — not a category, but the absence of one.",
+  },
+  openQuestions: [
+    "Whether the Africans landed at Point Comfort in 1619 were held as servants or as slaves. The Virginia statutes that define hereditary slavery come decades later, and historians read the intervening years differently.",
+    "How Tsenacommacah's own leadership understood the English land grants. Nothing you gathered records a Powhatan account of the patents themselves.",
+  ],
+  historicalRecord: {
+    documented: [
+      "The headright system: fifty acres granted for every person transported, to whoever paid the passage. Set out in the Virginia Company's 1618 Instructions to Governor George Yeardley.",
+      "The 1619 General Assembly, the first representative assembly in English America, and the property qualification behind a seat in it.",
+      "The arrival of some twenty Angolans at Point Comfort in 1619, and the Kingdom of Ndongo and port of Luanda they were taken from.",
+      "Tsenacommacah — the Powhatan paramount chiefdom of roughly thirty towns, with its own fields, weirs and paths, whose corn carried the English settlement through early winters.",
+      "Women's role in Powhatan agriculture and in decisions about what corn could be spared.",
+    ],
+    reconstructed: [
+      "All sixteen people at Riverbend. They are composites drawn from what the records establish about Chesapeake settlement in these years, not individuals anyone named.",
+      "Riverbend itself, as a settlement. The place is a composite of the Virginia tidewater; the arrangements inside it are not invented.",
+    ],
+    fiction: [
+      "Chronotravel, the Chronicle Institute, and a record that can be secured in the field.",
+    ],
+    debated: [
+      "The legal and social status of the 1619 Angolans and their children. This is one of the most actively argued questions in early American history, and the surviving documents genuinely do not settle it.",
+    ],
+  },
   intro:
     "The charter grants fifty acres for every person brought across the Atlantic. It does not say the acres go to the person. Everyone standing on this ground is an answer to that sentence — put the question to them and see which one they are.",
   howItWorks: {
@@ -336,6 +372,39 @@ const NOTHING_TO_BE_GOTTEN = {
   kind: "discrepancy",
   id: "case-004-discrepancy-nothing-to-be-gotten",
   title: "Nothing to be Gotten",
+  variant: "One Account Against What You Gathered",
+  missionQuestion:
+    "Richard Frethorne is telling the truth as he can see it. What can his letter actually establish, and where does his position stop his sight?",
+  thinkingMove:
+    "Qualification. Deciding what a truthful account is truthful about, instead of grading it true or false.",
+  debrief: {
+    speaker: "indentured-servant",
+    line: "Half the settlement would tell you he lays it on thick. You read it against what you were told out here, and you came back with something better than whether he was right.",
+    established:
+      "Frethorne is an excellent witness to his own condition and a poor one to the settlement's causes. The hunger, the sickness and the fear are exactly as he reports them. What he cannot see from where he stands is that the country is not what is killing him — people have fed themselves well on this river for generations — and that the arrangement doing it is the one he is standing inside.",
+    remains:
+      "The numbers. He writes thirty-two against three thousand and was in no position to have counted either; neither were you. What the line establishes is a settlement's state of mind ten weeks after the attack, which is worth having, and it is not arithmetic.",
+  },
+  openQuestions: [
+    "Whether Frethorne survived. The letter is his last known trace, and the Virginia Company records that preserve it do not follow him.",
+  ],
+  historicalRecord: {
+    documented: [
+      "Richard Frethorne's letter to his parents, March 20, 1623, preserved because the Virginia Company kept it and reprinted in Kingsbury's Records of the Virginia Company.",
+      "Martin's Hundred, a settlement on the James below Jamestown, and the coordinated Powhatan attack of March 1622 that killed roughly a third of the colony's English population.",
+      "The diet, disease and mortality of early Chesapeake servants, including brackish water at the wrong end of the tide.",
+      "The labor regime that put available hands into tobacco rather than food.",
+      "Powhatan agriculture on the James, and the corn from those fields that sustained the English through early winters.",
+    ],
+    reconstructed: [
+      "The Riverbend settlement you walked, and the people who told you what to check the letter against.",
+      "Frethorne himself is documented; the surroundings you audit him from are composite.",
+    ],
+    fiction: ["Chronotravel, and a Chronicler holding the letter within weeks of its writing."],
+    debated: [
+      "How representative Frethorne's experience was. His letter is the most anthologized servant account of the period, and historians disagree about how far one desperate voice should stand for a labor system.",
+    ],
+  },
   intro:
     "Frethorne is not lying to you. He is nineteen, he is sick, he is frightened, and he is writing to the two people in the world who might be able to get him out. Every one of those facts is a reason to read him closely rather than a reason to doubt him.",
   howItWorks: {
@@ -580,6 +649,38 @@ const ONE_HOGSHEAD = {
   kind: "trace",
   id: "case-004-trace-one-hogshead",
   title: "One Hogshead",
+  variant: "Commodity Chain",
+  missionQuestion:
+    "Follow one cask from the field to London and back. What does this account establish about who profited — and where does it stop being able to tell you?",
+  thinkingMove:
+    "Telling what you know from what your source shows. Being right about the world is not the same as being right about the evidence.",
+  debrief: {
+    speaker: "wharf-clerk",
+    line: "Two entries, and only one of them is mine to vouch for. You worked out which. Most people who read my book read it for the part it does not say.",
+    established:
+      "The account is good evidence of a system and poor evidence of the people in it. It establishes duty taken before the planter sees anything, proceeds returned as credit rather than coin, and a return cargo chosen in London a season ahead — a one-crop economy at the far end of a long credit line, legible in a single entry. That is how Chesapeake planters became chronically indebted to English merchants without anything illegal happening.",
+    remains:
+      "Who made the cask. You know, because you stood in the fields and asked them. The page does not: it opens at the landing with fourteen hogsheads already casked and weighed, and a record that begins where the labor ends cannot establish who did it.",
+  },
+  openQuestions: [
+    "What this particular cask sold for. The account records the consignment, not the London price, and the planter would not learn it for months either.",
+  ],
+  historicalRecord: {
+    documented: [
+      "The consignment system: Chesapeake tobacco shipped to a London merchant to be sold on the planter's behalf, paid out months later minus charges, with the planter carrying the risk.",
+      "English tobacco duties, which grew into one of the Crown's most dependable revenues across the seventeenth century.",
+      "The chronic indebtedness of Chesapeake planters to English merchant houses that this arrangement produced.",
+      "The hogshead itself — cured, stemmed, pressed leaf, marked with the planter's mark before it left the landing.",
+    ],
+    reconstructed: [
+      "The wharf account you are reading. It is a composite entry modeled on the invoice and cargo-account pattern documented throughout the period's records, not a transcription of any single surviving page — its own citation says so.",
+      "The Speedwell's voyage, and the specific quantities of cloth, hoes and knives returned.",
+    ],
+    fiction: ["Chronotravel, and a Chronicler auditing a wharf book in 1630."],
+    debated: [
+      "How much of a planter's debt was structural and how much was consumption. Historians read the same merchant accounts and weigh the two differently.",
+    ],
+  },
   intro:
     "Fourteen casks of tobacco left this landing and three pieces of Kentish cloth, two dozen iron hoes and six dozen knives came back. Follow one cask the whole way and enter what the account actually supports at each step — and what it does not.",
   howItWorks: {
