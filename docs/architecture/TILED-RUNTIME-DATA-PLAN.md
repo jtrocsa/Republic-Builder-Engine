@@ -25,25 +25,25 @@ Chosen because it is the simplest of the three field maps to validate against, a
 
 ## Object layers designed
 
-| Layer name | Object type | Properties | Riverbend pilot content |
-|---|---|---|---|
-| `collision` | rectangle × 6 | `kind` (string) | Mirrors `UNIT2_FIELD_BLOCKS` 1:1, carrying its existing `kind` values (`"meetinghouse"`, `"dwelling one"`, `"dwelling two"`, `"well"`, `"tobacco rows"`, `"wharf crates"`) |
-| `walkable` | rectangle × 3 | `role`: `"walkable-bounds"` \| `"obstacle-water"` \| `"walkable-bridge"` | Outer clearing rect (2.2–37.8, 2.2–21.8), river rect (29.5–33.5, full height), bridge cutout rect (29.5–33.5, 11.0–13.2) — reproduces `isRiverbendLand()`'s exact `!inRiver || onBridge` logic as data instead of code |
-| `player-spawn` | point × 2 | `role`: `"spawn"` \| `"recall"` | `(20.0, 12.0)` and `(17.0, 12.4)`, matching `FIELD_MAPS["unit-02"]` |
-| `npc-spawn` | point × 6 | `npcId` (string) | One per `UNIT2_FIELD_NPCS` entry (`settlement-minister`, `indentured-servant`, `settlement-burgess`, `settlement-goodwife`, `river-fisher`, `wharf-clerk`) |
-| `npc-patrol-path` | polyline × 6 | `npcId` | Mirrors `UNIT2_FIELD_NPC_PATROLS`'s six 4-waypoint arrays exactly — Tiled polylines are already an ordered point list, so this is a direct 1:1 shape match with zero translation logic needed |
-| `interaction-triggers` | point × 3 | `interactionId`, optional `reach` | Mirrors `UNIT2_FIELD_SOURCE_POINTS`'s 3 entries (`riverbend-charter` at 12.2,6.4; `riverbend-letter` at 13.0,16.2; `riverbend-ledger` at 35.4,11.9) |
-| `camera-bounds` | rectangle × 1 | `role: "camera-bounds"` | Full map rect (0,0 to 40,24) — a no-op migration for this map, since the camera already bounds to the full map today; still authored so the schema is exercised end-to-end |
+| Layer name             | Object type   | Properties                                                               | Riverbend pilot content                                                                                                                                                                       |
+| ---------------------- | ------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `collision`            | rectangle × 6 | `kind` (string)                                                          | Mirrors `UNIT2_FIELD_BLOCKS` 1:1, carrying its existing `kind` values (`"meetinghouse"`, `"dwelling one"`, `"dwelling two"`, `"well"`, `"tobacco rows"`, `"wharf crates"`)                    |
+| `walkable`             | rectangle × 3 | `role`: `"walkable-bounds"` \| `"obstacle-water"` \| `"walkable-bridge"` | Outer clearing rect (2.2–37.8, 2.2–21.8), river rect (29.5–33.5, full height), bridge cutout rect (29.5–33.5, 11.0–13.2) — reproduces `isRiverbendLand()`'s exact `!inRiver                   |     | onBridge` logic as data instead of code |
+| `player-spawn`         | point × 2     | `role`: `"spawn"` \| `"recall"`                                          | `(20.0, 12.0)` and `(17.0, 12.4)`, matching `FIELD_MAPS["unit-02"]`                                                                                                                           |
+| `npc-spawn`            | point × 6     | `npcId` (string)                                                         | One per `UNIT2_FIELD_NPCS` entry (`settlement-minister`, `indentured-servant`, `settlement-burgess`, `settlement-goodwife`, `river-fisher`, `wharf-clerk`)                                    |
+| `npc-patrol-path`      | polyline × 6  | `npcId`                                                                  | Mirrors `UNIT2_FIELD_NPC_PATROLS`'s six 4-waypoint arrays exactly — Tiled polylines are already an ordered point list, so this is a direct 1:1 shape match with zero translation logic needed |
+| `interaction-triggers` | point × 3     | `interactionId`, optional `reach`                                        | Mirrors `UNIT2_FIELD_SOURCE_POINTS`'s 3 entries (`riverbend-charter` at 12.2,6.4; `riverbend-letter` at 13.0,16.2; `riverbend-ledger` at 35.4,11.9)                                           |
+| `camera-bounds`        | rectangle × 1 | `role: "camera-bounds"`                                                  | Full map rect (0,0 to 40,24) — a no-op migration for this map, since the camera already bounds to the full map today; still authored so the schema is exercised end-to-end                    |
 
 Not authored for the Riverbend pilot — schema decided now for cross-map consistency, intentionally left unpopulated because nothing in Riverbend's current design needs them (following this repo's own precedent of deciding a field's shape ahead of a feature that uses it, e.g. `unit.archiveChallenges[]`, which existed as a schema field before any unit populated it):
 
-| Layer name | Object type | Properties | Purpose |
-|---|---|---|---|
-| `npc-patrol-region` | rectangle/polygon | `npcId`, `role: "patrol-region"` | Feeds Workstream 2's bounded-wander mode — no NPC in Riverbend currently wanders |
-| `dialogue-triggers` | point/rectangle | `dialogueId`, optional `once` | A genuinely new zone-entry capability, not a migration of anything existing |
-| `doors-exits` | rectangle/point | `targetScreen`, `targetSpawn` | Generalizes the Archive Room's door pattern — Riverbend has no door today |
-| `quest-triggers` | point/rectangle | `questId`, `questType` | Generalizes the existing `investigationMode`/`investigationQuestId` pointer pattern already used in the unit campaign content files |
-| `terrain-cost` | rectangle/polygon | `cost` (number) | Feeds Workstream 2's A* pathfinding as a per-cell weight; defaults to uniform cost 1 everywhere until a map actually needs variable terrain (e.g. mud, deep water passable-but-slow) |
+| Layer name          | Object type       | Properties                       | Purpose                                                                                                                                                                              |
+| ------------------- | ----------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npc-patrol-region` | rectangle/polygon | `npcId`, `role: "patrol-region"` | Feeds Workstream 2's bounded-wander mode — no NPC in Riverbend currently wanders                                                                                                     |
+| `dialogue-triggers` | point/rectangle   | `dialogueId`, optional `once`    | A genuinely new zone-entry capability, not a migration of anything existing                                                                                                          |
+| `doors-exits`       | rectangle/point   | `targetScreen`, `targetSpawn`    | Generalizes the Archive Room's door pattern — Riverbend has no door today                                                                                                            |
+| `quest-triggers`    | point/rectangle   | `questId`, `questType`           | Generalizes the existing `investigationMode`/`investigationQuestId` pointer pattern already used in the unit campaign content files                                                  |
+| `terrain-cost`      | rectangle/polygon | `cost` (number)                  | Feeds Workstream 2's A* pathfinding as a per-cell weight; defaults to uniform cost 1 everywhere until a map actually needs variable terrain (e.g. mud, deep water passable-but-slow) |
 
 ## `tiled-map-loader.js` extension — additive only
 
@@ -64,7 +64,7 @@ export function objectsForLayer(tmj, layerName) {
 }
 ```
 
-This is pure and DOM-free — unit-testable exactly like the existing `tilesForFrame()` (no canvas or real browser environment needed), following the same "small, additive, single-purpose export" pattern the module already uses. `renderTiledMap()` itself is untouched; nothing about the pilot changes how the map's *visuals* render.
+This is pure and DOM-free — unit-testable exactly like the existing `tilesForFrame()` (no canvas or real browser environment needed), following the same "small, additive, single-purpose export" pattern the module already uses. `renderTiledMap()` itself is untouched; nothing about the pilot changes how the map's _visuals_ render.
 
 ## Why raw `JSON.parse`, not a library
 
@@ -79,7 +79,7 @@ Per the project owner's reuse-first policy ([`OPEN-SOURCE-REUSE-DECISIONS.md`](O
 
 **Hand-coded collision stays authoritative at runtime throughout this pilot.** `main.js` keeps reading `UNIT2_FIELD_BLOCKS` and calling `isRiverbendLand()` exactly as it does today — this plan does not wire `objectsForLayer()`'s output into any runtime collision or NPC-patrol code path. This matches the `map-implementer` subagent's existing stance that Tiled-derived art generators are kept in sync with hand-coded collision data manually, not the other way around (the same convention already documented at `main.js:967-971` for the Common Cause map).
 
-Two safety nets validate the *data*, without ever making it load-bearing:
+Two safety nets validate the _data_, without ever making it load-bearing:
 
 1. **A new Vitest parity test, `tests/unit/riverbend-collision-parity.test.js`.** Loads `riverbend-field.tmj`, calls `objectsForLayer(tmj, "collision")`, converts each object's Tiled pixel coordinates (dividing by `tmj.tilewidth`, 48) into the same world-unit coordinate space `UNIT2_FIELD_BLOCKS` already uses, and asserts the two rectangle sets match. This fails loudly the moment either the `.tmj` file or the hand-coded array is edited without the other during the transition period — the exact kind of drift risk this workstream is designed to surface early rather than let compound silently.
 2. **A dev-only visual overlay page, `apps/web/tiled-collision-preview.html`.** Follows the same non-build-entry preview-page pattern this repo already uses (`tiled-preview.html`, `quest-type-preview.html`, `mini-games-preview.html` — none of these are wired into the production build or `npm run dev`'s main entry). Draws Tiled-derived rectangles (one color) over hand-coded rectangles (a contrasting outline) on top of the rendered Riverbend map, for quick human visual confirmation that the two data sources actually line up with the painted art, not just with each other numerically.
@@ -90,4 +90,4 @@ Only `riverbend-field.tmj` is touched by this pilot. The other four maps already
 
 ## What this workstream does not do
 
-It does not make `main.js` read collision from Tiled at runtime. It does not remove or deprecate any hand-coded array. It does not touch NPC movement math (Workstream 2 is a separate, later workstream that would eventually *consume* this data, once trust is established via the parity test). It does not convert any map besides Riverbend. It does not add a general-purpose Tiled-authoring pipeline, a `QuestEngine` renderer registry, or any of the other explicitly-deferred `WorldComposition`-era systems named in `docs/architecture/ARCHITECTURE-QUICKREF.md`.
+It does not make `main.js` read collision from Tiled at runtime. It does not remove or deprecate any hand-coded array. It does not touch NPC movement math (Workstream 2 is a separate, later workstream that would eventually _consume_ this data, once trust is established via the parity test). It does not convert any map besides Riverbend. It does not add a general-purpose Tiled-authoring pipeline, a `QuestEngine` renderer registry, or any of the other explicitly-deferred `WorldComposition`-era systems named in `docs/architecture/ARCHITECTURE-QUICKREF.md`.

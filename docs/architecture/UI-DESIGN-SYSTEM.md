@@ -14,7 +14,7 @@ teacher dashboard, mission cards, Manage Content (the mission editor),
 grading. It does **not** restyle gameplay screens (`.field-*`, `.hub-*`,
 `.quest-*`, `.map-*`, `.director-*` families) — those are regression-prone
 (see CLAUDE.md's "Gameplay invariants" section) and have zero e2e coverage
-protecting a restyle. Three things *do* apply app-wide because they're
+protecting a restyle. Three things _do_ apply app-wide because they're
 genuinely shared primitives, not screen-specific rules:
 
 - The `:root` token layer (colors, spacing, radius, shadow, etc.)
@@ -62,19 +62,19 @@ semantic set.
 
 ### Colors
 
-| Token | Value | Use |
-|---|---|---|
-| `--c-canvas` | `#052838` | Page background base |
-| `--c-surface` / `--c-surface-raised` / `--c-surface-interactive` | navy at 0.72/0.91/0.4 alpha | Card/panel backgrounds, by elevation |
-| `--c-surface-parchment` | `#e9d5a3` | The one place a lighter, paper-toned surface is appropriate (student-facing excerpt text) |
-| `--c-text` / `--c-text-secondary` / `--c-text-muted` | `#f7e7bd` / `#d8e3de` / `#c4d0cf` | Primary/secondary/muted text, in that contrast order |
-| `--c-text-on-gold` | `#19303a` | Text on a gold-filled surface (primary buttons) |
-| `--c-border-subtle` / `--c-border` / `--c-border-strong` | translucent cream 0.14 / gold 0.4 / gold 0.6 | Ordinary borders, in increasing emphasis — default to `-subtle` |
-| `--c-border-gold` | `var(--gold)` | Full-strength gold border — reserve for the rare case a border itself needs to read as the primary accent (e.g. a focus ring) |
-| `--c-gold` / `--c-gold-soft` / `--c-gold-hover` | `#e1b65d` / `#f0d488` / `#f0d488` | Primary accent |
-| `--c-success` / `--c-warning` / `--c-error` / `--c-info` | `#87d5a4` / `#f0cf7a` / `#bd755f` / `#7ee6ec` | Status tones for chips |
-| `--c-focus-ring` | `var(--c-gold)` | The global focus ring color |
-| `--c-disabled-bg` / `--c-disabled-text` | navy 0.3 / cream 0.4 | Disabled form control treatment |
+| Token                                                            | Value                                         | Use                                                                                                                           |
+| ---------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `--c-canvas`                                                     | `#052838`                                     | Page background base                                                                                                          |
+| `--c-surface` / `--c-surface-raised` / `--c-surface-interactive` | navy at 0.72/0.91/0.4 alpha                   | Card/panel backgrounds, by elevation                                                                                          |
+| `--c-surface-parchment`                                          | `#e9d5a3`                                     | The one place a lighter, paper-toned surface is appropriate (student-facing excerpt text)                                     |
+| `--c-text` / `--c-text-secondary` / `--c-text-muted`             | `#f7e7bd` / `#d8e3de` / `#c4d0cf`             | Primary/secondary/muted text, in that contrast order                                                                          |
+| `--c-text-on-gold`                                               | `#19303a`                                     | Text on a gold-filled surface (primary buttons)                                                                               |
+| `--c-border-subtle` / `--c-border` / `--c-border-strong`         | translucent cream 0.14 / gold 0.4 / gold 0.6  | Ordinary borders, in increasing emphasis — default to `-subtle`                                                               |
+| `--c-border-gold`                                                | `var(--gold)`                                 | Full-strength gold border — reserve for the rare case a border itself needs to read as the primary accent (e.g. a focus ring) |
+| `--c-gold` / `--c-gold-soft` / `--c-gold-hover`                  | `#e1b65d` / `#f0d488` / `#f0d488`             | Primary accent                                                                                                                |
+| `--c-success` / `--c-warning` / `--c-error` / `--c-info`         | `#87d5a4` / `#f0cf7a` / `#bd755f` / `#7ee6ec` | Status tones for chips                                                                                                        |
+| `--c-focus-ring`                                                 | `var(--c-gold)`                               | The global focus ring color                                                                                                   |
+| `--c-disabled-bg` / `--c-disabled-text`                          | navy 0.3 / cream 0.4                          | Disabled form control treatment                                                                                               |
 
 `--c-gold-rgb`, `--c-ink-rgb`, `--c-navy-rgb`, `--c-teal-rgb`,
 `--c-black-rgb`, `--c-white-rgb` are raw `R, G, B` triples for building new
@@ -108,35 +108,35 @@ inputs/chips), `-md` (12px, cards), `-lg` (16px, page shells/dialogs),
 
 `c-` prefixed to avoid collision with the file's ~570 existing selectors.
 Defined in a dedicated banner section near the top of `global.css`, right
-after the token block — intentionally positioned *before* the file's
+after the token block — intentionally positioned _before_ the file's
 milestone-log CSS so later, more-specific gameplay overrides still win by
 normal cascade order if they need to.
 
-| Class | Purpose |
-|---|---|
-| `.c-page`, `.c-page--wide` | Page shell width container (content vs. editor width) |
-| `.c-page-header`, `.c-page-title`, `.c-eyebrow`, `.c-page-description`, `.c-page-actions` | Page header block |
-| `.c-section`, `.c-section-head`, `.c-section-title`, `.c-section-description` | Loose content grouping with a top divider between sections |
-| `.c-card`, `.c-card--interactive` | Bounded surface; `--interactive` adds hover/focus-within lift |
-| `.c-panel`, `.c-panel--parchment` | Lighter-weight grouping than a card; `--parchment` is the student-excerpt treatment |
-| `.c-field`, `.c-field--inline`, `.c-field-label-row`, `.c-label`, `.c-label-hint`, `.c-help`, `.c-error-text` | Form field scaffolding |
-| `.c-input`, `.c-textarea`, `.c-select` | Form controls, with `:hover`/`:focus-visible`/`[aria-invalid]`/`:disabled` states |
-| `.c-chip`, `.c-chip--gold/success/warning/error/muted` | The one shared badge/pill primitive |
-| `.c-empty`, `.c-loading`, `.c-skeleton` | Empty state, inline loading note (with spinner), skeleton shimmer |
-| `.c-toolbar`, `.c-steps`, `.c-step` | Action row and step-indicator primitives |
+| Class                                                                                                         | Purpose                                                                             |
+| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `.c-page`, `.c-page--wide`                                                                                    | Page shell width container (content vs. editor width)                               |
+| `.c-page-header`, `.c-page-title`, `.c-eyebrow`, `.c-page-description`, `.c-page-actions`                     | Page header block                                                                   |
+| `.c-section`, `.c-section-head`, `.c-section-title`, `.c-section-description`                                 | Loose content grouping with a top divider between sections                          |
+| `.c-card`, `.c-card--interactive`                                                                             | Bounded surface; `--interactive` adds hover/focus-within lift                       |
+| `.c-panel`, `.c-panel--parchment`                                                                             | Lighter-weight grouping than a card; `--parchment` is the student-excerpt treatment |
+| `.c-field`, `.c-field--inline`, `.c-field-label-row`, `.c-label`, `.c-label-hint`, `.c-help`, `.c-error-text` | Form field scaffolding                                                              |
+| `.c-input`, `.c-textarea`, `.c-select`                                                                        | Form controls, with `:hover`/`:focus-visible`/`[aria-invalid]`/`:disabled` states   |
+| `.c-chip`, `.c-chip--gold/success/warning/error/muted`                                                        | The one shared badge/pill primitive                                                 |
+| `.c-empty`, `.c-loading`, `.c-skeleton`                                                                       | Empty state, inline loading note (with spinner), skeleton shimmer                   |
+| `.c-toolbar`, `.c-steps`, `.c-step`                                                                           | Action row and step-indicator primitives                                            |
 
 ## Button hierarchy
 
 One base (`.btn`) + variants. All have real `:hover`/`:active`/`:disabled`/
 `:focus-visible` states now (none existed before this pass).
 
-| Variant | Class | Use | Look |
-|---|---|---|---|
-| Primary | `.btn-gold` | The one most-important action on a screen (Sign In, Save Draft, Publish, Continue) | Filled gold gradient, dark text |
-| Secondary | `.btn-outline` | Important but non-primary (Preview as student, Continue with Google, Edit mission) | Dark surface, subtle border |
-| Tertiary | `.btn-plain` / `.text-button` / `.back-link` | Low-priority (Back, Cancel, View details) | No chrome, cream text |
-| Danger | `.btn-danger` | Destructive only (Remove, Discard) | Muted red, fills on hover |
-| Dev | `.btn-dev` | Development-only controls | Dashed border, monospace — visually quarantined from production actions |
+| Variant   | Class                                        | Use                                                                                | Look                                                                    |
+| --------- | -------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Primary   | `.btn-gold`                                  | The one most-important action on a screen (Sign In, Save Draft, Publish, Continue) | Filled gold gradient, dark text                                         |
+| Secondary | `.btn-outline`                               | Important but non-primary (Preview as student, Continue with Google, Edit mission) | Dark surface, subtle border                                             |
+| Tertiary  | `.btn-plain` / `.text-button` / `.back-link` | Low-priority (Back, Cancel, View details)                                          | No chrome, cream text                                                   |
+| Danger    | `.btn-danger`                                | Destructive only (Remove, Discard)                                                 | Muted red, fills on hover                                               |
+| Dev       | `.btn-dev`                                   | Development-only controls                                                          | Dashed border, monospace — visually quarantined from production actions |
 
 **Never give two actions on the same screen equal visual weight** unless
 they're genuinely equal-priority alternatives (e.g. a tab switcher). If you
@@ -151,22 +151,22 @@ above — use them for new teacher-screen markup instead of hand-writing the
 HTML string again.
 
 ```js
-btn({ label, action, variant, disabled, type, attrs })
+btn({ label, action, variant, disabled, type, attrs });
 // variant: "primary" | "secondary" | "tertiary" | "danger" | "dev"
 
-chip({ label, tone, live })
+chip({ label, tone, live });
 // tone: "default" | "gold" | "success" | "warning" | "error" | "muted"
 // live: true adds role="status" aria-live="polite" for a chip that updates
 
-fieldMarkup({ id, label, type, value, help, required, optional, error, textarea, rows })
+fieldMarkup({ id, label, type, value, help, required, optional, error, textarea, rows });
 // Labeled field with required/optional indicator, help text, and an
 // aria-describedby/aria-invalid-wired error message
 
-emptyState({ title, body, action })
-loadingNote(text)  // role="status" aria-live="polite" inline loading text
+emptyState({ title, body, action });
+loadingNote(text); // role="status" aria-live="polite" inline loading text
 
-pageHeaderMarkup({ eyebrow, title, description, status, actions, breadcrumb })
-sectionHeadMarkup({ title, description, actions })
+pageHeaderMarkup({ eyebrow, title, description, status, actions, breadcrumb });
+sectionHeadMarkup({ title, description, actions });
 ```
 
 `authTabsMarkup(tabs)` (near `passwordFieldMarkup`) builds a quiet pill-style
@@ -192,7 +192,7 @@ the Teacher Dashboard's own tab bar.
   `data-action` and a click handler) are a known trap — the highlight tool's
   per-sentence segments were exactly this until Phase 44 C7. Use a real
   `<button>` and reset its default chrome (`border: 0; padding: 0;
-  background: none; font: inherit; display: inline;` if it needs to sit
+background: none; font: inherit; display: inline;` if it needs to sit
   inline in running text) rather than a clickable non-interactive element.
 
 ## Responsive

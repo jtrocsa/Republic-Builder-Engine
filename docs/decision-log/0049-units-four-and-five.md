@@ -26,8 +26,8 @@ sources are all real named documents.
 
 Every record on these two maps is a **composite reconstructed from a documentary form**, and every
 citation says so in its own first sentence. The reason is what a field record has to do. A
-Chronicler walks up to a boat captain and asks to see his papers; the record has to be *that
-captain's* toll receipt, for that cargo, on that boat. The Bank Veto, the Declaration of Sentiments,
+Chronicler walks up to a boat captain and asks to see his papers; the record has to be _that
+captain's_ toll receipt, for that cargo, on that boat. The Bank Veto, the Declaration of Sentiments,
 the Emancipation Proclamation cannot do that job, because nobody standing on a towpath or on Cary
 Street is carrying one.
 
@@ -78,7 +78,7 @@ desk, which is where the ward's arithmetic lives. A ledger column is a more hone
 that than a painted casualty, and it is the one a Chronicler came to read.
 
 **In the record forms.** Six of Unit 5's records are administrative papers, and administrative papers
-are exactly where a person disappears. Each is written to be read *against its own form*: the
+are exactly where a person disappears. Each is written to be read _against its own form_: the
 requisition moves people its text never names; the payroll's second and third classes are wages paid
 to somebody else; the day book's plainest column bills an owner for a pair of shoes; the ward
 register's own matron must write a memorandum to admit four women work there whom the columns cannot
@@ -107,14 +107,14 @@ Six of the nine cases across Units 1–3 were evidence-organizing sorts, and the
 that every non-map mission was starting to feel like the same mission from a different door. Neither
 of Unit 4's is one: case-011 is `sequencing` because the Bank War's difficulty is genuinely causal
 ordering, and case-012 is `hipp` — the first mission in the game to use that type — because the
-Removal Message is a document whose *argument* is the thing to analyse.
+Removal Message is a document whose _argument_ is the thing to analyse.
 
 Unit 5 brings evidence-organizing back deliberately, for case-015, because Reconstruction's central
 difficulty is that everyone agreed slavery was finished and nobody agreed what replaced it. "Sort
 these claims by what each holds freedom to require" is not a genre exercise dressed as history; it is
 the actual problem. Case-014 is `sequencing` and is **not** case-011's shape: that chain runs
 decision → consequence, one man's choices compounding; the road to disunion runs settlement →
-destabilization, where every item is somebody *solving* the sectional crisis and the reason order
+destabilization, where every item is somebody _solving_ the sectional crisis and the reason order
 matters is that each solution made the next quarrel unmanageable.
 
 ### 6. A sequencing quest must be authored out of order
@@ -137,7 +137,7 @@ and excluded it. That verdict was drawn from a 4-of-27-sheet sample, and sheets 
 different pack inside the same folder: timber, brick and stone cut-outs on transparency with nothing
 datable in them.
 
-The distinction that survives is between *bomb damage* and *ruins*. 1864 Richmond has the second and
+The distinction that survives is between _bomb damage_ and _ruins_. 1864 Richmond has the second and
 not the first, so eight objects were repacked into `derived/richmond-ruins.png` and used in exactly
 three places the record puts them: a house **taken down** for the north-east line's field of fire
 with its brick stacked square beside it; the wrecked Confederate States Laboratory on Brown's Island,

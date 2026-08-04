@@ -16,36 +16,36 @@ scaffold.
 should trigger revisiting subject-pack extraction, and two of its seven conditions have
 since become true:
 
-- *"A real teacher or second user needs an account."* — True since Phase 22: real
+- _"A real teacher or second user needs an account."_ — True since Phase 22: real
   accounts, classrooms, submissions, evaluations, and manual grades exist and are live in
   Supabase (`supabase/migrations/0001_init.sql` onward, through `0012_assignments.sql` as
   of Phase 50D).
-- *"`api/evaluate.js` gets wired to the frontend... would itself warrant revisiting the
-  AI-grading boundary."* — True since Phase 22: `sourceReader()`'s initial reading and the
+- _"`api/evaluate.js` gets wired to the frontend... would itself warrant revisiting the
+  AI-grading boundary."_ — True since Phase 22: `sourceReader()`'s initial reading and the
   Archive Review SAQ block both call it via `evaluator-requests.js`/`evaluator-client.js`,
   and that boundary (formative feedback only, a teacher enters the real grade) has in fact
   already been revisited and re-affirmed repeatedly across Phase 22, 49A, and 49E.
 
 Two of seven trigger conditions firing is a real signal worth stopping to re-examine, which
-is what this document does — it is not itself evidence that the *specific* system this
+is what this document does — it is not itself evidence that the _specific_ system this
 phase is about (`packs/<subject>/` extraction) should now be built.
 
 ## Re-examining every §10 condition against 2026-07-28 reality
 
-| Condition | Status | Notes |
-| --- | --- | --- |
-| A second real subject pack is approved and enters active development | **Not met** | No second subject (a different AP course, a different grade band, a non-APUSH history game) has been proposed, scoped, or named anywhere in this repo's docs or content. "Odysso" (the separate marketing site discovered during Phase 50C) implies second-subject intent exists at the *brand* level, but zero code-level second-subject work exists. |
-| A real teacher or second user needs an account | **Met** (since Phase 22) | Already responded to — real accounts/classrooms exist. This justified building `PlatformCore`-adjacent account code, which happened; it does not by itself justify subject-pack extraction, a separate concern. |
-| A real classroom pilot gets scheduled | **Unknown / not evidenced in this repo** | No decision-log entry, session report, or `PHASES-46-50.md` line documents a scheduled pilot with a real school/teacher. If one exists, it lives outside this codebase's paper trail — flag to the product owner to confirm one way or the other rather than assume. |
-| New content work hits a map/collision-authoring wall | **Partially met, already responded to** | The Riverbend and Common Cause Tiled rebuilds (`0029`-`0032`) were owner-directed scoped POCs in response to exactly this pressure, not blocked on this reassessment. The hand-coded-array approach has not been abandoned; Tiled composites onto it. |
-| Manual browser verification becomes repeatedly burdensome | **Resolved** | Phase 29's Playwright suite (40 specs as of Phase 50D, including 20 visual-regression baselines) made this a non-issue. |
-| An approved quest design requires branching dialogue | **Not met** | No branching-dialogue quest design has been approved; dialogue remains static. |
-| `api/evaluate.js` gets wired to the frontend | **Met** (since Phase 22) | As above — already revisited multiple times since, most recently by 49A/49E's "complete = submitted, not AI-graded" resolution, which *is* the AI-grading-boundary re-examination this condition called for. |
+| Condition                                                            | Status                                   | Notes                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A second real subject pack is approved and enters active development | **Not met**                              | No second subject (a different AP course, a different grade band, a non-APUSH history game) has been proposed, scoped, or named anywhere in this repo's docs or content. "Odysso" (the separate marketing site discovered during Phase 50C) implies second-subject intent exists at the _brand_ level, but zero code-level second-subject work exists. |
+| A real teacher or second user needs an account                       | **Met** (since Phase 22)                 | Already responded to — real accounts/classrooms exist. This justified building `PlatformCore`-adjacent account code, which happened; it does not by itself justify subject-pack extraction, a separate concern.                                                                                                                                        |
+| A real classroom pilot gets scheduled                                | **Unknown / not evidenced in this repo** | No decision-log entry, session report, or `PHASES-46-50.md` line documents a scheduled pilot with a real school/teacher. If one exists, it lives outside this codebase's paper trail — flag to the product owner to confirm one way or the other rather than assume.                                                                                   |
+| New content work hits a map/collision-authoring wall                 | **Partially met, already responded to**  | The Riverbend and Common Cause Tiled rebuilds (`0029`-`0032`) were owner-directed scoped POCs in response to exactly this pressure, not blocked on this reassessment. The hand-coded-array approach has not been abandoned; Tiled composites onto it.                                                                                                  |
+| Manual browser verification becomes repeatedly burdensome            | **Resolved**                             | Phase 29's Playwright suite (40 specs as of Phase 50D, including 20 visual-regression baselines) made this a non-issue.                                                                                                                                                                                                                                |
+| An approved quest design requires branching dialogue                 | **Not met**                              | No branching-dialogue quest design has been approved; dialogue remains static.                                                                                                                                                                                                                                                                         |
+| `api/evaluate.js` gets wired to the frontend                         | **Met** (since Phase 22)                 | As above — already revisited multiple times since, most recently by 49A/49E's "complete = submitted, not AI-graded" resolution, which _is_ the AI-grading-boundary re-examination this condition called for.                                                                                                                                           |
 
 ## The actual test for subject-pack extraction specifically
 
 `packs/<subject>/` extraction only pays for itself once there is a second subject's real
-content to extract *against* — a second, concrete set of units/cases/quests that need the
+content to extract _against_ — a second, concrete set of units/cases/quests that need the
 engine to be subject-agnostic in ways it currently isn't. Today:
 
 - All three shipped units (Unit 1 Caribbean, Unit 2 Colonial Crossroads, Unit 3 Common

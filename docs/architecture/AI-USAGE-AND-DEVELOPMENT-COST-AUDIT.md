@@ -2,7 +2,7 @@
 
 **Status:** Point-in-time audit, 2026-07-23. Research and documentation only — no application code, dependencies, migrations, or `CLAUDE.md` edits were made in producing this document. Figures below are counts verified directly against the repository during this pass (line counts, file counts, commit stats); relative-cost ratings are qualitative judgments, not measured token/dollar totals, since no such measurements exist in this repo.
 
-**Scope note:** this is a workflow-cost audit, not a code-quality audit. It does not evaluate whether Chronicle's architecture or content is good — only where the *process* of working on it in Claude Code burns more usage than the reliability payoff justifies.
+**Scope note:** this is a workflow-cost audit, not a code-quality audit. It does not evaluate whether Chronicle's architecture or content is good — only where the _process_ of working on it in Claude Code burns more usage than the reliability payoff justifies.
 
 ## 1. Executive summary
 
@@ -12,7 +12,7 @@ Three concrete patterns account for most avoidable cost in Chronicle's current C
 2. **Browser verification is 100% manual and never made permanent.** Playwright is an installed dependency with zero committed test artifacts (no config, no `tests/e2e/`), yet `docs/architecture/PLAYWRIGHT-ADOPTION-PLAN.md` documents at least 20 ad hoc manual passes across the project's history, which caught 5+ real bugs. Every one of those passes was re-derived by hand, from scratch, in its own session — genuinely valuable coverage, repeatedly re-paid for instead of banked once.
 3. **Audit and roadmap documentation has proliferated rapidly and self-referentially.** Six stand-alone documents (`FOCUSED-UI-AND-MECHANICS-REUSE-AUDIT.md`, `TEACHER-UI-ACCESSIBILITY-AUDIT.md`, `WORKFLOW-STATE-AUDIT.md`, `AUTHORING-SYSTEMS-AUDIT.md`, `PLAYWRIGHT-ADOPTION-PLAN.md`, `FOCUSED-MODERNIZATION-ROADMAP.md`) were created on the same day this audit was requested, cross-referencing one another and repeating heavy per-item templated structure (the roadmap alone carries 10 items × ~10 metadata fields each). This is a live instance of the exact waste category this audit was commissioned to find — discovered while gathering evidence for it, not hypothesized.
 
-None of this reflects unreliable work — the underlying engineering (subagent scoping, deterministic `validate:content`, single-pass Vitest, textual guardrails in `CLAUDE.md`) is generally sound. The waste is concentrated in *process overhead around* that work: what gets read before starting, what gets manually re-verified instead of banked, and how much gets written down per pass.
+None of this reflects unreliable work — the underlying engineering (subagent scoping, deterministic `validate:content`, single-pass Vitest, textual guardrails in `CLAUDE.md`) is generally sound. The waste is concentrated in _process overhead around_ that work: what gets read before starting, what gets manually re-verified instead of banked, and how much gets written down per pass.
 
 ## 2. Highest-cost current workflows
 
@@ -32,17 +32,17 @@ None of this reflects unreliable work — the underlying engineering (subagent s
 
 ## 4. Waste patterns
 
-| Pattern | Evidence |
-|---|---|
-| QUICKREF read as a full changelog | 93 of 170 lines are a dense multi-phase narrative; the doc itself admits its own figures go stale between phases |
-| `main.js` read in full for orientation | 7,981 lines / ~193 KB; most tasks need one function or screen, not the whole file |
-| Playwright re-derived by hand every time | 20+ ad hoc passes, zero committed `.spec` files, zero `playwright.config.*` |
-| Audit-doc proliferation | 6 new stand-alone docs created in one day, heavily cross-referenced, ~10-field templated boilerplate per roadmap item |
-| Large multi-system autonomous phases | Phase 22 (5 systems at once); 2026-07-11 overnight run (4 quest types + 2 mini-games + 6 subagents, scope grew reactively mid-run) |
-| Whole-file rewrites | `9a04857` rewrites `global.css` (+8,143/-8,003) inside a 120-file commit; `933aa04` "main.js cleanup" touches nearly every line (+3,298/-3,328) for a verbatim mechanical extraction |
-| Stale doc figures forcing re-derivation | QUICKREF cites "7,677 lines as of Phase 27" vs. actual 7,981; `docs/development/UNIT-TESTING.md` cites "179 tests / 15 files" vs. actual 29 files / 4,610 lines — each stale figure either gets silently trusted (risk) or triggers a fresh grep/read to confirm (cost) |
-| Decision-log narrative chaining | ~80–90 lines per entry, several explicitly re-read 2–3 prior entries before writing (e.g., decision-log 0031 states it re-read 0029 and 0030 first) |
-| Session-report duplication | Only 2 exist across 27+ phases, and both nearly 1:1 duplicate their corresponding QUICKREF phase bullet — the same information maintained in two places for the only two phases that bothered |
+| Pattern                                  | Evidence                                                                                                                                                                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| QUICKREF read as a full changelog        | 93 of 170 lines are a dense multi-phase narrative; the doc itself admits its own figures go stale between phases                                                                                                                                                        |
+| `main.js` read in full for orientation   | 7,981 lines / ~193 KB; most tasks need one function or screen, not the whole file                                                                                                                                                                                       |
+| Playwright re-derived by hand every time | 20+ ad hoc passes, zero committed `.spec` files, zero `playwright.config.*`                                                                                                                                                                                             |
+| Audit-doc proliferation                  | 6 new stand-alone docs created in one day, heavily cross-referenced, ~10-field templated boilerplate per roadmap item                                                                                                                                                   |
+| Large multi-system autonomous phases     | Phase 22 (5 systems at once); 2026-07-11 overnight run (4 quest types + 2 mini-games + 6 subagents, scope grew reactively mid-run)                                                                                                                                      |
+| Whole-file rewrites                      | `9a04857` rewrites `global.css` (+8,143/-8,003) inside a 120-file commit; `933aa04` "main.js cleanup" touches nearly every line (+3,298/-3,328) for a verbatim mechanical extraction                                                                                    |
+| Stale doc figures forcing re-derivation  | QUICKREF cites "7,677 lines as of Phase 27" vs. actual 7,981; `docs/development/UNIT-TESTING.md` cites "179 tests / 15 files" vs. actual 29 files / 4,610 lines — each stale figure either gets silently trusted (risk) or triggers a fresh grep/read to confirm (cost) |
+| Decision-log narrative chaining          | ~80–90 lines per entry, several explicitly re-read 2–3 prior entries before writing (e.g., decision-log 0031 states it re-read 0029 and 0030 first)                                                                                                                     |
+| Session-report duplication               | Only 2 exist across 27+ phases, and both nearly 1:1 duplicate their corresponding QUICKREF phase bullet — the same information maintained in two places for the only two phases that bothered                                                                           |
 
 ## 5. Testing-cost analysis
 
@@ -51,6 +51,7 @@ The deterministic layer here is already well-designed: `validate:content` is sco
 The gap is entirely on the browser-verification side: because no Playwright suite is committed, **100% of interactive/visual verification cost is paid fresh, in-session, by an agent re-deriving the flow from memory of the code** — even for flows that have already been manually verified 5, 10, or 20 times across the project's history.
 
 **Recommended staged sequence** (cheapest first, escalate only as needed):
+
 1. Targeted `vitest` invocation scoped to the changed file/pattern (e.g. `vitest run tests/unit/quest-type-source-analysis.test.js`, not bare `vitest run`).
 2. The affected test group (e.g. all `quest-types/*.test.js` if a shared contract changed).
 3. `validate:content` only if content files changed — it's cheap enough that "only if relevant" is really the only gate needed.
@@ -59,21 +60,23 @@ The gap is entirely on the browser-verification side: because no Playwright suit
 
 ## 6. Subagent-cost analysis
 
-| Agent | Model | Assessment |
-|---|---|---|
-| content-designer | sonnet | Correctly scoped to content files only; explicit hand-off to map-implementer for maps |
-| map-implementer | sonnet | Correctly scoped to map/collision arrays only; explicit hand-off to content-designer |
-| content-validator | haiku | Appropriately cheap model for a "run a command, report plainly" job |
-| test-writer | sonnet | Reasonable scope (Vitest only, never touches engine behavior); ends by self-invoking a full test run as self-check |
-| code-reviewer | sonnet | Read-only, correctly commit-gated rather than per-diff |
-| doc-sync | haiku | Appropriately cheap model; scope (CLAUDE.md/UNIT-TESTING.md/decision-log numbering) is narrow and low-risk |
+| Agent             | Model  | Assessment                                                                                                         |
+| ----------------- | ------ | ------------------------------------------------------------------------------------------------------------------ |
+| content-designer  | sonnet | Correctly scoped to content files only; explicit hand-off to map-implementer for maps                              |
+| map-implementer   | sonnet | Correctly scoped to map/collision arrays only; explicit hand-off to content-designer                               |
+| content-validator | haiku  | Appropriately cheap model for a "run a command, report plainly" job                                                |
+| test-writer       | sonnet | Reasonable scope (Vitest only, never touches engine behavior); ends by self-invoking a full test run as self-check |
+| code-reviewer     | sonnet | Read-only, correctly commit-gated rather than per-diff                                                             |
+| doc-sync          | haiku  | Appropriately cheap model; scope (CLAUDE.md/UNIT-TESTING.md/decision-log numbering) is narrow and low-risk         |
 
 **Findings:**
+
 - No evidence of unnecessary multi-agent fan-out for routine work — the one clear example of heavy subagent use (the 2026-07-11 overnight run using 6 subagents) matches a genuinely large, owner-authorized scope, not a routine task.
 - `test-writer` and `content-validator` both end their runs by self-invoking a full command (`npm run test` / `npm run validate:content`) as their own self-check. This is redundant if the orchestrating session then re-runs the identical full command immediately afterward as part of its own verification — the check should be trusted once, not paid for twice.
 - The haiku-for-cheap-agents pattern (content-validator, doc-sync) is worth extending to any future agent whose job is fundamentally "run a deterministic command and summarize the result" rather than "make a judgment call."
 
 **Activation rules:**
+
 - Use `content-designer`/`map-implementer` only when new content/maps are genuinely being authored — not for reading or reviewing existing content.
 - Use `content-validator`/`test-writer` after content or logic changes, but trust their self-check instead of re-running the same command again immediately after.
 - Use `code-reviewer` before commits touching `main.js`, `repositories/`, or `quest-types/` — not for every commit, and not with an "eight-angle" multi-pass review for a small, narrowly-scoped change (reserve multi-pass/parallel review for milestone-boundary or cross-cutting changes).
@@ -82,33 +85,34 @@ The gap is entirely on the browser-verification side: because no Playwright suit
 
 ## 7. Documentation-cost overhead
 
-| Documentation type | Recommended cadence |
-|---|---|
-| Session report (`docs/architecture/session-reports/`) | Only at genuine milestone boundaries with a new architectural decision not already captured elsewhere — not for routine phases. Both existing reports nearly duplicate their QUICKREF bullet; that duplication is the failure mode to avoid going forward. |
-| Decision log (`docs/decision-log/`) | Keep for real, load-bearing decisions (this is working as intended) — but favor short, terse pointers to prior entries over full re-narration of context already on record. |
-| `ARCHITECTURE-QUICKREF.md` update | Required every phase boundary, but as a one-line index entry (number, title, pointer), not a paragraph. |
-| Stand-alone audit/roadmap docs | Consolidate into one living roadmap document, updated in place, rather than a new file per pass. Today's 6-document cluster — each cross-referencing the others, each restating findings the others already contain — is the concrete example to not repeat. |
-| Migration docs | Required for schema/migration changes (unchanged — this protects real architectural decisions and should not be cut). |
+| Documentation type                                    | Recommended cadence                                                                                                                                                                                                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Session report (`docs/architecture/session-reports/`) | Only at genuine milestone boundaries with a new architectural decision not already captured elsewhere — not for routine phases. Both existing reports nearly duplicate their QUICKREF bullet; that duplication is the failure mode to avoid going forward.   |
+| Decision log (`docs/decision-log/`)                   | Keep for real, load-bearing decisions (this is working as intended) — but favor short, terse pointers to prior entries over full re-narration of context already on record.                                                                                  |
+| `ARCHITECTURE-QUICKREF.md` update                     | Required every phase boundary, but as a one-line index entry (number, title, pointer), not a paragraph.                                                                                                                                                      |
+| Stand-alone audit/roadmap docs                        | Consolidate into one living roadmap document, updated in place, rather than a new file per pass. Today's 6-document cluster — each cross-referencing the others, each restating findings the others already contain — is the concrete example to not repeat. |
+| Migration docs                                        | Required for schema/migration changes (unchanged — this protects real architectural decisions and should not be cut).                                                                                                                                        |
 
-This audit does not recommend reducing documentation that protects architectural decisions (decision logs, migration docs) — the overhead identified is specifically in *changelog-shaped* and *audit-shaped* writing that restates already-known information rather than recording a new decision.
+This audit does not recommend reducing documentation that protects architectural decisions (decision logs, migration docs) — the overhead identified is specifically in _changelog-shaped_ and _audit-shaped_ writing that restates already-known information rather than recording a new decision.
 
 ## 8. Context-loading recommendations
 
 **Minimal required reading by task type:**
 
-| Task type | Minimum reading |
-|---|---|
-| Small bug fix | `CLAUDE.md` + grep for the specific function/screen; no architecture docs |
-| UI change | `CLAUDE.md` + grep the relevant screen-builder function in `main.js`; skip a full-file read |
-| Content addition | `CLAUDE.md` + the relevant unit-content file + its Zod schema; skip `main.js` entirely if the change is pure content |
-| Repository change | `CLAUDE.md` + the specific file in `repositories/` + its facade/caller |
-| Schema change | `CLAUDE.md` + `apps/web/src/content/schemas/` + `docs/content/CONTENT-VALIDATION.md` |
-| Migration | `CLAUDE.md` + the latest `supabase/migrations/*.sql` + the relevant session report if one exists for that system |
-| Accessibility improvement | `CLAUDE.md` + the specific screen/element in question; no broad architecture read |
-| Browser-only regression | `CLAUDE.md` + the specific interaction's code path; a targeted browser check, not a full journey |
-| Architecture audit | `ARCHITECTURE-QUICKREF.md` (once trimmed) + `ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` only, unless the task explicitly names other docs |
+| Task type                 | Minimum reading                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Small bug fix             | `CLAUDE.md` + grep for the specific function/screen; no architecture docs                                                                 |
+| UI change                 | `CLAUDE.md` + grep the relevant screen-builder function in `main.js`; skip a full-file read                                               |
+| Content addition          | `CLAUDE.md` + the relevant unit-content file + its Zod schema; skip `main.js` entirely if the change is pure content                      |
+| Repository change         | `CLAUDE.md` + the specific file in `repositories/` + its facade/caller                                                                    |
+| Schema change             | `CLAUDE.md` + `apps/web/src/content/schemas/` + `docs/content/CONTENT-VALIDATION.md`                                                      |
+| Migration                 | `CLAUDE.md` + the latest `supabase/migrations/*.sql` + the relevant session report if one exists for that system                          |
+| Accessibility improvement | `CLAUDE.md` + the specific screen/element in question; no broad architecture read                                                         |
+| Browser-only regression   | `CLAUDE.md` + the specific interaction's code path; a targeted browser check, not a full journey                                          |
+| Architecture audit        | `ARCHITECTURE-QUICKREF.md` (once trimmed) + `ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` only, unless the task explicitly names other docs |
 
 **Additional recommendations:**
+
 - Use targeted `grep`/`glob` for a specific function or screen before reading a large file (`main.js`, a long doc) in full.
 - Treat a stale-looking figure (a line count, a test count) as something to verify with one targeted `grep`/`wc`-equivalent, not as license to either blindly trust it or re-read the entire file to double-check.
 - Once trimmed (see §13), `ARCHITECTURE-QUICKREF.md` should be the actual default context boundary — the one doc read by default, with everything else read only when cited by name in the task.
@@ -118,30 +122,39 @@ This audit does not recommend reducing documentation that protects architectural
 Each template states the minimum files to read before acting; anything not listed should only be opened if the task turns out to need it.
 
 **Small bug fix**
+
 > Fix: [behavior]. Read `CLAUDE.md` and grep for [function/symbol]. Don't read architecture docs or `main.js` in full. Verify with the narrowest relevant test; browser-check only if the bug is visual/interactive.
 
 **UI change**
+
 > Change: [screen/element]. Read `CLAUDE.md` and the specific screen-builder function via grep. Don't read `main.js` end-to-end. Browser-check the specific interaction changed, not a full journey.
 
 **Content addition**
+
 > Add: [content]. Read `CLAUDE.md`, the target unit-content file, and its Zod schema. Skip `main.js` unless the content requires new rendering logic. Run `validate:content` after.
 
 **Repository change**
+
 > Change: [repository/facade]. Read `CLAUDE.md` and the specific file plus its direct caller in `main.js`. Run the targeted test file for that repository.
 
 **Schema change**
+
 > Change: [schema]. Read `CLAUDE.md`, `apps/web/src/content/schemas/`, and `docs/content/CONTENT-VALIDATION.md`. Run `validate:content` (always — it's cheap).
 
 **Migration**
+
 > Add migration: [purpose]. Read `CLAUDE.md`, the latest existing migration file for pattern, and any session report for the system being changed. Owner review before applying (migrations are not auto-applied).
 
 **Accessibility improvement**
+
 > Improve: [element/flow] for [assistive need]. Read `CLAUDE.md` and the specific element's markup/handler. No architecture-doc read required unless the gap is structural.
 
 **Browser-only regression**
+
 > Regression: [symptom]. Read `CLAUDE.md` and grep the specific interaction's code path first. Only open Playwright/manual browser verification if static reading doesn't resolve it — don't start with an exploratory walkthrough.
 
 **Architecture audit**
+
 > Audit: [system/question]. Read `ARCHITECTURE-QUICKREF.md` (trimmed) and `ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md` first. Open other architecture docs only if the audit's question specifically requires them — don't read the full architecture-doc set by default.
 
 ## 10. New default development workflow
@@ -167,14 +180,14 @@ Each template states the minimum files to read before acting; anything not liste
 
 No token/dollar measurements exist in this repository, so savings are stated qualitatively, relative to current practice:
 
-| Change | Relative savings | Effort | Risk |
-|---|---|---|---|
-| Trim QUICKREF to a true index | High — paid on every future task | Low | Low |
-| Consolidate audit/roadmap docs into one living document | High — removes a currently-active, self-compounding cost | Low | Low |
-| Commit the Playwright suite | High over time — removes 20+ recurring ad hoc passes | Medium (test-infra code) | Low |
-| Narrow subagent self-check redundancy | Moderate | Low | Low |
-| Staged test sequencing (targeted-first) | Moderate-high | Low | Low, if exceptions (§11) are honored |
-| Bound autonomous-run scope by default | Moderate-high | Low | Low-moderate |
+| Change                                                  | Relative savings                                         | Effort                   | Risk                                 |
+| ------------------------------------------------------- | -------------------------------------------------------- | ------------------------ | ------------------------------------ |
+| Trim QUICKREF to a true index                           | High — paid on every future task                         | Low                      | Low                                  |
+| Consolidate audit/roadmap docs into one living document | High — removes a currently-active, self-compounding cost | Low                      | Low                                  |
+| Commit the Playwright suite                             | High over time — removes 20+ recurring ad hoc passes     | Medium (test-infra code) | Low                                  |
+| Narrow subagent self-check redundancy                   | Moderate                                                 | Low                      | Low                                  |
+| Staged test sequencing (targeted-first)                 | Moderate-high                                            | Low                      | Low, if exceptions (§11) are honored |
+| Bound autonomous-run scope by default                   | Moderate-high                                            | Low                      | Low-moderate                         |
 
 ## 13. Immediate changes requiring no code
 
@@ -211,20 +224,20 @@ The following is a proposed addition for `CLAUDE.md` — **not applied to `CLAUD
 
 ## Required decision table
 
-| Workflow | Current pattern | Relative credit cost | Reliability value | Waste risk | Recommended replacement | Expected savings | Risk |
-|---|---|---:|---:|---:|---|---:|---:|
-| Architecture-doc reading | Read QUICKREF + related docs near-fully each task | High | Moderate | High | Trim QUICKREF to true index; read only cited docs | High | Low |
-| main.js reading | Full-file reads to "get oriented" | High | Low-Moderate | High | Targeted grep/glob for the function/screen in question | High | Low |
-| Playwright verification | 20+ ad hoc manual passes, never committed | High | High (caught 5+ real bugs) | Moderate | Commit the 11-scenario suite from PLAYWRIGHT-ADOPTION-PLAN.md | High (long-run) | Low |
-| Full unit-test runs | `vitest run` already single-pass/cheap | Low | High | Low | Prefer targeted file/pattern first, full run at milestones | Moderate | Low |
-| Content validation | `validate:content`, 2-file deterministic Zod pass | Low | High | Low | Keep as-is | — | — |
-| Subagent self-checks | test-writer/content-validator self-invoke full command | Moderate | Moderate | Moderate | Orchestrator trusts agent's self-check, doesn't rerun | Moderate | Low |
-| Session-report writing | Written for 2/27+ phases, ~1:1 duplicates QUICKREF | Moderate | Low (duplicated) | High | Reserve for genuine milestone/new-decision phases only | Moderate | Low |
-| Decision-log entries | ~80-90 lines, chains 2-3 prior logs for context | Moderate | High (real decisions) | Low-Moderate | Keep, but favor terse pointers over re-narration | Low-Moderate | Low |
-| Audit/roadmap doc creation | 6 new stand-alone docs in one day, heavy templating | Very High | Moderate | Very High | Consolidate into one living roadmap, update in place | High | Low |
-| Large multi-system autonomous phases | Phase 22 (5 systems), 2026-07-11 overnight (4 quest types + 2 mini-games + 6 agents) | Very High | High when scoped well | Moderate-High | Bound default scope to one screen-family/repo/schema-family/migration; require sign-off to exceed | Moderate | Low-Moderate |
-| Whole-file rewrites | global.css full rewrite, main.js mechanical extraction touching every line | Moderate-High | Low (as a category) | High | Surgical edits at stable insertion points; only extract with a proven forcing function | Moderate | Low |
-| Stale doc figures | QUICKREF/UNIT-TESTING.md counts stale vs. actual | Low-Moderate | Low | Moderate | Verify via targeted grep/wc instead of trusting or re-reading whole file | Moderate | Low |
+| Workflow                             | Current pattern                                                                      | Relative credit cost |          Reliability value |    Waste risk | Recommended replacement                                                                           | Expected savings |         Risk |
+| ------------------------------------ | ------------------------------------------------------------------------------------ | -------------------: | -------------------------: | ------------: | ------------------------------------------------------------------------------------------------- | ---------------: | -----------: |
+| Architecture-doc reading             | Read QUICKREF + related docs near-fully each task                                    |                 High |                   Moderate |          High | Trim QUICKREF to true index; read only cited docs                                                 |             High |          Low |
+| main.js reading                      | Full-file reads to "get oriented"                                                    |                 High |               Low-Moderate |          High | Targeted grep/glob for the function/screen in question                                            |             High |          Low |
+| Playwright verification              | 20+ ad hoc manual passes, never committed                                            |                 High | High (caught 5+ real bugs) |      Moderate | Commit the 11-scenario suite from PLAYWRIGHT-ADOPTION-PLAN.md                                     |  High (long-run) |          Low |
+| Full unit-test runs                  | `vitest run` already single-pass/cheap                                               |                  Low |                       High |           Low | Prefer targeted file/pattern first, full run at milestones                                        |         Moderate |          Low |
+| Content validation                   | `validate:content`, 2-file deterministic Zod pass                                    |                  Low |                       High |           Low | Keep as-is                                                                                        |                — |            — |
+| Subagent self-checks                 | test-writer/content-validator self-invoke full command                               |             Moderate |                   Moderate |      Moderate | Orchestrator trusts agent's self-check, doesn't rerun                                             |         Moderate |          Low |
+| Session-report writing               | Written for 2/27+ phases, ~1:1 duplicates QUICKREF                                   |             Moderate |           Low (duplicated) |          High | Reserve for genuine milestone/new-decision phases only                                            |         Moderate |          Low |
+| Decision-log entries                 | ~80-90 lines, chains 2-3 prior logs for context                                      |             Moderate |      High (real decisions) |  Low-Moderate | Keep, but favor terse pointers over re-narration                                                  |     Low-Moderate |          Low |
+| Audit/roadmap doc creation           | 6 new stand-alone docs in one day, heavy templating                                  |            Very High |                   Moderate |     Very High | Consolidate into one living roadmap, update in place                                              |             High |          Low |
+| Large multi-system autonomous phases | Phase 22 (5 systems), 2026-07-11 overnight (4 quest types + 2 mini-games + 6 agents) |            Very High |      High when scoped well | Moderate-High | Bound default scope to one screen-family/repo/schema-family/migration; require sign-off to exceed |         Moderate | Low-Moderate |
+| Whole-file rewrites                  | global.css full rewrite, main.js mechanical extraction touching every line           |        Moderate-High |        Low (as a category) |          High | Surgical edits at stable insertion points; only extract with a proven forcing function            |         Moderate |          Low |
+| Stale doc figures                    | QUICKREF/UNIT-TESTING.md counts stale vs. actual                                     |         Low-Moderate |                        Low |      Moderate | Verify via targeted grep/wc instead of trusting or re-reading whole file                          |         Moderate |          Low |
 
 ## Required priority list
 

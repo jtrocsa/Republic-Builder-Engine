@@ -23,17 +23,17 @@ defect classes, each with a single cause, and none of them could fail a test:
    arguments. Nothing checked either number against the pixels. `farm/6.png`'s trees are not
    tile-aligned at all — `treeBirch` was declared 3 rows × 2 cols at (0,8), but the apple tree's
    fruiting crown starts 19px inside that rect's second column, so the birch stamp painted a slice
-   of a *different, fruiting* tree beside the birch while clipping the birch's own crown. `farm/7`
+   of a _different, fruiting_ tree beside the birch while clipping the birch's own crown. `farm/7`
    packs its clapboard housing tightly enough that `houseCream`'s rect caught three neighbours, and
    `houseBlue` pointed at empty background — it drew nothing at all on the shipped map.
    `Island survival/5.png`'s `barrel` and `seaCrate` were declared 1×1 with 2-tile-tall art.
 
 2. **Opaque terrain quadrants were used as scattered decoration.** These packs author terrain in
-   96×96 (2×2) blocks. `CANONICAL["grass.tropical.tuft"]` is the bottom-left quadrant of a *sand*
+   96×96 (2×2) blocks. `CANONICAL["grass.tropical.tuft"]` is the bottom-left quadrant of a _sand_
    block — that is the tan square in the middle of green grass. `sand.tropical.driftwood`,
    `sand.tropical.shells` and the Caribbean's `coralPatch` are each one quadrant of a 2×2 block, so
    they rendered as half a log, a corner of shells, a quarter of a coral cluster. The Caribbean also
-   picked randomly between two quadrants of the *same* grass block, which is why its ground read as
+   picked randomly between two quadrants of the _same_ grass block, which is why its ground read as
    patchwork rather than as a field.
 
 3. **Collision was hand-maintained in parallel with the art.** `FIELD_BLOCKS`, `UNIT2_FIELD_BLOCKS`
@@ -56,11 +56,11 @@ its `.tmj`, from the same stamp calls that painted the tiles. `main.js` imports 
 
 A stamp declares what it is and the rect follows:
 
-| Solidity | Blocks | Layer |
-| --- | --- | --- |
-| `solid` | the whole footprint | `structures` |
-| `base` | the ground-contact row only | base row on `structures`, everything above on `overlay` |
-| `decor` | nothing | `structures` |
+| Solidity | Blocks                      | Layer                                                   |
+| -------- | --------------------------- | ------------------------------------------------------- |
+| `solid`  | the whole footprint         | `structures`                                            |
+| `base`   | the ground-contact row only | base row on `structures`, everything above on `overlay` |
+| `decor`  | nothing                     | `structures`                                            |
 
 **This amends a documented non-negotiable**, and the amendment is narrow. Nothing is derived from
 the `.tmj` — the `.tmj` still carries visuals only. The rect comes from the stamp, which is upstream
@@ -83,7 +83,7 @@ palettes.
 
 Two calibrations in there are worth keeping:
 
-- **Contamination means ink from a blob that continues *outside* the rect.** A second blob lying
+- **Contamination means ink from a blob that continues _outside_ the rect.** A second blob lying
   wholly inside it is part of the same object — a detached chimney, a spray of blossom the outline
   does not quite connect — and counting those flags half the library.
 - **It has to be at a visible scale.** These packs abut sprites tightly; four palms in a row each
@@ -111,10 +111,10 @@ Three sheets exist so far: `derived/farm-trees.png` (13 trees, saplings and bush
 ### 4. Ground is opaque, structures are cut-outs, terrain is tiled in its authored block
 
 - A `ground` cell must have no see-through holes, or the page background shows through the world.
-- A shape stamped above the ground must read as a cut-out. Judged per *stamped shape*, not per cell:
+- A shape stamped above the ground must read as a cut-out. Judged per _stamped shape_, not per cell:
   adjacent drawn cells are grouped and the shape's exposed border must carry some transparency. A
   building's interior cells are legitimately opaque; what is not legitimate is a shape that is
-  opaque in every cell *and* opaque to its own border, which is a square of swapped material.
+  opaque in every cell _and_ opaque to its own border, which is a square of swapped material.
 - Anything that genuinely is a floor — pier decking, a paved quay, a moored rowboat with the pack's
   own water painted into it — goes on `ground`, where it replaces the water instead of covering it.
 - Terrain is painted with `groundBlock()`, which tiles the authored block by `(row % h, col % w)`
@@ -150,7 +150,7 @@ map — the two churches are the only art still drawn from that pack, and both a
 - Riverbend and Philadelphia gained e2e visual-regression baselines; the Caribbean was previously
   the only field map with one.
 - **What is not decidable from pixels alone**, and is deliberately not tested: whether a footprint
-  *clips* its sprite. These packs abut sprites with no transparent gutter — the bohío huts sit
+  _clips_ its sprite. These packs abut sprites with no transparent gutter — the bohío huts sit
   directly on top of one another — so "ink continues past this rect" cannot distinguish one sprite
   spanning two cells from two complete sprites touching. That stays a preview-PNG read, per the
   verification ladder.

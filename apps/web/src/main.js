@@ -2767,7 +2767,7 @@ export const HUB_TARGETS = {
     // No `role`, deliberately, and the only target without one. The other three staff are people
     // the player is being introduced to and whose standing is the point — a Director of Field
     // Studies is being told apart from a Route Historian. Voss is the recurring companion, and
-    // captioning them "Field Liaison" every time they speak reintroduces somebody the player
+    // captioning her "Field Liaison" every time she speaks reintroduces somebody the player
     // already knows. The kicker is omitted rather than blank; "Field Liaison" stays the internal
     // name for the role, in the docs and the `liaison` registry key.
     dialogue: () => liaisonLine(progress.story.liaisonTrust),
@@ -3256,8 +3256,8 @@ export const HUB_NPC_BEHAVIOURS = {
       { x: 9.5, y: 4.5, facing: "up", pauseMs: [1500, 2900] },
     ],
   },
-  // Stationed rather than routed: a liaison waiting to see somebody off stands where they can be
-  // found. Their sheet declares `idleColumns: 5`, so standing here plays a breathing cycle rather
+  // Stationed rather than routed: a liaison waiting to see somebody off stands where she can be
+  // found. Her sheet declares `idleColumns: 5`, so standing here plays a breathing cycle rather
   // than holding one frame — the same treatment the other three staff in this room get.
   liaison: { kind: "station", at: { x: 14.5, y: 4.5 }, facing: "down" },
   // The south aisle end to end, between the foyer runner and the Navigation Table dais, on row 9

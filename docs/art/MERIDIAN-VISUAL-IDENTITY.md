@@ -182,7 +182,7 @@ reduction; anything with more than three strokes does not.
 
 ## 6. The Field Liaison — character direction
 
-Emery Voss. See [`../design/THE-FIELD-LIAISON.md`](../design/THE-FIELD-LIAISON.md) for who they are.
+Emery Voss. See [`../design/THE-FIELD-LIAISON.md`](../design/THE-FIELD-LIAISON.md) for who she is.
 
 **Silhouette.** Lean and practical. A mid-length asymmetrical coat or field jacket, with one
 shoulder carrying the stronger visual weight. A compact cross-body notebook or instrument case. High
@@ -321,7 +321,7 @@ canvas across the north cycle and snaps back at the loop point, which reads in g
 template also fixes the frame count at 8. Note that the staging run **did** use v3, so its ledger is
 the source for the create parameters and not for the animation ones.
 
-**Voss also needs a `breathing-idle`, 4 frames.** They are a stationed hub character standing beside
+**Voss also needs a `breathing-idle`, 4 frames.** She is a stationed hub character standing beside
 the player at close range, which is the exact case `director`/`amani`/`julian` all carry
 `idleColumns: 5` for — Phase 64's finding was that a stationed body without one reads as furniture.
 

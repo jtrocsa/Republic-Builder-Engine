@@ -19,10 +19,12 @@ The most complex teacher screen. Structure per the Phase 26/27 decision-log entr
 **Save/publish feedback**: a persistent "✓ Saved as draft — not visible to students until you publish" note renders under the swap control once a draft differs from published (per Phase 26's decision log, confirmed present in the read markup functions) — this was a deliberate fix for a previously-reported "does this dropdown do anything" complaint, and it works via plain conditional markup, no toast library needed.
 
 **Delete confirmation** (`main.js:2754`): the one dialog-shaped UI in the entire app —
+
 ```
 data-action="delete-custom-addition" ... type="button">Confirm delete</button>
 data-action="cancel-delete-addition" ... type="button">Cancel</button>
 ```
+
 A code comment at `main.js:1599` confirms this is deliberate: `"Confirm delete?" state, or null. The app has no window.confirm()`. This is a reasonable choice (native `window.confirm()` is unstyleable and blocks the render loop), but the replacement is two inline buttons with no focus management, no `Escape` handling, and no `aria-modal`/dialog semantics — a screen-reader or keyboard-only user gets no signal that a modal-shaped decision is being asked for. **See decision table row: replace with native `<dialog>` + `showModal()`, which gets focus-trap and Escape for free with near-zero code.**
 
 ### Grading (`gradingScreen()`, `main.js:2369-2402`)
@@ -57,13 +59,13 @@ Confirmed real and correctly guarded: `save()` (main.js's ~60+ call-site wrapper
 
 ## Verdict summary (feeds the decision table in the main audit doc)
 
-| System | Classification |
-|---|---|
-| `aria-live` coverage on quest/dialogue feedback | Keep as-is |
-| Disabled-state + tooltip pattern | Keep as-is |
-| Password Show/Hide toggle | Keep as-is |
-| `previewSession` guard/exit paths | Keep as-is |
-| Delete-confirmation dialog | Strengthen in place (native `<dialog>`) |
-| Global Escape-key handling | Strengthen in place (one shared `keydown` branch) |
-| Manage Content accordion (native `<details>` question) | Prototype before deciding |
-| Loading/error state per teacher screen | Strengthen in place (shared helper — see main audit doc's Supabase section) |
+| System                                                 | Classification                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `aria-live` coverage on quest/dialogue feedback        | Keep as-is                                                                  |
+| Disabled-state + tooltip pattern                       | Keep as-is                                                                  |
+| Password Show/Hide toggle                              | Keep as-is                                                                  |
+| `previewSession` guard/exit paths                      | Keep as-is                                                                  |
+| Delete-confirmation dialog                             | Strengthen in place (native `<dialog>`)                                     |
+| Global Escape-key handling                             | Strengthen in place (one shared `keydown` branch)                           |
+| Manage Content accordion (native `<details>` question) | Prototype before deciding                                                   |
+| Loading/error state per teacher screen                 | Strengthen in place (shared helper — see main audit doc's Supabase section) |

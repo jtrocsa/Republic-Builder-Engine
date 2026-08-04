@@ -13,7 +13,7 @@ for (let col = 17; col <= 46; col += 1) trackAt(col, 20);
 
 Nothing tied those coordinates to where the buildings actually were, and it showed in play:
 
-- **Caribbean** had a 2-wide dirt strip down cols 28–29 from row 9 to row 26. It passed *near* the
+- **Caribbean** had a 2-wide dirt strip down cols 28–29 from row 9 to row 26. It passed _near_ the
   Taíno village and then continued through empty grass to nothing. Not one hut had a path to its
   door, and the southern two-thirds of the strip led nowhere at all.
 - **Riverbend**'s three tracks touched the meetinghouse and the barn. The five dwellings, the shed,
@@ -48,7 +48,7 @@ thing that silently stops matching when a building moves or is resized.
 2. **Road material must be full-bleed and tiled by parity, never edge-baked.** `groundBlock()` paints
    one quadrant of an authored 2×2 block, which tiles correctly in any direction.
    `path.tropical.left`/`.right` do not: each carries a grass edge down one side. That is exactly why
-   Caribbean's road *was* one vertical line — the old generator's own comment recorded that an
+   Caribbean's road _was_ one vertical line — the old generator's own comment recorded that an
    east-west connector "has to be faked with plain sand." Both entries now have no consumer anywhere
    in the project; they are kept in `canonical-palette.js` with a note that they are the right answer
    for a deliberately vertical grass-flanked lane and the wrong answer for a network.
@@ -71,10 +71,10 @@ collision rect then blocks the very path it painted.
 
 ### Per-map outcome
 
-| Map | Trunk | Spurs |
-|---|---|---|
-| Caribbean | village → south → west along the waist to the landing cove | 11 doors: every bohío, work canopy, drying rack, conuco garden, chart table, both Spanish tents |
-| Riverbend | high street, village spine, barn-yard spur (unchanged) | 13 doors: meetinghouse, five dwellings, barn, well, shed, hen house, market stall, two field gates |
+| Map          | Trunk                                                                             | Spurs                                                                                                                           |
+| ------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Caribbean    | village → south → west along the waist to the landing cove                        | 11 doors: every bohío, work canopy, drying rack, conuco garden, chart table, both Spanish tents                                 |
+| Riverbend    | high street, village spine, barn-yard spur (unchanged)                            | 13 doors: meetinghouse, five dwellings, barn, well, shed, hen house, market stall, two field gates                              |
 | Philadelphia | the four paved streets (unchanged), plus the square and quay folded in as network | 22 doors: fourteen dwellings, print shop, chapel, statehouse, assembly hall, townhouse, warehouse, meeting house, dispatch post |
 
 Philadelphia's spurs are **cobble, not dirt**. It is a paved 1770s town: a one-cell paved lane between
@@ -95,7 +95,7 @@ and the test.
   the cells the generator used, rather than guessing which collision rects happen to be buildings.
 - New guard: `tests/unit/map-path-network.test.js`. Three assertions per field map — the palette
   declares a road material that exists in the committed `.tmj`; every door has road within 2 cells;
-  and every door touches the *same* flood-fill component, so a player can walk from any building to
+  and every door touches the _same_ flood-fill component, so a player can walk from any building to
   any other along road. That last one is deliberately not "the network has one component": on
   Caribbean the shoreline counts as road here (same tile) and the island's five lobes give it several
   genuinely separate arcs.

@@ -12,19 +12,19 @@ This plan acts on that conclusion. It is deliberately **not** a Phaser/PixiJS/Ex
 
 Three companion docs hold full design detail for the workstreams that involve the most new surface area. This document is the entry point: it summarizes all five workstreams, gives full detail for the two that don't have a dedicated doc (NPC pathfinding, engine-migration decision gate), and carries every cross-cutting section (order, files, untouched systems, rollback, testing, risks, acceptance criteria, estimates, first task).
 
-| Workstream | Detail lives in |
-|---|---|
-| 1. Character animation system | [`docs/art/CHARACTER-SPRITESHEET-STANDARD.md`](../art/CHARACTER-SPRITESHEET-STANDARD.md) |
-| 2. NPC movement and pathfinding | This document, below |
-| 3. Tiled as the source of truth | [`docs/architecture/TILED-RUNTIME-DATA-PLAN.md`](TILED-RUNTIME-DATA-PLAN.md) |
-| 4. Asset optimization pipeline | [`docs/architecture/ASSET-PIPELINE-PLAN.md`](ASSET-PIPELINE-PLAN.md) |
-| 5. Engine migration decision gate | This document, below |
+| Workstream                        | Detail lives in                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1. Character animation system     | [`docs/art/CHARACTER-SPRITESHEET-STANDARD.md`](../art/CHARACTER-SPRITESHEET-STANDARD.md) |
+| 2. NPC movement and pathfinding   | This document, below                                                                     |
+| 3. Tiled as the source of truth   | [`docs/architecture/TILED-RUNTIME-DATA-PLAN.md`](TILED-RUNTIME-DATA-PLAN.md)             |
+| 4. Asset optimization pipeline    | [`docs/architecture/ASSET-PIPELINE-PLAN.md`](ASSET-PIPELINE-PLAN.md)                     |
+| 5. Engine migration decision gate | This document, below                                                                     |
 
 ---
 
 ## Workstream 1 summary — character animation system
 
-New reusable module `apps/web/src/engine/sprite-animation.js`, replacing whole-PNG `.src` swapping (`fieldSpriteUrl()` at `main.js:5125-5131`, and the analogous NPC crossfade code in `updateFieldNpcs()` at `main.js:748-749`/`792-793` and `updateInstituteNpcs()` at `main.js:1356-1420`) with a spritesheet-driven CSS `background-position` stepping animation. Ships against a composited first-generation 2-pose sheet built from *existing* art via a new Sharp script — no new art generation is required to land this workstream. Full spritesheet convention, frame-order convention, directory structure, and animation-profile data structure are in `docs/art/CHARACTER-SPRITESHEET-STANDARD.md`.
+New reusable module `apps/web/src/engine/sprite-animation.js`, replacing whole-PNG `.src` swapping (`fieldSpriteUrl()` at `main.js:5125-5131`, and the analogous NPC crossfade code in `updateFieldNpcs()` at `main.js:748-749`/`792-793` and `updateInstituteNpcs()` at `main.js:1356-1420`) with a spritesheet-driven CSS `background-position` stepping animation. Ships against a composited first-generation 2-pose sheet built from _existing_ art via a new Sharp script — no new art generation is required to land this workstream. Full spritesheet convention, frame-order convention, directory structure, and animation-profile data structure are in `docs/art/CHARACTER-SPRITESHEET-STANDARD.md`.
 
 ## Workstream 2 — NPC movement and pathfinding
 
@@ -38,18 +38,18 @@ An earlier version of this section rejected three pathfinding libraries in a thr
 
 ### Package comparison
 
-| Package | License | Version / activity | Module format | Grid-native | Weighted terrain | Diagonal + corner-cut | Verdict |
-|---|---|---|---|---|---|---|---|
-| `pathfinding` (PathFinding.js) | MIT | 0.4.18, npm-stale since 2016 (repo touched 2024, no release) | CJS/browser-script only | Yes | Partial — general weighting sits in an **unmerged PR** ([#151](https://github.com/qiao/PathFinding.js/pull/151/files)) | Yes | Rejected — the exact feature Chronicle needs isn't in the shipped version |
-| `easystarjs` (EasyStar.js) | MIT | 0.4.4, npm-stale since 2020, [Snyk-flagged "likely discontinued"](https://snyk.io/advisor/npm-package/easystarjs) | CJS only | Yes | Yes | Yes | Rejected — stale, and its async-callback-only API is a poor fit for a synchronous per-tick patrol check |
-| `ngraph.path` (+ `ngraph.grid`) | MIT | 1.6.1, published 2025-11-18, actively maintained | Real dual ESM/CJS | **No** — generic graph engine, grid must be hand-built as nodes/links | Via custom `distance()` | Must be hand-wired | Rejected — the wrong shape; the grid-construction adapter it needs is comparable in size to a purpose-built grid A*, failing the "adapter must be smaller" test |
-| `astar-typescript` | MIT | 1.2.7, stale 3+ years | CJS only | Yes | Yes, weighted-grid mode | Yes | Rejected — unmaintained |
-| `fast-astar` | MIT | 2.0.2, published 2026-02-19 — days old at research time | ESM, ships a WASM binary | Yes | Not documented | Yes | Rejected — too immature (single-maintainer, days-old), and the WASM asset complicates the Vite build for an undocumented feature |
-| `@evilkiwi/astar` *(noted for completeness)* | **GPL-3.0** | Active | TS/ESM | Yes | Yes | Yes | **Disqualified outright** — copyleft license, wrong for a non-GPL commercial-education product |
+| Package                                      | License     | Version / activity                                                                                                | Module format            | Grid-native                                                           | Weighted terrain                                                                                                       | Diagonal + corner-cut | Verdict                                                                                                                                                         |
+| -------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pathfinding` (PathFinding.js)               | MIT         | 0.4.18, npm-stale since 2016 (repo touched 2024, no release)                                                      | CJS/browser-script only  | Yes                                                                   | Partial — general weighting sits in an **unmerged PR** ([#151](https://github.com/qiao/PathFinding.js/pull/151/files)) | Yes                   | Rejected — the exact feature Chronicle needs isn't in the shipped version                                                                                       |
+| `easystarjs` (EasyStar.js)                   | MIT         | 0.4.4, npm-stale since 2020, [Snyk-flagged "likely discontinued"](https://snyk.io/advisor/npm-package/easystarjs) | CJS only                 | Yes                                                                   | Yes                                                                                                                    | Yes                   | Rejected — stale, and its async-callback-only API is a poor fit for a synchronous per-tick patrol check                                                         |
+| `ngraph.path` (+ `ngraph.grid`)              | MIT         | 1.6.1, published 2025-11-18, actively maintained                                                                  | Real dual ESM/CJS        | **No** — generic graph engine, grid must be hand-built as nodes/links | Via custom `distance()`                                                                                                | Must be hand-wired    | Rejected — the wrong shape; the grid-construction adapter it needs is comparable in size to a purpose-built grid A*, failing the "adapter must be smaller" test |
+| `astar-typescript`                           | MIT         | 1.2.7, stale 3+ years                                                                                             | CJS only                 | Yes                                                                   | Yes, weighted-grid mode                                                                                                | Yes                   | Rejected — unmaintained                                                                                                                                         |
+| `fast-astar`                                 | MIT         | 2.0.2, published 2026-02-19 — days old at research time                                                           | ESM, ships a WASM binary | Yes                                                                   | Not documented                                                                                                         | Yes                   | Rejected — too immature (single-maintainer, days-old), and the WASM asset complicates the Vite build for an undocumented feature                                |
+| `@evilkiwi/astar` _(noted for completeness)_ | **GPL-3.0** | Active                                                                                                            | TS/ESM                   | Yes                                                                   | Yes                                                                                                                    | Yes                   | **Disqualified outright** — copyleft license, wrong for a non-GPL commercial-education product                                                                  |
 
 ### Recommendation: hand-rolled internal A*, using `tinyqueue` for the priority queue — pending owner sign-off
 
-New file `apps/web/src/engine/npc-pathfinding.js`. Against the owner's approval criteria: **six candidates were investigated** (five real, one license-disqualified), each **rejected with cited evidence** above; the custom implementation is **smaller than the adapter `ngraph.path` would need** (building and maintaining a parallel graph representation from the tile grid, by hand-wiring diagonal adjacency and rebuilding on obstacle changes, is comparable in size to a purpose-built grid A*); **unit tests are required** or the workstream (see the testing-strategy section below); and this remains **pending explicit project-owner sign-off** before implementation, tracked in `OPEN-SOURCE-REUSE-DECISIONS.md` §8. Adding any of the rejected libraries would also be the first new *runtime* dependency this repo has added since the "Vitest and Zod are the only approved immediate major dependencies" decision, with no equivalent forcing function.
+New file `apps/web/src/engine/npc-pathfinding.js`. Against the owner's approval criteria: **six candidates were investigated** (five real, one license-disqualified), each **rejected with cited evidence** above; the custom implementation is **smaller than the adapter `ngraph.path` would need** (building and maintaining a parallel graph representation from the tile grid, by hand-wiring diagonal adjacency and rebuilding on obstacle changes, is comparable in size to a purpose-built grid A*); **unit tests are required** or the workstream (see the testing-strategy section below); and this remains **pending explicit project-owner sign-off** before implementation, tracked in `OPEN-SOURCE-REUSE-DECISIONS.md` §8. Adding any of the rejected libraries would also be the first new _runtime_ dependency this repo has added since the "Vitest and Zod are the only approved immediate major dependencies" decision, with no equivalent forcing function.
 
 One change from the reasoning in the pre-revision version of this doc: the binary-heap/priority-queue component inside the A* search should **not** be hand-written. A binary heap is itself a solved, tiny problem with a well-maintained, near-zero-cost implementation available — **`tinyqueue`** ([mourner/tinyqueue](https://github.com/mourner/tinyqueue), ISC, zero dependencies, 454 B gzip, actively maintained by Mapbox's Vladimir Agafonkin) — so hand-writing one here would repeat the exact mistake this revision corrects elsewhere. The custom code this workstream actually contributes is the grid-construction/walkability-mask logic and the A* search loop wired around `tinyqueue`, both genuinely specific to how this repo already represents collision — not a generic data structure.
 
@@ -65,7 +65,7 @@ function buildWalkabilityGrid(map, { cellSize = 0.5 } = {}) {
 }
 ```
 
-The grid is built **once per map**, at the same point the runtime already rebuilds per-map NPC state — `ensureFieldNpcRuntime()` (`main.js:685-691`) — not recomputed every tick. Dynamic obstacles (other NPCs, the player) are **not** baked into the grid; `isFieldNpcBlocked()` (`main.js:720-732`) keeps deciding whether the *current* step executes this tick, exactly as it does today. The A* layer only decides the *route*; the existing per-tick blocking check still gates each individual step. This means zero new collision data has to be authored — the grid is derived entirely from data that already exists.
+The grid is built **once per map**, at the same point the runtime already rebuilds per-map NPC state — `ensureFieldNpcRuntime()` (`main.js:685-691`) — not recomputed every tick. Dynamic obstacles (other NPCs, the player) are **not** baked into the grid; `isFieldNpcBlocked()` (`main.js:720-732`) keeps deciding whether the _current_ step executes this tick, exactly as it does today. The A* layer only decides the _route_; the existing per-tick blocking check still gates each individual step. This means zero new collision data has to be authored — the grid is derived entirely from data that already exists.
 
 ### Integration with `updateFieldNpcs()`
 
@@ -80,7 +80,7 @@ The lerp/speed/facing math inside `updateFieldNpcs()` (`main.js:754-782`) is unc
 
 ### Patrol-region containment
 
-An optional `patrolRegion: { x1, y1, x2, y2 }` on a patrol config, implemented as a cheap per-search grid mask — cells outside the region are excluded from *that NPC's* search only, not from a second stored grid. This keeps memory cost to one shared per-map walkability grid regardless of NPC count.
+An optional `patrolRegion: { x1, y1, x2, y2 }` on a patrol config, implemented as a cheap per-search grid mask — cells outside the region are excluded from _that NPC's_ search only, not from a second stored grid. This keeps memory cost to one shared per-map walkability grid regardless of NPC count.
 
 ### Four behavior modes
 
@@ -91,7 +91,7 @@ An optional `patrolRegion: { x1, y1, x2, y2 }` on a patrol config, implemented a
 
 ### Anti-goals (explicitly out of scope)
 
-No physics engine, no steering-behavior library, no navmesh, no formation/flocking behavior beyond "don't move in lockstep" (already solved by existing per-NPC timing offsets). Facing/walking-animation state continues to be set from actual per-tick movement direction, exactly as today — this workstream changes *what point an NPC moves toward*, not how direction/animation state is derived from movement.
+No physics engine, no steering-behavior library, no navmesh, no formation/flocking behavior beyond "don't move in lockstep" (already solved by existing per-NPC timing offsets). Facing/walking-animation state continues to be set from actual per-tick movement direction, exactly as today — this workstream changes _what point an NPC moves toward_, not how direction/animation state is derived from movement.
 
 ---
 
@@ -144,15 +144,15 @@ The POC lives in a fully separate top-level directory, `poc/phaser-riverbend/`, 
 
 ## Cross-cutting: dependencies being considered
 
-| Dependency | Workstream | Status in this plan |
-|---|---|---|
-| `pathfinding` / `easystarjs` / `ngraph.path` / `astar-typescript` / `fast-astar` / `@evilkiwi/astar` (npm) | 2 | Evaluated and **rejected**, each with cited evidence — hand-rolled A* recommended instead, pending owner sign-off (see Workstream 2 and `OPEN-SOURCE-REUSE-DECISIONS.md` §2) |
-| `tinyqueue` | 2 | Recommended as a real (tiny) runtime dependency for the A* priority queue — ISC, 454 B gzip, actively maintained, see `OPEN-SOURCE-REUSE-DECISIONS.md` §2 |
-| `sharp` | 1, 4 | Recommended as a real devDependency once implementation starts (Workstream 4) |
-| `oxipng` | 4 | Recommended as an **optional external CLI**, not an npm dependency (every npm wrapper is stale) — see `ASSET-PIPELINE-PLAN.md` |
-| `picomatch` / `csv-stringify` | 4 | Recommended as real devDependencies for `scripts/assets/` — see `ASSET-PIPELINE-PLAN.md` and `OPEN-SOURCE-REUSE-DECISIONS.md` §5 |
-| `maxrects-packer` | 4 | Named for later (preferred over `free-tex-packer-core`), not adopted now — see `OPEN-SOURCE-REUSE-DECISIONS.md` §5 |
-| `rollup-plugin-visualizer` | 4 | Recommended as a devDependency, gated behind `ANALYZE=true` so it never runs on normal builds |
+| Dependency                                                                                                 | Workstream | Status in this plan                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pathfinding` / `easystarjs` / `ngraph.path` / `astar-typescript` / `fast-astar` / `@evilkiwi/astar` (npm) | 2          | Evaluated and **rejected**, each with cited evidence — hand-rolled A* recommended instead, pending owner sign-off (see Workstream 2 and `OPEN-SOURCE-REUSE-DECISIONS.md` §2) |
+| `tinyqueue`                                                                                                | 2          | Recommended as a real (tiny) runtime dependency for the A* priority queue — ISC, 454 B gzip, actively maintained, see `OPEN-SOURCE-REUSE-DECISIONS.md` §2                    |
+| `sharp`                                                                                                    | 1, 4       | Recommended as a real devDependency once implementation starts (Workstream 4)                                                                                                |
+| `oxipng`                                                                                                   | 4          | Recommended as an **optional external CLI**, not an npm dependency (every npm wrapper is stale) — see `ASSET-PIPELINE-PLAN.md`                                               |
+| `picomatch` / `csv-stringify`                                                                              | 4          | Recommended as real devDependencies for `scripts/assets/` — see `ASSET-PIPELINE-PLAN.md` and `OPEN-SOURCE-REUSE-DECISIONS.md` §5                                             |
+| `maxrects-packer`                                                                                          | 4          | Named for later (preferred over `free-tex-packer-core`), not adopted now — see `OPEN-SOURCE-REUSE-DECISIONS.md` §5                                                           |
+| `rollup-plugin-visualizer`                                                                                 | 4          | Recommended as a devDependency, gated behind `ANALYZE=true` so it never runs on normal builds                                                                                |
 
 No package is installed as part of this planning document. Each is a recommendation for a later, separately-approved implementation task.
 

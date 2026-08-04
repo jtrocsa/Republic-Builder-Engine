@@ -1,4 +1,4 @@
-// The Field Liaison, and the two rules about them that are cheap to break silently.
+// The Field Liaison, and the two rules about her that are cheap to break silently.
 //
 // Emery Voss is specified in docs/design/THE-FIELD-LIAISON.md and debuted in Phase 80. Two of that
 // document's constraints are enforceable here rather than by review:
@@ -7,7 +7,7 @@
 //      survive a save written before it existed, and it must never run off the end of the authored
 //      bands — a trust score the lines do not cover is a blank speech bubble.
 //   2. Units 1-2 are the "trusted helper" floor of the reveal ladder (§4). Voss never mentions
-//      Meridian and carries no insignia there, and every line they currently have is a Unit 1 or
+//      Meridian and carries no insignia there, and every line she currently has is a Unit 1 or
 //      Unit 2 line. A later session authoring the reveal early would not fail anything else.
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -87,7 +87,7 @@ describe("the reveal ladder's Units 1-2 floor", () => {
     }
   });
 
-  it("names them from one string, so renaming stays a content edit (normal case)", () => {
+  it("names her from one string, so renaming stays a content edit (normal case)", () => {
     const names = new Set([
       HUB_TARGETS.liaison.name,
       ...["unit-01", "unit-02"].map(

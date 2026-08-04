@@ -171,7 +171,7 @@ the banned list, which `tests/unit/chronicle-canon.test.js` enforces.
 Admits difficult truths only when continued secrecy becomes impossible. Never smug, never cruel, and
 never a villain reading his own indictment.
 
-**Emery Voss** — direct, observant, less formal. Comfortable saying they do not know. Responds to
+**Emery Voss** — direct, observant, less formal. Comfortable saying she does not know. Responds to
 historical suffering as suffering. Persuasive without always being right. Increasingly divided
 between the player and Meridian.
 

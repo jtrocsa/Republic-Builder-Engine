@@ -32,11 +32,15 @@ Raw browser events, no library. `window.addEventListener("keydown", handleWindow
 
 ```js
 const FIELD_MOVE_KEYS = {
-  arrowup: [0, -1], w: [0, -1],
-  arrowdown: [0, 1], s: [0, 1],
-  arrowleft: [-1, 0], a: [-1, 0],
-  arrowright: [1, 0], d: [1, 0],
-};   // main.js:536-544
+  arrowup: [0, -1],
+  w: [0, -1],
+  arrowdown: [0, 1],
+  s: [0, 1],
+  arrowleft: [-1, 0],
+  a: [-1, 0],
+  arrowright: [1, 0],
+  d: [1, 0],
+}; // main.js:536-544
 ```
 
 ### 5. How are sprite animations handled?
@@ -67,7 +71,7 @@ Each unit has a hand-measured array of blocking rectangles (`FIELD_BLOCKS`, `UNI
 
 ### 7. Are maps created in code, JSON, Tiled, images, or another format?
 
-**Tiled JSON (`.tmj`), used only as an authoring/export format — no Tiled runtime library.** Five `.tmj` files live in `apps/web/src/content/maps/` — `riverbend-field.tmj`, `caribbean-field.tmj`, `archive-room.tmj`, `hallway.tmj`, `common-cause-field.tmj` — and all five are wired into `main.js`. (A sixth, `sandy-island-demo.tmj`, plus the standalone `tiled-preview.html` that was its only consumer, were deleted in decision log `0034`: the "Sandy Island" pack they depended on had already been removed from disk, so both were broken as well as orphaned.) Four of the five are script-generated from a per-map palette; `riverbend-field.tmj` is the one hand-authored exception. These are imported as raw JSON (`import ... from "./content/maps/riverbend-field.tmj?raw"`), `JSON.parse`d, and rendered by the bespoke `tiled-map-loader.js` compositor described above. Tiled the desktop app is a level-*design* tool here, nothing more — its own file header states it is "Scoped to orthogonal orientation, uncompressed tile-layer data, no flip/rotate flags," i.e. a narrow, hand-written parser, not a general Tiled runtime.
+**Tiled JSON (`.tmj`), used only as an authoring/export format — no Tiled runtime library.** Five `.tmj` files live in `apps/web/src/content/maps/` — `riverbend-field.tmj`, `caribbean-field.tmj`, `archive-room.tmj`, `hallway.tmj`, `common-cause-field.tmj` — and all five are wired into `main.js`. (A sixth, `sandy-island-demo.tmj`, plus the standalone `tiled-preview.html` that was its only consumer, were deleted in decision log `0034`: the "Sandy Island" pack they depended on had already been removed from disk, so both were broken as well as orphaned.) Four of the five are script-generated from a per-map palette; `riverbend-field.tmj` is the one hand-authored exception. These are imported as raw JSON (`import ... from "./content/maps/riverbend-field.tmj?raw"`), `JSON.parse`d, and rendered by the bespoke `tiled-map-loader.js` compositor described above. Tiled the desktop app is a level-_design_ tool here, nothing more — its own file header states it is "Scoped to orthogonal orientation, uncompressed tile-layer data, no flip/rotate flags," i.e. a narrow, hand-written parser, not a general Tiled runtime.
 
 Critically, **collision/walkable-area data is never read from the `.tmj` files** — it's independently hand-coded in `main.js` (see Q6), and a code comment at `main.js:969-971` confirms the Tiled-art generator scripts are manually kept in sync with the hand-coded collision data, not the reverse. Some maps (e.g. the Institute hub, Archive Room targets) are entirely hand-coded coordinate/rectangle arrays with no Tiled art at all.
 
@@ -89,19 +93,19 @@ Not code. The existing `apps/web/dist/` build (from a prior build, not rebuilt f
 
 Single `package.json` at repo root; no separate `apps/web/package.json` (Vite's `root: "apps/web"` in `vite.config.js` just points the build at that directory).
 
-| Package | Version | Type | Game-engine-related? |
-|---|---|---|---|
-| `@anthropic-ai/sdk` | `^0.110.0` | dependency | No — AI grading backend |
-| `@supabase/supabase-js` | `^2.58.0` | dependency | No — accounts/classroom backend |
-| `vite` | `^7.0.0` | devDependency | No — build tool |
-| `vitest` | `^4.1.10` | devDependency | No — test runner |
-| `zod` | `^4.4.3` | devDependency | No — schema validation |
-| `eslint` | `^10.6.0` | devDependency | No |
-| `@eslint/js` | `^10.0.1` | devDependency | No |
-| `eslint-config-prettier` | `^10.1.8` | devDependency | No |
-| `prettier` | `^3.9.5` | devDependency | No |
-| `jsdom` | `^29.1.1` | devDependency | No — test DOM shim |
-| `playwright` | `^1.61.1` | devDependency | No — browser test automation, not game rendering |
+| Package                  | Version    | Type          | Game-engine-related?                             |
+| ------------------------ | ---------- | ------------- | ------------------------------------------------ |
+| `@anthropic-ai/sdk`      | `^0.110.0` | dependency    | No — AI grading backend                          |
+| `@supabase/supabase-js`  | `^2.58.0`  | dependency    | No — accounts/classroom backend                  |
+| `vite`                   | `^7.0.0`   | devDependency | No — build tool                                  |
+| `vitest`                 | `^4.1.10`  | devDependency | No — test runner                                 |
+| `zod`                    | `^4.4.3`   | devDependency | No — schema validation                           |
+| `eslint`                 | `^10.6.0`  | devDependency | No                                               |
+| `@eslint/js`             | `^10.0.1`  | devDependency | No                                               |
+| `eslint-config-prettier` | `^10.1.8`  | devDependency | No                                               |
+| `prettier`               | `^3.9.5`   | devDependency | No                                               |
+| `jsdom`                  | `^29.1.1`  | devDependency | No — test DOM shim                               |
+| `playwright`             | `^1.61.1`  | devDependency | No — browser test automation, not game rendering |
 
 A full-text grep of `package-lock.json` (npm, `lockfileVersion: 3`, the only lockfile present — no `pnpm-lock.yaml`/`yarn.lock`) for `phaser`, `pixi`, `three`, `matter-js`, `kontra`, `excalibur`, `tmx-parser`, `planck`, `box2d`, `pathfinding`, `easystarjs`, `gsap`, `anime.js`, and `hammer.js` returned **zero matches** — confirming none of these are present even as transitive/indirect dependencies of the packages above.
 
@@ -173,23 +177,23 @@ These are noted only because the request asked which safe, open-source libraries
 
 ## Would adding a game engine be beneficial or disruptive? Improve in place, or migrate?
 
-Per this repo's own binding scope document (`ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`, which CLAUDE.md designates as authoritative over the longer-term proposal when the two disagree): the game currently works, has no automated test coverage over movement/collision/camera code, and the codebase's explicit stated policy is *not* to physically extract movement/collision/camera logic out of `main.js` "merely for architectural neatness," reserving that for if/when a proven engine adapter is actually replacing it — which is not currently scheduled. Combined with this audit's finding that production size is an asset problem, not an architecture problem, the facts here point toward improving in place over migrating, but this section is offered as a finding for the user's decision, not a decision already made.
+Per this repo's own binding scope document (`ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`, which CLAUDE.md designates as authoritative over the longer-term proposal when the two disagree): the game currently works, has no automated test coverage over movement/collision/camera code, and the codebase's explicit stated policy is _not_ to physically extract movement/collision/camera logic out of `main.js` "merely for architectural neatness," reserving that for if/when a proven engine adapter is actually replacing it — which is not currently scheduled. Combined with this audit's finding that production size is an asset problem, not an architecture problem, the facts here point toward improving in place over migrating, but this section is offered as a finding for the user's decision, not a decision already made.
 
 ---
 
 ## Three paths compared
 
-| Axis | A: Minimal improvement in place | B: Add focused libraries | C: Migrate to a dedicated 2D engine |
-|---|---|---|---|
-| Implementation difficulty | Low | Low–Medium | High |
-| Risk of breaking existing features | Low | Low–Medium (new dep surface, but scoped) | High |
-| Movement quality | Same as today (already smooth, delta-time-scaled) | Same as today unless a specific gap is targeted | Highest ceiling (engine-native tweening/physics) |
-| Collision quality | Same as today (AABB/ellipse, adequate for current maps) | Same, or improved if a collision helper is added | Highest ceiling (broad-phase/narrow-phase physics) |
-| NPC pathfinding support | None (scripted waypoints only) | Can add real A* via a small grid-pathfinding lib | Highest ceiling (engine or plugin pathfinding) |
-| Sprite animation support | Same as today (`<img>` swap + CSS) | Could add spritesheet slicing without an engine | Highest ceiling (native animation/frame systems) |
-| Map-editor support | Same as today (Tiled export, hand-parsed) | Same, or a fuller Tiled-JSON reader if gaps appear | Highest ceiling (native/plugin Tiled runtime, e.g. Phaser's Tilemap API) |
-| Asset optimization | Directly addressable now (compress/resize images) — the actual driver of the 13 MB build | Same as Path A, optionally automated via a build plugin | Unrelated to engine choice; would still need doing |
-| Long-term maintainability | Consistent with current documented policy; zero new dependency risk | Manageable if each addition is small, scoped, and justified by a real gap | Full rewrite of a ~8,000-line working game's rendering/movement/collision; highest long-term payoff *if* the game's scope grows to need it, but currently against documented policy |
+| Axis                               | A: Minimal improvement in place                                                          | B: Add focused libraries                                                  | C: Migrate to a dedicated 2D engine                                                                                                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation difficulty          | Low                                                                                      | Low–Medium                                                                | High                                                                                                                                                                                |
+| Risk of breaking existing features | Low                                                                                      | Low–Medium (new dep surface, but scoped)                                  | High                                                                                                                                                                                |
+| Movement quality                   | Same as today (already smooth, delta-time-scaled)                                        | Same as today unless a specific gap is targeted                           | Highest ceiling (engine-native tweening/physics)                                                                                                                                    |
+| Collision quality                  | Same as today (AABB/ellipse, adequate for current maps)                                  | Same, or improved if a collision helper is added                          | Highest ceiling (broad-phase/narrow-phase physics)                                                                                                                                  |
+| NPC pathfinding support            | None (scripted waypoints only)                                                           | Can add real A* via a small grid-pathfinding lib                          | Highest ceiling (engine or plugin pathfinding)                                                                                                                                      |
+| Sprite animation support           | Same as today (`<img>` swap + CSS)                                                       | Could add spritesheet slicing without an engine                           | Highest ceiling (native animation/frame systems)                                                                                                                                    |
+| Map-editor support                 | Same as today (Tiled export, hand-parsed)                                                | Same, or a fuller Tiled-JSON reader if gaps appear                        | Highest ceiling (native/plugin Tiled runtime, e.g. Phaser's Tilemap API)                                                                                                            |
+| Asset optimization                 | Directly addressable now (compress/resize images) — the actual driver of the 13 MB build | Same as Path A, optionally automated via a build plugin                   | Unrelated to engine choice; would still need doing                                                                                                                                  |
+| Long-term maintainability          | Consistent with current documented policy; zero new dependency risk                      | Manageable if each addition is small, scoped, and justified by a real gap | Full rewrite of a ~8,000-line working game's rendering/movement/collision; highest long-term payoff _if_ the game's scope grows to need it, but currently against documented policy |
 
 ### Path A — Minimal improvement in place
 

@@ -173,17 +173,17 @@ in a hall.
 The registry key stays `liaison` and not `voss`, per `THE-FIELD-LIAISON.md` §1, so renaming the
 character later is a content edit in three strings rather than a save migration.
 
-## 6. The player calls them Emery Voss, and nothing calls them Field Liaison
+## 6. The player calls her Emery Voss, and nothing calls her Field Liaison
 
-Voss shipped captioned with their job on all three surfaces: `label: "Field Liaison"` under the
+Voss shipped captioned with her job on all three surfaces: `label: "Field Liaison"` under the
 sprite on both maps, and `role: "Field Liaison"` as the hub dialogue's kicker. Both are gone. The
 player-facing string is the name, everywhere.
 
 The field pill is the clearer of the two. Every other label on those maps is a role — "Community
 elder", "Scribe", "Burgess", "Goodwife" — because they are anonymous period characters the player
 meets once and has no name for, and the role is the only useful thing a pill can say. **Voss is the
-one person out there the player already knows**, so the same convention applied to them produces the
-opposite result: it hides the name and re-labels a companion by function every time they appear.
+one person out there the player already knows**, so the same convention applied to her produces the
+opposite result: it hides the name and re-labels a companion by function every time she appears.
 
 The hub kicker is a judgement rather than a fix. Rowan Hale, Amani Soto and Julian Park all keep
 theirs, and should: they are staff being introduced, and "Director of Field Studies" against "Route
@@ -211,4 +211,4 @@ legible as one.**
 - **No new flag.** See §2.
 - **No change to onboarding.** `hallwayScene`, the tutorial tour and `isHubInputLocked()` are all
   untouched — Voss debuts strictly after the Entrance Hall escort, per §4 of the ladder, because
-  meeting them before the Director would flatten the contrast they exist to create.
+  meeting her before the Director would flatten the contrast she exists to create.

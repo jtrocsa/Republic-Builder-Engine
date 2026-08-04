@@ -5,6 +5,7 @@
 ## Ranked top 10
 
 ### 1. Consolidate quest-type status/hint derivation onto `QUEST_TYPES`
+
 - **Why now**: two independent, already-disagreeing systems exist today (`main.js:1819-1848` vs. `main.js:5525-5609`) — this isn't a hypothetical risk, it's confirmed present duplication with a confirmed vocabulary mismatch (HIPP's `"partial"` status).
 - **Visible to**: both — students see quest feedback text, teachers see the same logic reflected in Archive/Investigation Challenges.
 - **Dependency or native**: native — add `isComplete`/`answeredAny`/`hint` to each of the 4 `quest-types/*.js` modules.
@@ -18,6 +19,7 @@
 - **Recommended mode**: Auto.
 
 ### 2. Commit the Playwright suite (11 scenarios from `PLAYWRIGHT-ADOPTION-PLAN.md`)
+
 - **Why now**: Playwright has caught 5+ real bugs across 20+ ad hoc passes with zero committed artifacts to show for any of them — the "convert proven manual value into rerunnable coverage" case is unusually strong and already evidenced, not speculative.
 - **Visible to**: neither directly (dev-only infra) — but protects both student- and teacher-facing flows from regressions.
 - **Dependency or native**: already-installed dependency (`playwright ^1.61.1`) — this is "start using what's already there," not a new adoption.
@@ -31,6 +33,7 @@
 - **Recommended mode**: Plan (worth a short scope check before an 11-scenario suite is written in one pass, given the size).
 
 ### 3. Replace the hand-rolled delete-confirmation with native `<dialog>`
+
 - **Why now**: it's the one modal-shaped UI in the app with no focus trap or Escape handling — a small, concrete, already-isolated accessibility gap.
 - **Visible to**: teachers only (Manage Content's teacher-added-question delete).
 - **Dependency or native**: native (`<dialog>`/`showModal()`).
@@ -44,6 +47,7 @@
 - **Recommended mode**: Auto.
 
 ### 4. Add global Escape-key handling for dialogue/preview-banner/dialog dismissal
+
 - **Why now**: confirmed zero `Escape` handling anywhere in `main.js` — a real, verifiable keyboard-accessibility gap, cheap to close.
 - **Visible to**: students (dialogue bubbles) and teachers (preview banner, item 3's dialog).
 - **Dependency or native**: native — one `keydown` branch.
@@ -57,6 +61,7 @@
 - **Recommended mode**: Auto.
 
 ### 5. Build the curated-alternate-content picker UI
+
 - **Why now**: backend-complete since Phase 23, confirmed still unrendered anywhere — the cleanest "close a self-reported gap" item on the list, no new schema/migration needed.
 - **Visible to**: teachers.
 - **Dependency or native**: native (`<select>` populated from existing `contentUiState.slots[].alternatives`).
@@ -70,6 +75,7 @@
 - **Recommended mode**: Plan.
 
 ### 6. Centralize the repeated teacher-screen async/error-state pattern
+
 - **Why now**: 5 near-identical `try/catch → xUiState.error → render()` blocks and 5 near-identical `.feedback.error` markup fragments exist today — not broken, but real duplicated boilerplate.
 - **Visible to**: teachers (error messages render identically either way, so no visible change for correct behavior — only the code shrinks).
 - **Dependency or native**: native (one small helper function).
@@ -83,6 +89,7 @@
 - **Recommended mode**: Auto.
 
 ### 7. Consolidate `previewSession`'s repeated manual guard into one shared predicate
+
 - **Why now**: the same `if (previewSession.active) return;` check is duplicated at ~6 call sites — small but real duplication in a security-relevant guard (prevents teacher-preview writes from leaking into a real account).
 - **Visible to**: teachers (invisible if correct — this is a safety-net refactor, not a feature).
 - **Dependency or native**: native.
@@ -96,6 +103,7 @@
 - **Recommended mode**: Auto (after item 2).
 
 ### 8. Prototype native `<details>/<summary>` for the Manage Content unit accordion
+
 - **Why now**: currently reimplements disclosure-widget behavior by hand; native would remove ~18 lines per instance, but Phase 26's decision log records a specific reason it wasn't used (`render()`'s full-markup-replacement model resets native `open` state on every re-render) — that constraint needs to be tested, not assumed still true.
 - **Visible to**: teachers.
 - **Dependency or native**: native.
@@ -109,6 +117,7 @@
 - **Recommended mode**: Plan (small, bounded prototype).
 
 ### 9. `aria-live` audit follow-up on save-feedback/error messages
+
 - **Why now**: 17 confirmed correct uses exist already; this pass did not exhaustively confirm the Manage Content "Saved as draft" note and the teacher-screen `.feedback.error` blocks carry the same treatment — a narrow, cheap follow-up to close the loop on an otherwise-strong existing pattern.
 - **Visible to**: students and teachers who use assistive technology.
 - **Dependency or native**: native.
@@ -122,6 +131,7 @@
 - **Recommended mode**: Auto.
 
 ### 10. Document the `manageContentScreen()` → Teacher Dashboard Units-tab consolidation
+
 - **Why now**: every existing architecture doc still describes "two Manage Content screens," and the actual code has already moved past that — a documentation-only fix, but leaving it stale actively misleads the next session (exactly the failure mode `ARCHITECTURE-QUICKREF.md` itself warns against: "a stale quickref is worse than no quickref").
 - **Visible to**: neither (internal documentation only).
 - **Dependency or native**: N/A.
@@ -159,7 +169,8 @@ Per the binding docs, reaffirmed by this audit with no new counter-evidence foun
 ## Concrete triggers for a bigger migration (React, Phaser, InkJS, or similar)
 
 Restated from the binding docs, unchanged by this audit — no evidence found here that any of these thresholds have been crossed:
-- **React or another UI framework**: would need a concrete case that `render()`'s full-markup-replace model is causing a *measured* bug or performance problem beyond the one narrow, already-isolated accordion-state question in item 8 — not met.
+
+- **React or another UI framework**: would need a concrete case that `render()`'s full-markup-replace model is causing a _measured_ bug or performance problem beyond the one narrow, already-isolated accordion-state question in item 8 — not met.
 - **Phaser**: a second real map needing performance the current hand-coded terrain math can't deliver, or a real authoring bottleneck with the hand-coded collision-array approach — not met (3 real `.tmj` maps exist and work).
 - **inkjs**: an approved quest design that actually needs branching dialogue with variables/rejoining branches — not met (every NPC line is still static).
 - **A general content draft/publish/versioning pipeline** beyond the current classroom-scoped flat overrides — a second real content author (beyond the one owner-as-teacher account exercised so far) needing simultaneous-edit conflict resolution — not met.
@@ -172,7 +183,7 @@ Every item in the top 10 is independently reversible: items 1, 3, 4, 6, 7, 9 are
 
 **Item 1: consolidate `practiceCheckScreen()`'s four hand-rolled quest-status blocks onto the `QUEST_TYPES` contract** (`isComplete`/`answeredAny`/`hint` added to each of the 4 quest-type modules, replacing both `main.js:1819-1848` and the inline duplication at `main.js:5525-5609`).
 
-**Why this one, not items 2–7**: it is the only candidate that is simultaneously (a) a *confirmed, currently-live* correctness risk — two systems already disagree on HIPP's partial-credit vocabulary, not a hypothetical future drift — (b) fully covered by pre-existing automated tests (all 4 quest-type modules already have Vitest suites, so before/after behavior is pinned without writing new test infrastructure first), (c) explicitly named as an option in the task's own prompt ("Evaluate whether the existing `QUEST_TYPES` entries should own additional behavior such as `isComplete`, `answeredAny`, `hint`, `status`, `initialResponse`"), and (d) already flagged as unscheduled follow-up by the project's own `ARCHITECTURE-QUICKREF.md`, meaning it needs no fresh owner buy-in to start. Item 2 (Playwright suite) is valuable and evidenced but larger in scope (11 scenarios) and better sequenced as a **Plan**-mode task of its own rather than the single first pick; items 3/4/6/7/9 are all real but smaller/narrower wins that don't touch a currently-confirmed correctness bug the way item 1 does.
+**Why this one, not items 2–7**: it is the only candidate that is simultaneously (a) a _confirmed, currently-live_ correctness risk — two systems already disagree on HIPP's partial-credit vocabulary, not a hypothetical future drift — (b) fully covered by pre-existing automated tests (all 4 quest-type modules already have Vitest suites, so before/after behavior is pinned without writing new test infrastructure first), (c) explicitly named as an option in the task's own prompt ("Evaluate whether the existing `QUEST_TYPES` entries should own additional behavior such as `isComplete`, `answeredAny`, `hint`, `status`, `initialResponse`"), and (d) already flagged as unscheduled follow-up by the project's own `ARCHITECTURE-QUICKREF.md`, meaning it needs no fresh owner buy-in to start. Item 2 (Playwright suite) is valuable and evidenced but larger in scope (11 scenarios) and better sequenced as a **Plan**-mode task of its own rather than the single first pick; items 3/4/6/7/9 are all real but smaller/narrower wins that don't touch a currently-confirmed correctness bug the way item 1 does.
 
 ## Decisions requiring owner approval before proceeding
 

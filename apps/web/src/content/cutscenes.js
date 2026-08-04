@@ -36,10 +36,10 @@ const TABLE_APPROACH = { x: 19.0, y: 9.0 };
  * authority. Reinforces the Navigation Table and Field Notebook *without* repeating the tutorial.
  * Competence shown through action, never a biography speech."
  *
- * So Voss does not describe the table — they walk the player to it and point at it, which is the
+ * So Voss does not describe the table — she walks the player to it and points at it, which is the
  * same escort the Director already used to get them out of the Entrance Hall. That reuse is the
  * point: the two characters teach the same way, and the difference the scene is establishing is
- * what they choose to say once they arrive.
+ * what each chooses to say once they arrive.
  *
  * The walk back to the post at the end is not decoration. It is what leaves the room in the state
  * every other system expects — `HUB_TARGETS.liaison` is a fixed anchor for the marker, the

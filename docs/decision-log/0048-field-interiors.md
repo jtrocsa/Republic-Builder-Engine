@@ -16,7 +16,7 @@ There was already a working answer to this problem in the same file. The Institu
 three different sizes — Entrance Hall 20×18, Main Hall 23×12, Archive Room 20×12 — switched by a
 single persisted field `progress.currentHubRoom` and resolved through
 `activeHubGrid()`/`activeHubBlocks()`/`activeHubTargets()`/`activeHubNpcRuntime()`. Nothing about
-that pattern is hub-specific. The decision here is mostly the decision *not* to invent a second one.
+that pattern is hub-specific. The decision here is mostly the decision _not_ to invent a second one.
 
 ## Decisions
 
@@ -91,7 +91,7 @@ on `sourcePointPosition()`'s (10,10) fallback, in the middle of the room.
 The **Records to Recover** checklist is deliberately the opposite. It lists all of a case's records
 wherever the player is standing, because it is the only thing that tells them there is anything
 behind a door at all. (Phase 73 found that this cut both ways: the checklist was reading source
-points off the *active* surface too, so every record living elsewhere fell through to its long
+points off the _active_ surface too, so every record living elsewhere fell through to its long
 historical title instead of naming the person carrying it. It resolves across every surface of the
 unit's map now.)
 

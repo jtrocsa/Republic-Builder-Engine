@@ -1,4 +1,4 @@
-// Emery Voss, in the three places they stand.
+// Emery Voss, in the three places she stands.
 //
 // The Field Liaison debuted in Phase 80 with no new engine system — a HUB_TARGETS entry, a
 // behaviour, two FIELD_NPCS rows and one `progress.story` object. That is exactly why it needs a
@@ -69,7 +69,7 @@ test.describe("the Field Liaison at the Institute", () => {
 
   // Voss stands in the north cross-aisle at (14.5,4.5), two and a half tiles east of the cols 11-12
   // lane. A station is a solid body to the player and is injected into the hub nav grid as occupied,
-  // so the browser question is whether the room still works around them.
+  // so the browser question is whether the room still works around her.
   test("leaves the Archive Room approach open from beside Voss", async ({ page }) => {
     await enterMainHall(page);
 

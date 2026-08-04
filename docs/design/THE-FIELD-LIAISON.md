@@ -8,24 +8,32 @@ Institute post, both field posts and `progress.story` are real, and `CHRONICLE-C
 moved Voss and the name to canonical. See decision log `0063`. Everything about the **reveal**
 remains provisional or deferred: the Meridian connection, its placement, and §7's list.
 
+**Voss's pronouns changed to she/her in Phase 81**, by the author's decision. This document argued
+at some length that presentation and pronouns were independent, and kept them apart deliberately;
+that argument is retired rather than lost, and §1 records what it was for. Nothing in code changed —
+the registry key was already `liaison` and no shipped string carried a pronoun, which is the whole
+reason this cost one commit instead of a migration.
+
 ---
 
-## 1. Who they are
+## 1. Who she is
 
-**Role:** Field Liaison. **Name:** Emery Voss. **Pronouns:** they/them.
+**Role:** Field Liaison. **Name:** Emery Voss. **Pronouns:** she/her.
 
-**"Field Liaison" is an internal name and appears on no screen.** Player-facing, they are "Emery
+**"Field Liaison" is an internal name and appears on no screen.** Player-facing, she is "Emery
 Voss" — the field pill carries the name where every other NPC's carries a role, and the hub dialogue
-omits the kicker the other three staff get. The role is what they do, not a caption the player needs
+omits the kicker the other three staff get. The role is what she does, not a caption the player needs
 re-read every time; the comparison that settled it was a rival in Pokémon, who does not get labelled
 "Rival" on each appearance. See decision log `0063` §6.
 
-**Presentation: Voss reads as a woman**, decided in Phase 80b when the sprite had to be ordered and
-a generator needed a body to draw. This settles how the character _looks_ and nothing else — the
-pronouns above are unchanged, and §7's deferred list keeps biography and family exactly where they
-were. The separation that mattered was not from the Director but from **Dr. Amani Soto**, who is
-also a woman with her hair up in dark clothing and stands in the same room; the costume's cream
-upper body is what tells them apart at 48 pixels. See
+**Presentation was settled before pronouns were.** Phase 80b decided Voss reads as a woman because a
+sprite had to be ordered and a generator needed a body to draw; the pronouns stayed they/them
+until Phase 81, on the reasoning that a drawing does not decide a person. Both are now she/her and
+the distinction no longer does any work here — but it is worth keeping the order straight, because
+the art brief was written under the earlier rule and does not depend on the later one. The separation
+that mattered visually was never from the Director but from **Dr. Amani Soto**, who is also a woman
+with her hair up in dark clothing and stands in the same room; the costume's cream upper body is what
+tells them apart at 48 pixels. See
 [`MERIDIAN-VISUAL-IDENTITY.md`](../art/MERIDIAN-VISUAL-IDENTITY.md) §6 for the settled costume.
 
 The name follows the cast's convention — first name plus surname, no title for non-academic staff,
@@ -35,26 +43,26 @@ their names are spoken aloud in the same conversations.
 
 **The registry key is `liaison`, not the name.** That is deliberate and it is what makes the naming
 reversible: the sprite key, the behaviour entry and every `briefing.speaker` string say `liaison`,
-so changing "Emery Voss" later is a content edit in one place and not a migration. Gender and
-biography are likewise unfixed — the reveal arc constrains neither, and nothing in the art brief
-depends on either (see [`MERIDIAN-VISUAL-IDENTITY.md`](../art/MERIDIAN-VISUAL-IDENTITY.md) §6).
+so changing "Emery Voss" later is a content edit in one place and not a migration. Biography remains
+unfixed — the reveal arc does not constrain it, and nothing in the art brief depends on it (see
+[`MERIDIAN-VISUAL-IDENTITY.md`](../art/MERIDIAN-VISUAL-IDENTITY.md) §6).
 
-## 2. What they are for
+## 2. What she is for
 
 The Director is authority: precise, controlled, protective, reluctant to explain uncertainty. That
 works, and it leaves a gap — there is nobody in the Institute a player can be _unsure_ in front of.
 
-Voss fills it. They are slightly more experienced than the player, teach practical field procedure
-rather than institutional doctrine, are candid about what Chronicle does not know, and are willing
-to question policy without sounding disloyal. They demonstrate competence through action, never
+Voss fills it. She is slightly more experienced than the player, teaches practical field procedure
+rather than institutional doctrine, is candid about what Chronicle does not know, and is willing
+to question policy without sounding disloyal. She demonstrates competence through action, never
 through a biography speech.
 
-Concretely, they:
+Concretely, she:
 
-- hand off missions and explain field procedure;
-- give contextual advice during a map;
-- respond to what the player actually found rather than to a script;
-- notice historical suffering out loud, which the Director does not.
+- hands off missions and explains field procedure;
+- gives contextual advice during a map;
+- responds to what the player actually found rather than to a script;
+- notices historical suffering out loud, which the Director does not.
 
 ## 3. The reveal, and what it must not be
 
@@ -63,19 +71,19 @@ Concretely, they:
 The failure mode is making this mean the friendship was a lie. It was not, and the writing has to
 carry that:
 
-- They genuinely care about the player.
-- They genuinely made the player a better investigator.
-- They believe Chronicle is concealing evidence — and they are **right** (`CHRONICLE-CANON.md` §5).
-- They believe some historical suffering could have been prevented.
-- They cooperated with Meridian's humanitarian interventions, and would again.
-- They become genuinely disturbed as Meridian starts taking private clients.
+- She genuinely cares about the player.
+- She genuinely made the player a better investigator.
+- She believes Chronicle is concealing evidence — and she is **right** (`CHRONICLE-CANON.md` §5).
+- She believes some historical suffering could have been prevented.
+- She cooperated with Meridian's humanitarian interventions, and would again.
+- She becomes genuinely disturbed as Meridian starts taking private clients.
 
 The emotional weight comes from the relationship having been real. A Liaison who turns out to have
 been performing is a cheaper character and a worse argument — the player should finish the game
 unable to say cleanly that Voss was wrong.
 
-**They are also not simply right.** They passed evidence to an organisation that later sold
-historical outcomes, and people were affected by interventions they helped make. They should say so.
+**She is also not simply right.** She passed evidence to an organisation that later sold historical
+outcomes, and people were affected by interventions she helped make. She should say so.
 
 ## 4. Reveal ladder
 
@@ -88,14 +96,14 @@ investigation. Occasionally expresses sympathy for people in the historical sett
 mentions Meridian**, and carries no visible insignia.
 
 Voss debuts in **Unit 1, strictly after the Entrance Hall escort** — the onboarding sequence,
-`hallwayScene`, the tutorial tour and `isHubInputLocked()` are all untouched. Introducing them
+`hallwayScene`, the tutorial tour and `isHubInputLocked()` are all untouched. Introducing her
 before the player has met the Director would flatten the contrast the character exists to create.
 
 ### Units 3–4 — inconsistencies
 
 Small, deniable, and visible only on a second pass:
 
-- knows more about a temporal signature than they should;
+- knows more about a temporal signature than she should;
 - arrives before being assigned;
 - recognises a piece of Meridian equipment a beat too quickly;
 - steers the player away from exactly one clue;
@@ -107,8 +115,8 @@ way is not a clue, it is the reveal arriving early.
 
 ### Units 5–6 — the reveal
 
-The player finds Voss using Meridian equipment or wearing the insignia. They explain Meridian as a
-response to Chronicle's secrecy and refusal to act. They do not ask the player to approve of
+The player finds Voss using Meridian equipment or wearing the insignia. She explains Meridian as a
+response to Chronicle's secrecy and refusal to act. She does not ask the player to approve of
 everything Meridian has done. The player learns selected evidence has been going to Meridian for
 some time. The relationship is damaged and not ended.
 
@@ -154,7 +162,7 @@ Rules that keep this maintainable:
 `progress.story` **shipped in Phase 80**, extending `DEFAULT_PROGRESS` and `readProgress()`'s merge
 in the ordinary way. `liaisonTrust` counts debriefed missions and is clamped at `MAX_LIAISON_TRUST`;
 three bands (0, 1–2, 3+) select which Institute line plays, via the exported pure `liaisonLine()`.
-`flags` is still empty, per the rule above.
+`flags` carries `metLiaison` as of Phase 81C, per the rule above.
 
 ## 6. Integration points
 
@@ -173,7 +181,7 @@ phases that had already shipped under different numbers. They now cite the real 
 | Speaks in the field     | The existing dialogue bubble                                                         | **Exists**                                         |
 | Sprite                  | `CHARACTER_SHEETS.liaison` + a `character-manifest.js` entry                         | **Shipped, Phase 80b**                             |
 | Narrative state         | `progress.story`                                                                     | **Shipped, Phase 80**                              |
-| Cutscenes               | See [`CUTSCENE-AND-DIALOGUE-CONVENTIONS.md`](./CUTSCENE-AND-DIALOGUE-CONVENTIONS.md) | Phase 81C                                          |
+| Cutscenes               | See [`CUTSCENE-AND-DIALOGUE-CONVENTIONS.md`](./CUTSCENE-AND-DIALOGUE-CONVENTIONS.md) | **Shipped, Phase 81C** — Scene A                   |
 | Revealed costume        | `CHARACTER_SHEETS["liaison-meridian"]` — a second sheet key                          | Art, with Unit 6's reveal                          |
 
 Two costume states as **two sheet keys** is the right shape: a sheet key is one registry entry, the
@@ -182,12 +190,12 @@ than a runtime tint. It also keeps the pre-reveal art untouched when the reveal 
 
 Placement caution when posting Voss in the Institute: hub staff are solid, stationed posts feed
 `stationedPosts()` into the nav grid as occupied cells, and two characters within interaction reach
-of each other are interchangeable to the nearest-interaction sort. Keep them clear of the Director,
+of each other are interchangeable to the nearest-interaction sort. Keep her clear of the Director,
 of the Archive Room approach lane (columns 11–12), and of the tutorial tour's walked path.
 
 ## 7. Deferred
 
-Do not resolve while writing something else: Voss's biography and family; their exact
-recruitment by Meridian; whether they knew about the Original Drift before the player; their final
-allegiance; and the closing scene. Each has content consequences and each is listed in
-`CHRONICLE-CANON.md` §9 as deliberately unwritten.
+Do not resolve while writing something else: Voss's biography and family; her exact recruitment by
+Meridian; whether she knew about the Original Drift before the player; her final allegiance; and the
+closing scene. Each has content consequences and each is listed in `CHRONICLE-CANON.md` §9 as
+deliberately unwritten.

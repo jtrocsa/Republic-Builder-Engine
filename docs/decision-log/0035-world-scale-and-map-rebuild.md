@@ -49,7 +49,7 @@ and a map with an `overlay` layer is rendered into two stacked canvases. This is
 player walk behind a tree canopy — the single largest contributor to the Pokémon-like depth the
 mockup has and the flat maps lacked.
 
-Deliberately *not* added: object layers, per-tile properties, layer opacity, flip/rotate flags.
+Deliberately _not_ added: object layers, per-tile properties, layer opacity, flip/rotate flags.
 All still unused, all still silently ignored.
 
 ### 4. Riverbend gets a generator; its two visible defects are fixed
@@ -60,12 +60,12 @@ original proof of concept, so its layout could not be re-derived. It now has
 
 Writing it surfaced two real defects in the shipped map:
 
-- **Black gaps across every crop field.** The planted-row tiles are transparent *between* the
+- **Black gaps across every crop field.** The planted-row tiles are transparent _between_ the
   plants — props meant to be laid over soil, not full-bleed ground. Treated as ground, the page
   background showed through. Soil now goes down as ground with the crop on structures above it.
 - **The river was floored with loose planks.** `tile-B-04`'s rows 8–11 are pier decking, and they
   had been tiled across the whole channel. The pier is now laid over water only, and the sheet's
-  *vertical* pier art is used where a pier runs north–south — the horizontal deck tile stacked
+  _vertical_ pier art is used where a pier runs north–south — the horizontal deck tile stacked
   downward is what produced the plank-stack look.
 
 ### 5. New art brought in from the catalog

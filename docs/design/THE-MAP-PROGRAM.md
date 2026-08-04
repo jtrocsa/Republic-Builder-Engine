@@ -111,7 +111,7 @@ one way is not a clue — it is the reveal arriving early.
 
 **Voss is not on Units 3–5's maps at all.** `FIELD_MAPS` for those units has no `liaison` entry and
 `field-liaison.test.js` scopes to units 1–2, so the entire ladder above rung one currently has
-nobody to happen to. Stationing them is Phase 81E and it is the keystone of everything in this
+nobody to happen to. Stationing her is Phase 81E and it is the keystone of everything in this
 table.
 
 ---

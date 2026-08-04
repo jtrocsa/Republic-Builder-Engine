@@ -237,11 +237,12 @@ as canon will build content on it, and unbuilding that is expensive.
 - Chronicle's danger is secrecy; Meridian's is moral certainty (§7).
 - The final conflict is about who controls access to evidence (§7).
 - A Chronicler changes the record, never the event (§1).
-- The Field Liaison, **Emery Voss** — promoted from provisional in Phase 80, when they shipped. They
-  stand in the Institute Main Hall and on both authored field maps, and `progress.story.liaisonTrust`
-  is real save state. The character, the name and the `liaison` registry key may now be relied on.
-  See [`THE-FIELD-LIAISON.md`](./THE-FIELD-LIAISON.md) and decision log `0063`. **Their Meridian
-  connection did not move with them** — see below.
+- The Field Liaison, **Emery Voss** — promoted from provisional in Phase 80, when she shipped. She
+  stands in the Institute Main Hall and on both authored field maps, and `progress.story.liaisonTrust`
+  is real save state. The character, the name, her pronouns (**she/her**, settled in Phase 81) and
+  the `liaison` registry key may now all be relied on.
+  See [`THE-FIELD-LIAISON.md`](./THE-FIELD-LIAISON.md) and decision log `0063`. **Her Meridian
+  connection did not move with her** — see below.
 
 ### Provisional — usable in planning, not yet in shipped content
 
@@ -257,9 +258,9 @@ Do not resolve these in passing. Each is a decision with content consequences.
 
 - **The exact Original Drift incident** — what the first expedition did, to whom, and when.
 - The exact intervention Chronicle reversed or contained.
-- Emery Voss's biography and final allegiance. (Their **presentation** left this list in Phase 80b —
-  the sprite had to be ordered, so Voss reads as a woman. Pronouns stay they/them and nothing else
-  about them was decided. See `THE-FIELD-LIAISON.md` §1.)
+- Emery Voss's biography and final allegiance. (Her **presentation** left this list in Phase 80b,
+  when the sprite had to be ordered, and her **pronouns** left it in Phase 81 — both are settled and
+  neither decided anything else about her. See `THE-FIELD-LIAISON.md` §1.)
 - The complete unit-by-unit plot.
 - The final player decision and the Director's closing dialogue.
 - How the Original Drift connects to each individual APUSH unit.
