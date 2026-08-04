@@ -2795,8 +2795,12 @@ export const HUB_TARGETS = {
     y: 8.9,
     name: "Professor Julian Park",
     role: "Route Historian",
+    // Rewritten in Phase 81B. The old line called it "the navigation table" in lower case and
+    // treated a route as a destination. Julian is the Route Historian, so he is the one person on
+    // the floor who would speak about provenance unprompted — and per canon §8 he *uses* the
+    // object-led rule the briefing introduced rather than re-explaining it.
     dialogue: () =>
-      `The navigation table is ready. ${progress.unlocked.length > 1 ? "New Unit 1 routes are now available for review." : "The Caribbean route is the only active route for now."}`,
+      `The Navigation Table is ready. ${progress.unlocked.length > 1 ? "More of Unit 1's records are holding a passage now. Read the provenance before you pick one — where a thing has been is the whole of where it can take you." : "The Caribbean record is the only one holding a passage for now."}`,
   },
   trophy: {
     // The display plinth's south face. Its rect is (3,2)-(5,4) and the open cross-aisle starts
@@ -2824,8 +2828,12 @@ export const HUB_TARGETS = {
     marker: { col: 17, row: 6, w: 3, h: 2 },
     name: "Chronicle Navigation Table",
     role: "Archive interface",
+    // Rewritten in Phase 81B. The old line — "displays teacher-unlocked cases geographically" —
+    // was interface documentation rather than an in-world description, and it implied a case is a
+    // place you choose. Canon §2 is object-led: the markers are surviving records, and the passage
+    // opens onto wherever each one was. That is the reason this prop is a table with things on it.
     dialogue: () =>
-      `The table displays teacher-unlocked cases geographically. Select a route only after you have reviewed the active investigation.`,
+      `Each marker is a record that outlasted its moment, set down where it was when it did. Your teacher decides which are open to you. Select one only after you have reviewed the active investigation.`,
     action: "archive",
   },
   archiveDoor: {

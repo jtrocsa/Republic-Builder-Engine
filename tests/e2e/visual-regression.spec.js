@@ -126,12 +126,30 @@ test.describe("Gameplay visual-regression baselines", () => {
     );
 
     const nameInput = page.locator('input[data-profile="name"]');
+    // intro-protocol is the only director screen that renders an extra-content panel, and
+    // `completeCurrentIntroStep()` unhides it once that screen's lines finish typing — so the first
+    // frame where this is visible is the field protocol, fully drawn.
+    //
+    // Baselined in Phase 81B, which took the protocol from three cards to four so it states all
+    // four clauses of the canon operational rule rather than dropping the last one. The panel is a
+    // 380px column with `max-height: calc(100% - 320px)` and `overflow-y: auto`, so a fourth card
+    // is a scroll risk rather than an overflow one — which is exactly the kind of thing that is
+    // cheap to check by eye once and expensive to keep re-checking by hand.
+    const protocolPanel = page.locator(".director-extra-content");
+    let sawProtocol = false;
     for (let i = 0; i < 40; i += 1) {
       if (await nameInput.isVisible().catch(() => false)) break;
       if (!(await dialogueBox.isVisible().catch(() => false))) break;
+      if (!sawProtocol && (await protocolPanel.isVisible().catch(() => false))) {
+        sawProtocol = true;
+        await expect(page).toHaveScreenshot(
+          snap("director-protocol-scene", { mask: [page.locator("#directorArchiveClock")] })
+        );
+      }
       await dialogueBox.click();
       await page.waitForTimeout(30);
     }
+    expect(sawProtocol, "the field protocol screen never appeared during the intro").toBe(true);
     await expect(nameInput).toBeVisible();
     await expect(page).toHaveScreenshot(snap("identity-screen"));
   });

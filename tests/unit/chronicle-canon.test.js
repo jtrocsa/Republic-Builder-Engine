@@ -49,6 +49,19 @@ function flatten(markdown) {
 describe("Chronicle canon", () => {
   // CHRONICLE-CANON.md §8. Each of these sounds precise and says nothing, and every one of them
   // describes history as a machine that can break rather than as a record that can be argued with.
+  //
+  // `record drift` was added in Phase 81B, and it is the only entry here that had actually
+  // shipped. The Director's briefing defined it as "fragments of the past changing, vanishing, or
+  // contradicting each other" — which is the precise list canon §6 exists to keep the word *drift*
+  // away from. A source can be incomplete, biased, unverified or flatly contradicted by another
+  // source without anyone having travelled anywhere; those are the historian's problems and they
+  // take the historian's words. Calling them a temporal event teaches a student something false
+  // about history, which is the failure this whole document was written to prevent.
+  //
+  // Note this bans the *phrase*, not the word. `drift` on its own is used all over the codebase in
+  // its ordinary engineering sense — two values drifting out of sync — and about twenty comments
+  // depend on that still being allowed. A looser pattern here would fail on all of them and be
+  // deleted within a phase, which is worse than no rule.
   const BANNED = [
     "temporal integrity",
     "quantum record",
@@ -56,6 +69,7 @@ describe("Chronicle canon", () => {
     "causal resonance",
     "timeline corruption",
     "one true timeline",
+    "record drift",
   ];
 
   it("ships none of the banned science-fiction phrasing", () => {

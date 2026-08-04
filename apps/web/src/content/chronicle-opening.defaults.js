@@ -4,10 +4,31 @@
  * This file is the canonical default copy committed to the repository.
  * Author Mode creates browser-local drafts on top of these defaults and can
  * export a JSON snapshot when a wording pass is ready to publish.
+ *
+ * REWRITTEN IN PHASE 81B against docs/design/CHRONICLE-CANON.md, which was written six phases
+ * after this copy and contradicted it on the first screen a player reads. What was here before:
+ *
+ *   - The premise was named for *drift* and defined as "fragments of the past changing, vanishing,
+ *     or contradicting each other." That is the exact list canon §6 exists to keep that word away
+ *     from. A source can be incomplete, biased, unverified or contradicted by another source
+ *     without anyone having travelled anywhere, and teaching a student that those are symptoms of
+ *     a temporal event teaches them something false about history.
+ *     `tests/unit/chronicle-canon.test.js` now fails on the two-word phrase, which is why it is
+ *     described here rather than quoted — the scanner cannot tell a ban from a use, the same
+ *     reason it skips docs/.
+ *   - Travel described as date-led — "a Chronicler travels to the moment." Canon §2 is object-led:
+ *     you pick a surviving thing and arrive where it was. That is *why* the Navigation Table is a
+ *     table with records on it rather than a dial, and the old copy left the prop unexplained.
+ *   - No anchor glass, no temporal imprints, no Original Drift, and only three of the operational
+ *     rule's four clauses.
+ *
+ * Two authoring rules from canon §8 govern edits here. **Introduce a term once, then stop
+ * explaining it** — every lore word below appears in the briefing and is then used plainly
+ * forever after. And **no sentence stacks three lore terms before naming the academic task**;
+ * the briefing is four screens of two lines precisely so each idea gets its own box.
  */
 export const CHRONICLE_OPENING_DEFAULTS = {
   brand: {
-    engineName: "Republic Builder Engine",
     productName: "Chronicle",
   },
   status: {
@@ -15,39 +36,46 @@ export const CHRONICLE_OPENING_DEFAULTS = {
   },
   footer: {
     left: "Chronicle Institute orientation build",
-    right: "Milestone 2 · Chronicle Identity",
+    right: "Field protocol · Chronicler registration",
   },
+  // Not currently rendered anywhere — kept because it is the shape a future Archive Signal surface
+  // would take, and corrected in Phase 81B so that if it is ever wired up it does not reintroduce
+  // the phrase this phase removed. "Temporal anomaly" is canon §8's term for the one thing this
+  // panel describes: Codex-protected evidence and the surviving archive disagreeing.
   archiveSignal: {
     kicker: "Archive Signal",
     year: "1491",
-    title: "Record drift detected",
-    body: "The Atlantic world is about to change. The Institute requires a Chronicler.",
+    title: "Codex and archive disagree",
+    body: "An Atlantic record the Codex protected no longer matches the one that survived. The Institute requires a Chronicler.",
     tag: "Case 1.01 queued",
   },
   scenes: {
+    // The eyebrow was "Republic Builder Engine" — a retired project identity on the game's first
+    // screen. Dropped in Phase 81B. It is the subtitle rather than empty because
+    // `directorSceneMarkup()` renders the kicker element unconditionally, so a blank string leaves
+    // an empty `<p>` and a gap above the title. The teacher screens' `BRAND.engine` is a separate
+    // surface and deliberately untouched — see CLAUDE.md on product branding.
     welcome: {
-      eyebrow: "Republic Builder Engine",
+      eyebrow: "An AP U.S. History Adventure",
       title: "Chronicle",
-      subtitle: "An AP U.S. History Adventure",
+      subtitle: "The Institute has been waiting for you.",
       body: [{ text: "Welcome, Chronicler." }, { text: "The Institute has been waiting for you." }],
       action: "Begin Orientation",
       secondary: "What is Chronicle?",
     },
     oath: {
       eyebrow: "Chronicle Institute — Field Protocol",
-      title: "Welcome, Chronicler.",
-      subtitle: "Observe. Source. Report.",
+      title: "Four rules, and then the work.",
+      subtitle: "Enter carefully. Observe freely. Preserve evidence.",
       body: [
-        { text: "Your first assignment is ready." },
-        {
-          text: "These rules protect the historical record—and define the work of a Chronicler.",
-        },
+        { text: "Every Chronicler works to the same four rules." },
+        { text: "Learn them here. I will not be repeating them in the field." },
       ],
       action: "Create Chronicler",
       secondary: "Review Director briefing",
     },
     character: {
-      eyebrow: "Milestone 2 · Chronicle Identity",
+      eyebrow: "Chronicle Institute — Identity Registry",
       title: "Identity registry online.",
       subtitle: "Your field record is ready for registration.",
       body: "This transition is now handled by the Chronicle Identity feature, where the player chooses an appearance and name before receiving a Codex.",
@@ -83,7 +111,7 @@ export const CHRONICLE_OPENING_DEFAULTS = {
     table: {
       name: "Director Rowan Hale",
       role: "Director of Field Studies",
-      body: "The Chronicle Navigation Table displays every route your teacher has unlocked. You'll return here between cases to choose where the record needs you next.",
+      body: "The Chronicle Navigation Table. Those are not destinations — they are objects that survived, and each one opens onto wherever it was. You'll return here between cases to choose which one the record needs next.",
       cta: "Next →",
     },
     archiveDoor: {
@@ -121,19 +149,23 @@ export const CHRONICLE_OPENING_DEFAULTS = {
             },
           },
           {
-            text: "We preserve the historical record—and right now, part of it is disappearing.",
+            text: "We recover historical evidence, and we keep it somewhere it cannot be altered.",
           },
         ],
         action: "Continue briefing",
         secondary: "Return to title",
       },
       {
+        // Canon §5: the explanation the player is given early is truthful and incomplete. Chronicle
+        // admits the first expedition and that it caused the change. What it conceals — the
+        // specifics of the incident and of how it was contained — is not on this screen and is not
+        // hinted at. The Director is not lying here, which is what makes Units 5-6 land.
         eyebrow: "Director’s briefing · 02 / 04",
-        title: "What’s wrong.",
-        subtitle: "We call it record drift.",
+        title: "What we did.",
+        subtitle: "Chronicle’s first expedition changed something. It has not stopped.",
         body: [
           {
-            text: "We call it record drift: fragments of the past changing, vanishing, or contradicting each other.",
+            text: "Chronicle’s first expedition changed something in the past. It is still moving forward — through the people it touched, what they decided, and the records that outlived them.",
             reveal: {
               type: "chips",
               items: [
@@ -146,64 +178,90 @@ export const CHRONICLE_OPENING_DEFAULTS = {
             },
           },
           {
-            text: "If we lose them, we lose the ability to understand what really happened.",
+            text: "We call that continuing consequence temporal drift. Ours is the Original Drift, and it is the reason this Institute still sends people out.",
           },
         ],
         action: "Continue briefing",
         secondary: "Previous message",
       },
       {
+        // Canon §2's object-led rule, which the previous copy inverted. This is the only screen in
+        // the game that explains the Navigation Table, and without it the prop the player walks to
+        // every session is a dial with no stated mechanism.
         eyebrow: "Director’s briefing · 03 / 04",
-        title: "What a Chronicler does.",
-        subtitle: "A Chronicler travels to the moment and secures the record before it’s lost.",
+        title: "How you’ll get there.",
+        subtitle: "You will not choose a year. You will choose something that survived.",
         body: [
           {
-            text: "A Chronicler travels to the moment and secures the record before it’s lost.",
+            text: "You will not choose a year. You will choose something that survived.",
           },
           {
-            text: "Not to change history—to prove it. This is your Codex.",
-            reveal: { type: "image", src: "codex", label: "The Codex" },
-          },
-        ],
-        action: "Continue briefing",
-        secondary: "Previous message",
-      },
-      {
-        eyebrow: "Director’s briefing · 04 / 04",
-        title: "Why you.",
-        subtitle: "Every record you secure updates your Codex.",
-        body: [
-          {
-            text: "Every record you secure updates your Codex—the Archive’s memory.",
+            text: "An object keeps an imprint of what it was present for. Anchor glass makes that imprint readable, and the Navigation Table opens a passage through a strong one.",
             reveal: {
               type: "badge",
-              icon: "⌁",
-              label: "The Archive",
-              sublabel: "Records you secure, kept safe",
+              icon: "◈",
+              label: "Anchor glass",
+              sublabel: "Makes an imprint readable",
             },
           },
-          { text: "I’ll show you how this works." },
+        ],
+        action: "Continue briefing",
+        secondary: "Previous message",
+      },
+      {
+        // Canon §2's second consequence — observation is free — is what makes the job possible at
+        // all, and the old copy never said it. And canon rule 5: the Codex is the one fixed point.
+        // Never write it as unstable, corrupted or at risk; the premise collapses if the player
+        // cannot trust it.
+        eyebrow: "Director’s briefing · 04 / 04",
+        title: "What the work is.",
+        subtitle: "Not to change history. To come back with evidence that holds up.",
+        body: [
+          {
+            text: "Standing in a moment changes nothing. Watch it as long as you need to.",
+          },
+          {
+            text: "You are not there to fix anything — you are there to come back with evidence that holds up. What you secure goes into the Codex, and drift does not reach it.",
+            reveal: { type: "image", src: "codex", label: "The Codex" },
+          },
         ],
         action: "Accept field protocol",
         secondary: "Previous message",
       },
     ],
   },
+  // Canon §3's operational rule, all four clauses. It was a three-card Observe/Source/Report
+  // triad, which dropped the fourth entirely.
+  //
+  // The fourth clause is stated flatly and deliberately left unexplained. Canon §4 calls the gap
+  // between "Chronicle authorises intervention in principle" and "no shipped mission has ever
+  // required it" the most useful thing the canon does, because it makes Chronicle's own doctrine
+  // an object of suspicion rather than a description of gameplay. Planting it at recruitment, in
+  // the same plain register as the other three, is what makes it cost nothing now and pay off in
+  // Units 5-6. Do not add a gloss here later; the flatness is the point.
+  // Bodies are kept to a single wrapped line each. The panel is a fixed-height scroll column, and
+  // at four cards a two-line body pushes the First Assignment block below the fold — measured, not
+  // guessed, against the `director-protocol-scene` baseline.
   protocol: [
     {
       number: "01",
-      title: "Observe",
-      body: "Enter the moment. Leave history untouched.",
+      title: "Enter carefully",
+      body: "Let the moment go on without you.",
     },
     {
       number: "02",
-      title: "Source",
-      body: "Interrogate the record: creator, audience, purpose.",
+      title: "Observe freely",
+      body: "Watching costs the record nothing.",
     },
     {
       number: "03",
-      title: "Report",
-      body: "Return with evidence. Preserve what can be proven.",
+      title: "Preserve evidence",
+      body: "Return with what can be examined.",
+    },
+    {
+      number: "04",
+      title: "Change only what is necessary",
+      body: "And only to stop an outside alteration.",
     },
   ],
   assignment: {
