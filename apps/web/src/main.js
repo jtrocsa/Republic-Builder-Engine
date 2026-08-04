@@ -9749,7 +9749,10 @@ function exitFieldInterior() {
 }
 function fieldTooFarNotice(label) {
   progress.fieldNotice = `Move closer to interact with ${label}.`;
-  progress.activeFieldNpc = null;
+  // Deliberately leaves the dialogue open. This used to null `activeFieldNpc`, so being a tenth of
+  // a tile short both told the player to move closer *and* shut the bubble that was offering the
+  // record — the instruction and the thing it referred to disappeared in the same frame. Taking one
+  // step then meant re-opening the conversation, which is why a near-miss read as a dead button.
   save();
   const notice = document.getElementById("fieldNotice");
   // This path patches the DOM instead of re-rendering, so it has to reveal the line itself — the
@@ -12039,7 +12042,9 @@ function handleFieldClick(target, action) {
     return true;
   }
   if (action === "start-source-activity") {
-    progress.activeFieldNpc = null;
+    // Closing the dialogue is what *succeeding* does, so it happens once every guard below has
+    // passed. Nulling it up here closed the bubble on the two refusal paths as well, which is how
+    // "too far" and "not yet available" both came out looking like the button had eaten the click.
     openSourceId = target.dataset.source;
     if (!isNearFieldSource(openSourceId)) {
       fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
@@ -12056,6 +12061,7 @@ function handleFieldClick(target, action) {
       render();
       return true;
     }
+    progress.activeFieldNpc = null;
     sourceOrigin = "field";
     ensureSourceActivity(openSourceId);
     // Persisted alongside the module-local id so a reload inside an activity resumes in the right
@@ -12160,12 +12166,13 @@ function handleSourceReaderClick(target, action) {
     return true;
   }
   if (action === "open-source") {
-    progress.activeFieldNpc = null;
     openSourceId = target.dataset.source;
     if ((target.dataset.origin || "field") === "field" && !isNearFieldSource(openSourceId)) {
       fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
       return true;
     }
+    // After the guard, for the same reason as "start-source-activity" above.
+    progress.activeFieldNpc = null;
     sourceOrigin = target.dataset.origin || "field";
     progress.currentScreen = "source";
     save();
@@ -13014,7 +13021,17 @@ function handleAppClick(event) {
   }
   const target = event.target.closest("[data-action]");
   if (!target) {
-    if (progress.currentScreen === "field" && progress.activeFieldNpc) {
+    // Click-away dismissal for the field dialogue — but only for a click that actually landed
+    // outside the bubble. `closest("[data-action]")` is null for everything in it that is not a
+    // control: the speaker's name, the line itself, the padding, and the few pixels around the
+    // record button. Without the second test, a click that missed a control by a pixel did not
+    // merely do nothing — it destroyed the thing the player was reading, which reads as the button
+    // being broken rather than as a miss, because the bubble and the answer vanish together.
+    if (
+      progress.currentScreen === "field" &&
+      progress.activeFieldNpc &&
+      !event.target.closest(".field-speech-bubble")
+    ) {
       progress.activeFieldNpc = null;
       save();
       render();

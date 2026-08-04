@@ -155,4 +155,41 @@ test.describe("Field movement, collision, and dialogue", () => {
     expect(afterCollision.py).toBeGreaterThan(3.0 * TILE);
     expectCameraTracksPosition(afterCollision);
   });
+
+  test("a click that misses a control inside the bubble does not close it (regression)", async ({
+    page,
+  }) => {
+    // Reported from a real playthrough as "the mission won't open — it just flickers and then goes
+    // away," with the record button working from one part of its face and not another.
+    //
+    // The cause was click-away dismissal with no tolerance: handleAppClick() closed the dialogue
+    // whenever `closest("[data-action]")` came back null, and that is null for everything in the
+    // bubble that is not a control — the speaker's name, the line, the padding, and the few pixels
+    // around the record button. So missing the button by a pixel did not do nothing, it destroyed
+    // the bubble *and* the record offer together, which reads as a broken button rather than a miss.
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-001",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    expect(await walkToNpc(page, "taino-elder")).toBe(true);
+    await page.locator('[data-npc="taino-elder"]').click();
+
+    const bubble = page.locator(".field-speech-bubble");
+    await expect(bubble).toBeVisible();
+    await expect(page.locator('[data-action="start-source-activity"]')).toBeVisible();
+
+    // Inside the bubble, on no control at all — the speaker's name. dispatchEvent for the same
+    // reason the close button above uses it: where the bubble lands depends on where the walk parked
+    // the player, and main.js delegates off #app so a bubbling event is the same code path.
+    await bubble.locator("b").first().dispatchEvent("click");
+    await expect(bubble).toBeVisible();
+    await expect(page.locator('[data-action="start-source-activity"]')).toBeVisible();
+
+    // Click-away itself still works — it just has to actually land away.
+    await page.locator("#caribbeanWorld").dispatchEvent("click");
+    await expect(bubble).toHaveCount(0);
+  });
 });

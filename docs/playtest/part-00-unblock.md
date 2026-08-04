@@ -29,6 +29,7 @@ with NPCs visible and screenshotted each beat — `visual-regression.spec.js` hi
 | P0-3 | S2 · broken       | Logging a non-`useful` interview answer prints "✓ In your Field Notebook" and the answer never reaches the notebook                     | **→ Part 8**, needs an owner decision                           |
 | P0-4 | S3 · rough        | The Codex aside clips its text and its "Open Codex" button at a 1280px viewport; baselines are banked at 1366×768 so nothing catches it | → Part 6                                                        |
 | P0-5 | S3 · inconsistent | The chrome eyebrow still reads "REPUBLIC BUILDER ENGINE"                                                                                | → the known branding cleanup in `CLAUDE.md`; not this program's |
+| P0-6 | S1 · broken       | A click inside the dialogue bubble that missed a control closed the bubble, so the record button read as dead                           | fixed                                                           |
 
 ### P0-1 / P0-2 — one cause, two symptoms
 
@@ -75,6 +76,36 @@ units and the cross-activity evidence link:
 4. Leave the behaviour and fix only the words.
 
 Option 2 is the closest fit to rules the engine already holds, but it is the owner's call.
+
+### P0-6 — the record button was not dead, the bubble was being destroyed under it
+
+Reported from a real playthrough as _"the mission won't open — it just flickers and then goes away,"_
+with the button working from one part of its face and not another, and working if the press was held.
+
+Three hypotheses were tested and killed first, which is worth recording so nobody re-runs them:
+nothing overlaps the button (hit-tested across its full width — it is z-index 95 against the cast's
+70); the production build is not at fault (walked end to end against `npm run preview`); and there is
+no proximity flicker (60 frames standing still at the boundary, bubble present in all of them). The
+owner's own measurement is what ruled out the obvious one: **0.62 tiles from the elder against a 1.45
+reach**, so distance was never involved.
+
+The cause was click-away dismissal with no tolerance. `handleAppClick()` closed the dialogue whenever
+`event.target.closest("[data-action]")` came back null — and that is null for everything in the
+bubble that is not a control: the speaker's name, the line itself, the padding, and the few pixels
+around the record button. Missing the button therefore did not do nothing; it destroyed the bubble
+and the record offer together. That is indistinguishable from a broken button, because the thing you
+were aiming at disappears either way.
+
+Three fixes, all on the same fault line:
+
+1. Click-away now requires the click to land **outside `.field-speech-bubble`**. The behaviour is
+   kept; it just has to actually be away.
+2. `fieldTooFarNotice()` no longer nulls `activeFieldNpc`. Telling the player to move closer while
+   closing the thing they were reading meant a tenth of a tile cost the whole conversation.
+3. `start-source-activity` and `open-source` close the dialogue **after** their guards pass rather
+   than before, so a refusal leaves the bubble up instead of looking like the click was eaten.
+
+Banked in `field-movement-dialogue.spec.js`, confirmed failing against the old code.
 
 ## Instrumentation
 
