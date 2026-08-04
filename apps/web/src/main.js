@@ -1089,11 +1089,15 @@ const FIELD_MOVE_KEYS = {
 const FIELD_NPCS = [
   {
     id: "liaison",
-    x: 31.5,
+    x: 33.5,
     y: 23.5,
     group: "chronicle",
     name: "Emery Voss",
-    label: "Field Liaison",
+    // The name, where every other pill on this map is a role ("Community elder", "Scribe"). Those
+    // are anonymous period characters the player meets once and has no name for; Voss is the one
+    // person out here they already know, and labelling them by their job every time reintroduces
+    // somebody who does not need reintroducing.
+    label: "Emery Voss",
     sprite: "liaison",
     text: "Walk it before you write it. You will get one account from the Admiral's table and another from the village, and the gap between the two is not a problem to solve — it is the thing you were sent to record.",
   },
@@ -1194,7 +1198,14 @@ const FIELD_NPC_BEHAVIOURS = {
   // of the four directions anybody presses first, and (25.5,19.5) sat in the corridor every walk
   // north to the village uses — it took two unrelated e2e specs down and they came back the moment
   // Voss moved. South-east is the one quadrant nothing on this map needs.
-  liaison: { kind: "station", at: { x: 31.5, y: 23.5 }, facing: "up" },
+  //
+  // (31.5,23.5) was clear of all of that and still wrong, for a reason no clearance check looks at:
+  // it stood them directly above the palm at overlay tile (31,24). The overlay layer draws over the
+  // cast on purpose, so the name pill — which hangs below the feet, into exactly that row — was
+  // half-covered by fronds. Two tiles east clears it. **A post has to clear the overlay layer under
+  // the pill, not only the collision layer under the feet**; this map has 14 overlay tiles in 2016
+  // and Voss found one.
+  liaison: { kind: "station", at: { x: 33.5, y: 23.5 }, facing: "up" },
   // The village-observation content describes her as the person others bring decisions to. Someone
   // being consulted stays put.
   "taino-elder": { kind: "station", at: { x: 30.0, y: 13.5 }, facing: "down" },
@@ -1411,7 +1422,8 @@ const UNIT2_FIELD_NPCS = [
     y: 17.0,
     group: "chronicle",
     name: "Emery Voss",
-    label: "Field Liaison",
+    // The name, not the job — same reason as the Caribbean post above.
+    label: "Emery Voss",
     sprite: "liaison",
     text: "Everyone here will tell you the settlement is working. Ask them who it is working for — the answer moves depending on whose name is on a contract, and whether they signed it themselves.",
   },
@@ -2750,7 +2762,12 @@ export const HUB_TARGETS = {
     x: 14.5,
     y: 4.5,
     name: "Emery Voss",
-    role: "Field Liaison",
+    // No `role`, deliberately, and the only target without one. The other three staff are people
+    // the player is being introduced to and whose standing is the point — a Director of Field
+    // Studies is being told apart from a Route Historian. Voss is the recurring companion, and
+    // captioning them "Field Liaison" every time they speak reintroduces somebody the player
+    // already knows. The kicker is omitted rather than blank; "Field Liaison" stays the internal
+    // name for the role, in the docs and the `liaison` registry key.
     dialogue: () => liaisonLine(progress.story.liaisonTrust),
   },
   director: {
@@ -8724,7 +8741,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div><p class="kicker">${esc(dialogue.role)}</p><h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was

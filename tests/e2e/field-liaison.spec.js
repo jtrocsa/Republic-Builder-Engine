@@ -47,8 +47,12 @@ test.describe("the Field Liaison at the Institute", () => {
     const dialogue = page.locator(".hub-dialogue");
     await expect(dialogue).toBeVisible();
     await expect(dialogue).toContainText("Emery Voss");
-    await expect(dialogue).toContainText("Field Liaison");
     await expect(dialogue).toContainText(NEW_LINE);
+    // Voss is named and not captioned — the only HUB_TARGET with no `role`, so the kicker the other
+    // three staff get is absent rather than empty. Asserted because an empty <p class="kicker">
+    // renders as a blank line above the name and looks like a layout bug rather than a decision.
+    await expect(dialogue.locator(".kicker")).toHaveCount(0);
+    await expect(dialogue).not.toContainText("Field Liaison");
   });
 
   test("speaks a different line once the player has filed a few missions", async ({ page }) => {

@@ -14,6 +14,12 @@ remains provisional or deferred: the Meridian connection, its placement, and §7
 
 **Role:** Field Liaison. **Name:** Emery Voss. **Pronouns:** they/them.
 
+**"Field Liaison" is an internal name and appears on no screen.** Player-facing, they are "Emery
+Voss" — the field pill carries the name where every other NPC's carries a role, and the hub dialogue
+omits the kicker the other three staff get. The role is what they do, not a caption the player needs
+re-read every time; the comparison that settled it was a rival in Pokémon, who does not get labelled
+"Rival" on each appearance. See decision log `0063` §6.
+
 **Presentation: Voss reads as a woman**, decided in Phase 80b when the sprite had to be ordered and
 a generator needed a body to draw. This settles how the character _looks_ and nothing else — the
 pronouns above are unchanged, and §7's deferred list keeps biography and family exactly where they

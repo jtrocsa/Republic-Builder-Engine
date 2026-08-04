@@ -69,16 +69,28 @@ tiles of the minister. The rule this makes concrete, and the one worth carrying:
 is furniture, so posting one in a corridor moves whoever walks it.** Moved to `(24.0, 17.0)`, in the
 open strip north of the dockside stores and off the spine entirely.
 
-**The Caribbean** took two corrections and neither was a collision. `(26.0, 21.5)` is two tiles due
-west of the spawn, so it walled off one of the four directions a player presses first, and
+**The Caribbean** took three corrections and not one of them was a collision. `(26.0, 21.5)` is two
+tiles due west of the spawn, so it walled off one of the four directions a player presses first, and
 `character-directions.spec.js` failed on a walk cycle that never started. `(25.5, 19.5)` cleared
 every static check and sat in the corridor every walk north to the village uses — it took two
-unrelated specs down, and both came back the instant Voss moved. Settled at `(31.5, 23.5)`,
-south-east down the shore, which is the one quadrant of that map nothing needs.
+unrelated specs down, and both came back the instant Voss moved. `(31.5, 23.5)` was south-east down
+the shore, the one quadrant of that map nothing needs, and passed every check this repository has.
 
-Two rules fall out of it, and they are the same rule at two scales: **a stationed body is furniture
-to the NPCs and a wall to the player.** Post one off the spawn's cardinals, and out of any corridor
-that leads somewhere.
+It was still wrong, for a reason nothing looks at: it stood Voss **directly above the palm at
+overlay tile `(31, 24)`**. The overlay layer draws over the cast deliberately — that is the depth
+illusion — and a name pill hangs _below_ the feet, into exactly that row. So the pill was half
+behind fronds. This map has 14 overlay tiles in 2016, and the post found one. Settled at
+`(33.5, 23.5)`, two tiles east.
+
+It only surfaced because the pill changed from a role to a name (§6): "Field Liaison" half-covered
+reads as scenery, and a half-covered proper noun reads as broken. **A cosmetic fault in a generic
+label is a functional one in an identifier.**
+
+Three rules fall out, the first two being the same rule at two scales: **a stationed body is
+furniture to the NPCs and a wall to the player** — post one off the spawn's cardinals and out of any
+corridor that leads somewhere. And: **clear the overlay layer under the pill, not just the collision
+layer under the feet.** Nothing tests the third, because the check is "does this read", and the
+`.tmj` overlay array is the place to look.
 
 ## 4. The art, and the three creates it took
 
@@ -160,6 +172,36 @@ in a hall.
 
 The registry key stays `liaison` and not `voss`, per `THE-FIELD-LIAISON.md` §1, so renaming the
 character later is a content edit in three strings rather than a save migration.
+
+## 6. The player calls them Emery Voss, and nothing calls them Field Liaison
+
+Voss shipped captioned with their job on all three surfaces: `label: "Field Liaison"` under the
+sprite on both maps, and `role: "Field Liaison"` as the hub dialogue's kicker. Both are gone. The
+player-facing string is the name, everywhere.
+
+The field pill is the clearer of the two. Every other label on those maps is a role — "Community
+elder", "Scribe", "Burgess", "Goodwife" — because they are anonymous period characters the player
+meets once and has no name for, and the role is the only useful thing a pill can say. **Voss is the
+one person out there the player already knows**, so the same convention applied to them produces the
+opposite result: it hides the name and re-labels a companion by function every time they appear.
+
+The hub kicker is a judgement rather than a fix. Rowan Hale, Amani Soto and Julian Park all keep
+theirs, and should: they are staff being introduced, and "Director of Field Studies" against "Route
+Historian" is exactly the distinction a first meeting needs. Voss is not being introduced after the
+first time. `HUB_TARGETS.liaison` is now the only target with no `role`, and the renderer omits the
+element instead of printing an empty one — an empty `<p class="kicker">` is a blank line above the
+name that reads as a layout bug. `field-liaison.spec.js` asserts the count is zero for that reason.
+
+The comparison that settled it: **a rival in Pokémon is not captioned "Rival" on each appearance.**
+Recurring characters are established once and then simply present, and a caption that survives past
+its introduction is the game admitting it does not trust the player to remember.
+
+"Field Liaison" remains the internal name — this ADR, `THE-FIELD-LIAISON.md`, `CLAUDE.md`, and the
+`liaison` registry key. Nothing about the role changed; only what a screen prints.
+
+This is also what exposed the palm in §3. A generic label half-covered by fronds reads as scenery;
+a half-covered proper noun reads as broken. **The naming change did not cause that fault, it made it
+legible as one.**
 
 ## What this deliberately does not do
 
