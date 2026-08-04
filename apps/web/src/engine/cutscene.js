@@ -73,9 +73,11 @@ export function validateScene(scene) {
       return;
     }
     if (command.op === "say" && !command.line) problems.push(`${at}: say has no line`);
-    if (command.op === "moveActor" && !command.actor) problems.push(`${at}: moveActor has no actor`);
+    if (command.op === "moveActor" && !command.actor)
+      problems.push(`${at}: moveActor has no actor`);
     if (command.op === "moveActor" && !command.to) problems.push(`${at}: moveActor has no target`);
-    if (command.op === "turnActor" && !command.actor) problems.push(`${at}: turnActor has no actor`);
+    if (command.op === "turnActor" && !command.actor)
+      problems.push(`${at}: turnActor has no actor`);
     if (command.op === "setFlag" && !command.flag) problems.push(`${at}: setFlag has no flag`);
   });
 
