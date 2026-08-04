@@ -9,7 +9,43 @@ import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-s
 // Three states per row, and the point of each is that it is readable without reading the words:
 // gold + pulsing ✦ = go here, struck-through green ✓ = secured, grey · = not yet available.
 //
-// The second block is covered in activity-engines.spec.js, beside the interview it reports on.
+// What the second block *reports* for a given engine is covered in activity-engines.spec.js, beside
+// the interview it reports on. Which record it is about is covered here, because that is a question
+// about the case rather than about any one engine.
+
+// Case 1.01's interview, closed out and debriefed earlier — the same shape as activity-engines.spec.js's
+// FILED, which is what `isActivityComplete` needs before the tracker will consider it finished.
+const INTERVIEW_FILED = {
+  state: {
+    asked: {
+      "taino-elder": ["decides"],
+      "taino-gardener": ["grows"],
+      "taino-fisher": ["trade"],
+      "taino-child": ["grows"],
+      columbus: ["gold"],
+      "spanish-scribe": ["decides"],
+      "spanish-sailor": ["trade"],
+    },
+    logged: {
+      "taino-elder": ["decides"],
+      "taino-gardener": ["grows"],
+      "taino-fisher": ["trade"],
+      "taino-child": ["grows"],
+      columbus: ["gold"],
+      "spanish-scribe": ["decides"],
+      "spanish-sailor": ["trade"],
+    },
+    filed: "questions",
+  },
+  completed: true,
+  briefed: true,
+  debriefed: true,
+};
+// A discrepancy just opened and not yet worked — defaultDiscrepancyState().
+const AUDIT_STARTED = {
+  state: { verdicts: {}, gaps: {}, filed: null, notebook: { kept: [] } },
+  briefed: true,
+};
 
 test.describe("Field objective tracker", () => {
   test("lists every record with its destination, and counts what is secured", async ({ page }) => {
@@ -95,5 +131,70 @@ test.describe("Field objective tracker", () => {
     await page.getByRole("button", { name: "Load Save" }).click();
     await expect(page.locator(".field-tracker")).toHaveClass(/is-collapsed/);
     await expect(page.locator(".field-tracker__body")).toBeHidden();
+  });
+
+  test("moves on to the next mission once one is filed (regression)", async ({ page }) => {
+    // The defect that started Part 0. The block read the first record of the case with any activity
+    // state at all, so from the first click on the elder onward it named Case 1.01's interview
+    // forever — progress line stuck at "✓ Filed", bar at 7/7, and the notebook button reopening a
+    // mission the player finished an hour ago whatever they were actually working on.
+    //
+    // This is the state right after a debrief: `mission-debriefed` nulls activeActivitySourceId, so
+    // the panel has to answer without it for the entire walk to the next record.
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-001",
+      caseEvidence: { "case-001": ["taino-context"] },
+      activeActivitySourceId: null,
+      sourceActivities: { "taino-context": INTERVIEW_FILED, "columbus-letter": AUDIT_STARTED },
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+
+    const tracker = page.locator(".field-tracker");
+    // toContainText, not toHaveText: the row carries its state glyph as an aria-hidden <i>.
+    await expect(tracker.locator(".field-tracker__row.is-tracked")).toContainText(
+      "What Will Be Useful"
+    );
+    await expect(tracker.locator('[data-action="open-activity-notebook"]')).toHaveAttribute(
+      "data-source",
+      "columbus-letter"
+    );
+    // And the interview's own row goes back to naming the person who carried it, which is what the
+    // in-flight row was displacing.
+    await expect(tracker).toContainText("Taíno community elder");
+  });
+
+  test("follows the open record even with an earlier mission unfinished (edge case)", async ({
+    page,
+  }) => {
+    // Missions are not ordered within a case beyond Case 1.01's one gate, so "first unfinished" is a
+    // fallback rather than the rule: a player who walks out of the audit with the interview still
+    // half-done should come back to the audit.
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-001",
+      caseEvidence: { "case-001": ["taino-context"] },
+      activeActivitySourceId: "columbus-letter",
+      sourceActivities: {
+        "taino-context": {
+          state: { asked: { "taino-gardener": ["grows"] }, logged: {}, filed: null },
+          briefed: true,
+        },
+        "columbus-letter": AUDIT_STARTED,
+      },
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+
+    const tracker = page.locator(".field-tracker");
+    // toContainText, not toHaveText: the row carries its state glyph as an aria-hidden <i>.
+    await expect(tracker.locator(".field-tracker__row.is-tracked")).toContainText(
+      "What Will Be Useful"
+    );
+    await expect(tracker.locator('[data-action="open-activity-notebook"]')).toHaveAttribute(
+      "data-source",
+      "columbus-letter"
+    );
   });
 });

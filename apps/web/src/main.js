@@ -3876,6 +3876,61 @@ if (bootEntryParam === "join" || bootEntryParam === "teacher-login") {
   progress.currentScreen = bootEntryParam === "join" ? "join" : "login";
   saveProgress(progress);
 }
+
+// The tour finished, which is what every warp past the Entrance Hall assumes.
+const WARP_TOUR_DONE = { tutorial: { step: "complete", completed: true, skipped: false } };
+const WARP_CASE_ONE = { activeCaseId: "case-001", selectedCaseId: "case-001" };
+/**
+ * Dev-only fast travel: `?warp=<name>` boots straight into a named save state.
+ *
+ * For the part-by-part playtest program (`docs/playtest/PLAYTHROUGH-LEDGER.md`), where a review pass
+ * has to start where it starts. Checking anything past Chronotravel otherwise costs the whole intro,
+ * the escort, the tour and a case selection first — which means it gets checked once and then never
+ * re-checked, and a script nobody re-runs is not coverage.
+ *
+ * These are the same shapes `tests/e2e/helpers/progress-seed.js` already seeds; this only puts them
+ * in reach of a human. Adding one is a line in the table — a warp is a save state, not a code path.
+ *
+ * Gated on `import.meta.env.DEV`, exactly as the "dev-fake-teacher" shortcut is, and deliberately so:
+ * it resets the save, which is not something a student's URL should ever be able to do.
+ */
+const DEV_WARPS = {
+  intro: { currentScreen: "intro-welcome" },
+  hall: { currentScreen: "institute", currentHubRoom: "hallway" },
+  hub: { currentScreen: "institute", currentHubRoom: "main", ...WARP_TOUR_DONE },
+  table: { currentScreen: "archive", ...WARP_TOUR_DONE },
+  field: { currentScreen: "field", ...WARP_CASE_ONE, ...WARP_TOUR_DONE },
+  // Straight onto the interview's board, past its Mission Instructions. `ensureSourceActivity()`
+  // fills in the engine's own default state, so the flag alone is the whole seed.
+  mission: {
+    currentScreen: "interview",
+    activeActivitySourceId: "taino-context",
+    sourceActivities: { "taino-context": { briefed: true } },
+    ...WARP_CASE_ONE,
+    ...WARP_TOUR_DONE,
+  },
+};
+function applyDevWarp() {
+  if (!import.meta.env.DEV) return;
+  const name = new URLSearchParams(window.location.search).get("warp");
+  if (!name) return;
+  if (!DEV_WARPS[name]) {
+    console.warn(`[warp] no state named "${name}". Try: ${Object.keys(DEV_WARPS).join(", ")}`);
+    return;
+  }
+  // A named state, not a patch over whatever was already saved — a script that quietly starts from
+  // last session's leftovers is not exercising the state it claims to.
+  progress = resetProgress();
+  showMainMenu = false;
+  // Both clear held keys and stop the hub movement loop, so a warp cannot land mid-walk.
+  if (name === "hall") enterHallwayRoom();
+  else safeInstituteSpawn();
+  // After the spawn helpers, which write `currentHubRoom` themselves — the warp's own value wins.
+  Object.assign(progress, DEV_WARPS[name]);
+  // And after the assign, because it reads the active case to find the map to spawn on.
+  resetFieldPosition();
+  saveProgress(progress);
+}
 let briefingStep = 0;
 let activeTravelTimeout = null;
 // Director intro scene (intro-welcome/intro-briefing/intro-protocol) typewriter state.
@@ -9837,9 +9892,8 @@ function fieldObjectiveTracker() {
  */
 function fieldTrackerMissionBlock(tracked) {
   if (!tracked) return "";
-  const { source, activity, state } = tracked;
+  const { source, activity, state, complete: done } = tracked;
   const summary = activitySummary(activity.kind, activity, state);
-  const done = isActivityComplete(activity.kind, activity, state);
   const line = done
     ? `<p class="field-tracker__progress is-done">✓ Filed — your Field Notebook is still here</p>`
     : summary
@@ -10036,20 +10090,54 @@ function liveFieldInterview() {
 }
 
 /**
- * The activity this case has in flight, for the Mission Tracker: any source of the active
- * case whose activity state has actually been created. Unlike liveFieldInterview() this
- * keeps reporting a finished one, because the notebook is still worth re-reading after it
- * is filed — that is most of what the tracker's button is for.
+ * Which of a case's started activities the tracker is about, given the record the player
+ * currently has open.
+ *
+ * Three tiers, and the reason there are three is that `progress.activeActivitySourceId` is
+ * deliberately nulled when a mission is filed ("open-activity-source" and "mission-debriefed"),
+ * so "whatever is open" is only an answer some of the time:
+ *
+ * 1. **The open record wins.** This is the whole point — it is what `activityScreen()` and
+ *    `handleActivityAction()` already resolve on, and it survives "Back to the field", so the
+ *    tracker keeps naming the mission the player walked out of.
+ * 2. **Otherwise the first unfinished one**, which is where a player who just filed something
+ *    still has work.
+ * 3. **Otherwise the last one**, not the first: with everything filed, the useful notebook is the
+ *    one they were most recently in. This tier is why the function keeps reporting a *finished*
+ *    activity at all — re-reading a filed notebook is most of what the tracker's button is for.
+ *
+ * Pure and exported so the ordering can be tested without a map, a save or a DOM: reading the
+ * first entry with any state at all (which is what this did before) pinned the panel to a case's
+ * first record for the rest of the case, and nothing caught it.
+ */
+export function pickTrackedActivity(entries, activeId) {
+  if (entries.length === 0) return null;
+  return (
+    entries.find((entry) => entry.source.id === activeId) ||
+    entries.find((entry) => !entry.complete) ||
+    entries[entries.length - 1]
+  );
+}
+
+/**
+ * The activity this case has in flight, for the Mission Tracker: every source of the active case
+ * whose activity state has actually been created, resolved by pickTrackedActivity() above.
  */
 function trackedFieldActivity() {
+  const entries = [];
   for (const source of sourcesForCase(activeFieldCaseId())) {
     const activity = activityFor(source.id);
     if (!activity) continue;
     const state = progress.sourceActivities?.[source.id]?.state;
     if (!state || typeof state !== "object") continue;
-    return { source, activity, state };
+    entries.push({
+      source,
+      activity,
+      state,
+      complete: isActivityComplete(activity.kind, activity, state),
+    });
   }
-  return null;
+  return pickTrackedActivity(entries, progress.activeActivitySourceId);
 }
 function recallBeacon() {
   // Outdoors only. Recalling to the Archive from inside a building would strand the return
@@ -13488,6 +13576,11 @@ if (app) {
   document.addEventListener("cancel", handleManageContentDialogNativeClose, true);
   window.addEventListener("beforeunload", handleWindowBeforeUnload);
 
+  // Applied here rather than beside the `?entry=` block it sits next to, because a warp calls
+  // resetFieldPosition() and the hub spawn helpers, which read movement state declared much further
+  // down this file — running it from up there is the same temporal-dead-zone throw a field interior
+  // gets for being attached inside the FIELD_MAPS literal.
+  applyDevWarp();
   // Before the first render, so a player who finished missions before the Codex existed opens it
   // to their own work rather than to an empty archive. A no-op on every boot after the first.
   backfillCodex();
