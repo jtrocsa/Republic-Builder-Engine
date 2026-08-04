@@ -25,6 +25,7 @@ import {
   advanceScene,
   skipScene,
 } from "../../apps/web/src/engine/cutscene.js";
+import { CUTSCENES } from "../../apps/web/src/content/cutscenes.js";
 
 /** Records every effect the interpreter asks for, and pretends a walk takes three ticks. */
 function spyEffects() {
@@ -239,6 +240,62 @@ describe("stepScene", () => {
     expect(effects.calls.filter((call) => call[0] === "say")).toHaveLength(3);
     expect(effects.calls.filter((call) => call[0] === "returnControl")).toHaveLength(1);
     expect(effects.calls.filter((call) => call[0] === "setFlag")).toHaveLength(1);
+  });
+});
+
+describe("the shipped scenes", () => {
+  it("every authored scene is structurally valid", () => {
+    // The cheap half of authoring safety. Both failures validateScene() catches are silent at
+    // runtime — an unknown command never fires, and a missing returnControl strands the player in
+    // a locked room — so they have to fail here or they fail in front of a student.
+    for (const [id, scene] of Object.entries(CUTSCENES)) {
+      expect(validateScene(scene), `${id} is malformed`).toEqual([]);
+      expect(scene.id, `${id} is filed under the wrong key`).toBe(id);
+    }
+  });
+
+  it("every authored scene runs to completion and leaves nothing waiting", () => {
+    for (const [id, scene] of Object.entries(CUTSCENES)) {
+      const effects = spyEffects();
+      const state = createScene(scene);
+      const ticks = playToEnd(state, effects);
+      expect(state.done, `${id} never finished`).toBe(true);
+      expect(state.waiting, `${id} ended mid-hold`).toBeNull();
+      expect(ticks, `${id} hit the tick ceiling`).toBeLessThan(500);
+    }
+  });
+
+  it("every authored scene survives being skipped from its first frame", () => {
+    // The scene a player skips is the one they see on a replay, and a half-applied scene is a
+    // broken room. Same assertion as the watched run: same flags, same final positions.
+    for (const [id, scene] of Object.entries(CUTSCENES)) {
+      const watched = spyEffects();
+      const watchedState = createScene(scene);
+      playToEnd(watchedState, watched);
+
+      const skipped = spyEffects();
+      const skippedState = createScene(scene);
+      stepScene(skippedState, 16, skipped);
+      skipScene(skippedState, skipped);
+
+      expect(skipped.flags, `${id} skipped to different flags`).toEqual(watched.flags);
+      expect(skipped.positions, `${id} skipped to different positions`).toEqual(watched.positions);
+    }
+  });
+
+  it("Voss says nothing that breaks the Units 1-2 reveal floor", () => {
+    // THE-FIELD-LIAISON.md §4. field-liaison.test.js already pins this for the NPC tables; a scene
+    // is a second place a line can ship from, and it would not have been covered.
+    for (const [id, scene] of Object.entries(CUTSCENES)) {
+      const lines = scene.commands
+        .filter((command) => command.op === "say" && command.speaker === "liaison")
+        .map((command) => command.line);
+      for (const line of lines) {
+        expect(line, `${id} puts Meridian in a Units 1-2 Voss line`).not.toMatch(
+          /meridian|insignia/i
+        );
+      }
+    }
   });
 });
 

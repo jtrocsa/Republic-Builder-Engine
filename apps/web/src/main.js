@@ -127,6 +127,8 @@ import {
   codexStats,
 } from "./engine/codex-archive.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
+import { createScene, stepScene, advanceScene, skipScene } from "./engine/cutscene.js";
+import { CUTSCENES } from "./content/cutscenes.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
 import landCoastlines from "./content/maps/land-coastlines.json";
@@ -3110,7 +3112,7 @@ function isTutorialTourActive() {
  * places is how a screen ends up controllable during half of one cutscene.
  */
 function isHubInputLocked() {
-  return isTutorialTourActive() || hallwayScene.phase !== "idle";
+  return isTutorialTourActive() || hallwayScene.phase !== "idle" || isHubSceneActive();
 }
 function currentTourStepId() {
   return isTutorialTourActive() ? progress.tutorial.step.slice("tour-".length) : null;
@@ -8300,6 +8302,284 @@ function completeHallwayEscort() {
   );
 }
 
+// --- The scripted-scene runner ----------------------------------------------------------------
+//
+// One host for every scene in content/cutscenes.js, driving the pure interpreter in
+// engine/cutscene.js. `hallwayScene` above predates it and is the one scene still on its own
+// bespoke phases; folding the Entrance Hall onto this runner is the remaining half of Phase 81C,
+// and until that lands the two are kept apart by `isHubInputLocked()` checking both rather than by
+// either one knowing about the other.
+//
+// The rule this obeys, from CUTSCENE-AND-DIALOGUE-CONVENTIONS.md §1: **a scripted beat moves
+// characters, never the screen.** Every command writes to the objects the ordinary loops already
+// read — an NPC's behaviour runtime, and `instituteMovement` itself — so updateHubCamera() stays a
+// pure function of player position and there is no camera code path here at all. It is the same
+// trick the Entrance Hall escort uses, which is why `moveActor` can reuse createEscortWalk()
+// untouched.
+const SCENE_WALK_SPEED = 2.2;
+const BLANK_HUB_SCENE = {
+  id: null,
+  state: null,
+  frame: null,
+  lastAt: 0,
+  escort: null,
+  followsPlayer: false,
+  typeTimer: null,
+  speaker: null,
+  line: "",
+  highlight: null,
+};
+let hubScene = { ...BLANK_HUB_SCENE };
+
+/** Whether an authored scene currently owns the hub. One of `isHubInputLocked()`'s three terms. */
+function isHubSceneActive() {
+  return Boolean(hubScene.state) && !hubScene.state.done;
+}
+
+/**
+ * Cancels anything the runner has in flight. Safe to call when nothing is running.
+ *
+ * §4's teardown rule 4: a scene that forgets its rAF handle or its timer leaves a loop running
+ * against a screen that is gone. Both are cancelled here, and this is the only place that resets
+ * the object, so there is one thing to read and one thing to call.
+ */
+function stopHubScene() {
+  if (hubScene.frame) window.cancelAnimationFrame(hubScene.frame);
+  clearTimeout(hubScene.typeTimer);
+  hubScene = { ...BLANK_HUB_SCENE };
+}
+
+/** The live body a command's `actor` id names. `"player"` is the player's own movement state. */
+function sceneActor(id) {
+  return id === "player" ? instituteMovement : activeHubNpcRuntime()[id];
+}
+
+/**
+ * The impure half. Every handler writes world or save state and nothing else — the DOM is patched
+ * by the frame loop below, so the interpreter never re-enters render().
+ */
+function hubSceneEffects() {
+  return {
+    moveActor(command) {
+      const leader = sceneActor(command.actor);
+      if (!leader) return;
+      hubScene.followsPlayer = command.follower === "player";
+      hubScene.escort = createEscortWalk({
+        waypoints: findRoute(HUB_NAV_GRID, leader, command.to) || [],
+        speed: SCENE_WALK_SPEED,
+        gap: ESCORT_GAP,
+        leader,
+        // A walk with nobody in tow still needs a follower object to write into, so it gets a
+        // throwaway rather than a branch inside stepEscort().
+        follower: hubScene.followsPlayer ? instituteMovement : { ...leader },
+      });
+    },
+    // Skip's fast-forward. Lands the actor exactly where the walk would have left them, which is
+    // what makes a skipped scene and a watched one leave the same room behind.
+    snapActor(command) {
+      const actor = sceneActor(command.actor);
+      if (!actor) return;
+      actor.x = command.to.x;
+      actor.y = command.to.y;
+      actor.walking = false;
+      if (hubScene.followsPlayer) instituteMovement.moving = false;
+      hubScene.escort = null;
+    },
+    isMoveDone: () => !hubScene.escort || hubScene.escort.done,
+    turnActor(command) {
+      const actor = sceneActor(command.actor);
+      if (actor) actor.facing = command.facing;
+    },
+    say(command, fast) {
+      hubScene.speaker = command.speaker;
+      hubScene.line = command.line;
+      typeHubSceneLine(command.line, fast);
+    },
+    highlightObject(command) {
+      hubScene.highlight = command.off ? null : command.target;
+    },
+    playSound(command) {
+      playSfx(command.cue);
+    },
+    // §4 rule 6: written *before* control returns, so a reload on the last frame of a scene cannot
+    // replay a scene the player has already finished. The interpreter guarantees the ordering; this
+    // just has to actually persist.
+    setFlag(command) {
+      progress.story.flags[command.flag] = command.value ?? true;
+      save();
+    },
+    returnControl() {
+      hubScene.speaker = null;
+      hubScene.line = "";
+      hubScene.highlight = null;
+      hubScene.escort = null;
+    },
+    fade() {
+      document.getElementById("sceneFade")?.classList.add("scene-fade--doorway");
+    },
+  };
+}
+
+/**
+ * Starts an authored scene, if it exists and has not already been seen.
+ *
+ * Returns whether it started, so a caller that wanted a scene and did not get one can carry on to
+ * whatever it would otherwise have done.
+ */
+function startHubScene(id) {
+  const scene = CUTSCENES[id];
+  if (!scene || isHubSceneActive()) return false;
+  stopHubScene();
+  hubScene.id = id;
+  hubScene.state = createScene(scene);
+  hubScene.lastAt = performance.now();
+  hubHeldKeys.clear();
+  stopHubMovementLoop();
+  instituteMovement.moving = false;
+  render();
+  hubScene.frame = window.requestAnimationFrame(runHubSceneFrame);
+  return true;
+}
+
+// Self-terminating rAF in the same shape as runHallwayEscort() and runHubMovementLoop(), including
+// the elapsed clamp, and patching the DOM directly rather than re-rendering per frame.
+function runHubSceneFrame(now) {
+  if (!hubScene.state) {
+    hubScene.frame = null;
+    return;
+  }
+  const elapsed = Math.min(48, Math.max(0, now - hubScene.lastAt || 16));
+  hubScene.lastAt = now;
+
+  if (hubScene.escort && !hubScene.escort.done) {
+    stepEscort(hubScene.escort, elapsed);
+    if (hubScene.followsPlayer) updateInstitutePlayer(SCENE_WALK_SPEED);
+  }
+  stepScene(hubScene.state, elapsed, hubSceneEffects());
+  paintHubSceneFrame();
+
+  if (hubScene.state.done) {
+    finishHubScene();
+    return;
+  }
+  hubScene.frame = window.requestAnimationFrame(runHubSceneFrame);
+}
+
+/** Pushes this frame's actor positions and highlight onto the DOM the last render() put up. */
+function paintHubSceneFrame() {
+  const runtime = activeHubNpcRuntime();
+  for (const [id, body] of Object.entries(runtime)) {
+    const node = document.querySelector(`[data-hub-npc="${id}"]`);
+    if (!node) continue;
+    node.style.cssText = hubCharacterStyle(body.x, body.y);
+    node.classList.toggle("is-walking-npc", Boolean(body.walking));
+    node.dataset.facing = body.facing;
+    applyCharacterSprite(
+      node.querySelector(".character-sprite"),
+      id,
+      body.facing,
+      Boolean(body.walking),
+      SCENE_WALK_SPEED
+    );
+  }
+  document
+    .querySelectorAll(".hub-marker")
+    .forEach((marker) =>
+      marker.classList.toggle("is-scene-lit", marker.dataset.target === hubScene.highlight)
+    );
+}
+
+/**
+ * The single teardown, run by natural completion and by skip alike.
+ *
+ * §4 is explicit that two teardown paths is how a skipped scene leaves the player frozen, so skip
+ * does not have its own version of this — `skipHubScene()` fast-forwards the interpreter and then
+ * lands here.
+ */
+function finishHubScene() {
+  const runtime = activeHubNpcRuntime();
+  // Rule 3: no actor is left mid-route. An escort leaves `walking` true on whoever it was moving.
+  for (const body of Object.values(runtime)) body.walking = false;
+  instituteMovement.moving = false;
+  document.getElementById("sceneFade")?.classList.remove("scene-fade--doorway");
+  stopHubScene();
+  save();
+  // Rule 2: the "Press E" prompt is restored by the same render that removes the dialogue bar, so
+  // there is never a frame offering an interaction that is already happening.
+  render();
+}
+
+/** Player input during a scene. Releases a line; a walk and a fade are not skippable this way. */
+function advanceHubScene() {
+  if (!isHubSceneActive()) return;
+  // A part-typed line completes on the first press and advances on the second, matching the intro
+  // typewriter's tap-to-skip rather than inventing a second convention for the same gesture.
+  if (hubScene.typeTimer) {
+    clearTimeout(hubScene.typeTimer);
+    hubScene.typeTimer = null;
+    const textEl = document.getElementById("hubSceneLine");
+    if (textEl) textEl.textContent = hubScene.line;
+    document.getElementById("hubSceneIndicator")?.removeAttribute("hidden");
+    return;
+  }
+  advanceScene(hubScene.state);
+}
+
+/** Escape, or the skip control. Runs the rest of the scene in fast-forward, then the one teardown. */
+function skipHubScene() {
+  if (!isHubSceneActive()) return;
+  clearTimeout(hubScene.typeTimer);
+  hubScene.typeTimer = null;
+  skipScene(hubScene.state, hubSceneEffects());
+  finishHubScene();
+}
+
+// One line, typed into the bar the hub scene renders. A slimmer sibling of startIntroTypewriter():
+// the interpreter owns the line cursor here, so this types a string and says when it is done rather
+// than walking an array and tracking which steps have been seen.
+function typeHubSceneLine(text, instant) {
+  clearTimeout(hubScene.typeTimer);
+  hubScene.typeTimer = null;
+  const textEl = document.getElementById("hubSceneLine");
+  const nameEl = document.getElementById("hubSceneName");
+  if (nameEl) nameEl.textContent = characterDisplayName(hubScene.speaker);
+  if (!textEl) return;
+  document.getElementById("hubSceneIndicator")?.setAttribute("hidden", "");
+  if (instant || prefersReducedMotion()) {
+    textEl.textContent = text;
+    document.getElementById("hubSceneIndicator")?.removeAttribute("hidden");
+    return;
+  }
+  textEl.textContent = "";
+  let charIndex = 0;
+  const typeNextChar = () => {
+    charIndex += 1;
+    textEl.textContent = text.slice(0, charIndex);
+    if (charIndex >= text.length) {
+      hubScene.typeTimer = null;
+      document.getElementById("hubSceneIndicator")?.removeAttribute("hidden");
+      return;
+    }
+    const pause = INTRO_PAUSE_AFTER[text[charIndex - 1]] || 1;
+    hubScene.typeTimer = setTimeout(typeNextChar, INTRO_TYPE_MS * pause);
+  };
+  hubScene.typeTimer = setTimeout(typeNextChar, INTRO_TYPE_MS);
+}
+
+/** The in-world speech bar a scene speaks through. Empty markup when no scene is running. */
+function hubSceneDialogueMarkup() {
+  if (!isHubSceneActive()) return "";
+  const name = characterDisplayName(hubScene.speaker);
+  return `<div class="hallway-dialogue" data-action="hub-scene-click" role="button" tabindex="0" aria-label="${esc(name)} speaking — click to continue"><p class="hallway-dialogue__name" id="hubSceneName">${esc(name)}</p><p class="director-dialogue-box__text" id="hubSceneLine"></p><span class="director-continue-indicator" id="hubSceneIndicator" hidden>▼</span><button class="btn btn-outline hub-scene-skip" data-action="hub-scene-skip" type="button">Skip scene</button></div>`;
+}
+
+/** A character's player-facing name, from whichever table knows them. */
+function characterDisplayName(id) {
+  if (!id) return "";
+  if (id === "player") return progress.profile.name || "Chronicler";
+  return activeHubTargets()[id]?.name || CHARACTER_SHEETS[id]?.name || "";
+}
+
 // Base per-character delay for the intro typewriter, plus extra hold time (as a multiple of
 // INTRO_TYPE_MS) after punctuation so a line reads with natural rhythm instead of a flat scroll.
 // Kept as named constants (not inlined) so a future progress.settings.textSpeed can scale them.
@@ -8804,7 +9084,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -11896,9 +12176,23 @@ function handleHubClick(target, action) {
       progress.tutorial.step = `tour-${TUTORIAL_TOUR_STEPS[idx + 1]}`;
     } else {
       progress.tutorial = { step: "complete", completed: true, skipped: false };
+      save();
+      // Scene A hands straight off the tour's last beat. THE-FIELD-LIAISON.md §4 puts Voss's debut
+      // strictly after the Director has finished — introducing them earlier flattens the contrast
+      // the character exists to create. startHubScene() renders, so this returns rather than
+      // falling through to a second render of the same frame.
+      if (!progress.story.flags.metLiaison && startHubScene("liaison-intro")) return true;
     }
     save();
     render();
+    return true;
+  }
+  if (action === "hub-scene-click") {
+    advanceHubScene();
+    return true;
+  }
+  if (action === "hub-scene-skip") {
+    skipHubScene();
     return true;
   }
   if (action === "hub-open-table") {
@@ -13397,6 +13691,14 @@ function handleAppDrop(event) {
 // that aren't a real <dialog> element.
 function handleEscapeDismiss() {
   if (document.querySelector("dialog[open]")) return;
+  // Above the rest, because a scene owns the room while it runs and there is nothing else on
+  // screen for Escape to mean. This is the only place Escape can skip a scene from: the global
+  // handler returns as soon as it has dealt with the key, so a branch in the institute keydown
+  // block below would never be reached.
+  if (isHubSceneActive()) {
+    skipHubScene();
+    return;
+  }
   if (exitPreviewIfActive()) return;
   if (progress.currentScreen === "field" && progress.activeFieldNpc) {
     progress.activeFieldNpc = null;
@@ -13471,6 +13773,18 @@ function handleWindowKeydown(event) {
         event.preventDefault();
         if (!advanceIntroDialogue()) startHallwayEscort();
       }
+      return;
+    }
+    // Above isHubInputLocked() and returning unconditionally, for the same reason the branch above
+    // is: a scene owns the room while it runs, and falling through would let E re-enter
+    // interactWithHubTarget() on whoever the player happens to be standing next to.
+    if (isHubSceneActive()) {
+      if (key === "e" || key === "enter" || key === " ") {
+        event.preventDefault();
+        advanceHubScene();
+      }
+      // Escape is not handled here — handleWindowKeydown() takes it before this block is reached,
+      // and skipping lives there with the rest of the global dismissals.
       return;
     }
     if (isHubInputLocked()) return;

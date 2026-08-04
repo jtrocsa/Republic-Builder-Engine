@@ -4426,6 +4426,31 @@ dd {
   border-color: rgba(var(--c-gold-rgb), 0.72);
   color: #f7e3ae;
 }
+/* A scene's `highlightObject` pointing at something. Deliberately the marker's own near-state
+   treatment turned up rather than a second glow: CLAUDE.md's rule is that hub object markers are
+   one class restyled in place, and appending a competing style layer is exactly how the three
+   rival marker treatments this class replaced came to exist. The player is locked out during a
+   scene, so this never fights `.is-near` for the same marker. */
+.hub-marker.is-scene-lit {
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--c-gold-rgb), 0.85),
+    0 0 0 8px rgba(var(--c-gold-rgb), 0.18),
+    0 0 34px rgba(var(--c-gold-rgb), 0.55);
+  animation: hub-marker-pulse 1.6s ease-in-out infinite;
+}
+.hub-marker.is-scene-lit b {
+  border-color: rgba(var(--c-gold-rgb), 0.85);
+  color: #fdf1cd;
+}
+/* Sits with the line rather than in a corner, so the way out of a scene is where the player is
+   already looking. §4 requires every scene be skippable at any point. */
+.hub-scene-skip {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
 .hub-interact-prompt {
   position: absolute;
   z-index: 18;
@@ -8789,6 +8814,26 @@ body {
   position: sticky;
   top: 84px !important;
   align-self: start;
+}
+/* A scene's speech bar is an overlay, not a third column child — the same escape `.hub-dialogue`
+   and the tutorial tour's callout already make, and for the same reason.
+   `.hub-shell--status-left` is a two-column grid, so two earlier placements both lost the room:
+   as a plain third child the bar took the map's own cell, and pinned to the map's column it opened
+   a second grid row that begins below the full height of the tall sticky intro — in each case the
+   map was still rendering perfectly, a screen and a half further down the page.
+   Bottom-centred rather than top, so it sits where dialogue sits everywhere else in the game and
+   leaves the characters it is describing in view above it. */
+.hub-shell--status-left > .hallway-dialogue {
+  position: fixed;
+  z-index: 44;
+  bottom: 26px;
+  /* Anchored to the shell's right edge rather than centred on the viewport, so the bar lands over
+     the map and clears the status column beside it. Centring on 50vw puts its left edge at ~190px
+     at 1366x768, which is a third of the way across the status card. */
+  right: max(27px, calc((100vw - 1500px) / 2));
+  width: min(1000px, 72vw);
+  max-width: none;
+  margin: 0;
 }
 .hub-sidepanel--left {
   position: static !important;
