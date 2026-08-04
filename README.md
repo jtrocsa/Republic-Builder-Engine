@@ -1,11 +1,15 @@
-# Republic Builder Engine — Foundation v0.1
+# Chronicle
 
-This is the permanent, content-first repository foundation for **Republic Builder**, a reusable historical RPG engine.
+**Chronicle** is a browser-based AP U.S. History RPG: a top-down field-and-dialogue game covering
+CED Periods 1–5 across fifteen cases, on five walkable outdoor field maps plus four interiors.
 
-The first campaign is **Chronicle**, an AP U.S. History experience. The first playable vertical slice is:
+The repository was originally framed as a reusable engine called "Republic Builder"; that framing is
+retired. The multi-subject platform this may grow into has no final name yet — see `CLAUDE.md`.
 
-- **Unit 1 — Period 1: 1491–1607**
-- **Case 1.01 — The Atlantic Crossroads**
+> **The sections below describe the original v0.1 foundation and are stale in places** — folder
+> intent still holds, but the vertical-slice framing predates fourteen more cases. `CLAUDE.md` and
+> [`docs/architecture/ARCHITECTURE-QUICKREF.md`](docs/architecture/ARCHITECTURE-QUICKREF.md) are the
+> current descriptions of this repository.
 
 ## What this repository is for
 

@@ -22,11 +22,12 @@ const MapPositionSchema = z.object({
   lon: z.number().min(-180).max(180),
 });
 
-// BRAND's own field values are a known, deliberately-untouched cleanup item
-// (see CLAUDE.md's "Republic Builder Engine" retirement note) — this only
-// checks the fields are present, not what they currently say.
+// `engine` carried the retired "Republic Builder Engine" identity and was
+// removed in Phase 81 along with its last render site. It is deliberately not
+// replaced: CLAUDE.md's retirement note says the platform this may grow into
+// has no final name yet, so the schema requires no successor field. Adding one
+// back means inventing that name.
 export const BrandSchema = z.object({
-  engine: z.string().min(1, "BRAND.engine is required"),
   campaign: z.string().min(1, "BRAND.campaign is required"),
   status: z.string().min(1, "BRAND.status is required"),
 });

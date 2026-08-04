@@ -642,19 +642,12 @@ select {
   border-radius: 50%;
   color: var(--gold-soft);
 }
-.brand small,
+/* The lockup was two lines until Phase 81 retired the engine name above it.
+   `.brand-mark` is 34px and still governs the header's height, so dropping the
+   upper line moved nothing below it. */
 .brand strong {
   display: block;
   font-family: "Cinzel", serif;
-}
-.brand small {
-  font-size: 0.58rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #f0d18a;
-}
-.brand strong {
-  margin-top: 1px;
   font-size: 1rem;
 }
 .chrome-right {
@@ -3683,9 +3676,6 @@ dd {
   }
   .chrome {
     height: 52px;
-  }
-  .brand small {
-    display: none;
   }
 }
 

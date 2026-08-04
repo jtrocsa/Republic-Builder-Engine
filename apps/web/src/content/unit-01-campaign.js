@@ -1,5 +1,4 @@
 export const BRAND = {
-  engine: "Republic Builder Engine",
   campaign: "Chronicle",
   status: "Archive connection secure",
 };

@@ -4259,7 +4259,7 @@ function contentPreviewBannerMarkup() {
 
 function chrome() {
   const previewBanner = isPreviewingContent() ? contentPreviewBannerMarkup() : "";
-  return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><small>${esc(BRAND.engine)}</small><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="text-button" data-action="open-main-menu">Menu</button><button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" aria-label="Toggle Chronicle music">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button><button class="author-toggle ${authorMode ? "active" : ""}" data-action="author">✦ ${authorMode ? "Author Mode On" : "Author Mode"}</button></div></header>${previewBanner}`;
+  return `<header class="chrome"><button class="brand" data-action="home" aria-label="Return to Chronicle Institute"><span class="brand-mark">✦</span><span><strong>${esc(BRAND.campaign)}</strong></span></button><div class="chrome-right"><span class="link-status"><i></i>${esc(BRAND.status)}</span><button class="text-button" data-action="open-main-menu">Menu</button><button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" aria-label="Toggle Chronicle music">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button><button class="author-toggle ${authorMode ? "active" : ""}" data-action="author">✦ ${authorMode ? "Author Mode On" : "Author Mode"}</button></div></header>${previewBanner}`;
 }
 
 // Stable-key convention for Author Mode content overrides: keyed by the
@@ -4344,7 +4344,6 @@ function mainMenuItemMarkup(item) {
 function mainMenuScreen() {
   if (landingMode === "student") {
     return `<main class="shell completion-shell landing-shell"><section>
-<p class="kicker">${esc(BRAND.engine)}</p>
 <h1>${esc(BRAND.campaign)}</h1>
 <div class="landing-option-group">
 <p class="kicker">Have a classroom code?</p>
@@ -4357,7 +4356,7 @@ function mainMenuScreen() {
 <button class="btn btn-outline" data-action="landing-back" type="button">← Back</button>
 </section></main>`;
   }
-  return `<main class="shell completion-shell landing-shell"><section><p class="kicker">${esc(BRAND.engine)}</p><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div></section></main>`;
+  return `<main class="shell completion-shell landing-shell"><section><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div></section></main>`;
 }
 
 // --- Real accounts screens (join/login/teacher-dashboard/grading) ---------
@@ -4393,7 +4392,6 @@ function joinScreen() {
   const isClaim = authUiState.studentTab !== "signin";
   return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
 ${pageHeaderMarkup({
-  eyebrow: BRAND.engine,
   title: "Join a Classroom",
   description: isClaim
     ? "First time joining? Your teacher gave you a classroom code and a student ID — claim your seat and set a password."
@@ -4417,7 +4415,7 @@ function loginScreen() {
   const isSignIn = authUiState.teacherTab !== "signup";
   if (isSignIn) {
     return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
-${pageHeaderMarkup({ eyebrow: BRAND.engine, title: "Teacher Sign In" })}
+${pageHeaderMarkup({ title: "Teacher Sign In" })}
 ${authTabsMarkup([
   { label: "Sign In", action: "teacher-tab-signin", selected: true },
   { label: "Create Account", action: "teacher-tab-signup", selected: false },
@@ -4455,7 +4453,7 @@ ${fieldMarkup({
       .join("");
     return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
 ${pageHeaderMarkup({
-  eyebrow: `${BRAND.engine} · Step 2 of 2`,
+  eyebrow: "Step 2 of 2",
   title: "Set Up Classrooms",
   description:
     "Choose how many classrooms to create now — you can always add more later from your dashboard.",
@@ -4475,7 +4473,7 @@ ${feedbackError(authUiState)}
   }
   const draft = authUiState.signupDraft;
   return `${chrome()}<main class="shell completion-shell auth-shell c-app"><section>
-${pageHeaderMarkup({ eyebrow: `${BRAND.engine} · Step 1 of 2`, title: "Create Teacher Account" })}
+${pageHeaderMarkup({ eyebrow: "Step 1 of 2", title: "Create Teacher Account" })}
 ${authTabsMarkup([
   { label: "Sign In", action: "teacher-tab-signin", selected: false },
   { label: "Create Account", action: "teacher-tab-signup", selected: true },
@@ -4685,7 +4683,6 @@ ${unitSections}`;
 function teacherDashboardScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
     return `${chrome()}<main class="c-page c-app">${pageHeaderMarkup({
-      eyebrow: BRAND.engine,
       title: "Teacher Dashboard",
       description: "Sign in as a teacher to manage classrooms.",
       actions: [
@@ -4716,7 +4713,6 @@ function teacherDashboardScreen() {
   const activeTabBody = (tabBodies[teacherUiState.activeTab] || teacherClassroomsTabMarkup)();
   return `${chrome()}<main class="c-page c-app">
 ${pageHeaderMarkup({
-  eyebrow: BRAND.engine,
   title: "Teacher Dashboard",
   description: `Signed in as ${currentProfile.displayName}.`,
   actions: [
@@ -4916,7 +4912,6 @@ ${PRIMARY_SOURCE_LIBRARY_UNITS.map(({ meta }) => teacherSourcesUnitSectionMarkup
 function gradingScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
     return `${chrome()}<main class="shell completion-shell c-app"><section>${pageHeaderMarkup({
-      eyebrow: BRAND.engine,
       title: "Grading",
       description: "Sign in as a teacher to review submissions.",
       actions: [{ label: "Teacher Sign In →", action: "open-teacher-login", variant: "secondary" }],
@@ -4927,7 +4922,7 @@ function gradingScreen() {
     const body = gradingUiState.error
       ? feedbackError(gradingUiState)
       : loadingNote("Loading submission…");
-    return `${chrome()}<main class="shell completion-shell c-app"><section>${pageHeaderMarkup({ eyebrow: BRAND.engine, title: "Grading" })}
+    return `${chrome()}<main class="shell completion-shell c-app"><section>${pageHeaderMarkup({ title: "Grading" })}
 ${body}
 <button class="btn btn-outline" data-action="back-to-teacher-dashboard" type="button">← Back to dashboard</button>
 </section></main>${authorPanel()}`;
@@ -6439,7 +6434,6 @@ function manageContentCaseScreen() {
   if (!currentProfile || currentProfile.role !== "teacher") {
     return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section>${pageHeaderMarkup(
       {
-        eyebrow: BRAND.engine,
         title: "Manage Content",
         description: "Sign in as a teacher to manage content.",
         actions: [
@@ -6452,7 +6446,6 @@ function manageContentCaseScreen() {
   if (!activeCase) {
     return `${manageContentFixedHeaderMarkup(null)}<main class="shell manage-content-shell c-app"><section>${pageHeaderMarkup(
       {
-        eyebrow: BRAND.engine,
         title: "Manage Content",
         description: contentUiState.error || "Loading case…",
       }

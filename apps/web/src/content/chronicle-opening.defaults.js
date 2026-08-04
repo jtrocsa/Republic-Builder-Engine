@@ -53,8 +53,9 @@ export const CHRONICLE_OPENING_DEFAULTS = {
     // The eyebrow was "Republic Builder Engine" — a retired project identity on the game's first
     // screen. Dropped in Phase 81B. It is the subtitle rather than empty because
     // `directorSceneMarkup()` renders the kicker element unconditionally, so a blank string leaves
-    // an empty `<p>` and a gap above the title. The teacher screens' `BRAND.engine` is a separate
-    // surface and deliberately untouched — see CLAUDE.md on product branding.
+    // an empty `<p>` and a gap above the title. (`pageHeaderMarkup()` on the account and teacher
+    // screens is the opposite — it omits a missing eyebrow — which is why Phase 81's sweep of the
+    // remaining sites could simply drop them rather than find a replacement string.)
     welcome: {
       eyebrow: "An AP U.S. History Adventure",
       title: "Chronicle",

@@ -157,9 +157,16 @@ describe("UnitSchema (normal / boundary / invalid cases)", () => {
 });
 
 describe("BrandSchema", () => {
-  it("requires all three brand fields to be present (normal case)", () => {
-    expect(BrandSchema.safeParse({ engine: "e", campaign: "c", status: "s" }).success).toBe(true);
-    expect(BrandSchema.safeParse({ engine: "", campaign: "c", status: "s" }).success).toBe(false);
+  it("requires both brand fields to be present (normal case)", () => {
+    expect(BrandSchema.safeParse({ campaign: "c", status: "s" }).success).toBe(true);
+    expect(BrandSchema.safeParse({ campaign: "", status: "s" }).success).toBe(false);
+  });
+
+  // Phase 81 removed `engine`, which carried the retired "Republic Builder Engine" identity.
+  // Zod objects are non-strict by default, so a leftover `engine` would parse silently rather
+  // than fail — this asserts the field is genuinely gone from the shape, not merely unread.
+  it("no longer declares an engine field", () => {
+    expect(Object.keys(BrandSchema.shape)).toEqual(["campaign", "status"]);
   });
 });
 
