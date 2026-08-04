@@ -255,11 +255,15 @@ export const PLANNED_MAPS = [
       "generic ruins. Build a rear-area or ruined-village scene rather than a trench line, or " +
       "commission art.",
   },
-
-  // ---------------------------------------------------------------------------- Period 8
+  //
+  // The three entries below were filed under Period 8 until Phase 81. They are all 1929-1945,
+  // which is Period 7 (1890-1945) — Period 8 begins in 1945. The `pN-` prefix in each id was
+  // wrong with them. Nothing referenced these ids outside this file, so both were corrected
+  // together rather than leaving the prefix disagreeing with the field.
+  //
   {
-    id: "p8-depression-street",
-    period: 8,
+    id: "p7-depression-street",
+    period: 7,
     status: "planned",
     intent: "A Depression-era street: shuttered shops, breadline, relief office.",
     sheets: [
@@ -273,8 +277,8 @@ export const PLANNED_MAPS = [
       "strictly exclude war ruins' modern cars and graffiti tiles.",
   },
   {
-    id: "p8-wwii-europe-ruins",
-    period: 8,
+    id: "p7-wwii-europe-ruins",
+    period: 7,
     status: "planned",
     intent: "A bombed European street.",
     sheets: [
@@ -286,8 +290,8 @@ export const PLANNED_MAPS = [
       "bins and playground equipment are excluded.",
   },
   {
-    id: "p8-war-factory",
-    period: 8,
+    id: "p7-war-factory",
+    period: 7,
     status: "planned",
     intent: "Wartime industrial mobilisation.",
     sheets: [
@@ -298,10 +302,17 @@ export const PLANNED_MAPS = [
     notes: "Exclude Factory/2.png and /5.png — robot arms and CNC machinery are Period 9.",
   },
 
-  // ---------------------------------------------------------------------------- Period 9
+  // ---------------------------------------------------------------------------- Period 8
+  //
+  // 1945-1980: the Cold War, civil rights, Vietnam, the Great Society. Phase 81 found this the
+  // library's genuinely under-served period, not Period 7 — the three entries that used to sit
+  // here were all pre-1945 and moved up, and `p8-suburb` came down from Period 9. The
+  // nine-period coverage assertion in tile-palettes.test.js passed throughout, because it counts
+  // periods rather than reading what the entries depict.
+  //
   {
-    id: "p9-suburb",
-    period: 9,
+    id: "p8-suburb",
+    period: 8,
     status: "planned",
     intent: "Postwar suburbia.",
     sheets: [
@@ -310,8 +321,34 @@ export const PLANNED_MAPS = [
       "Living room/1.png", // domestic interior
     ],
     gap: "streetscape.midCentury",
-    notes: "Reads contemporary, not 1950s. Flagged, acceptable.",
+    notes:
+      "Reads contemporary, not 1950s. Flagged, acceptable. Was `p9-suburb` until Phase 81; " +
+      "postwar suburbia is 1945-1980, and the covenants, FHA appraisals and GI Bill files that " +
+      "make it a documentary-rich map are all Period 8.",
   },
+  {
+    id: "p8-campus",
+    period: 8,
+    status: "planned",
+    intent: "A school or university campus.",
+    sheets: [
+      "University/tile-B-04.png", // campus exteriors, sports fields
+      "University/tile-B-05.png", // classroom furniture, chalkboards
+      "Modern Park/tile-B-05.png",
+    ],
+    notes:
+      "Was `p9-campus` until Phase 81. Assigned to Period 8 because the campus is one of that " +
+      "period's defining settings — sit-ins, SNCC, the Free Speech Movement, Kent State — and " +
+      "because Period 8 needed the coverage. The sheets are era-agnostic and serve a Period 9 " +
+      "campus unchanged, so this is an assignment rather than an exclusion.",
+  },
+
+  // ---------------------------------------------------------------------------- Period 9
+  //
+  // 1980-present. Deliberately thin: it is the CED's shortest period, and its settings overlap
+  // Period 8's heavily — `p8-campus` and `p8-suburb` both serve a present-day map with no sheet
+  // changes. Add here only when a Period 9 map needs something the two above cannot dress.
+  //
   {
     id: "p9-modern-city",
     period: 9,
@@ -322,17 +359,6 @@ export const PLANNED_MAPS = [
       "Highway Rest Area/tile-B-04.png", // street furniture, US signage
       "Highway Rest Area/tile-B-06.png", // vehicles
       "Modern Park/tile-B-01.png",
-    ],
-  },
-  {
-    id: "p9-campus",
-    period: 9,
-    status: "planned",
-    intent: "A school or university campus.",
-    sheets: [
-      "University/tile-B-04.png", // campus exteriors, sports fields
-      "University/tile-B-05.png", // classroom furniture, chalkboards
-      "Modern Park/tile-B-05.png",
     ],
   },
 

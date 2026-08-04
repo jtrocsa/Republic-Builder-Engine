@@ -160,6 +160,10 @@ three bands (0, 1–2, 3+) select which Institute line plays, via the exported p
 
 The strongest finding of the Phase 78 audit: **Voss can debut without a single new engine system.**
 
+**Phase numbers in this table were renumbered in Phase 81.** They were written in Phase 78 against
+that program's own internal 1–11 count, which never matched the repository's phase log and pointed at
+phases that had already shipped under different numbers. They now cite the real log.
+
 | Need                    | Mechanism                                                                            | Status                                             |
 | ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
 | Hands off a mission     | `activity.briefing.speaker` — an opaque id the host resolves                         | **Exists.** Authoring a string is the whole change |
@@ -167,10 +171,10 @@ The strongest finding of the Phase 78 audit: **Voss can debut without a single n
 | Stands in the Institute | `HUB_NPC_BEHAVIOURS` entry, `{ kind: "station", at, facing }`                        | **Exists**                                         |
 | Appears on a map        | `FIELD_NPC_BEHAVIOURS` for that unit                                                 | **Exists**                                         |
 | Speaks in the field     | The existing dialogue bubble                                                         | **Exists**                                         |
-| Sprite                  | `CHARACTER_SHEETS.liaison` + a `character-manifest.js` entry                         | Art, Phase 8                                       |
-| Revealed costume        | `CHARACTER_SHEETS["liaison-meridian"]` — a second sheet key                          | Art, Phase 11                                      |
-| Narrative state         | `progress.story`                                                                     | New, Phase 8                                       |
-| Cutscenes               | See [`CUTSCENE-AND-DIALOGUE-CONVENTIONS.md`](./CUTSCENE-AND-DIALOGUE-CONVENTIONS.md) | Phase 9                                            |
+| Sprite                  | `CHARACTER_SHEETS.liaison` + a `character-manifest.js` entry                         | **Shipped, Phase 80b**                             |
+| Narrative state         | `progress.story`                                                                     | **Shipped, Phase 80**                              |
+| Cutscenes               | See [`CUTSCENE-AND-DIALOGUE-CONVENTIONS.md`](./CUTSCENE-AND-DIALOGUE-CONVENTIONS.md) | Phase 81C                                          |
+| Revealed costume        | `CHARACTER_SHEETS["liaison-meridian"]` — a second sheet key                          | Art, with Unit 6's reveal                          |
 
 Two costume states as **two sheet keys** is the right shape: a sheet key is one registry entry, the
 revealed state is a genuinely different set of PNGs, and switching between them is a lookup rather

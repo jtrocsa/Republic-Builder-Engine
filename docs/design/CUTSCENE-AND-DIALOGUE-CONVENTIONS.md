@@ -4,8 +4,8 @@ What a scripted scene may do, what it must clean up, and how the two institutes 
 speak.
 
 Written in Phase 78 alongside decision log `0061`. The cutscene system described in §3 **does not
-exist yet** — it is Phase 9 work. §1 is an audit of what is actually there today, and it is short
-on purpose: knowing exactly how little exists is what stops Phase 9 building a second one beside it.
+exist yet** — it is Phase 81C work. §1 is an audit of what is actually there today, and it is short
+on purpose: knowing exactly how little exists is what stops Phase 81C building a second one beside it.
 
 ---
 
@@ -29,7 +29,7 @@ on purpose: knowing exactly how little exists is what stops Phase 9 building a s
 support anywhere** in the codebase, and touch is a single app-level `pointerdown` handler — taps
 work, but there is no on-screen movement control. A cutscene must therefore be skipped and advanced
 by **keyboard and pointer**. Do not write a requirement for controller support into
-Phase 9; that would be inventing a mode the game does not have.
+Phase 81C; that would be inventing a mode the game does not have.
 
 ### The one architectural lesson from the scene that exists
 
@@ -52,7 +52,7 @@ sound cues and the existing dialogue surfaces. This keeps the download small and
 
 ## 3. The command set
 
-Phase 9 should generalise `hallwayScene` into a small timeline the content declares, rather than add
+Phase 81C should generalise `hallwayScene` into a small timeline the content declares, rather than add
 a second bespoke machine beside it. **Only commands a scene in §5 actually needs may exist.** A
 command set built from imagination will be half dead code within a phase — the same finding as the
 unreachable `fallback` lines and the never-printed `note` fields in Phases 71 and 72.

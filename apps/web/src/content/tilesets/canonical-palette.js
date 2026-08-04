@@ -286,6 +286,14 @@ export const GAPS = [
   "architecture.plantation.greatHouse", // Greek Revival columned house. Fields and quarters are
   // covered (farm + Wild West tile-B-08); the great house is not.
   "streetscape.midCentury", // 1950s-specific. Highway Rest Area / Modern Park read contemporary.
+  "architecture.antebellum.commercialStreet", // Greek Revival storefronts and vernacular brick
+  // blocks, c. 1820-1850. 19th Century European City/tile-B-01 is the library's only masonry
+  // commercial street, and its mansard roofs and railed terraces are Second Empire — twenty years
+  // late for 1845. Partial; canal-crossroads-field manages it by keeping the brick for the six
+  // buildings a boomtown would genuinely have built in brick and using repacked clapboard for the
+  // rest. Registered here in Phase 81: the Gap Register in art-and-map-style-guide.md has carried
+  // this row since Canal Crossroads shipped, but it was never mirrored into this array, so the
+  // two sources of truth disagreed on how many gaps exist.
   // --- Meridian Institute props (Phase 79, decision log 0062) ---------------------------------
   // The rival institute's interior is covered by office/3, office/4, 19thC tile-B-04 and
   // Steampunk/5 — see `meridian-interior` in maps/planned-maps.js. These three props are what

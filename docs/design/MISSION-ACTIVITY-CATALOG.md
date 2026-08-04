@@ -386,15 +386,39 @@ This is the clause that makes this document a governance log rather than a wish 
 new units.**
 
 1. **Each unit's three missions must draw from three different groups.**
-2. **No two adjacent units may share a primary activity.**
-3. **Every unit ships at least one Group A entry** — or its map is a hallway again.
+2. **No two adjacent units may run the same three engines** — and any engine that does repeat across
+   a unit boundary must be pointed at a **structurally different question**.
+3. **A unit that omits Group A must carry its talk another way** — authored companion dialogue, a
+   scripted scene, or the §3 substrate fields on the people who matter.
 4. **No mission may ask for extended writing twice.** One written response per mission is the cap;
    extended AP writing belongs in an Archive Commission or in a single deliberate mission slot, not
    scattered across a source reader, a reflection, _and_ a quest.
 
-Rule 3 is the important one. Groups B, C and D can all be built without any NPC ever becoming a
-person, and if that happens the game will have more variety and still feel like a worksheet with a
-map attached.
+### Why rules 2 and 3 were amended (Phase 81)
+
+Both were rewritten because the originals could not be satisfied as written. Recorded here rather
+than silently fixed, because the arithmetic is not obvious and someone will propose the old wording
+back.
+
+**Rule 2 was "no two adjacent units may share a primary activity."** Four engines exist and a unit
+ships three, so any two units share at least two engines — the rule forbade something no schedule
+could avoid. Phase 70 had already applied the workable version when it slated Riverbend: what must
+not repeat is the **whole slate**, and a repeated engine earns its place by asking a different
+question. Unit 1's interview puts four topical questions to seven people; Unit 2's puts one civic
+question set to eight and lets the answers stratify by legal status. Same engine, different
+question, and the two missions do not feel alike. **The question axis is what actually carries this
+rule** — the engine axis is only its cheap half.
+
+**Rule 3 was "every unit ships at least one Group A entry."** `interview` is the only Group A engine,
+so the rule forced it into all nine units and left exactly three legal slates — which defeats rule 1's
+whole purpose and makes the "variety rule" a uniformity rule. Relaxing it to a condition rather than
+a requirement restores the fourth slate (`assembly · discrepancy · trace`) and lets a map be genuinely
+different rather than differently-decorated.
+
+**The original concern behind rule 3 stands and is why the amended version is a condition, not a
+deletion.** Groups B, C and D can all be built without any NPC ever becoming a person, and a unit
+that lets that happen will have more variety and still feel like a worksheet with a map attached. A
+unit dropping the interview is taking on a debt it has to pay somewhere else on that map.
 
 ---
 
