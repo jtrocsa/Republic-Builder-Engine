@@ -3094,6 +3094,17 @@ function activeHubTargets() {
   if (progress.currentHubRoom === "hallway") return HALLWAY_TARGETS;
   return HUB_TARGETS;
 }
+/**
+ * The nav grid a scripted walk plans over. Only two rooms have one, because only two rooms have
+ * anyone to walk: the Archive Room has no NPCs and so never built a grid, and asking for one there
+ * would be asking a scene to exist that does not.
+ *
+ * A `function` declaration rather than a `const` arrow, like isHallwayLand() below and for the same
+ * reason: both grids are built at module load, so this must be hoisted above them.
+ */
+function activeHubNavGrid() {
+  return progress.currentHubRoom === "hallway" ? HALLWAY_NAV_GRID : HUB_NAV_GRID;
+}
 
 // Post-hallway guided tour of the Main Hall (progress.tutorial.step === "tour-<id>" for one of
 // these ids, or "tour-intro" for the unhighlighted orientation beat before them). Movement is
@@ -3107,12 +3118,15 @@ function isTutorialTourActive() {
  * Whether a scripted beat currently owns the hub, so the player's own input has to stand down.
  *
  * One concept, checked at the same three sites the tutorial tour's lock already used — the institute
- * keydown handler, runHubMovementLoop() and interactWithHubTarget(). The Entrance Hall scene added a
- * second reason to lock movement, and two independent locks checked at overlapping subsets of three
- * places is how a screen ends up controllable during half of one cutscene.
+ * keydown handler, runHubMovementLoop() and interactWithHubTarget(). Two independent locks checked
+ * at overlapping subsets of three places is how a screen ends up controllable during half of one
+ * cutscene, which is why this is a predicate and not a flag each scene sets for itself.
+ *
+ * It was three terms until Phase 81G, when the Entrance Hall's bespoke `hallwayScene.phase` folded
+ * into the general runner and left two.
  */
 function isHubInputLocked() {
-  return isTutorialTourActive() || hallwayScene.phase !== "idle" || isHubSceneActive();
+  return isTutorialTourActive() || isHubSceneActive();
 }
 function currentTourStepId() {
   return isTutorialTourActive() ? progress.tutorial.step.slice("tour-".length) : null;
@@ -3168,11 +3182,11 @@ function instituteRecallSpawn() {
  * Puts the player just inside the Entrance Hall's south doors with the scene wound back to the top.
  *
  * The counterpart to safeInstituteSpawn() for the one room that isn't the Main Hall by default. It
- * resets `hallwayScene` as well as the position because both entry points want that: arriving from
- * Registration, and resuming a save that was in this room when it was written.
+ * cancels any scene in flight as well as resetting the position, because both entry points want
+ * that: arriving from Registration, and resuming a save that was in this room when it was written.
  */
 function enterHallwayRoom() {
-  stopHallwayScene();
+  stopHubScene();
   hubHeldKeys.clear();
   stopHubMovementLoop();
   const [x, y, facing] = HALLWAY_SPAWN;
@@ -3187,27 +3201,7 @@ function enterHallwayRoom() {
   progress.currentHubRoom = "hallway";
   progress.tutorial.step = "hallway";
 }
-/** Cancels anything the Entrance Hall scene has in flight. Safe to call when nothing is running. */
-function stopHallwayScene() {
-  if (hallwayScene.frame) window.cancelAnimationFrame(hallwayScene.frame);
-  clearTimeout(hallwayScene.fadeTimer);
-  hallwayScene = { phase: "idle", escort: null, frame: null, lastAt: 0, fadeTimer: null };
-}
 let hubDialogueId = null;
-/**
- * The Entrance Hall's one-shot scene, in one object rather than the five separate module lets the
- * retired `intro-hallway` walk kept — so there is a single thing to read and a single thing to reset.
- *
- * `phase` is also the room's input lock (see isHubInputLocked()):
- *   idle     an ordinary walkable hub room. The player has full control.
- *   talking  the Director's briefing is on screen; movement is off and E advances a line.
- *   escort   he is walking to the doors and the player is following him. No input at all.
- *   flicker  the doorway transition is playing over the top of everything.
- *
- * Declared up here beside hubDialogueId, not down with the intro-screen state it replaced, because
- * updateInstituteNpcs() below reads it and a `let` further down the file would be in its TDZ.
- */
-let hallwayScene = { phase: "idle", escort: null, frame: null, lastAt: 0, fadeTimer: null };
 // What each staff member is doing in the Main Hall — see FIELD_NPC_BEHAVIOURS above and
 // engine/npc-behaviour.js for the three kinds.
 //
@@ -3383,14 +3377,10 @@ function updateInstituteNpcs(now = performance.now()) {
   );
   Object.entries(activeHubNpcRuntime()).forEach(([id, state]) => {
     // Standing still while being spoken to, while walking the player through the tutorial tour, and
-    // for the whole of the Entrance Hall scene — the Director cannot wander off mid-sentence, and
-    // once the escort starts, runHallwayEscort() owns his position. Letting this tick also
-    // stepBehaviour() him during the escort would be two loops writing the same coordinates.
-    if (
-      hubDialogueId === id ||
-      (id === "director" && (isTutorialTourActive() || hallwayScene.phase !== "idle"))
-    )
-      state.walking = false;
+    // for the whole of any scripted scene — nobody can wander off mid-sentence, and once a scene's
+    // escort starts, runHubSceneFrame() owns that body's position. Letting this tick also
+    // stepBehaviour() them during the walk would be two loops writing the same coordinates.
+    if (hubDialogueId === id || isHubInputLocked()) state.walking = false;
     else stepBehaviour(state, elapsed, (x, y) => isHubNpcBlocked(id, x, y));
 
     const node = nodes.get(id);
@@ -8114,22 +8104,10 @@ function currentIntroLines() {
   if (progress.currentScreen === "intro-protocol") {
     return { stepKey: "intro-protocol", lines: CHRONICLE_OPENING_DEFAULTS.scenes.oath.body };
   }
-  // The Entrance Hall's conversation is the one beat that isn't a screen of its own — it is spoken
-  // in-world, in a walkable hub room, so it keys off the scene phase instead. Everything else about
-  // it is identical, which is the point: the typewriter, the continue indicator and tap-to-skip all
-  // come for free rather than being rebuilt inside a hub dialogue panel.
-  if (hallwayScene.phase === "talking") {
-    // The only content line in this file that interpolates player state — scoped to this one
-    // branch since nothing else here has a reason to reference progress.profile.name.
-    const name = progress.profile.name || "Chronicler";
-    return {
-      stepKey: "intro-hallway",
-      lines: CHRONICLE_OPENING_DEFAULTS.scenes.hallway.body.map((line) => ({
-        ...line,
-        text: line.text.replace("{{chroniclerName}}", name),
-      })),
-    };
-  }
+  // The Entrance Hall's conversation used to be a fourth branch here, keyed off a scene phase
+  // rather than a screen, because it is spoken in-world in a walkable room. Phase 81G moved it onto
+  // the scripted-scene runner, which has its own typewriter — so the branch is gone and this
+  // function is back to being about intro *screens* only.
   return null;
 }
 
@@ -8195,113 +8173,37 @@ function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
-// Faster than HUB_NPC_SPEED's indoor amble (1.15), which is too slow to read as leading anyone, and
-// slower than the player's own 3.65, which would read as a jog. walkCycleSeconds() turns this into a
-// 0.5s stride for both bodies, so nobody skates — see the ground-speed invariant in CLAUDE.md.
-const HALLWAY_ESCORT_SPEED = 2.2;
 // A little over one tile: close enough to read as following, far enough that the two sprites never
 // overlap into a single blob.
 const ESCORT_GAP = 1.15;
+
 /**
- * Ends the Director's briefing and starts the walk to the Main Hall doors.
+ * What the Entrance Hall orientation does once its last command has run.
  *
- * The follower is `instituteMovement` itself, which is the one choice that makes the rest of this
- * free: updateHubCamera() is already a pure function of that object, so the camera pans up the room
- * behind the player with no new code and CLAUDE.md's camera invariant untouched. The leader is the
- * Director's own behaviour state, so instituteNpc()'s markup and updateInstituteNpcs()'s DOM patch
- * keep drawing him exactly as they already did.
+ * The scene itself is content — see `DIRECTOR_ORIENTATION` in content/cutscenes.js. This is the
+ * half it cannot express: the room swap. It arrives under the held black frame of the scene's
+ * closing `fade`, so the Main Hall is already up by the time the screen clears, and
+ * safeInstituteSpawn() is the same spawn point every other route into that room uses.
+ *
+ * Guarded on the room because a scene that has already been torn down should not move a player who
+ * has since gone somewhere else — the same defence the racing animationend/timeout pair this
+ * replaces needed for a different reason.
  */
-function startHallwayEscort() {
-  const director = hallwayNpcRuntime.director;
-  hallwayScene.phase = "escort";
-  hallwayScene.escort = createEscortWalk({
-    waypoints: findRoute(HALLWAY_NAV_GRID, director, HALLWAY_DOOR_APPROACH) || [],
-    speed: HALLWAY_ESCORT_SPEED,
-    gap: ESCORT_GAP,
-    leader: director,
-    follower: instituteMovement,
-  });
-  hallwayScene.lastAt = performance.now();
+function enterMainHallFromHallway() {
+  if (progress.currentHubRoom !== "hallway") return render();
+  safeInstituteSpawn();
+  progress.tutorial.step = "tour-intro";
+  enterMainHallFromBlack = true;
+  save();
   render();
-  hallwayScene.frame = window.requestAnimationFrame(runHallwayEscort);
-}
-// Self-terminating rAF in the same shape as runHubMovementLoop(), including its elapsed clamp, and
-// patching the DOM directly rather than re-rendering per frame.
-function runHallwayEscort(now) {
-  if (hallwayScene.phase !== "escort") {
-    hallwayScene.frame = null;
-    return;
-  }
-  const elapsed = Math.min(48, Math.max(0, now - hallwayScene.lastAt || 16));
-  hallwayScene.lastAt = now;
-  const { leaderDone } = stepEscort(hallwayScene.escort, elapsed);
-
-  const director = hallwayNpcRuntime.director;
-  const node = document.querySelector('[data-hub-npc="director"]');
-  if (node) {
-    node.style.cssText = hubCharacterStyle(director.x, director.y);
-    node.classList.toggle("is-walking-npc", director.walking);
-    node.dataset.facing = director.facing;
-    applyCharacterSprite(
-      node.querySelector(".character-sprite"),
-      "director",
-      director.facing,
-      director.walking,
-      HALLWAY_ESCORT_SPEED
-    );
-  }
-  updateInstitutePlayer(HALLWAY_ESCORT_SPEED);
-
-  // Cut on leaderDone rather than waiting for the follower to close up: the Director steps through
-  // the doors and the screen starts pulsing while the player is still a step behind him, which is
-  // what it should look like. The loop keeps running underneath, so the follower catches up beneath
-  // the black rather than freezing mid-stride.
-  if (leaderDone) completeHallwayEscort();
-  hallwayScene.frame = window.requestAnimationFrame(runHallwayEscort);
-}
-
-// How long the doorway flicker runs. Must match @keyframes doorway-flicker in global.css — this is
-// only the backstop for reduced motion, where there is no animation to listen to.
-const DOORWAY_FLICKER_MS = 900;
-// Fires once the Director reaches the Main Hall doors: plays the doorway flicker over the top of the
-// room, then cuts to the Main Hall with the tour's first (unhighlighted) beat active.
-// safeInstituteSpawn() is the same spawn point every other route into that room uses.
-function completeHallwayEscort() {
-  if (hallwayScene.phase === "flicker") return;
-  hallwayScene.phase = "flicker";
-  const fade = document.getElementById("sceneFade");
-  fade?.classList.add("scene-fade--doorway");
-  // Idempotent, because two things race to call it: the animation's own end event and the timeout
-  // below. Whichever arrives first does the work; the other finds the room already changed.
-  const enterMainHall = () => {
-    if (progress.currentHubRoom !== "hallway") return;
-    stopHallwayScene();
-    safeInstituteSpawn();
-    progress.tutorial.step = "tour-intro";
-    enterMainHallFromBlack = true;
-    save();
-    render();
-  };
-  // animationend is the primary hook: the keyframes end held at full black, so it fires at exactly
-  // the moment the screen is covered — no magic delay duplicated between the CSS and here, and no
-  // chance of swapping rooms during one of the transparent beats between pulses. The timeout is the
-  // backstop for reduced motion, where there is no animation and no animationend to wait for.
-  if (fade && !prefersReducedMotion())
-    fade.addEventListener("animationend", enterMainHall, { once: true });
-  clearTimeout(hallwayScene.fadeTimer);
-  hallwayScene.fadeTimer = setTimeout(
-    enterMainHall,
-    prefersReducedMotion() ? 60 : DOORWAY_FLICKER_MS + 120
-  );
 }
 
 // --- The scripted-scene runner ----------------------------------------------------------------
 //
 // One host for every scene in content/cutscenes.js, driving the pure interpreter in
-// engine/cutscene.js. `hallwayScene` above predates it and is the one scene still on its own
-// bespoke phases; folding the Entrance Hall onto this runner is the remaining half of Phase 81C,
-// and until that lands the two are kept apart by `isHubInputLocked()` checking both rather than by
-// either one knowing about the other.
+// engine/cutscene.js. Both authored scenes run here as of Phase 81G, when the Entrance Hall gave up
+// its own four-phase state machine, its own rAF loop, its own fade timer and its own branch inside
+// the intro typewriter. There is one scripted-scene code path in the Institute now, not two.
 //
 // The rule this obeys, from CUTSCENE-AND-DIALOGUE-CONVENTIONS.md §1: **a scripted beat moves
 // characters, never the screen.** Every command writes to the objects the ordinary loops already
@@ -8321,6 +8223,7 @@ const BLANK_HUB_SCENE = {
   speaker: null,
   line: "",
   highlight: null,
+  onDone: null,
 };
 let hubScene = { ...BLANK_HUB_SCENE };
 
@@ -8358,7 +8261,10 @@ function hubSceneEffects() {
       if (!leader) return;
       hubScene.followsPlayer = command.follower === "player";
       hubScene.escort = createEscortWalk({
-        waypoints: findRoute(HUB_NAV_GRID, leader, command.to) || [],
+        // The active room's grid, not the Main Hall's — the Entrance Hall runs a scene too, and
+        // pathfinding it over the wrong room's walls returns an empty route and a walk that ends
+        // instantly where it started.
+        waypoints: findRoute(activeHubNavGrid(), leader, command.to) || [],
         speed: SCENE_WALK_SPEED,
         gap: ESCORT_GAP,
         leader,
@@ -8385,8 +8291,13 @@ function hubSceneEffects() {
     },
     say(command, fast) {
       hubScene.speaker = command.speaker;
-      hubScene.line = command.line;
-      typeHubSceneLine(command.line, fast);
+      // The one interpolation any scene does. It exists because the Director greets the player by
+      // name in the first line of the game; keep it to that rather than growing a template syntax.
+      hubScene.line = command.line.replace(
+        "{{chroniclerName}}",
+        progress.profile.name || "Chronicler"
+      );
+      typeHubSceneLine(hubScene.line, fast);
     },
     highlightObject(command) {
       hubScene.highlight = command.off ? null : command.target;
@@ -8418,12 +8329,19 @@ function hubSceneEffects() {
  *
  * Returns whether it started, so a caller that wanted a scene and did not get one can carry on to
  * whatever it would otherwise have done.
+ *
+ * `onDone` is the seam that let the Entrance Hall fold onto this runner. That scene ends by
+ * *changing rooms*, which none of the eight justified commands expresses, and adding a ninth for
+ * the one scene that needs it is what CUTSCENE-AND-DIALOGUE-CONVENTIONS.md §3 forbids. So
+ * `returnControl` hands back to whoever started the scene and the caller does the rest: which room
+ * the Institute is in is host state, and a content file has no business naming it.
  */
-function startHubScene(id) {
+function startHubScene(id, { onDone = null } = {}) {
   const scene = CUTSCENES[id];
   if (!scene || isHubSceneActive()) return false;
   stopHubScene();
   hubScene.id = id;
+  hubScene.onDone = onDone;
   hubScene.state = createScene(scene);
   hubScene.lastAt = performance.now();
   hubHeldKeys.clear();
@@ -8434,8 +8352,8 @@ function startHubScene(id) {
   return true;
 }
 
-// Self-terminating rAF in the same shape as runHallwayEscort() and runHubMovementLoop(), including
-// the elapsed clamp, and patching the DOM directly rather than re-rendering per frame.
+// Self-terminating rAF in the same shape as runHubMovementLoop(), including the elapsed clamp, and
+// patching the DOM directly rather than re-rendering per frame.
 function runHubSceneFrame(now) {
   if (!hubScene.state) {
     hubScene.frame = null;
@@ -8480,6 +8398,12 @@ function paintHubSceneFrame() {
     .forEach((marker) =>
       marker.classList.toggle("is-scene-lit", marker.dataset.target === hubScene.highlight)
     );
+  // The continue indicator means "a press will do something", so it is derived here rather than
+  // only being switched on by the typewriter. Left to the typewriter alone it stays lit through the
+  // walk that follows the last line, inviting a press that the interpreter deliberately ignores —
+  // `advanceScene()` releases a `say` and nothing else.
+  const canAdvance = hubScene.state?.waiting === "input" && !hubScene.typeTimer;
+  document.getElementById("hubSceneIndicator")?.toggleAttribute("hidden", !canAdvance);
 }
 
 /**
@@ -8494,12 +8418,18 @@ function finishHubScene() {
   // Rule 3: no actor is left mid-route. An escort leaves `walking` true on whoever it was moving.
   for (const body of Object.values(runtime)) body.walking = false;
   instituteMovement.moving = false;
+  // Read before stopHubScene() blanks the object, and run after teardown so the handler sees a
+  // runner with nothing in flight — it is allowed to change rooms, and a scene half torn down when
+  // the screen swaps is the failure this ordering exists to prevent.
+  const onDone = hubScene.onDone;
   document.getElementById("sceneFade")?.classList.remove("scene-fade--doorway");
   stopHubScene();
   save();
   // Rule 2: the "Press E" prompt is restored by the same render that removes the dialogue bar, so
-  // there is never a frame offering an interaction that is already happening.
-  render();
+  // there is never a frame offering an interaction that is already happening. A handler that takes
+  // over does its own render, so the two never fight over one frame.
+  if (onDone) onDone();
+  else render();
 }
 
 /** Player input during a scene. Releases a line; a walk and a fade are not skippable this way. */
@@ -8986,15 +8916,10 @@ function interactWithHubTarget(id) {
   }
   if (target.action === "hallway-brief") {
     playSfx("dialogue");
-    hallwayScene.phase = "talking";
-    introLineIndex = 0;
-    hubHeldKeys.clear();
-    stopHubMovementLoop();
-    instituteMovement.moving = false;
-    // Turn to face each other rather than leaving whichever way they were walking.
-    instituteMovement.facing = "up";
-    hallwayNpcRuntime.director.facing = "down";
-    render();
+    // Everything this used to do by hand — clearing held keys, stopping the movement loop, turning
+    // the two bodies to face each other — is now either the runner's own start-up or the scene's
+    // first two `turnActor` commands.
+    startHubScene("director-orientation", { onDone: enterMainHallFromHallway });
     return;
   }
   playSfx(id === "trophy" ? "archive-receive" : "dialogue");
@@ -9038,15 +8963,13 @@ function instituteHallwayScreen() {
   // so the card's two quiet lines were silently rendered at intro-body size.
   const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Orientation · Unit 1</p><div class="archive-badges archive-badges--compact"><b>First steps</b><span>Walk to Director Hale and press E to speak with him.</span></div><p class="hub-controls">Arrow keys / WASD to move · E or click to interact</p></aside>`;
   const worldStyle = `width:${HALLWAY_GRID.columns * HALLWAY_GRID.tile}px;height:${HALLWAY_GRID.rows * HALLWAY_GRID.tile}px`;
-  // The typewriter bar is the same rail the director-stage intro screens use — #directorLineText,
-  // #directorContinueIndicator and #directorRevealRail all have to be here by those exact ids, since
-  // startIntroTypewriter() writes into them and returns early without the rail. The Entrance Hall
-  // authors no reveals, so the rail stays empty; the briefing's own reveals are untouched, in their
-  // own screen.
-  const dialogue =
-    hallwayScene.phase === "talking"
-      ? `<div class="hallway-dialogue" data-action="hallway-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><div class="director-reveal-rail" id="directorRevealRail" hidden></div><p class="hallway-dialogue__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div>`
-      : "";
+  // The same bar every scripted scene speaks through, and the same one the Main Hall uses for
+  // Scene A. It kept `.hallway-dialogue` as its class when the runner was built in Phase 81C — this
+  // room is where the style originated — so folding the Entrance Hall onto the runner in 81G left
+  // the CSS and the e2e selectors alone. Note it stays inside `.hub-column`: the fixed-overlay rule
+  // is `.hub-shell--status-left > .hallway-dialogue`, a direct-child selector the Main Hall matches
+  // and this room deliberately does not.
+  const dialogue = hubSceneDialogueMarkup();
   // The dialogue sits in `.hub-column` alongside `.hub-intro`, not inside it: `.hub-intro
   // p:not(.kicker)` is a descendant selector that outranks `.director-dialogue-box__text`, so nesting
   // the bar would quietly restyle the typewriter it is built around. One wrapper keeps the Director's
@@ -11562,10 +11485,10 @@ function render() {
   clearTimeout(activeTravelTimeout);
   clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
-  // Leaving the Entrance Hall mid-scene (refresh, reset, a stray render() call) must not leave an
-  // orphaned escort loop or flicker timeout running against DOM nodes this render is about to
-  // replace. Re-entering the room is what starts it again, from the top.
-  if (progress.currentHubRoom !== "hallway") stopHallwayScene();
+  // Leaving a hub room mid-scene (refresh, reset, a stray render() call) must not leave an orphaned
+  // rAF loop or typewriter timer running against DOM nodes this render is about to replace.
+  // Re-entering the room is what starts it again, from the top.
+  if (progress.currentScreen !== "institute") stopHubScene();
   let html;
   try {
     // Any registered activity engine renders through the one host screen, and the screen id *is*
@@ -12096,12 +12019,6 @@ function handleOnboardingClick(target, action) {
     else progress.currentScreen = next;
     save();
     render();
-    return true;
-  }
-  if (action === "hallway-dialogue-click") {
-    // Mirrors the keydown path in handleWindowKeydown(): skip the typing if mid-line, advance to the
-    // next beat, and once the last one is fully revealed, set off.
-    if (!advanceIntroDialogue()) startHallwayEscort();
     return true;
   }
   if (action === "briefing-next") {
@@ -13757,20 +13674,11 @@ function handleWindowKeydown(event) {
     return;
   }
   if (progress.currentScreen === "institute") {
-    // Above the generic E-to-interact block below, and returning unconditionally, because the
-    // Director never leaves reach during his own briefing: falling through would re-enter
-    // interactWithHubTarget("director") on every advance, reset introLineIndex to 0, and loop the
-    // first line forever.
-    if (hallwayScene.phase === "talking") {
-      if (key === "e" || key === "enter" || key === " ") {
-        event.preventDefault();
-        if (!advanceIntroDialogue()) startHallwayEscort();
-      }
-      return;
-    }
-    // Above isHubInputLocked() and returning unconditionally, for the same reason the branch above
-    // is: a scene owns the room while it runs, and falling through would let E re-enter
-    // interactWithHubTarget() on whoever the player happens to be standing next to.
+    // Above isHubInputLocked() and returning unconditionally: a scene owns the room while it runs,
+    // and falling through would let E re-enter interactWithHubTarget() on whoever the player
+    // happens to be standing next to — which, during the Entrance Hall briefing, is the Director
+    // himself, restarting his own scene on every advance. This was two branches until Phase 81G,
+    // one of them the Entrance Hall's, and they said the same thing.
     if (isHubSceneActive()) {
       if (key === "e" || key === "enter" || key === " ") {
         event.preventDefault();

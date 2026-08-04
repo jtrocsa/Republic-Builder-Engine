@@ -3268,8 +3268,9 @@ dd {
 /* Walking through a door into a new area, the way the genre plays it: two hard cuts to black before
    it holds, not a crossfade. `steps(1, end)` is what makes each stop a cut — the 480ms opacity
    transition on the base rule is exactly what this must not do, hence the explicit `transition:
-   none`. `forwards` holds the final black frame, so the room swap lands underneath it and
-   completeHallwayEscort() can hang off `animationend` rather than a duplicated magic delay. */
+   none`. `forwards` holds the final black frame, so the room swap lands underneath it. The 900ms
+   here is duplicated in DIRECTOR_ORIENTATION's closing `fade` command — Phase 81G moved the timing
+   into the scene, where it is a number the author can see, so keep the two in step. */
 .scene-fade--doorway {
   transition: none;
   animation: doorway-flicker 900ms steps(1, end) forwards;

@@ -95,9 +95,11 @@ Teaches systems. Appears at the Institute. Speaks during selected map moments. E
 investigation. Occasionally expresses sympathy for people in the historical setting. **Never
 mentions Meridian**, and carries no visible insignia.
 
-Voss debuts in **Unit 1, strictly after the Entrance Hall escort** — the onboarding sequence,
-`hallwayScene`, the tutorial tour and `isHubInputLocked()` are all untouched. Introducing her
-before the player has met the Director would flatten the contrast the character exists to create.
+Voss debuts in **Unit 1, strictly after the Entrance Hall escort**. Introducing her before the
+player has met the Director would flatten the contrast the character exists to create. Since Phase
+81G both scenes run on the same interpreter, so the ordering is a fact about the two triggers — the
+Director's is an interaction in the Entrance Hall, hers fires when the tutorial tour ends — rather
+than about two machines that had to be kept out of each other's way.
 
 ### Units 3–4 — inconsistencies
 

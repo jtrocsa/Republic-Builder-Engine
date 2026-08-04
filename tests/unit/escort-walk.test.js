@@ -147,8 +147,9 @@ describe("escort walk", () => {
 
   it("terminates immediately when there is nowhere to walk (edge case)", () => {
     // findRoute() returns [] when start and goal share a cell, and null when there is no way at
-    // all — startHallwayEscort() passes `|| []` for the second, so both arrive here as an empty
-    // list. Neither may hang the scene: the flicker fires off leaderDone.
+    // all — the hub scene runner's `moveActor` passes `|| []` for the second, so both arrive here
+    // as an empty list. Neither may hang the scene: `isMoveDone()` is what releases the command,
+    // and a walk that never finishes is a player locked in a room forever.
     const { leader, follower } = bodies();
     const state = createEscortWalk({ waypoints: [], speed: SPEED, gap: GAP, leader, follower });
     expect(stepEscort(state, 16)).toEqual({ leaderDone: true, done: true });

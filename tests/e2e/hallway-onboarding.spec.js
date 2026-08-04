@@ -29,6 +29,33 @@ function playerPoint(page) {
   });
 }
 
+/**
+ * Advances the Director's spoken beats, running `each` once per beat with the line fully revealed.
+ *
+ * The continue indicator is the signal, and it is the only honest one: it appears when a line has
+ * finished typing and does not come back once the scene moves on to the walk. Counting to a fixed
+ * number of beats hard-codes the script, and watching for the bar to disappear does not work at all
+ * — since Phase 81G the bar stays up through the walk and the fade, exactly as Emery Voss's does,
+ * so its removal marks the end of the whole scene rather than the end of the talking.
+ */
+async function advanceSpokenBeats(page, each = async () => {}) {
+  const indicator = page.locator("#hubSceneIndicator");
+  const dialogue = page.locator(".hallway-dialogue");
+  for (let beat = 0; beat < 12; beat += 1) {
+    try {
+      await expect(indicator).toBeVisible({ timeout: 4000 });
+    } catch {
+      return beat; // no further line — the scene has moved past `say`.
+    }
+    await each(beat);
+    // dispatchEvent rather than click(): Playwright scrolls an element into view before clicking,
+    // which would slide the sticky column up and quietly make the layout assertions pass on their own.
+    await dialogue.dispatchEvent("click");
+    await page.waitForTimeout(60);
+  }
+  throw new Error("the Director never stopped talking");
+}
+
 test.describe("Institute Entrance Hall", () => {
   test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -89,18 +116,13 @@ test.describe("Institute Entrance Hall", () => {
     );
 
     // Every beat, not just the first: the bar is sized by its longest line, and the beats differ by
-    // three wrapped lines in a column this narrow. Advanced with dispatchEvent rather than click()
-    // because Playwright scrolls an element into view before clicking it — which would slide the
-    // sticky column up and quietly make the very assertion below pass on its own.
-    for (let beat = 0; beat < 12; beat += 1) {
-      if (!(await dialogue.isVisible().catch(() => false))) break;
-      await page.waitForTimeout(2600); // let the typewriter finish revealing this line
-      const box = await dialogue.boundingBox().catch(() => null);
-      if (!box) break;
+    // three wrapped lines in a column this narrow.
+    const beats = await advanceSpokenBeats(page, async (beat) => {
+      const box = await dialogue.boundingBox();
       expect(box.y + box.height, `beat ${beat} runs past the fold`).toBeLessThanOrEqual(768);
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
-      await dialogue.dispatchEvent("click").catch(() => {});
-    }
+    });
+    expect(beats, "the Director's briefing lost its beats").toBeGreaterThanOrEqual(4);
   });
 
   test("clears the interaction prompt when the player walks back out of reach (edge case)", async ({
@@ -131,18 +153,15 @@ test.describe("Institute Entrance Hall", () => {
     const dialogue = page.locator(".hallway-dialogue");
     await expect(dialogue).toBeVisible();
 
-    // Advance every beat. The last one ends the conversation and starts the escort.
-    for (let i = 0; i < 12; i += 1) {
-      if (!(await dialogue.isVisible().catch(() => false))) break;
-      await dialogue.click();
-      await page.waitForTimeout(40);
-    }
-    await expect(dialogue).toHaveCount(0);
+    // Advance every beat. The last one ends the conversation and starts the escort. The bar does
+    // not go away here — it stays up through the walk and the fade — so the walk itself is the only
+    // thing that says the conversation is over.
+    const startedAt = await playerPoint(page);
+    await advanceSpokenBeats(page);
 
     // The player deliberately holds for a beat while the Director gets a gap ahead — sampling
     // inside that window would read a stationary player and prove nothing either way. Wait for the
     // walk to actually be under way first.
-    const startedAt = await playerPoint(page);
     await expect
       .poll(async () => (await playerPoint(page)).y, { timeout: 5000 })
       .toBeLessThan(startedAt.y);
@@ -154,6 +173,12 @@ test.describe("Institute Entrance Hall", () => {
     await holdKey(page, "ArrowDown", 400);
     const afterPush = await playerPoint(page);
     expect(afterPush.y).toBeLessThan(midWalk.y);
+
+    // The bar stays up through the walk, but the continue indicator must not: `advanceScene()`
+    // releases a `say` and nothing else, so a "▼" during the escort is an affordance for a press
+    // the interpreter ignores. It stayed lit here — and in Scene A — until Phase 81G derived it
+    // from what the interpreter is actually waiting on.
+    await expect(page.locator("#hubSceneIndicator")).toBeHidden();
 
     // Ends in the Main Hall, at its own spawn, with the guided tour queued.
     await expect(page.locator(".institute-map--main-hall")).toBeVisible({ timeout: 15000 });

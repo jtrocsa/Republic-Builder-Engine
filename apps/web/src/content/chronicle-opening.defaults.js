@@ -83,24 +83,10 @@ export const CHRONICLE_OPENING_DEFAULTS = {
       action: "Create Chronicler",
       secondary: "Review field protocol",
     },
-    // Spoken in the Entrance Hall, in world, with the Director standing in front of the player —
-    // not on the director stage. The player walks up to him and presses E, and the last beat sets
-    // him walking to the Main Hall doors with the player following. Four beats: greet them by name,
-    // say what the room is, say what is through the doors, then go.
-    hallway: {
-      body: [
-        {
-          text: "{{chroniclerName}}. You found it. Most new Chroniclers stand in the entry a while first.",
-        },
-        {
-          text: "This hall is the oldest part of the Institute. Every record we have recovered came back through it.",
-        },
-        {
-          text: "Through those doors is the Institute Archive — where the work gets checked, and where it gets kept.",
-        },
-        { text: "Walk with me." },
-      ],
-    },
+    // The Entrance Hall's four beats used to live here as `hallway.body`, because they were spoken
+    // through the same intro typewriter these screens use. Phase 81G moved them to
+    // `DIRECTOR_ORIENTATION` in content/cutscenes.js, which is where scene lines belong now that
+    // there is a scene format — this file is the opening *screens*.
   },
   tour: {
     intro: {

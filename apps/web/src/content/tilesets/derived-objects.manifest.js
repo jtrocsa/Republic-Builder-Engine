@@ -251,7 +251,12 @@ export const DERIVED_OBJECTS = [
       { name: "timberStack", seed: [6, 10], limit: { height: 3, width: 3 } },
       { name: "deadTree", seed: [2, 8], limit: { height: 3, width: 3 } },
       { name: "deadTreeSmall", seed: [4, 0], limit: { height: 3, width: 3 } },
-      { name: "cordwood", from: "war ruins/22.png", seed: [11, 14], limit: { height: 3, width: 3 } },
+      {
+        name: "cordwood",
+        from: "war ruins/22.png",
+        seed: [11, 14],
+        limit: { height: 3, width: 3 },
+      },
     ],
   },
 ];

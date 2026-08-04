@@ -446,7 +446,8 @@ export const UNIT_04_ARCHIVE_DBQ_QUESTS = [
       {
         id: "doc-jackson-bank-veto",
         label: "Document 3",
-        attribution: "Andrew Jackson, veto message on the recharter of the Bank of the United States",
+        attribution:
+          "Andrew Jackson, veto message on the recharter of the Bank of the United States",
         date: "July 10, 1832",
         excerpt:
           "It is to be regretted that the rich and powerful too often bend the acts of government to their selfish purposes… when the laws undertake to add to these natural and just advantages artificial distinctions, to grant titles, gratuities, and exclusive privileges, to make the rich richer and the potent more powerful, the humble members of society — the farmers, mechanics, and laborers — who have neither the time nor the means of securing like favors to themselves, have a right to complain of the injustice of their Government.",
@@ -471,7 +472,8 @@ export const UNIT_04_ARCHIVE_DBQ_QUESTS = [
       {
         id: "doc-temperance-pledge",
         label: "Document 6",
-        attribution: "Total abstinence pledge of the kind circulated by American temperance societies",
+        attribution:
+          "Total abstinence pledge of the kind circulated by American temperance societies",
         date: "1840s",
         excerpt:
           "We, the undersigned, do agree that we will not use intoxicating liquors as a beverage, nor traffic in them; that we will not provide them as an article of entertainment, nor for persons in our employment; and that in all suitable ways we will discountenance their use throughout the community.",

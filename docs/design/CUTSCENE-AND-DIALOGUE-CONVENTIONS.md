@@ -3,27 +3,32 @@
 What a scripted scene may do, what it must clean up, and how the two institutes are allowed to
 speak.
 
-Written in Phase 78 alongside decision log `0061`. The cutscene system described in §3 **does not
-exist yet** — it is Phase 81C work. §1 is an audit of what is actually there today, and it is short
-on purpose: knowing exactly how little exists is what stops Phase 81C building a second one beside it.
+Written in Phase 78 alongside decision log `0061`, when the cutscene system described in §3 did not
+exist. **It does now** — Phase 81C built `engine/cutscene.js` and Phase 81G moved the last bespoke
+scene onto it, so §1's audit is history and §3's command set is shipped. §1 is kept anyway: knowing
+exactly how little existed is what stopped 81C building a second machine beside the first.
 
 ---
 
 ## 1. What exists today
 
-**There is no cutscene system.** There is one hard-coded scene and a set of reusable parts.
+**This section described the state before Phase 81C**, when there was no cutscene system — one
+hard-coded scene and a set of reusable parts. It is kept because the parts column is still accurate
+and still the reason the system was cheap to build. `hallwayScene`, the row that motivated all of
+it, **no longer exists**: Phase 81G folded the Entrance Hall onto the runner, so both authored
+scenes are now command lists in `content/cutscenes.js`.
 
-| Part                              | Where                                                                       | Reusable?                       |
-| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------- |
-| `hallwayScene`                    | `main.js` — a four-phase machine: `idle` / `talking` / `escort` / `flicker` | No. Welded to the Entrance Hall |
-| `createEscortWalk` / `stepEscort` | `engine/escort-walk.js` — pure, DOM-free two-body walk                      | **Yes**                         |
-| Intro typewriter                  | `main.js` — per-line reveal, tap-to-skip, continue indicator                | **Yes**                         |
-| `isHubInputLocked()`              | `main.js` — three call sites                                                | **Yes.** The one input lock     |
-| Portraits                         | `CHARACTER_SHEETS[key].portrait` — every character has one                  | **Yes**                         |
-| `prefersReducedMotion()`          | `main.js` — live, uncached                                                  | **Yes**                         |
-| Doorway fade                      | `@keyframes doorway-flicker`, `steps(1, end)`, driven by `animationend`     | **Yes**                         |
-| Four-direction facing             | `engine/sprite-animation.js`                                                | **Yes**                         |
-| Pathfinding                       | `findRoute()` over the map's walkable cells                                 | **Yes**                         |
+| Part                              | Where                                                                     | Reusable?                   |
+| --------------------------------- | ------------------------------------------------------------------------- | --------------------------- |
+| `createScene` / `stepScene`       | `engine/cutscene.js` — pure, DOM-free command cursor (Phase 81C)          | **Yes.** The system         |
+| `createEscortWalk` / `stepEscort` | `engine/escort-walk.js` — pure, DOM-free two-body walk                    | **Yes**                     |
+| Intro typewriter                  | `main.js` — per-line reveal, tap-to-skip, continue indicator              | **Yes**                     |
+| `isHubInputLocked()`              | `main.js` — three call sites, two terms since 81G                         | **Yes.** The one input lock |
+| Portraits                         | `CHARACTER_SHEETS[key].portrait` — every character has one                | **Yes**                     |
+| `prefersReducedMotion()`          | `main.js` — live, uncached                                                | **Yes**                     |
+| Doorway fade                      | `@keyframes doorway-flicker`, `steps(1, end)`, held by the `fade` command | **Yes**                     |
+| Four-direction facing             | `engine/sprite-animation.js`                                              | **Yes**                     |
+| Pathfinding                       | `findRoute()` over the map's walkable cells                               | **Yes**                     |
 
 **Input reality, stated plainly.** Keyboard and pointer are supported. There is **no gamepad
 support anywhere** in the codebase, and touch is a single app-level `pointerdown` handler — taps
@@ -52,10 +57,18 @@ sound cues and the existing dialogue surfaces. This keeps the download small and
 
 ## 3. The command set
 
-Phase 81C should generalise `hallwayScene` into a small timeline the content declares, rather than add
-a second bespoke machine beside it. **Only commands a scene in §5 actually needs may exist.** A
-command set built from imagination will be half dead code within a phase — the same finding as the
-unreachable `fallback` lines and the never-printed `note` fields in Phases 71 and 72.
+Phase 81C built the timeline; **Phase 81G finished the instruction** by generalising `hallwayScene`
+into it rather than leaving a second bespoke machine beside it. **Only commands a scene in §5
+actually needs may exist.** A command set built from imagination will be half dead code within a
+phase — the same finding as the unreachable `fallback` lines and the never-printed `note` fields in
+Phases 71 and 72.
+
+That rule was tested immediately and held. The Entrance Hall ends by **changing rooms**, which none
+of the eight expresses, and the temptation was a ninth command for the one scene that needs it. The
+answer instead was `startHubScene(id, { onDone })`: `returnControl` hands control back to whoever
+started the scene, and the caller does the room swap. **When a scene needs something the commands
+cannot say, look first at what it should hand back to** — the command set is for what happens on
+screen, and where the screen goes next is the host's business.
 
 Justified by the scenes below:
 
@@ -99,8 +112,8 @@ Anything a scene locked, it unlocks. Derived from invariants that have each brok
 2. The "Press E" prompt is cleared. Anything that locks movement must also suppress the prompt, or
    it hangs there offering an interaction that is already happening.
 3. NPC behaviour state is returned to its ordinary loop; no actor is left mid-route.
-4. Any `requestAnimationFrame` handle and any timer is cancelled — `hallwayScene` cancels both, and
-   a scene that forgets leaves a loop running against a screen that is gone.
+4. Any `requestAnimationFrame` handle and any timer is cancelled — `stopHubScene()` cancels both,
+   and a scene that forgets leaves a loop running against a screen that is gone.
 5. The player's facing and position are coherent, and their walk cycle matches their real ground
    speed. Passing a default speed to a body moving at a scripted speed runs its legs at the wrong
    rate — the `updateInstitutePlayer(speed)` lesson.
