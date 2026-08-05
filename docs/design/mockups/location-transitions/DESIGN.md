@@ -55,11 +55,19 @@ Each destination is one object. This is the whole content surface:
 | `kicker`  | Line above the title — the org, or `Case 1.01 · …`.                |
 | `title`   | The destination name (the hero line).                              |
 | `meta`    | Place · date — `Caribbean · 1493`, `Present day · Navigation Table`. |
-| `goal`    | One sentence, or `null` for a building with no mission goal.        |
-| `q`       | The central question, or `null`.                                   |
+| `goal`    | Orienting "what you'll do" line. Normally `null` — see the one-statement rule below. |
+| `q`       | The central question — the single body statement on a warp card, or `null`.        |
 | `sync`    | Loader label — `Syncing archive`, `Syncing record`.                |
 | `enter`   | Prompt — `Press E to enter`, `Follow the evidence`.                |
 | `scene`   | The scene id (drives the art `<img>` and the `data-scene` toggles). |
+
+**One body statement per card.** A warp card shows exactly one line under the title/meta: the central
+question (`q`). The earlier task-briefing `goal` paragraph was dropped — stacking a "what you'll do"
+goal *and* the question was too much text, and the two said the same thing (each case's goal already
+ends on the same stakes the question asks). The in-world Mission Tracker briefs the actual tasks, so
+the arrival screen doesn't. `goal` stays in the schema (rendered above `q` when set) for a future card
+where a concrete orienting line beats an abstract question, but the shipped warp cards leave it `null`.
+A building card (the Archive) has neither and leans on title + meta alone.
 
 In the game these come from real content, not literals — see §7.
 
