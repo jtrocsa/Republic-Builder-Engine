@@ -307,6 +307,9 @@
     <button class="tab" role="tab" data-dest="riverbend" aria-selected="false">
       Riverbend <small>Chronotravel · warp</small>
     </button>
+    <button class="tab" role="tab" data-dest="commonCause" aria-selected="false">
+      The Common Cause <small>Chronotravel · warp</small>
+    </button>
   </div>
 
   <div class="screen-frame">
@@ -484,6 +487,11 @@
         <img class="scene-img" id="img-riverbend" alt="The Riverbend tobacco settlement on the James River, 1619" />
       </div>
 
+      <!-- ===== SCENE: THE COMMON CAUSE — Revolutionary-era Philadelphia (exterior) ===== -->
+      <div class="scene" id="scene-commonCause">
+        <img class="scene-img" id="img-commonCause" alt="A Revolutionary-era Philadelphia market square: Independence Hall's clock tower, a cobblestone street of wagons and townspeople, and tall ships at the harbor beyond" />
+      </div>
+
       <div class="vignette"></div>
       <div class="scrim"></div>
       <!-- CARIBBEAN: the painted water ripples (image pixels warped by turbulence, masked to the bay) -->
@@ -606,6 +614,7 @@
   const ARCHIVE_IMG = './art/archive.jpg';
   const CARIBBEAN_IMG = './art/caribbean.jpg';
   const RIVERBEND_IMG = './art/riverbend.jpg';
+  const COMMONCAUSE_IMG = './art/common-cause.jpg';
 
   const DEST = {
     archive: {
@@ -628,12 +637,21 @@
       q: "What do a land charter, a servant's letter, and a wharf ledger reveal about who did this settlement's work and who held its power?",
       sync: "Syncing record", enter: "Follow the evidence", scene: "riverbend",
     },
+    // Real content from unit-03-campaign.js, case-007 (Case 3.01).
+    commonCause: {
+      eyebrow: "Chronotravel", kicker: "Case 3.01 · Revolution and Founding", title: "The Common Cause",
+      meta: "Philadelphia, Pennsylvania · 1763–1783",
+      goal: "Walk a reconstruction of a Revolutionary-era Philadelphia gathering ground, gather seven records spanning a frontier war to a fragile peace, and weigh how unevenly the era's language of liberty was extended — and to whom.",
+      q: "What did a frontier war, a farmer's protest, a King's offer of freedom, and rival appeals to liberty reveal about who could claim the Revolution's promise — and who was left still claiming it?",
+      sync: "Syncing record", enter: "Follow the evidence", scene: "commonCause",
+    },
   };
 
   const $ = (id) => document.getElementById(id);
   $("img-archive").src = ARCHIVE_IMG;
   $("img-caribbean").src = CARIBBEAN_IMG;
   $("img-riverbend").src = RIVERBEND_IMG;
+  $("img-commonCause").src = COMMONCAUSE_IMG;
   // the ripple layers warp the same painting pixels — point each SVG <image> at its own art
   const setSvgImage = (id, src) => {
     const el = document.getElementById(id);
@@ -724,9 +742,9 @@
   }
   function seedParts() {
     if (sceneKind === "archive") { parts = Array.from({ length: 16 }, makeDust); glints = []; return; }
-    // riverbend: the river moves purely by pixel-distortion (rb-fx) — no overlaid specular streaks
-    if (sceneKind === "riverbend") { parts = []; glints = []; return; }
-    glintZone = BAY; parts = []; glints = Array.from({ length: 20 }, makeGlint); // caribbean
+    if (sceneKind === "caribbean") { glintZone = BAY; parts = []; glints = Array.from({ length: 20 }, makeGlint); return; }
+    // every other scene (riverbend, commonCause, …) is a still painting — no overlaid particles
+    parts = []; glints = [];
   }
 
   let plast = performance.now();
