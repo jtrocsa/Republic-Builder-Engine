@@ -1,0 +1,772 @@
+<title>The Codex Handover — Cutscene POC</title>
+
+<style>
+  :root {
+    /* Chronicle palette (from apps/web/src/styles/global.css) */
+    --gold: #e1b65d;
+    --gold-soft: #f0d488;
+    --gold-rgb: 239, 204, 122;
+    --teal: #7ee6ec;
+    --ink: #f7e7bd;
+    --ink-2: #d8e3de;
+    --parchment: #e9d5a3;
+    --navy-rgb: 4, 26, 38;
+
+    /* Stage is always a dark theater — it is the game viewport */
+    --stage-a: #073042;
+    --stage-b: #041722;
+    --stage-c: #020c13;
+
+    --font-label: "Cinzel", "Trajan Pro", "Optima", "Palatino Linotype", Georgia, serif;
+    --font-display: "Spectral", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --font-ui: "DM Sans", system-ui, -apple-system, sans-serif;
+
+    /* Page chrome — theme-aware */
+    --page-bg: #06171f;
+    --page-bg-2: #0a222e;
+    --panel: rgba(var(--navy-rgb), 0.55);
+    --panel-solid: #0a2531;
+    --line: rgba(var(--gold-rgb), 0.16);
+    --text: #e7eef0;
+    --muted: #93a6ab;
+    --chip-idle: rgba(var(--navy-rgb), 0.5);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --page-bg: #ece1c6;
+      --page-bg-2: #f4ecd6;
+      --panel: #fbf6e7;
+      --panel-solid: #fbf6e7;
+      --line: rgba(30, 52, 62, 0.14);
+      --text: #24333b;
+      --muted: #5d6d70;
+      --chip-idle: #f0e7ce;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #06171f; --page-bg-2: #0a222e;
+    --panel: rgba(var(--navy-rgb), 0.55); --panel-solid: #0a2531;
+    --line: rgba(var(--gold-rgb), 0.16); --text: #e7eef0; --muted: #93a6ab;
+    --chip-idle: rgba(var(--navy-rgb), 0.5);
+  }
+  :root[data-theme="light"] {
+    --page-bg: #ece1c6; --page-bg-2: #f4ecd6;
+    --panel: #fbf6e7; --panel-solid: #fbf6e7;
+    --line: rgba(30, 52, 62, 0.14); --text: #24333b; --muted: #5d6d70;
+    --chip-idle: #f0e7ce;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-ui);
+    color: var(--text);
+    background:
+      radial-gradient(1100px 600px at 50% -8%, var(--page-bg-2), transparent 70%),
+      var(--page-bg);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 40px) 64px;
+  }
+
+  /* ---- header ---- */
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.34em;
+    font-size: 0.72rem;
+    color: var(--gold);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 4.4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 10px;
+    color: var(--text);
+  }
+  h1 em { color: var(--gold-soft); font-style: normal; }
+  .lede {
+    max-width: 64ch;
+    color: var(--muted);
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  /* ---- stage ---- */
+  .stage-frame {
+    margin: 26px auto 0;
+    max-width: 940px;
+    border: 1px solid rgba(var(--gold-rgb), 0.34);
+    border-radius: 16px;
+    padding: 10px;
+    background:
+      linear-gradient(180deg, rgba(var(--gold-rgb), 0.06), rgba(var(--navy-rgb), 0.2));
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+  .stage {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 9px;
+    background:
+      radial-gradient(58% 46% at 30% 74%, rgba(var(--gold-rgb), 0.14), transparent 62%),
+      radial-gradient(120% 80% at 50% 6%, rgba(var(--gold-rgb), 0.05), transparent 52%),
+      radial-gradient(140% 120% at 50% 120%, var(--stage-a), var(--stage-b) 52%, var(--stage-c) 100%);
+    cursor: pointer;
+    isolation: isolate;
+  }
+  /* faint archive floor line */
+  .stage::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 24%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.22), transparent);
+    z-index: 1;
+  }
+
+  #dust { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* cinematic letterbox */
+  .bar {
+    position: absolute; left: 0; right: 0; height: 8%;
+    background: #010609; z-index: 8;
+    transform: scaleY(0); transition: transform 0.5s ease;
+  }
+  .bar.top { top: 0; transform-origin: top; }
+  .bar.bot { bottom: 0; transform-origin: bottom; }
+  .stage.rolling .bar { transform: scaleY(1); }
+
+  /* director */
+  #director {
+    position: absolute;
+    left: 24%;
+    bottom: 26%;
+    height: 46%;
+    image-rendering: pixelated;
+    transform: translate(-50%, 0);
+    transform-origin: bottom center;
+    filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.4s ease;
+    z-index: 4;
+  }
+  #director.lit { opacity: 1; }
+  #director.turn { transform: translate(-50%, 0) scaleX(-1); }
+
+  /* the codex object */
+  #codex {
+    position: absolute;
+    left: 24%;
+    bottom: 40%;
+    width: 7%;
+    image-rendering: pixelated;
+    transform: translate(-50%, 20%) scale(0.6) rotate(-8deg);
+    opacity: 0;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
+    transition: transform var(--flight, 1.1s) cubic-bezier(0.22, 0.7, 0.2, 1),
+                opacity 0.5s ease, width var(--flight, 1.1s) cubic-bezier(0.22, 0.7, 0.2, 1),
+                left var(--flight, 1.1s) cubic-bezier(0.22, 0.7, 0.2, 1),
+                bottom var(--flight, 1.1s) cubic-bezier(0.22, 0.7, 0.2, 1);
+    z-index: 6;
+  }
+  #codex.summoned { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(0deg); }
+  /* handed toward the player/camera: front & centre, larger */
+  #codex.handover {
+    left: 50%; bottom: 30%; width: 15%;
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1) rotate(0deg);
+  }
+  /* settles into the HUD slot */
+  #codex.stowed {
+    left: 92%; bottom: 80%; width: 5%;
+    opacity: 0.96;
+    transform: translate(-50%, 0) scale(1) rotate(0deg);
+  }
+
+  /* highlightObject glow ring */
+  #glow {
+    position: absolute;
+    left: 24%; bottom: 46%;
+    width: 16%; aspect-ratio: 1;
+    transform: translate(-50%, 50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--gold-rgb), 0.5), rgba(var(--gold-rgb), 0.12) 45%, transparent 68%);
+    opacity: 0;
+    z-index: 5;
+    transition: left var(--flight, 1.1s) ease, bottom var(--flight, 1.1s) ease, opacity 0.4s ease;
+  }
+  #glow.on { opacity: 1; animation: pulse 1.5s ease-in-out infinite; }
+  #glow.follow { left: 50%; bottom: 37%; }
+  @keyframes pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
+  /* white flash / fade overlay */
+  #flash {
+    position: absolute; inset: 0; z-index: 9;
+    background: #fff; opacity: 0; pointer-events: none;
+    transition: opacity 0.45s ease;
+  }
+  #fadeblack {
+    position: absolute; inset: 0; z-index: 10;
+    background: #010609; opacity: 1; pointer-events: none;
+    transition: opacity 0.7s ease;
+  }
+  #fadeblack.clear { opacity: 0; }
+
+  /* HUD codex slot (top-right) */
+  #hudslot {
+    position: absolute; top: 6%; right: 4%;
+    width: 8%; aspect-ratio: 3/4; z-index: 3;
+    border: 1px dashed rgba(var(--gold-rgb), 0.32);
+    border-radius: 6px;
+    display: grid; place-items: center;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  #hudslot.show { opacity: 1; }
+  #hudslot.filled { border-style: solid; border-color: rgba(var(--gold-rgb), 0.7); background: rgba(var(--gold-rgb), 0.08); }
+  #hudslot span {
+    font-family: var(--font-label); font-size: 0.5rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold-soft);
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  }
+
+  /* dialogue box */
+  #dialogue {
+    position: absolute;
+    left: 4%; right: 4%; bottom: 5%;
+    z-index: 7;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: stretch;
+    padding: 12px 16px;
+    border: 1px solid rgba(var(--gold-rgb), 0.5);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(6, 30, 42, 0.94), rgba(3, 18, 27, 0.96));
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #dialogue.show { opacity: 1; transform: translateY(0); }
+  .portrait-chip {
+    width: 54px; height: 63px;
+    image-rendering: pixelated;
+    border: 1px solid rgba(var(--gold-rgb), 0.5);
+    border-radius: 8px;
+    background: rgba(var(--navy-rgb), 0.6);
+    align-self: end;
+  }
+  .speech { min-width: 0; }
+  .speaker {
+    font-family: var(--font-label);
+    text-transform: uppercase; letter-spacing: 0.16em;
+    font-size: 0.66rem; color: var(--gold-soft); margin: 2px 0 4px;
+  }
+  .line {
+    font-family: var(--font-display);
+    font-size: clamp(0.92rem, 1.9vw, 1.18rem);
+    line-height: 1.35; color: var(--ink); margin: 0;
+  }
+  .caret {
+    display: inline-block; margin-left: 2px; color: var(--gold);
+    animation: blink 1s steps(1) infinite; opacity: 0;
+  }
+  .caret.on { opacity: 1; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* "Press E" — suppressed during scene, restored on returnControl */
+  #presse {
+    position: absolute; left: 50%; bottom: 8%; z-index: 4;
+    transform: translateX(-50%);
+    font-family: var(--font-label); font-size: 0.62rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--gold-soft);
+    padding: 5px 12px; border: 1px solid rgba(var(--gold-rgb), 0.4);
+    border-radius: 999px; background: rgba(3, 18, 27, 0.8);
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  #presse.show { opacity: 1; }
+
+  /* ---- controls ---- */
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin: 16px 0 6px;
+  }
+  button {
+    font-family: var(--font-label);
+    font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 10px 16px; border-radius: 9px; cursor: pointer;
+    border: 1px solid rgba(var(--gold-rgb), 0.45);
+    background: var(--chip-idle); color: var(--text);
+    transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+  }
+  button:hover { transform: translateY(-1px); border-color: rgba(var(--gold-rgb), 0.8); }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  button.primary { background: var(--gold); color: #19303a; border-color: var(--gold); font-weight: 700; }
+  button.primary:hover { background: var(--gold-soft); }
+  button[aria-pressed="true"] { background: rgba(var(--gold-rgb), 0.2); border-color: var(--gold); color: var(--gold-soft); }
+  .spacer { flex: 1; }
+  .hint { font-family: var(--font-ui); font-size: 0.8rem; color: var(--muted); }
+
+  /* ---- command rail ---- */
+  .rail-head {
+    display: flex; align-items: baseline; gap: 12px; margin: 26px 0 10px;
+  }
+  .rail-head h2 {
+    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.18em;
+    font-size: 0.82rem; color: var(--gold); margin: 0;
+  }
+  .rail-head .sub { font-size: 0.8rem; color: var(--muted); font-family: var(--font-ui); }
+  .rail {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px;
+    scrollbar-width: thin;
+  }
+  .cmd {
+    flex: 0 0 auto;
+    min-width: 116px; max-width: 150px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    opacity: 0.5;
+    transition: opacity 0.25s ease, border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  }
+  .cmd .k {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.72rem; color: var(--gold-soft); display: block; margin-bottom: 4px;
+  }
+  .cmd .d { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+  .cmd.done { opacity: 0.85; }
+  .cmd.active {
+    opacity: 1; border-color: var(--gold); transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+  .cmd.flag.fired { opacity: 1; border-color: var(--gold); background: rgba(var(--gold-rgb), 0.12); }
+  .cmd.flag.fired .k::after { content: " ✓"; color: var(--gold); }
+
+  /* ---- notes grid ---- */
+  .notes {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px; margin-top: 30px;
+  }
+  .card {
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--panel); padding: 16px 18px;
+  }
+  .card h3 {
+    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.12em;
+    font-size: 0.74rem; color: var(--gold); margin: 0 0 8px;
+  }
+  .card p { margin: 0 0 8px; font-size: 0.88rem; color: var(--text); }
+  .card ul { margin: 0; padding-left: 18px; }
+  .card li { font-size: 0.86rem; color: var(--text); margin-bottom: 5px; }
+  .card li b { color: var(--gold-soft); font-weight: 600; }
+  .tag {
+    display: inline-block; font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.72rem; color: var(--gold-soft);
+    background: rgba(var(--gold-rgb), 0.12); border: 1px solid var(--line);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  footer { margin-top: 30px; font-size: 0.8rem; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.001s !important; animation-duration: 0.001s !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Chronicle Institute · Cutscene proof-of-concept</p>
+    <h1>The Director hands you the <em>Codex</em>.</h1>
+    <p class="lede">
+      A Claude-animated, asset-driven scene built from the real game art
+      (<span class="tag">chronicle-codex.png</span> · <span class="tag">director-rowan-hale-portrait.png</span>)
+      in Chronicle's own palette. It plays like the game <em>and</em> decomposes, live, into the
+      eight commands that <span class="tag">engine/cutscene.js</span> already ships — so this is a
+      test of the <b>approach</b>, not a new system. Click the stage or press Space to advance a line.
+    </p>
+  </header>
+
+  <div class="stage-frame">
+    <div class="stage" id="stage" tabindex="0" aria-label="Cutscene stage">
+      <canvas id="dust"></canvas>
+      <div class="bar top"></div>
+      <div class="bar bot"></div>
+
+      <img id="director" alt="Director Rowan Hale" />
+      <div id="glow"></div>
+      <img id="codex" alt="The Codex" />
+
+      <div id="hudslot"><img id="hudcodex" alt="" style="width:70%;image-rendering:pixelated;opacity:0;transition:opacity .4s" /><span>Codex</span></div>
+
+      <div id="presse">Press E</div>
+
+      <div id="dialogue">
+        <img class="portrait-chip" id="portrait" alt="Rowan Hale" />
+        <div class="speech">
+          <div class="speaker" id="speaker">Director Rowan Hale</div>
+          <p class="line"><span id="linetext"></span><span class="caret" id="caret">▍</span></p>
+        </div>
+      </div>
+
+      <div id="flash"></div>
+      <div id="fadeblack"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="play">▶ Play scene</button>
+    <button id="skip">Skip ⏭</button>
+    <button id="reduce" aria-pressed="false">Reduced motion</button>
+    <span class="spacer"></span>
+    <span class="hint" id="status">Ready.</span>
+  </div>
+
+  <div class="rail-head">
+    <h2>Command timeline</h2>
+    <span class="sub">the scene <em>is</em> this list — same shape as a <span class="tag">content/cutscenes.js</span> entry</span>
+  </div>
+  <div class="rail" id="rail" aria-label="Command timeline"></div>
+
+  <div class="notes">
+    <div class="card">
+      <h3>Why this is a POC, not a mockup</h3>
+      <p>Every beat maps to a command your interpreter already runs. Nothing here needs a ninth command or a <span class="tag">focusCamera</span> — the hand-over is staged by moving the object, per your canon rule <em>“a scripted beat moves characters, never the screen.”</em></p>
+    </div>
+    <div class="card">
+      <h3>Canon rules it demonstrates</h3>
+      <ul>
+        <li><b>Skip = fast-forward, one teardown.</b> Skipping runs the remaining commands' end-states and still fires every <span class="tag">setFlag</span> — it never abandons them.</li>
+        <li><b>Flag before control.</b> <span class="tag">receivedCodex</span> is written before <span class="tag">returnControl</span>.</li>
+        <li><b>Prompt restored.</b> “Press E” is suppressed during the scene, back after.</li>
+        <li><b>Reduced motion respected.</b> Toggle it; states cut instead of tween.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Where a little new PixelLab art pays off</h3>
+      <ul>
+        <li><b>Codex, larger + 2-frame glow</b> — the current 96×128 icon scales up soft; a 2–3 frame “closed → seam-glow → open” state would sell the hand-over.</li>
+        <li><b>Director “extends / offers” pose</b> — one frame beyond the walk set so the give reads as a give.</li>
+        <li><b>Gold dust / seam-light sprite</b> — optional; the ambient here is canvas, which is free and parameterizable.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    Assets embedded from <span class="tag">apps/web/src/assets/</span>. Palette &amp; type from
+    <span class="tag">global.css</span>. Fonts fall back to serif where Cinzel/Spectral aren't installed.
+  </footer>
+</div>
+
+<script>
+  "use strict";
+  /* ---- real game art, inlined (CSP blocks external hosts) ---- */
+  const CODEX_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAACACAYAAAD03Gy6AAAB4ElEQVR4nO3dMWsTYQDH4bQEMnRoC0IGh04OpXsHsSBB3JycRPAj+AmkU4fM/QiF4uTUrZTiIE5Zi4OTYyZ1cAgIcX4PkhBzd//TPs/2kkvu5X68d7kMl14PAAAAAAAAAAD432w1vYPh41fzpvfRpOnn940eo+0mP5zVBAgTIKz289ve4ag45w/2h+UO+4Ni/PHtr7qnsJan5zvFeP57Voxn36fF+MeX21qPmRUQJkCYAGH9tnf44cVdMT4ZP2x7CoXJuDwEx6ezBVs2wwoIEyBMgDABwgQIEyBMgLDW7wPW9fXy2Ubvf/T6pqaZNMMKCBMgTICwzl8Dun4O35QVECZAmABhnb8GVH062136+pN3P1uaST2sgDABwgQIEyBMgDABwgQI6/x9wKrv/au27/p9gRUQJkCYAGGdvwZUz+F+C6JWAoQJECZAmABhAoQJENb5+4Cqdb/nXzz/tmKLB38/mRpYAWEChAkQJkCYAGEChAkQ9s/dB6zrzfXB0tcno5YmsoAVECZAmABhAoQJECZAmABhAoQJECZAmABhrf8W9PLqqBhXn9t531gBYQKECRDW+gm4+nz+tp/V3DVWQJgAYQKENX4NqP4HCyUrIEyAMAEAAAAAAAAAAAAAoCZ/AD6YN2N7Fz3tAAAAAElFTkSuQmCC";
+  const DIRECTOR_PNG = "data:image/png;base64,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";
+
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage");
+  const els = {
+    fadeblack: $("fadeblack"), flash: $("flash"), director: $("director"),
+    codex: $("codex"), glow: $("glow"), dialogue: $("dialogue"),
+    speaker: $("speaker"), linetext: $("linetext"), caret: $("caret"),
+    portrait: $("portrait"), presse: $("presse"), hudslot: $("hudslot"),
+    hudcodex: $("hudcodex"), rail: $("rail"), status: $("status"),
+  };
+  els.director.src = DIRECTOR_PNG;
+  els.portrait.src = DIRECTOR_PNG;
+  els.codex.src = CODEX_PNG;
+  els.hudcodex.src = CODEX_PNG;
+
+  /* ---- the scene: a list of commands, exactly like content/cutscenes.js ---- */
+  const SCENE = [
+    { cmd: "fade",          desc: "in · from black",        type: "fadein",   dur: 850 },
+    { cmd: "say",           desc: "Director · 1 of 3",       type: "say",
+      text: "You’ve read the record. Preserving it is another matter." },
+    { cmd: "turnActor",     desc: "Director → you",          type: "turn",     dur: 520 },
+    { cmd: "say",           desc: "Director · 2 of 3",       type: "say",
+      text: "This is your Codex. It keeps only what you can defend — never what you merely believe." },
+    { cmd: "highlightObject", desc: "codex · summon + glow", type: "summon",   dur: 1000 },
+    { cmd: "playSound",     desc: "chime (shown as light)",  type: "sound",    dur: 380 },
+    { cmd: "moveActor",     desc: "codex · the hand-over",   type: "handover", dur: 1250 },
+    { cmd: "fade",          desc: "flash · received",        type: "flash",    dur: 620 },
+    { cmd: "setFlag",       desc: "receivedCodex = true",    type: "flag",     dur: 260, flag: true },
+    { cmd: "say",           desc: "Director · 3 of 3",       type: "say",
+      text: "It stays synced to the archive. When they disagree, you’ll know before I do." },
+    { cmd: "moveActor",     desc: "codex · stow to HUD",     type: "stow",     dur: 850 },
+    { cmd: "returnControl", desc: "control → host",          type: "return",   dur: 520 },
+  ];
+
+  /* ---- build the command rail ---- */
+  SCENE.forEach((s, i) => {
+    const el = document.createElement("div");
+    el.className = "cmd" + (s.type === "flag" ? " flag" : "");
+    el.dataset.i = i;
+    el.innerHTML = `<span class="k">${s.cmd}</span><span class="d">${s.desc}</span>`;
+    els.rail.appendChild(el);
+  });
+  const railEls = [...els.rail.children];
+
+  /* ---- particles (ambient motes + hand-over bursts) ---- */
+  const cv = $("dust"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, motes = [], bursts = [];
+  function sizeCanvas() {
+    const r = stage.getBoundingClientRect();
+    W = cv.width = r.width; H = cv.height = r.height;
+  }
+  function seedMotes() {
+    motes = Array.from({ length: 34 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: 0.5 + Math.random() * 1.4, v: 4 + Math.random() * 10,
+      a: 0.06 + Math.random() * 0.18, drift: (Math.random() - 0.5) * 6,
+    }));
+  }
+  function burst(fx, fy, n, color) {
+    if (reduced) return;
+    const x = fx * W, y = (1 - fy) * H;
+    for (let i = 0; i < n; i++) {
+      const ang = Math.random() * Math.PI * 2, sp = 20 + Math.random() * 70;
+      bursts.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 12,
+        life: 1, r: 1 + Math.random() * 2.4, color });
+    }
+  }
+  let last = performance.now();
+  function draw(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    ctx.clearRect(0, 0, W, H);
+    for (const m of motes) {
+      m.y -= m.v * dt; m.x += m.drift * dt;
+      if (m.y < -4) { m.y = H + 4; m.x = Math.random() * W; }
+      ctx.globalAlpha = m.a;
+      ctx.fillStyle = "#f0d488";
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill();
+    }
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      const b = bursts[i];
+      b.x += b.vx * dt; b.y += b.vy * dt; b.vy += 60 * dt; b.life -= dt * 1.1;
+      if (b.life <= 0) { bursts.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(0, b.life) * 0.9;
+      ctx.fillStyle = b.color;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  sizeCanvas(); seedMotes(); requestAnimationFrame(draw);
+  new ResizeObserver(sizeCanvas).observe(stage);
+
+  /* ---- runner state ---- */
+  let idx = -1, playing = false, reduced = false;
+  let typeTimer = null, holdTimer = null, stepTimer = null, isTyping = false;
+  const clearTimers = () => { [typeTimer, holdTimer, stepTimer].forEach(clearTimeout); typeTimer = holdTimer = stepTimer = null; };
+  const wait = (ms) => reduced ? Math.min(ms, 110) : ms;
+
+  function setNoAnim(on) { stage.classList.toggle("noanim", on); }
+
+  function resetVisuals() {
+    clearTimers(); isTyping = false;
+    els.fadeblack.classList.remove("clear");
+    stage.classList.remove("rolling");
+    els.director.classList.remove("lit", "turn");
+    els.director.style.transform = "";
+    els.codex.classList.remove("summoned", "handover", "stowed");
+    els.codex.style.opacity = "";
+    els.glow.classList.remove("on", "follow");
+    els.dialogue.classList.remove("show");
+    els.linetext.textContent = ""; els.caret.classList.remove("on");
+    els.presse.classList.remove("show");
+    els.hudslot.classList.remove("show", "filled"); els.hudcodex.style.opacity = "0";
+    els.flash.style.opacity = "0";
+    railEls.forEach((r) => r.classList.remove("active", "done", "fired"));
+    bursts = [];
+  }
+
+  function markRail(i) {
+    railEls.forEach((r, j) => {
+      r.classList.toggle("active", j === i);
+      if (j < i) r.classList.add("done");
+    });
+    railEls[i] && railEls[i].scrollIntoView({ behavior: reduced ? "auto" : "smooth", inline: "center", block: "nearest" });
+  }
+
+  function typewriter(text, done) {
+    isTyping = true; els.linetext.textContent = ""; els.caret.classList.add("on");
+    if (reduced) { els.linetext.textContent = text; isTyping = false; done(); return; }
+    let i = 0;
+    (function tick() {
+      els.linetext.textContent = text.slice(0, ++i);
+      if (i < text.length) typeTimer = setTimeout(tick, 26);
+      else { isTyping = false; done(); }
+    })();
+  }
+
+  function runStep() {
+    idx++;
+    if (idx >= SCENE.length) return finish();
+    const s = SCENE[idx];
+    markRail(idx);
+    els.status.textContent = `${s.cmd} — ${s.desc}`;
+
+    switch (s.type) {
+      case "fadein":
+        stage.classList.add("rolling");
+        els.fadeblack.classList.add("clear");
+        setTimeout(() => els.director.classList.add("lit"), wait(250));
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "say":
+        els.speaker.textContent = "Director Rowan Hale";
+        els.dialogue.classList.add("show");
+        typewriter(s.text, () => { holdTimer = setTimeout(runStep, wait(1300)); });
+        break;
+
+      case "turn":
+        els.director.style.transform = "translate(-50%,0) translateY(-4px)";
+        setTimeout(() => (els.director.style.transform = ""), wait(240));
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "summon":
+        els.codex.style.setProperty("--flight", "0.7s");
+        els.codex.classList.add("summoned");
+        els.glow.classList.add("on");
+        burst(0.24, 0.5, 18, "#f0d488");
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "sound":
+        els.glow.style.filter = "brightness(1.7)";
+        setTimeout(() => (els.glow.style.filter = ""), wait(260));
+        burst(0.24, 0.5, 10, "#7ee6ec");
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "handover":
+        els.codex.style.setProperty("--flight", (reduced ? 0.11 : s.dur / 1000) + "s");
+        els.codex.classList.remove("summoned");
+        els.codex.classList.add("handover");
+        els.glow.classList.add("follow");
+        if (!reduced) {
+          let n = 0;
+          const trail = setInterval(() => { burst(0.24 + (0.26 * n) / 6, 0.5 - 0.1 * (n / 6), 6, "#f0d488"); if (++n > 6) clearInterval(trail); }, s.dur / 8);
+        }
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "flash":
+        els.glow.classList.remove("on");
+        els.flash.style.opacity = "0.85";
+        burst(0.5, 0.3, 26, "#ffffff");
+        setTimeout(() => (els.flash.style.opacity = "0"), wait(300));
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "flag":
+        railEls[idx].classList.add("fired");
+        els.hudslot.classList.add("show");
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "stow":
+        els.codex.style.setProperty("--flight", (reduced ? 0.11 : s.dur / 1000) + "s");
+        els.codex.classList.remove("handover");
+        els.codex.classList.add("stowed");
+        els.hudslot.classList.add("show");
+        setTimeout(() => {
+          els.hudslot.classList.add("filled");
+          els.hudcodex.style.opacity = "1";
+          els.codex.style.opacity = "0";
+        }, wait(s.dur * 0.8));
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+
+      case "return":
+        els.dialogue.classList.remove("show");
+        stage.classList.remove("rolling");
+        setTimeout(() => els.presse.classList.add("show"), wait(200));
+        stepTimer = setTimeout(runStep, wait(s.dur));
+        break;
+    }
+  }
+
+  /* Skip = fast-forward. Runs every remaining command's END state and fires
+     every flag — the SAME teardown as natural completion, never an abandon. */
+  function skip() {
+    if (!playing) return;
+    clearTimers(); isTyping = false;
+    setNoAnim(true);
+    els.fadeblack.classList.add("clear");
+    stage.classList.remove("rolling");
+    els.director.classList.add("lit"); els.director.classList.remove("turn"); els.director.style.transform = "";
+    els.codex.classList.remove("summoned", "handover"); els.codex.classList.add("stowed"); els.codex.style.opacity = "0";
+    els.glow.classList.remove("on", "follow");
+    els.dialogue.classList.remove("show");
+    els.flash.style.opacity = "0";
+    els.hudslot.classList.add("show", "filled"); els.hudcodex.style.opacity = "1";
+    els.presse.classList.add("show");
+    railEls.forEach((r) => { r.classList.remove("active"); r.classList.add("done"); if (r.classList.contains("flag")) r.classList.add("fired"); });
+    els.status.textContent = "Skipped — same teardown ran. receivedCodex ✓, control returned.";
+    setTimeout(() => setNoAnim(false), 40);
+    idx = SCENE.length; playing = false;
+    $("play").textContent = "↻ Replay scene";
+  }
+
+  function finish() {
+    playing = false;
+    els.status.textContent = "Scene complete. receivedCodex ✓, control returned to host.";
+    $("play").textContent = "↻ Replay scene";
+  }
+
+  function start() {
+    resetVisuals(); playing = true; idx = -1;
+    $("play").textContent = "↻ Replay scene";
+    els.status.textContent = "Rolling…";
+    stepTimer = setTimeout(runStep, wait(120));
+  }
+
+  /* manual advance — only meaningful during a say beat, mirrors tap-to-skip */
+  function advance() {
+    if (!playing) return;
+    const s = SCENE[idx];
+    if (!s || s.type !== "say") return;
+    if (isTyping) { clearTimeout(typeTimer); els.linetext.textContent = s.text; els.caret.classList.add("on"); isTyping = false; clearTimeout(holdTimer); holdTimer = setTimeout(runStep, wait(700)); }
+    else { clearTimeout(holdTimer); runStep(); }
+  }
+
+  /* ---- wiring ---- */
+  $("play").addEventListener("click", start);
+  $("skip").addEventListener("click", skip);
+  $("reduce").addEventListener("click", (e) => {
+    reduced = !reduced;
+    e.currentTarget.setAttribute("aria-pressed", String(reduced));
+    setNoAnim(reduced);
+    els.status.textContent = reduced ? "Reduced motion on — states cut instead of tween." : "Reduced motion off.";
+  });
+  stage.addEventListener("click", () => { if (!playing) start(); else advance(); });
+  stage.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); if (!playing) start(); else advance(); }
+  });
+  window.addEventListener("keydown", (e) => {
+    if (document.activeElement === stage) return;
+    if (e.code === "Space") { e.preventDefault(); playing ? advance() : start(); }
+  });
+
+  resetVisuals();
+</script>
+
+<style>
+  .noanim, .noanim * { transition-duration: 0.001s !important; animation: none !important; }
+</style>
