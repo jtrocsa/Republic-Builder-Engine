@@ -109,16 +109,13 @@
   }
 
   /* scene-scoped life — sits ABOVE the scrim so light/water read, toggled per scene */
-  .cb-fx, .ar-flicker, .ar-beams, .rb-fx { display: none; }
-  .cb-fx, .rb-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+  .cb-fx, .ar-flicker, .ar-beams { display: none; }
+  .cb-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
   .screen[data-scene="caribbean"] .cb-fx { display: block; }
   .screen[data-scene="archive"] .ar-flicker,
   .screen[data-scene="archive"] .ar-beams { display: block; }
-  .screen[data-scene="riverbend"] .rb-fx { display: block; }
 
-  /* riverbend — the painting's own pixels move: the river ripples (left) and the chimney
-     smoke wavers (right). Both are feTurbulence + feDisplacementMap on the image itself, in
-     .rb-fx below — no overlaid puffs or streaks, so the motion always reads as native. */
+  /* riverbend — no contextual motion; the painting carries the card on its own. */
 
   /* archive — warm glow at the windows + soft volumetric beams (the earlier, quieter treatment kept) */
   .ar-flicker {
@@ -523,53 +520,7 @@
       <div class="ar-flicker"></div>
       <div class="ar-beams"><span class="beam b1"></span><span class="beam b2"></span><span class="beam b3"></span></div>
 
-      <!-- RIVERBEND: the painting's own pixels move. The river ripples behind the text (left) and
-           the painted chimney smoke wavers (right). Both warp the real image via turbulence +
-           displacement — no overlaid streaks or puffs. Low scale + feathered masks = current, not a lens. -->
-      <svg class="rb-fx" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <defs>
-          <!-- river: gentle, mostly-horizontal ripple. Small scale so it reads as a moving surface. -->
-          <filter id="rbWater" x="-4%" y="-6%" width="108%" height="118%" color-interpolation-filters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.030" numOctaves="2" seed="9" result="n">
-              <animate attributeName="baseFrequency" dur="21s"
-                       values="0.012 0.028; 0.015 0.034; 0.012 0.028" repeatCount="indefinite"/>
-            </feTurbulence>
-            <feDisplacementMap in="SourceGraphic" in2="n" xChannelSelector="R" yChannelSelector="G" scale="4">
-              <animate attributeName="scale" dur="13s" values="3; 6; 3" repeatCount="indefinite"/>
-            </feDisplacementMap>
-          </filter>
-          <!-- smoke: slower, larger-featured, taller wobble so the painted plume drifts and curls upward. -->
-          <filter id="rbSmoke" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.020" numOctaves="2" seed="4" result="s">
-              <animate attributeName="baseFrequency" dur="9s"
-                       values="0.014 0.020; 0.020 0.028; 0.014 0.020" repeatCount="indefinite"/>
-            </feTurbulence>
-            <feDisplacementMap in="SourceGraphic" in2="s" xChannelSelector="R" yChannelSelector="G" scale="10">
-              <animate attributeName="scale" dur="6.5s" values="6; 13; 6" repeatCount="indefinite"/>
-            </feDisplacementMap>
-          </filter>
-          <radialGradient id="rbSoft" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stop-color="#fff"/>
-            <stop offset="0.55" stop-color="#fff"/>
-            <stop offset="1" stop-color="#000"/>
-          </radialGradient>
-          <!-- open river on the left, behind the title/goal text — feathered, off the far shore and docks -->
-          <mask id="rbWaterMask">
-            <ellipse cx="270" cy="465" rx="210" ry="150" fill="url(#rbSoft)"/>
-            <ellipse cx="235" cy="650" rx="190" ry="115" fill="url(#rbSoft)"/>
-            <ellipse cx="375" cy="430" rx="105" ry="80"  fill="url(#rbSoft)"/>
-          </mask>
-          <!-- the two chimney plumes rising over the cabins on the right -->
-          <mask id="rbSmokeMask">
-            <ellipse cx="1120" cy="330" rx="70" ry="125" fill="url(#rbSoft)"/>
-            <ellipse cx="1388" cy="400" rx="50" ry="95"  fill="url(#rbSoft)"/>
-          </mask>
-        </defs>
-        <image id="rb-water-img" x="0" y="0" width="1600" height="900" preserveAspectRatio="none"
-               filter="url(#rbWater)" mask="url(#rbWaterMask)"/>
-        <image id="rb-smoke-img" x="0" y="0" width="1600" height="900" preserveAspectRatio="none"
-               filter="url(#rbSmoke)" mask="url(#rbSmokeMask)"/>
-      </svg>
+      <!-- RIVERBEND: no contextual motion — the painting stands on its own (breathe + scrim only). -->
 
       <canvas id="spray"></canvas>
       <div class="ticks"><span class="edge"></span><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
@@ -691,10 +642,7 @@
     el.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", src);
   };
   setSvgImage("cb-water-img", CARIBBEAN_IMG);
-  setSvgImage("rb-water-img", RIVERBEND_IMG);
-  setSvgImage("rb-smoke-img", RIVERBEND_IMG);
   const cbFxSvg = document.querySelector(".cb-fx");
-  const rbFxSvg = document.querySelector(".rb-fx");
   const ring = $("ringFill"), pctEl = $("ringPct"), syncEl = $("ringSync");
   const R = 70, C = 2 * Math.PI * R;
   ring.style.strokeDasharray = C;
@@ -816,10 +764,8 @@
 
   function applyCalm() {
     screenEl.classList.toggle("calm", reduced);
-    // CSS animation:none can't stop SMIL — pause the water-ripple SVG timelines directly
-    for (const s of [cbFxSvg, rbFxSvg]) {
-      if (s) { try { reduced ? s.pauseAnimations() : s.unpauseAnimations(); } catch (e) {} }
-    }
+    // CSS animation:none can't stop SMIL — pause the caribbean water-ripple SVG timeline directly
+    if (cbFxSvg) { try { reduced ? cbFxSvg.pauseAnimations() : cbFxSvg.unpauseAnimations(); } catch (e) {} }
     if (reduced) stopParts(); else { reseedFor(current); startParts(); }
   }
 
