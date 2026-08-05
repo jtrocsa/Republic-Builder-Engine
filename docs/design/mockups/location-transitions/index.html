@@ -109,11 +109,33 @@
   }
 
   /* scene-scoped life — sits ABOVE the scrim so light/water read, toggled per scene */
-  .cb-fx, .ar-flicker, .ar-beams { display: none; }
-  .cb-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+  .cb-fx, .ar-flicker, .ar-beams, .rb-fx, .rb-smoke { display: none; }
+  .cb-fx, .rb-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
   .screen[data-scene="caribbean"] .cb-fx { display: block; }
   .screen[data-scene="archive"] .ar-flicker,
   .screen[data-scene="archive"] .ar-beams { display: block; }
+  .screen[data-scene="riverbend"] .rb-fx,
+  .screen[data-scene="riverbend"] .rb-smoke { display: block; }
+
+  /* riverbend — chimney smoke rising from the settlement cabins (right side of the painting) */
+  .rb-smoke { position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
+  .rb-smoke .puff {
+    position: absolute; width: 3.4%; aspect-ratio: 1; border-radius: 50%; filter: blur(7px); opacity: 0;
+    background: radial-gradient(circle, rgba(232, 226, 214, 0.5), rgba(210, 204, 192, 0.14) 55%, transparent 72%);
+    animation: smokeRise 8s ease-out infinite;
+  }
+  @keyframes smokeRise {
+    0%   { transform: translate(0, 0) scale(0.35); opacity: 0; }
+    18%  { opacity: 0.55; }
+    100% { transform: translate(2.4%, -150px) scale(1.9); opacity: 0; }
+  }
+  /* three chimneys; the ".d" twin is a delayed second puff for a continuous column */
+  .rb-smoke .p1 { left: 68.5%; top: 45%; }
+  .rb-smoke .p2 { left: 83.2%; top: 49%; animation-duration: 9.5s; }
+  .rb-smoke .p3 { left: 60.4%; top: 40%; width: 2.8%; animation-duration: 7s; }
+  .rb-smoke .p1.d { animation-delay: -4s; }
+  .rb-smoke .p2.d { animation-delay: -4.7s; }
+  .rb-smoke .p3.d { animation-delay: -3.5s; }
 
   /* archive — warm glow at the windows + soft volumetric beams (the earlier, quieter treatment kept) */
   .ar-flicker {
@@ -141,9 +163,9 @@
      image pixels, masked to soft spots on the rocks and surf). Motion is SMIL inside the SVG. */
 
   /* calm: user toggle or reduced-motion — one switch stills everything (SMIL paused in JS) */
-  .calm .scene, .calm .rays, .calm .ar-flicker, .calm .beam, .calm .ring-ticks { animation: none !important; }
+  .calm .scene, .calm .rays, .calm .ar-flicker, .calm .beam, .calm .rb-smoke .puff, .calm .ring-ticks { animation: none !important; }
   @media (prefers-reduced-motion: reduce) {
-    .scene, .rays, .ar-flicker, .beam { animation: none !important; }
+    .scene, .rays, .ar-flicker, .beam, .rb-smoke .puff { animation: none !important; }
   }
 
   /* warm legibility scrim */
@@ -301,6 +323,9 @@
     </button>
     <button class="tab" role="tab" data-dest="caribbean" aria-selected="false">
       Atlantic Crossroads <small>Chronotravel · warp</small>
+    </button>
+    <button class="tab" role="tab" data-dest="riverbend" aria-selected="false">
+      Riverbend <small>Chronotravel · warp</small>
     </button>
   </div>
 
@@ -474,6 +499,11 @@
         </svg>
       </div>
 
+      <!-- ===== SCENE: RIVERBEND SETTLEMENT (exterior) ===== -->
+      <div class="scene" id="scene-riverbend">
+        <img class="scene-img" id="img-riverbend" alt="The Riverbend tobacco settlement on the James River, 1619" />
+      </div>
+
       <div class="vignette"></div>
       <div class="scrim"></div>
       <!-- CARIBBEAN: the painted water ripples (image pixels warped by turbulence, masked to the bay) -->
@@ -509,6 +539,40 @@
       <!-- ARCHIVE: warm window glow + soft volumetric beams (CSS layers) -->
       <div class="ar-flicker"></div>
       <div class="ar-beams"><span class="beam b1"></span><span class="beam b2"></span><span class="beam b3"></span></div>
+
+      <!-- RIVERBEND: the James River's own pixels ripple, masked to soft patches of open water -->
+      <svg class="rb-fx" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <filter id="rbWater" x="-4%" y="-6%" width="108%" height="118%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.010 0.024" numOctaves="2" seed="9" result="n">
+              <animate attributeName="baseFrequency" dur="19s"
+                       values="0.010 0.022; 0.013 0.028; 0.010 0.022" repeatCount="indefinite"/>
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="n" xChannelSelector="R" yChannelSelector="G" scale="8">
+              <animate attributeName="scale" dur="12s" values="5; 10; 5" repeatCount="indefinite"/>
+            </feDisplacementMap>
+          </filter>
+          <radialGradient id="rbSoft" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#fff"/>
+            <stop offset="0.5" stop-color="#fff"/>
+            <stop offset="1" stop-color="#000"/>
+          </radialGradient>
+          <!-- the river fills the left third — ripple soft patches of open water, off the far shore and trees -->
+          <mask id="rbMask">
+            <ellipse cx="292" cy="462" rx="196" ry="118" fill="url(#rbSoft)"/>
+            <ellipse cx="322" cy="662" rx="168" ry="92"  fill="url(#rbSoft)"/>
+            <ellipse cx="432" cy="384" rx="124" ry="72"  fill="url(#rbSoft)"/>
+          </mask>
+        </defs>
+        <image id="rb-water-img" x="0" y="0" width="1600" height="900" preserveAspectRatio="none"
+               filter="url(#rbWater)" mask="url(#rbMask)"/>
+      </svg>
+      <!-- RIVERBEND: chimney smoke rising from the settlement cabins -->
+      <div class="rb-smoke">
+        <span class="puff p1"></span><span class="puff p1 d"></span>
+        <span class="puff p2"></span><span class="puff p2 d"></span>
+        <span class="puff p3"></span><span class="puff p3 d"></span>
+      </div>
 
       <canvas id="spray"></canvas>
       <div class="ticks"><span class="edge"></span><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
@@ -591,8 +655,9 @@
 <script>
   "use strict";
   /* painterly backdrops, optimized + inlined */
-  const ARCHIVE_IMG = ./art/archive.jpg;
-  const CARIBBEAN_IMG = ./art/caribbean.jpg;
+  const ARCHIVE_IMG = './art/archive.jpg';
+  const CARIBBEAN_IMG = './art/caribbean.jpg';
+  const RIVERBEND_IMG = './art/riverbend.jpg';
 
   const DEST = {
     archive: {
@@ -607,18 +672,31 @@
       q: "How did early contact begin to reshape societies on both sides of the Atlantic?",
       sync: "Syncing record", enter: "Follow the evidence", scene: "caribbean",
     },
+    // Real content from unit-02-campaign.js, case-004 (Case 2.01).
+    riverbend: {
+      eyebrow: "Chronotravel", kicker: "Case 2.01 · Colonial Crossroads", title: "The Riverbend Settlement",
+      meta: "Chesapeake tidewater · 1619",
+      goal: "Walk a young tobacco settlement on the James River, speak with its people, and secure three records — a company land charter, a servant's letter, and a wharf account — before they are lost.",
+      q: "What do a land charter, a servant's letter, and a wharf ledger reveal about who did this settlement's work and who held its power?",
+      sync: "Syncing record", enter: "Follow the evidence", scene: "riverbend",
+    },
   };
 
   const $ = (id) => document.getElementById(id);
   $("img-archive").src = ARCHIVE_IMG;
   $("img-caribbean").src = CARIBBEAN_IMG;
-  // the ripple layer warps the same painting pixels — point its SVG <image> at the Caribbean art
-  const cbWaterImg = document.getElementById("cb-water-img");
-  if (cbWaterImg) {
-    cbWaterImg.setAttribute("href", CARIBBEAN_IMG);
-    cbWaterImg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", CARIBBEAN_IMG);
-  }
+  $("img-riverbend").src = RIVERBEND_IMG;
+  // the ripple layers warp the same painting pixels — point each SVG <image> at its own art
+  const setSvgImage = (id, src) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute("href", src);
+    el.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", src);
+  };
+  setSvgImage("cb-water-img", CARIBBEAN_IMG);
+  setSvgImage("rb-water-img", RIVERBEND_IMG);
   const cbFxSvg = document.querySelector(".cb-fx");
+  const rbFxSvg = document.querySelector(".rb-fx");
   const ring = $("ringFill"), pctEl = $("ringPct"), syncEl = $("ringSync");
   const R = 70, C = 2 * Math.PI * R;
   ring.style.strokeDasharray = C;
@@ -684,7 +762,9 @@
     { x0: 0.19, x1: 0.40, y0: 0.10, y1: 0.64, vx: 5 },   // left beam (b1)
     { x0: 0.62, x1: 0.77, y0: 0.40, y1: 0.74, vx: -3 },  // right beam (b2)
   ];
-  const BAY = { x0: 0.16, x1: 0.62, y0: 0.66, y1: 0.80 }; // specular sparkle on the surf, below the text
+  const BAY = { x0: 0.16, x1: 0.62, y0: 0.66, y1: 0.80 };   // caribbean: sparkle on the surf, below the text
+  const RIVER = { x0: 0.09, x1: 0.33, y0: 0.42, y1: 0.68 };  // riverbend: sparkle on the James River (left third)
+  let glintZone = BAY; // whichever water body the current scene sparkles on
   function makeDust() {
     const z = ARCHIVE_ZONES[Math.random() < 0.62 ? 0 : 1];
     return {
@@ -694,11 +774,13 @@
     };
   }
   function makeGlint() {
-    return { x: rand(BAY.x0, BAY.x1) * SW, y: rand(BAY.y0, BAY.y1) * SH, len: rand(6, 26), tw: Math.random() * 6.28, sp: rand(0.9, 1.7), drift: rand(-9, 9) };
+    const z = glintZone;
+    return { x: rand(z.x0, z.x1) * SW, y: rand(z.y0, z.y1) * SH, len: rand(6, 26), tw: Math.random() * 6.28, sp: rand(0.9, 1.7), drift: rand(-9, 9) };
   }
   function seedParts() {
-    if (sceneKind === "archive") { parts = Array.from({ length: 16 }, makeDust); glints = []; }
-    else { parts = []; glints = Array.from({ length: 20 }, makeGlint); }
+    if (sceneKind === "archive") { parts = Array.from({ length: 16 }, makeDust); glints = []; return; }
+    if (sceneKind === "riverbend") { glintZone = RIVER; parts = []; glints = Array.from({ length: 14 }, makeGlint); return; }
+    glintZone = BAY; parts = []; glints = Array.from({ length: 20 }, makeGlint); // caribbean
   }
 
   let plast = performance.now();
@@ -719,7 +801,7 @@
     sctx.lineCap = "round"; sctx.strokeStyle = "#eafcff"; sctx.shadowColor = "#bfefff"; sctx.lineWidth = 1.7;
     for (const g of glints) {
       g.tw += g.sp * dt; g.x += g.drift * dt;
-      if (g.x > BAY.x1 * SW) g.x = BAY.x0 * SW; else if (g.x < BAY.x0 * SW) g.x = BAY.x1 * SW;
+      if (g.x > glintZone.x1 * SW) g.x = glintZone.x0 * SW; else if (g.x < glintZone.x0 * SW) g.x = glintZone.x1 * SW;
       const s = Math.sin(g.tw); if (s <= 0) continue;
       sctx.globalAlpha = s * s * 0.65;
       sctx.beginPath(); sctx.moveTo(g.x, g.y); sctx.lineTo(g.x + g.len, g.y); sctx.stroke();
@@ -736,8 +818,10 @@
 
   function applyCalm() {
     screenEl.classList.toggle("calm", reduced);
-    // CSS animation:none can't stop SMIL — pause the water-ripple SVG timeline directly
-    if (cbFxSvg) { try { reduced ? cbFxSvg.pauseAnimations() : cbFxSvg.unpauseAnimations(); } catch (e) {} }
+    // CSS animation:none can't stop SMIL — pause the water-ripple SVG timelines directly
+    for (const s of [cbFxSvg, rbFxSvg]) {
+      if (s) { try { reduced ? s.pauseAnimations() : s.unpauseAnimations(); } catch (e) {} }
+    }
     if (reduced) stopParts(); else { reseedFor(current); startParts(); }
   }
 
