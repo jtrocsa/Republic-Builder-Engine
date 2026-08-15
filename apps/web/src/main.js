@@ -116,6 +116,7 @@ import {
 } from "./engine/activities/index.js";
 import { UNIT_01_ACTIVITIES } from "./content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "./content/activities/unit-02-activities.js";
+import { UNIT_03_ACTIVITIES } from "./content/activities/unit-03-activities.js";
 // The Codex's own arithmetic, kept pure and out here: what a filed record looks like, and how two
 // of them relate. main.js keeps the wiring and the screen.
 import {
@@ -9888,7 +9889,11 @@ function runFieldMovementLoop(now) {
 // Every unit's activities in one flat lookup keyed by source id, the same shape as the quest
 // lookups above. A source with no entry here falls through to sourceReader() exactly as the 18
 // remaining sources in Units 3-5 still do.
-const ACTIVITIES_BY_SOURCE = { ...UNIT_01_ACTIVITIES, ...UNIT_02_ACTIVITIES };
+const ACTIVITIES_BY_SOURCE = {
+  ...UNIT_01_ACTIVITIES,
+  ...UNIT_02_ACTIVITIES,
+  ...UNIT_03_ACTIVITIES,
+};
 
 function activityFor(sourceId) {
   return ACTIVITIES_BY_SOURCE[sourceId] || null;

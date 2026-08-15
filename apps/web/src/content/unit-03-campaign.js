@@ -199,7 +199,9 @@ export const CASE_007_SOURCES = [
     date: "December 10, 1767",
     record: "Serialized newspaper essay opposing the Townshend Revenue Act",
     visual: "context",
-    activityRoute: null,
+    // Phase 81F. The Investigation Challenge below still gates entry; the activity is what the
+    // record opens into once that gate is passed (see main.js's handleSourceReaderClick note).
+    activityRoute: "interview",
     // Investigation Challenge (Phase A of the Investigation/Archive Challenge
     // plan's catalog-expansion pass) — gates this source's sourceReader()
     // worksheet behind a pre-reveal prediction quest
@@ -225,7 +227,7 @@ export const CASE_007_SOURCES = [
     date: "March 23, 1775",
     record: "Speech to the Second Virginia Convention, Richmond, urging Virginia arm its militia",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "assembly",
     excerpt:
       "It is in vain, sir, to extenuate the matter. Gentlemen may cry, Peace, Peace — but there is no peace. The war is actually begun! The next gale that sweeps from the north will bring to our ears the clash of resounding arms! Our brethren are already in the field! Why stand we here idle? What is it that gentlemen wish? What would they have? Is life so dear, or peace so sweet, as to be purchased at the price of chains and slavery? Forbid it, Almighty God! I know not what course others may take; but as for me, give me liberty, or give me death!",
     prompt:
@@ -267,7 +269,7 @@ export const CASE_007_SOURCES = [
     record:
       "Martial-law proclamation offering freedom to enslaved people who left Patriot enslavers to join British forces",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "trace",
     // Investigation Challenge pilot (Phase 3 of the Investigation/Archive
     // Challenge plan) — gates this source's sourceReader() worksheet behind a
     // pre-reveal Source Prediction quest (UNIT_03_INVESTIGATION_QUESTS).

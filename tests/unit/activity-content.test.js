@@ -12,7 +12,7 @@
 // observation keyed to a question nobody can ask, an activity with no `howItWorks` that a student
 // has to reverse-engineer.
 //
-// Covers both authored units. Units 3-5 have no activities yet and the loops below simply find
+// Covers every authored unit. Units 4 and 5 have no activities yet and the loops below simply find
 // nothing for them, which is the correct behaviour for this file until they do.
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -22,10 +22,17 @@ import { describe, it, expect } from "vitest";
 import { FIELD_MAPS } from "../../apps/web/src/main.js";
 import { UNIT_01_ACTIVITIES } from "../../apps/web/src/content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "../../apps/web/src/content/activities/unit-02-activities.js";
+import { UNIT_03_ACTIVITIES } from "../../apps/web/src/content/activities/unit-03-activities.js";
+import { CASE_001_SOURCES } from "../../apps/web/src/content/unit-01-campaign.js";
+import { CASE_004_SOURCES } from "../../apps/web/src/content/unit-02-campaign.js";
+import { CASE_007_SOURCES } from "../../apps/web/src/content/unit-03-campaign.js";
 
+// `sources` rides along because one rule below is about the *order* a case can be finished in, and
+// that lives on the record (`requiresSourceId`) rather than on the activity.
 const AUTHORED_UNITS = [
-  { unitId: "unit-01", activities: UNIT_01_ACTIVITIES },
-  { unitId: "unit-02", activities: UNIT_02_ACTIVITIES },
+  { unitId: "unit-01", activities: UNIT_01_ACTIVITIES, sources: CASE_001_SOURCES },
+  { unitId: "unit-02", activities: UNIT_02_ACTIVITIES, sources: CASE_004_SOURCES },
+  { unitId: "unit-03", activities: UNIT_03_ACTIVITIES, sources: CASE_007_SOURCES },
 ];
 
 const entriesOf = (activities) => Object.entries(activities);
@@ -180,23 +187,47 @@ describe("activity content: the rules every authored mission is held to", () => 
     }
   });
 
-  it("closes Riverbend's arc wherever the player actually ends it", () => {
-    // The arc close rides the debrief of whichever mission is finished last, gated by the host on
-    // the whole case being in the Codex. Riverbend gates only one of its three records (the letter
-    // needs the charter), so the last mission is always the letter or the ledger and never the
-    // charter — both of those must carry an `arcClose` or a player finishing in the other order
-    // gets nothing. Authoring it on one is the bug this test exists to catch.
-    const riverbend = UNIT_02_ACTIVITIES;
-    expect(riverbend["riverbend-letter"].arcClose?.established).toBeTruthy();
-    expect(riverbend["riverbend-ledger"].arcClose?.established).toBeTruthy();
-    // And they must say the same thing, or the arc has two different meanings depending on route.
+  it.each(AUTHORED_UNITS)(
+    "$unitId closes its arc wherever the player ends it",
+    ({ activities, sources }) => {
+      // The arc close rides the debrief of whichever mission is finished last, gated by the host on
+      // the whole case being in the Codex. So it has to be authored on every mission that *can* be
+      // last, and which those are is a fact about the records rather than the activities: a record
+      // named by another record's `requiresSourceId` always precedes it and can never be the ending.
+      //
+      // Riverbend gates one of three (the letter needs the charter), so its charter is exempt and its
+      // other two must carry one. Philadelphia gates nothing, so all three must. Authoring it on one
+      // and shipping is the bug this exists to catch, and it is silent — a player who finished in the
+      // other order simply gets no ending and has no way to know they were owed one.
+      const required = new Set(sources.map((source) => source.requiresSourceId).filter(Boolean));
+      const canBeLast = entriesOf(activities).filter(([sourceId]) => !required.has(sourceId));
+      const closers = entriesOf(activities).filter(([, activity]) => activity.arcClose);
+      // A unit that closes no arc at all is legal — Unit 1 predates the field — so the rule only
+      // binds once one mission in the unit has one.
+      if (!closers.length) return;
+      for (const [sourceId, activity] of canBeLast) {
+        expect(
+          activity.arcClose?.established,
+          `${sourceId} can be last and closes nothing`
+        ).toBeTruthy();
+      }
+      // Deliberately *not* asserting the closers are byte-identical. They have to mean the same
+      // thing, which is a different requirement: Riverbend's two say the same argument with the
+      // record you are standing in moved to the end of the list, and that is a real authorial choice
+      // rather than drift. Philadelphia buys the guarantee structurally instead — all three read
+      // `established` from one const in the content file, so there is nothing here left to check.
+    }
+  );
+
+  it("says the same thing at both of Riverbend's two endings", () => {
+    // The specific pin for the case that has two authored wordings of one claim. What must survive
+    // an edit to either is the claim, not the sentence order.
     const claim = (text) => text.replace(/\s+/g, " ").trim();
-    expect(claim(riverbend["riverbend-letter"].arcClose.established)).toContain(
-      "one arrangement described by three people who each thought they were recording something else"
-    );
-    expect(claim(riverbend["riverbend-ledger"].arcClose.established)).toContain(
-      "one arrangement described by three people who each thought they were recording something else"
-    );
+    for (const sourceId of ["riverbend-letter", "riverbend-ledger"]) {
+      expect(claim(UNIT_02_ACTIVITIES[sourceId].arcClose.established), sourceId).toContain(
+        "one arrangement described by three people who each thought they were recording something else"
+      );
+    }
   });
 
   it("plants at most one anomaly per unit", () => {
