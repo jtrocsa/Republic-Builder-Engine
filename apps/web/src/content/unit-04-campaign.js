@@ -141,7 +141,7 @@ export const CASE_010_SOURCES = [
     date: "May 1845",
     record: "Canal toll paper carried by a freight boat between Buffalo and the Hudson",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "trace",
     excerpt:
       "CLEARANCE — Boat MARY ANN, Elias Rood, master. Laden at Buffalo with wheat, flour, and staves. Weight of cargo, sixty-three tons. Bound east for Albany, thence New York by river. Toll assessed on wheat at the rate per ton per mile now in force, distance three hundred and sixty-three miles; toll paid in full at this office and endorsed hereon. Boats to keep to the right in passing. No boat to remain in a lock chamber after the gates are opened. Master's declaration: the within is a true account of lading. — Collector's office, this day of May, 1845.",
     prompt:
@@ -161,7 +161,13 @@ export const CASE_010_SOURCES = [
     date: "1845",
     record: "Posted bell schedule and piece-rate account kept for a textile workshop's operatives",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "discrepancy",
+    // Second use of the field Phase 70 introduced, and it is not sequencing for its own sake: the
+    // audit's strongest observation is that a workshop stands on this street because a ton of wheat
+    // now reaches New York in eight days, and a player who has not followed the wheat has no
+    // business being handed that sentence. It also decides which mission can be last, which is what
+    // `arcClose` is authored against — see the header on unit-04-activities.js.
+    requiresSourceId: "canal-toll-receipt",
     excerpt:
       "TIME TABLE. — First bell, 4.30 morning. Second bell, 5.00, at which hour the operatives are to be in the room. Breakfast bell, 7.00; return, 7.30. Dinner, 12.30; return, 1.05. Evening bell at 7.00. — RULES. The gate will be closed at the ringing of the second bell, and no operative admitted after it without leave of the agent. All persons entering the employ of this establishment engage to remain not less than one year. Any operative leaving without the agent's regular discharge shall not be given a certificate of honourable dismissal. — ACCOUNT of L. BELLAMY, weaving: pieces this fortnight, sixty-one; rate allowed, as per posted list; board deducted, one dollar twenty-five the week; balance carried forward.",
     prompt:
@@ -181,7 +187,7 @@ export const CASE_010_SOURCES = [
     date: "1845",
     record: "Public posting board carrying notices that answer each other",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "assembly",
     excerpt:
       "[1] TOTAL ABSTINENCE. — We, the undersigned, do agree that we will not use intoxicating liquors as a beverage, nor traffic in them; that we will not provide them as an article of entertainment, nor for persons in our employment; and that in all suitable ways we will discountenance their use throughout the community. Signatures received at the Meeting House, Thursday evening. — [2] TO THE PUBLIC. — The keeper of a licensed house on the towpath begs leave to ask the subscribers to the above by what right they would take the bread out of a widow's mouth in the name of her neighbours' virtue. I pay my licence. I keep an orderly house. Let those who would close it say plainly what they propose that I should live upon. — [3] ANTI-SLAVERY. — A meeting will be held to consider the immediate abolition of slavery throughout these United States, and the condition of the free coloured people of this State. All friends of the cause are invited. — [4] CITIZENS, TAKE NOTICE. — The above meeting is the work of fanatics and incendiaries whose designs will dissolve the Union and ruin the trade of this town. Gentlemen of property and standing are requested to attend and put a stop to it.",
     prompt:

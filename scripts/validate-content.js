@@ -452,6 +452,13 @@ function main() {
     )
   );
   results.push(
+    runSchema(
+      "unit-04-activities.js: UNIT_04_ACTIVITIES",
+      ActivityMapSchema,
+      content.unit04.activities
+    )
+  );
+  results.push(
     runSchema("unit-04-quests.js: UNIT_04_MCQ_QUESTS", McqQuestListSchema, content.unit04.mcqQuests)
   );
   results.push(
