@@ -109,10 +109,25 @@ map has learned a period rather than a plot.
 Every 3–5 beat must have an innocent reading available at the time. A clue the player can only read
 one way is not a clue — it is the reveal arriving early.
 
-**Voss is not on Units 3–5's maps at all.** `FIELD_MAPS` for those units has no `liaison` entry and
-`field-liaison.test.js` scopes to units 1–2, so the entire ladder above rung one currently has
-nobody to happen to. Stationing her is Phase 81E and it is the keystone of everything in this
-table.
+**Voss stands on all five authored maps as of Phase 81E**, and rungs 3–5 of the table above are
+authored — one dialogue line each, which is the whole of a map's Voss budget. Philadelphia: she came
+through ahead of the assignment. Canal Crossroads: she talks the player out of exactly one thing,
+chosen to be the subscription board, which carries no record — so the steer costs a student nothing
+and the tell is that a list of who paid for what is precisely where her own stated method would
+send them. Richmond: she names anchor glass that is not Chronicle's before anyone has told her, and
+hangs a lantern on having done it, which is what keeps both readings live.
+
+`field-liaison.test.js` now scopes to all five units, and its Meridian ban with it — one rung
+stricter than §4 of [`THE-FIELD-LIAISON.md`](./THE-FIELD-LIAISON.md), whose "Units 5–6" reveal band
+would permit the word in Unit 5. The reveal lands in Unit 6 by the author's decision, so the test
+enforces the decision rather than the older band.
+
+Placement was solved against the real collision data rather than by eye, because a stationed body
+is fed into the nav grid as `occupied` and is a wall to the player: each post is off both of its
+spawn's cardinals, off the road network, at least two tiles clear of every other NPC's territory
+(whole walked route paths included), clear of every interior door, and verified not to re-plan any
+existing route. `field-map-coordinates.test.js` re-checks the first four on every run and
+`field-liaison.spec.js` walks a player to each post in a browser.
 
 ---
 

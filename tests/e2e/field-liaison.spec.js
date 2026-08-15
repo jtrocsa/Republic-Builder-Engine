@@ -1,4 +1,4 @@
-// Emery Voss, in the three places she stands.
+// Emery Voss, in the six places she stands.
 //
 // The Field Liaison debuted in Phase 80 with no new engine system — a HUB_TARGETS entry, a
 // behaviour, two FIELD_NPCS rows and one `progress.story` object. That is exactly why it needs a
@@ -118,4 +118,40 @@ test.describe("the Field Liaison in the field", () => {
 
     await expect(page.locator('[data-npc="liaison"]')).toBeVisible();
   });
+
+  // Phase 81E's three posts, and the browser half of what the coordinate test cannot see. A station
+  // is a solid body to the player and goes into the nav grid as `occupied`, so the two questions a
+  // spec can answer are whether she is walkable-to from the spawn and whether the map's own
+  // signature motion still runs around her. `walkToNpc` answers the first by construction — it
+  // walks until the game's own `.is-near` appears, so a post sealed behind a building fails here.
+  const LATER_MAPS = [
+    { unit: "Philadelphia", caseId: "case-007", says: "I came through ahead of the assignment" },
+    { unit: "Canal Crossroads", caseId: "case-010", says: "Two rules on a towpath" },
+    { unit: "Richmond", caseId: "case-013", says: "anchor glass out there that is not ours" },
+  ];
+
+  for (const { unit, caseId, says } of LATER_MAPS) {
+    test(`stands where the Chronicler can reach her at ${unit}`, async ({ page }) => {
+      test.setTimeout(60_000);
+      await seedProgress(page, {
+        currentScreen: "field",
+        activeCaseId: caseId,
+        unlocked: ["case-001", caseId],
+        tutorial: { step: "complete", completed: true, skipped: false },
+      });
+      await loadSeededSave(page);
+      await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+      const voss = page.locator('[data-npc="liaison"]');
+      await expect(voss).toBeVisible();
+      // The name, not the job — the pill is the one surface where getting this wrong is invisible
+      // to every other assertion in this file.
+      await expect(voss).toContainText("Emery Voss");
+      await expect(voss).not.toContainText("Liaison");
+
+      expect(await walkToNpc(page, "liaison"), "Voss is unreachable from the spawn").toBe(true);
+      await page.keyboard.press("e");
+      await expect(page.locator(".field-speech-bubble")).toContainText(says);
+    });
+  }
 });

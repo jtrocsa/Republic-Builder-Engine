@@ -120,8 +120,11 @@ const SHEETS_BY_CASE = {
     "field-servant-south": "npc-jamestown-servant",
   },
   // Unit 3 is deliberately frozen on its placeholder art: no Revolutionary-era characters exist,
-  // and inheriting Unit 1's would put Christopher Columbus on a Philadelphia street in 1767.
+  // and inheriting Unit 1's would put Christopher Columbus on a Philadelphia street in 1767. Voss
+  // is the exception and always was — she is Institute staff, not a period character, so her own
+  // sheet travels with her onto every map (Phase 81E put her on this one).
   "case-007": {
+    liaison: LIAISON_SHEET,
     "john-dickinson": "legacy-scribe",
     "town-crier": "legacy-columbus",
     "militia-recruiter": "legacy-sailor",

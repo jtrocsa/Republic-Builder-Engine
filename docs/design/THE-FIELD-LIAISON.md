@@ -115,7 +115,16 @@ Small, deniable, and visible only on a second pass:
 Each should have an innocent reading available at the time. A clue the player can only interpret one
 way is not a clue, it is the reveal arriving early.
 
+**Shipped in Phase 81E**, one line per map and no more: at Philadelphia she arrives before being
+assigned, at Canal Crossroads she steers the player off exactly one thing, and at Richmond — the
+last beat before the reveal — she recognises equipment that is not Chronicle's a beat too fast. The
+budget is per-map and it is spent; see [`THE-MAP-PROGRAM.md`](./THE-MAP-PROGRAM.md) §4.
+
 ### Units 5–6 — the reveal
+
+**The reveal lands in Unit 6, the railhead**, by the author's decision — the later end of this band,
+which means Unit 5 is still a deniable beat and not the reveal. `field-liaison.test.js` enforces
+that by scoping its Meridian ban to all five authored maps rather than to the trusted-helper floor.
 
 The player finds Voss using Meridian equipment or wearing the insignia. She explains Meridian as a
 response to Chronicle's secrecy and refusal to act. She does not ask the player to approve of
@@ -179,7 +188,7 @@ phases that had already shipped under different numbers. They now cite the real 
 | Hands off a mission     | `activity.briefing.speaker` — an opaque id the host resolves                         | **Exists.** Authoring a string is the whole change |
 | Portrait in a hand-off  | `characterSheet().portrait` — every character already has one                        | **Exists**                                         |
 | Stands in the Institute | `HUB_NPC_BEHAVIOURS` entry, `{ kind: "station", at, facing }`                        | **Exists**                                         |
-| Appears on a map        | `FIELD_NPC_BEHAVIOURS` for that unit                                                 | **Exists**                                         |
+| Appears on a map        | `FIELD_NPC_BEHAVIOURS` for that unit                                                 | **Shipped on all five, Phase 81E**                 |
 | Speaks in the field     | The existing dialogue bubble                                                         | **Exists**                                         |
 | Sprite                  | `CHARACTER_SHEETS.liaison` + a `character-manifest.js` entry                         | **Shipped, Phase 80b**                             |
 | Narrative state         | `progress.story`                                                                     | **Shipped, Phase 80**                              |

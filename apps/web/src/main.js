@@ -1763,6 +1763,24 @@ function isRiverbendLand(x, y) {
 // common-cause-field.blocks.js imported at the top of this file; the NPC and source coordinates
 // below are the hand-authored half, and the generator's building anchors are chosen around them.
 const UNIT3_FIELD_NPCS = [
+  {
+    // South-east of the spawn, on the grass between the square's south exit and the wharf — off
+    // both of the spawn's cardinals, off the road network, and 3 tiles clear of the free
+    // tradesman's disc. See the placement rules on UNIT4_FIELD_NPCS.
+    id: "liaison",
+    x: 31.0,
+    y: 24.0,
+    group: "chronicle",
+    name: "Emery Voss",
+    // The name, not the job — same reason as the Caribbean and Riverbend posts above.
+    label: "Emery Voss",
+    sprite: "liaison",
+    // Reveal ladder rung two, and the whole of this map's Voss budget: she arrives before being
+    // assigned (THE-MAP-PROGRAM.md §4). The innocent reading is the one she offers herself — the
+    // passage was open and she is not a person who waits on paperwork. The other reading only
+    // arrives on a second pass, which is the point.
+    text: "I came through ahead of the assignment. The passage was open, and waiting on paperwork has never yet made anybody's notes better. Here is the trick of this square: every person in it has a public position and a private interest, and only the first one gets offered to you. Ask who is permitted to speak here before you decide what the argument is about.",
+  },
   // Frozen placeholder roster. No Revolutionary-era characters exist in PixelLab, so rather than
   // dress John Dickinson in Christopher Columbus's real 1492 doublet, these six keep the
   // placeholder art they have always used — rebuilt onto the same sprite-strip canvas as the rest
@@ -1834,6 +1852,7 @@ const UNIT3_FIELD_NPCS = [
   },
 ];
 const UNIT3_FIELD_NPC_BEHAVIOURS = {
+  liaison: { kind: "station", at: { x: 31.0, y: 24.0 }, facing: "left" },
   // Outside the print shop's door, where his record is anchored.
   "john-dickinson": { kind: "station", at: { x: 16.0, y: 10.5 }, facing: "down" },
   // Across the market square, which is cobbled wall to wall — a crier carries the news to where
@@ -1944,6 +1963,24 @@ function commonCauseWorldMarkup() {
 //     just its stops (decision log 0045). nearestFieldInteraction() answers with whoever is
 //     closest, so anything tighter means a player who walks to one is answered by the other.
 const UNIT4_FIELD_NPCS = [
+  {
+    // Back off the towpath on the south side, three tiles clear of the mule team's line. Both of
+    // the rules above bear on this post and a third does too: a stationed body goes into the nav
+    // grid as `occupied`, so anyone standing in the lane the driver walks would re-plan his whole
+    // circuit. Standing clear of the line is also the thing he tells you to do.
+    id: "liaison",
+    x: 28.0,
+    y: 23.5,
+    group: "chronicle",
+    name: "Emery Voss",
+    label: "Emery Voss",
+    sprite: "liaison",
+    // Reveal ladder rung two: she steers the player away from exactly one thing
+    // (THE-MAP-PROGRAM.md §4). The subscription board is chosen deliberately — it carries no
+    // record, so the steer costs a student nothing, and the tell is that a list of who paid for
+    // what is precisely the evidence her own stated method would send them to.
+    text: "Two rules on a towpath. Stand clear of the line when a boat passes, and take the paper a person hands you before you take the paper off a wall. Everything in this town was made by somebody and charged to somebody — the toll, the time book, the notices in the square. Don't waste the walk on the subscription board up by the meeting hall. It is a list of names and nothing else.",
+  },
   {
     id: "canal-lock-keeper",
     x: 24.5,
@@ -2072,6 +2109,7 @@ const UNIT4_FIELD_NPCS = [
   },
 ];
 const UNIT4_FIELD_NPC_BEHAVIOURS = {
+  liaison: { kind: "station", at: { x: 28.0, y: 23.5 }, facing: "up" },
   // The lock's foot, on the towpath rather than on the walk itself — see the second rule above.
   "canal-lock-keeper": { kind: "station", at: { x: 24.5, y: 20.2 }, facing: "left" },
   "canal-boat-captain": { kind: "station", at: { x: 28.5, y: 13.2 }, facing: "down" },
@@ -2297,6 +2335,23 @@ function canalBoardingHouseWorldMarkup() {
 // measured over a route's whole walked path (decision log 0045).
 const UNIT5_FIELD_NPCS = [
   {
+    // West of the spawn at the foot of the Capitol approach, off the street itself so she is not
+    // furniture in the messenger's lane — his route runs Franklin Street east from (28.5, 12.4),
+    // and a stationed body in it would re-plan the length of this map's signature walk.
+    id: "liaison",
+    x: 24.0,
+    y: 11.0,
+    group: "chronicle",
+    name: "Emery Voss",
+    label: "Emery Voss",
+    sprite: "liaison",
+    // Reveal ladder rung three, and the last beat before Unit 6's reveal: she recognises equipment
+    // that is not Chronicle's a beat too fast (THE-MAP-PROGRAM.md §4). She hangs a lantern on it
+    // herself, which is what keeps both readings live — an honest person noticing they knew that
+    // too quickly, or a person covering. "Anchor glass" is used, not re-explained (canon §8).
+    text: "Stop a moment. There is anchor glass out there that is not ours — different housing, older mount. I could not tell you how I know that at a glance. Salvage, most likely; the Institute has lost equipment before now, and this city takes anything that is not nailed down. Log it and leave it. What you came for is the paperwork, and this government writes down what it takes. What it takes is people.",
+  },
+  {
     // Two tiles from the spawn, on Franklin Street: the first person the player meets, and the one
     // who explains the shape of the city. A civilian, deliberately — the most-seen routed character
     // on this map being a soldier is the easy way to fail the brief.
@@ -2420,6 +2475,7 @@ const UNIT5_FIELD_NPCS = [
   },
 ];
 const UNIT5_FIELD_NPC_BEHAVIOURS = {
+  liaison: { kind: "station", at: { x: 24.0, y: 11.0 }, facing: "right" },
   // Franklin Street, Capitol to the hospital hill — the length of the upper city, which is what
   // makes him the map's signature motion and the reason he is the orienting contact.
   "richmond-government-messenger": {
