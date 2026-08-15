@@ -8,7 +8,7 @@
 // Not a check that the destinations are *correct* for review purposes; that is the part's own job.
 // It checks that each name lands somewhere, and that an unknown one changes nothing.
 import { expect, test } from "@playwright/test";
-import { readProgress } from "./helpers/progress-seed.js";
+import { readProgress, beginFromTitle } from "./helpers/progress-seed.js";
 
 test.describe("Dev warp", () => {
   test("drops straight onto the field, past the landing screen", async ({ page }) => {
@@ -56,7 +56,10 @@ test.describe("Dev warp", () => {
     await page.goto("/?warp=field");
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
+    // An unknown warp name falls through to a normal cold boot, which now opens on the title
+    // sequence in front of the landing — clear it, then confirm the landing and an untouched save.
     await page.goto("/?warp=nonesuch");
+    await beginFromTitle(page);
     await expect(page.getByRole("button", { name: "Student" })).toBeVisible();
     expect((await readProgress(page)).currentScreen).toBe("field");
   });

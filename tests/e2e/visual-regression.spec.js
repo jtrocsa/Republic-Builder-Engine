@@ -4,6 +4,8 @@ import {
   briefed,
   seedProgress,
   loadSeededSave,
+  reloadIntoSave,
+  beginFromTitle,
   walkTo,
   walkToNpc,
 } from "./helpers/progress-seed.js";
@@ -52,9 +54,7 @@ async function setScreen(page, overrides) {
     key: PROGRESS_KEY,
     data: overrides,
   });
-  await page.reload();
-  await page.getByRole("button", { name: "Student" }).click();
-  await page.getByRole("button", { name: "Load Save" }).click();
+  await reloadIntoSave(page);
 }
 
 function snap(name, extra = {}) {
@@ -114,6 +114,7 @@ test.describe("Gameplay visual-regression baselines", () => {
 
   test("onboarding: director welcome scene + identity screen", async ({ page }) => {
     await page.goto("/");
+    await beginFromTitle(page);
     await page.getByRole("button", { name: "Student" }).click();
     await page.getByRole("button", { name: "Start New Game" }).click();
 

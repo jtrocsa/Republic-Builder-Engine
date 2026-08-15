@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, readProgress, walkToNpc } from "./helpers/progress-seed.js";
+import {
+  seedProgress,
+  loadSeededSave,
+  reloadIntoSave,
+  readProgress,
+  walkToNpc,
+} from "./helpers/progress-seed.js";
 
 // The Mission Instructions screen (Phase 71, decision log 0054).
 //
@@ -90,9 +96,7 @@ test.describe("Mission Instructions", () => {
 
     // A reload lands back in the activity, not back in the briefing. `briefed` is persisted for the
     // same reason `activeActivitySourceId` is: a module-local flag dies with the page.
-    await page.reload();
-    await page.getByRole("button", { name: "Student" }).click();
-    await page.getByRole("button", { name: "Load Save" }).click();
+    await reloadIntoSave(page);
     await expect(page.locator(".activity-board--interview")).toBeVisible();
     await expect(page.locator(".mission-brief")).toHaveCount(0);
   });

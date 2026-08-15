@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-seed.js";
+import {
+  seedProgress,
+  loadSeededSave,
+  reloadIntoSave,
+  readProgress,
+} from "./helpers/progress-seed.js";
 
 // The field's Mission Tracker checklist (Phase 57; renamed from "Records to Recover" in Phase 69,
 // when it gained the second block that opens the mission you have in flight). Before it, the only
@@ -102,9 +107,7 @@ test.describe("Field objective tracker", () => {
       saved.caseEvidence = { "case-001": ["taino-context"] };
       window.localStorage.setItem(key, JSON.stringify(saved));
     });
-    await page.reload();
-    await page.getByRole("button", { name: "Student" }).click();
-    await page.getByRole("button", { name: "Load Save" }).click();
+    await reloadIntoSave(page);
 
     await expect(page.locator(".field-tracker__toggle em")).toHaveText("1/3");
     await expect(page.locator(".field-tracker__row.is-secured")).toHaveCount(1);
@@ -126,9 +129,7 @@ test.describe("Field objective tracker", () => {
     await expect(body).toBeHidden();
     expect((await readProgress(page)).settings.trackerCollapsed).toBe(true);
 
-    await page.reload();
-    await page.getByRole("button", { name: "Student" }).click();
-    await page.getByRole("button", { name: "Load Save" }).click();
+    await reloadIntoSave(page);
     await expect(page.locator(".field-tracker")).toHaveClass(/is-collapsed/);
     await expect(page.locator(".field-tracker__body")).toBeHidden();
   });

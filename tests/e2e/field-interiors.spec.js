@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, readProgress, walkTo } from "./helpers/progress-seed.js";
+import {
+  seedProgress,
+  loadSeededSave,
+  reloadIntoSave,
+  readProgress,
+  walkTo,
+} from "./helpers/progress-seed.js";
 
 // The interior walkthrough Phase 1 owed and Phase 4 could not pay.
 //
@@ -98,14 +104,12 @@ test.describe("Field interiors", () => {
       0
     );
 
-    // A reload inside a room comes back inside that room. The two clicks are not incidental:
-    // page.reload() re-runs module scope and resets `showMainMenu`, so the landing screen returns
-    // exactly as it does on a cold boot — see save-persistence.spec.js, which documents the same
-    // thing. What is being tested is that the *save* resumes the room, and it is the field boot
-    // guard's `resetFieldPosition({ keepRoom: true })` that makes it.
-    await page.reload();
-    await page.getByRole("button", { name: "Student" }).click();
-    await page.getByRole("button", { name: "Load Save" }).click();
+    // A reload inside a room comes back inside that room. `reloadIntoSave()` is not incidental:
+    // page.reload() re-runs module scope, resetting `showMainMenu` and re-arming the title, so the
+    // app returns to its very first screen exactly as on a cold boot — see save-persistence.spec.js,
+    // which documents the same thing. What is being tested is that the *save* resumes the room, and
+    // it is the field boot guard's `resetFieldPosition({ keepRoom: true })` that makes it.
+    await reloadIntoSave(page);
     await expect(page.locator("#canalPrintShopTiledCanvas")).toBeVisible();
     expect((await roomState(page)).room).toBe("canal-print-shop");
 

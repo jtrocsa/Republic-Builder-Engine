@@ -24,12 +24,37 @@ export async function seedProgress(page, overrides = {}) {
   );
 }
 
-// showMainMenu is a runtime-only variable (always true on cold boot), so seeding localStorage
-// alone does not skip the landing screen — this walks the two clicks that do.
-export async function loadSeededSave(page) {
-  await page.goto("/");
+// The cinematic title (titleScreen() in main.js) now sits in front of the Student/Teacher landing
+// on every cold boot at "/". Enter (or a click) dismisses it into the landing, unchanged; a dev
+// warp (?warp=…) skips it entirely. Any test path that boots at "/" and then reaches for the
+// landing has to clear the title first — this is a no-op if the title isn't showing.
+export async function beginFromTitle(page) {
+  const title = page.locator("#titleStage");
+  if (!(await title.isVisible().catch(() => false))) return;
+  await page.keyboard.press("Enter");
+  await title.waitFor({ state: "detached" }).catch(() => {});
+}
+
+// The walk from a freshly loaded page into the seeded save: past the title, then the two clicks.
+async function enterSavedGame(page) {
+  await beginFromTitle(page);
   await page.getByRole("button", { name: "Student" }).click();
   await page.getByRole("button", { name: "Load Save" }).click();
+}
+
+// showMainMenu is a runtime-only variable (always true on cold boot), so seeding localStorage
+// alone does not skip the landing screen — this clears the title, then walks the two clicks that do.
+export async function loadSeededSave(page) {
+  await page.goto("/");
+  await enterSavedGame(page);
+}
+
+// page.reload() re-runs module scope, so `showMainMenu` resets *and* the title re-arms — a reload
+// lands back at the very top of the app, not in the game. Eight specs walked those steps by hand,
+// and all eight missed the title the day it shipped. This is that walk, written once.
+export async function reloadIntoSave(page) {
+  await page.reload();
+  await enterSavedGame(page);
 }
 
 /**

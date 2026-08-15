@@ -8,7 +8,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { seedProgress, loadSeededSave } from "./helpers/progress-seed.js";
+import { seedProgress, loadSeededSave, reloadIntoSave } from "./helpers/progress-seed.js";
 
 /** One click short of the tour ending, which is the beat Scene A hands off from. */
 async function seedAtLastTourStep(page) {
@@ -47,9 +47,7 @@ async function walk(page, key = "ArrowLeft", ms = 260) {
 
 /** A reload lands on the landing screen — `showMainMenu` is runtime-only — so it takes two clicks. */
 async function reenterAfterReload(page) {
-  await page.reload();
-  await page.getByRole("button", { name: "Student" }).click();
-  await page.getByRole("button", { name: "Load Save" }).click();
+  await reloadIntoSave(page);
   await expect(page.locator("#instituteMap")).toBeVisible();
 }
 

@@ -3,6 +3,7 @@ import {
   holdKey,
   loadSeededSave,
   readProgress,
+  reloadIntoSave,
   seedProgress,
   walkToHubNpc,
 } from "./helpers/progress-seed.js";
@@ -194,9 +195,7 @@ test.describe("Institute Entrance Hall", () => {
     await page.keyboard.press("e");
     await expect(page.locator(".hallway-dialogue")).toBeVisible();
 
-    await page.reload();
-    await page.getByRole("button", { name: "Student" }).click();
-    await page.getByRole("button", { name: "Load Save" }).click();
+    await reloadIntoSave(page);
 
     // Back at the doors with the Director waiting, not stranded mid-beat with a dead typewriter and
     // no way to advance it.

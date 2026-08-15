@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { PROGRESS_KEY, walkToHubNpc } from "./helpers/progress-seed.js";
+import { PROGRESS_KEY, walkToHubNpc, beginFromTitle } from "./helpers/progress-seed.js";
 
 // Scenario 1: cold load -> identity creation -> Entrance Hall -> Main Hall.
 // No seed here (a fresh profile) — this is the one spec that exercises the real onboarding
@@ -12,6 +12,7 @@ test.describe("Boot and onboarding", () => {
     // animation, and walkToHubNpc() steers by position rather than by a fixed hold.
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
+    await beginFromTitle(page);
 
     await page.getByRole("button", { name: "Student" }).click();
     await page.getByRole("button", { name: "Start New Game" }).click();

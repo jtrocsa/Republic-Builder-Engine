@@ -10615,3 +10615,317 @@ details[open] > summary.manage-content-unit-toggle::before {
     gap: 6px;
   }
 }
+
+/* ============================================================================
+   Title sequence — the Chronicle wordmark cinematic shown once on load, in
+   front of the Student/Teacher landing (titleScreen() in main.js). Ported from
+   the approved "Chronicle — Title Sequence" artifact; the artifact was built
+   against these exact tokens, so colours/fonts are the game's own. The floating
+   motes are a JS canvas loop; everything else here is CSS. Scoped under
+   .title-sequence. `ts` keyframe prefix keeps these out of the global namespace.
+   ========================================================================== */
+.title-sequence {
+  --ts-navy: #041a26;
+  --ts-navy-deep: #020d13;
+  --ts-navy-lift: #0a2b3b;
+  --ts-gold-deep: #a67c34;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  background: radial-gradient(
+    120% 90% at 50% 42%,
+    var(--ts-navy-lift) 0%,
+    var(--ts-navy) 38%,
+    var(--ts-navy-deep) 100%
+  );
+}
+.title-sequence::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  background: radial-gradient(130% 100% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+.title-motes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+.title-seal {
+  position: absolute;
+  width: min(74vmin, 660px);
+  height: min(74vmin, 660px);
+  z-index: 2;
+  opacity: 0;
+  color: var(--gold);
+  animation:
+    tsSealIn 2.2s ease-out 1.6s forwards,
+    tsSealDrift 34s linear 3.7s infinite;
+}
+.title-seal path,
+.title-seal circle,
+.title-seal line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tsDraw 3s ease-out 1.7s forwards;
+}
+.title-seal .tick {
+  stroke-width: 1;
+}
+.title-core {
+  position: relative;
+  z-index: 4;
+  text-align: center;
+  padding: 0 6vw;
+}
+.title-eyebrow {
+  font-family: var(--c-font-label);
+  font-size: clamp(0.62rem, 1.5vw, 0.82rem);
+  font-weight: 600;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: rgb(var(--c-teal-rgb));
+  margin: 0 0 clamp(1rem, 3.2vh, 1.9rem);
+  text-indent: 0.5em;
+  opacity: 0;
+  animation: tsRise 0.9s ease-out 3s forwards;
+}
+.title-wordmark {
+  display: flex;
+  justify-content: center;
+  gap: 0.02em;
+  font-family: var(--c-font-display);
+  font-weight: 700;
+  font-size: clamp(3.1rem, 13.5vw, 11rem);
+  line-height: 0.9;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin: 0;
+}
+.title-wordmark span {
+  display: inline-block;
+  position: relative;
+  opacity: 0;
+  transform: translateY(0.14em) scale(1.04);
+  filter: blur(6px);
+  animation: tsLetterIn 0.6s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+  animation-delay: calc(1.55s + var(--i) * 0.1s);
+}
+.title-wordmark.lit span {
+  text-shadow:
+    0 0 18px rgba(225, 182, 93, 0.34),
+    0 0 46px rgba(225, 182, 93, 0.14);
+}
+.title-wordmark.lit {
+  animation: tsGlowBreathe 5s ease-in-out infinite;
+}
+.title-rulewrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.title-rule {
+  height: 1px;
+  width: 0;
+  margin: clamp(1.1rem, 3vh, 2rem) auto 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ts-gold-deep) 18%,
+    var(--gold-soft) 50%,
+    var(--ts-gold-deep) 82%,
+    transparent
+  );
+  animation: tsRuleGrow 1.1s ease-out 2.9s forwards;
+}
+.title-rulewrap::before,
+.title-rulewrap::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--gold-soft);
+  transform: rotate(45deg) scale(0);
+  align-self: center;
+  margin-top: clamp(1.1rem, 3vh, 2rem);
+  box-shadow: 0 0 10px rgba(240, 212, 136, 0.5);
+  animation: tsDiamond 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) 3.7s forwards;
+}
+.title-rulewrap::before {
+  margin-right: -3px;
+}
+.title-rulewrap::after {
+  margin-left: -3px;
+}
+.title-subtitle {
+  font-family: var(--c-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1rem, 3vw, 1.7rem);
+  letter-spacing: 0.02em;
+  color: var(--paper);
+  margin: clamp(1rem, 2.6vh, 1.6rem) 0 0;
+  opacity: 0;
+  animation: tsRise 1s ease-out 3.5s forwards;
+}
+.title-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(6vh, 9vh, 90px);
+  transform: translateX(-50%);
+  z-index: 5;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: clamp(0.66rem, 1.6vw, 0.8rem);
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-indent: 0.34em;
+  background: none;
+  border: 0;
+  opacity: 0;
+}
+.title-prompt b {
+  color: var(--gold-soft);
+  font-weight: 600;
+}
+.title-prompt.on {
+  animation:
+    tsPromptIn 0.8s ease-out forwards,
+    tsPulse 2.4s ease-in-out 0.8s infinite;
+}
+@keyframes tsLetterIn {
+  0% {
+    opacity: 0;
+    transform: translateY(0.14em) scale(1.04);
+    filter: blur(6px);
+  }
+  45% {
+    opacity: 1;
+    filter: blur(1.2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes tsGlowBreathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(225, 182, 93, 0.12));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(240, 212, 136, 0.28));
+  }
+}
+@keyframes tsDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes tsSealIn {
+  to {
+    opacity: 0.5;
+  }
+}
+@keyframes tsSealDrift {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes tsRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes tsRuleGrow {
+  to {
+    width: min(46ch, 66vw);
+  }
+}
+@keyframes tsDiamond {
+  to {
+    transform: rotate(45deg) scale(1);
+  }
+}
+@keyframes tsPromptIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 0.9;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+@keyframes tsPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+/* Reduced motion: no motes, no draw-on — everything sits at its resting state and the prompt shows
+   immediately (the JS also skips the canvas loop and reveals the prompt at once). */
+@media (prefers-reduced-motion: reduce) {
+  .title-motes {
+    display: none;
+  }
+  .title-seal,
+  .title-seal path,
+  .title-seal circle,
+  .title-seal line {
+    animation: none;
+    opacity: 0.4;
+    stroke-dashoffset: 0;
+  }
+  .title-wordmark span {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  .title-wordmark.lit {
+    animation: none;
+  }
+  .title-eyebrow,
+  .title-rule,
+  .title-subtitle,
+  .title-rulewrap::before,
+  .title-rulewrap::after {
+    animation: none;
+    opacity: 1;
+  }
+  .title-rule {
+    width: min(46ch, 66vw);
+  }
+  .title-rulewrap::before,
+  .title-rulewrap::after {
+    transform: rotate(45deg) scale(1);
+  }
+  /* `.on` is added by JS immediately under reduced motion, and its `animation` shorthand beats a
+     bare `opacity` here — so the pulse has to be switched off by name, not merely overridden. */
+  .title-prompt,
+  .title-prompt.on {
+    animation: none;
+    opacity: 0.9;
+  }
+}

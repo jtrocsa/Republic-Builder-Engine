@@ -11,7 +11,7 @@
 //      75's key, so this is the first thing that depends on two phases at once.
 //   3. The anomaly is the last band of the debrief and belongs to exactly one record.
 import { expect, test } from "@playwright/test";
-import { loadSeededSave, seedProgress } from "./helpers/progress-seed.js";
+import { loadSeededSave, reloadIntoSave, seedProgress } from "./helpers/progress-seed.js";
 
 const CASE_004 = {
   activeCaseId: "case-004",
@@ -113,9 +113,7 @@ test.describe("the Riverbend arc", () => {
       saved.sourceActivities["riverbend-charter"].state.logged = { "wharf-clerk": ["passage"] };
       window.localStorage.setItem(key, JSON.stringify(saved));
     });
-    await page.reload();
-    await page.getByRole("button", { name: "Student" }).click();
-    await page.getByRole("button", { name: "Load Save" }).click();
+    await reloadIntoSave(page);
 
     const lead = page.locator(".interview-notebook .is-lead");
     await expect(lead).toHaveCount(1);

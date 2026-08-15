@@ -3866,6 +3866,11 @@ getSession().then((session) => {
   });
 });
 let showMainMenu = true;
+// The cinematic title plays once per page load, in front of the Student/Teacher landing. It is a
+// pure pre-screen: dismissing it (Enter, or a click/tap) drops straight into mainMenuScreen() with
+// nothing else changed. A dev warp skips it (applyDevWarp sets this false), so ?warp=… lands where
+// it says. It never re-arms after dismissal within a session — only a reload replays it.
+let showTitle = true;
 // "root" | "student" — sub-state within the landing screen only; Teacher routes straight
 // into the existing "login" screen via open-teacher-login, so it needs no landing sub-state.
 let landingMode = "root";
@@ -3922,6 +3927,7 @@ function applyDevWarp() {
   // last session's leftovers is not exercising the state it claims to.
   progress = resetProgress();
   showMainMenu = false;
+  showTitle = false; // a named warp lands where it says — never behind the title sequence
   // Both clear held keys and stop the hub movement loop, so a warp cannot land mid-walk.
   if (name === "hall") enterHallwayRoom();
   else safeInstituteSpawn();
@@ -4325,6 +4331,126 @@ const STUDENT_SOLO_ITEMS = [
     disabledHint: "No saved Chronicle found yet.",
   },
 ];
+
+// --- Title sequence (the Chronicle wordmark cinematic, plays once per load) ------------------
+// Ported from the approved "Chronicle — Title Sequence" artifact. Palette and fonts are the game's
+// own tokens (the artifact was built against them), so nothing new loads. The floating gold motes
+// are a canvas rAF loop (startTitleDecor/stopTitleDecor — same lifecycle as startDirectorSceneDecor);
+// the seal, wordmark, rule and prompt are CSS in .title-sequence. Dismissed by Enter or a click/tap
+// (data-action="begin" → handleLandingClick → dismissTitle), which drops into mainMenuScreen()
+// unchanged. A dev warp skips it (showTitle=false in applyDevWarp).
+const TITLE_SUBTITLE = "An AP U.S. History Adventure";
+function titleWordmarkMarkup() {
+  return [...BRAND.campaign.toUpperCase()]
+    .map((ch, i) => `<span style="--i:${i}">${esc(ch)}</span>`)
+    .join("");
+}
+function titleScreen() {
+  return `<div class="title-sequence" id="titleStage" data-action="begin" aria-label="${esc(BRAND.campaign)} title screen">
+  <canvas class="title-motes" id="titleMotes" aria-hidden="true"></canvas>
+  <svg class="title-seal" viewBox="0 0 200 200" aria-hidden="true">
+    <circle cx="100" cy="100" r="86" pathLength="1"/>
+    <circle cx="100" cy="100" r="72" pathLength="1"/>
+    <circle cx="100" cy="100" r="30" pathLength="1"/>
+    <path d="M100 14 L112 100 L100 186 L88 100 Z" pathLength="1"/>
+    <path d="M14 100 L100 112 L186 100 L100 88 Z" pathLength="1"/>
+    <path d="M40 40 L100 94 L160 40 L106 100 L160 160 L100 106 L40 160 L94 100 Z" opacity=".7" pathLength="1"/>
+    <line class="tick" x1="100" y1="14" x2="100" y2="26" pathLength="1"/>
+    <line class="tick" x1="100" y1="174" x2="100" y2="186" pathLength="1"/>
+    <line class="tick" x1="14" y1="100" x2="26" y2="100" pathLength="1"/>
+    <line class="tick" x1="174" y1="100" x2="186" y2="100" pathLength="1"/>
+  </svg>
+  <div class="title-core">
+    <p class="title-eyebrow">The ${esc(BRAND.campaign)} Institute</p>
+    <h1 class="title-wordmark" id="titleWordmark" aria-label="${esc(BRAND.campaign)}">${titleWordmarkMarkup()}</h1>
+    <div class="title-rulewrap"><div class="title-rule"></div></div>
+    <p class="title-subtitle">${esc(TITLE_SUBTITLE)}</p>
+  </div>
+  <button class="title-prompt" id="titlePrompt" type="button" data-action="begin">Press <b>Enter</b> to begin</button>
+</div>`;
+}
+
+let titleDecorFrame = null;
+let titlePromptTimer = null;
+let titleMotes = [];
+// The gold motes drifting up behind the wordmark. Reveals the prompt (and the wordmark's glow) after
+// the letters have finished animating in. Reduced motion: no canvas loop, prompt shown immediately.
+function startTitleDecor() {
+  stopTitleDecor();
+  const reduce = prefersReducedMotion();
+  const wordmark = document.getElementById("titleWordmark");
+  const prompt = document.getElementById("titlePrompt");
+  const lightUp = () => {
+    wordmark?.classList.add("lit");
+    prompt?.classList.add("on");
+  };
+  titlePromptTimer = window.setTimeout(lightUp, reduce ? 0 : 2700);
+  const canvas = document.getElementById("titleMotes");
+  if (!canvas || reduce) return;
+  const ctx = canvas.getContext("2d");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0;
+  let H = 0;
+  const sizeCanvas = () => {
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  const seed = () => {
+    titleMotes = [];
+    const n = Math.round(Math.min(W, 1600) / 12);
+    for (let i = 0; i < n; i++) {
+      titleMotes.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.6 + 0.3,
+        vy: -(Math.random() * 0.28 + 0.05),
+        vx: (Math.random() - 0.5) * 0.14,
+        a: Math.random() * 0.5 + 0.12,
+        tw: Math.random() * Math.PI * 2,
+        tws: Math.random() * 0.03 + 0.008,
+      });
+    }
+  };
+  const tick = () => {
+    ctx.clearRect(0, 0, W, H);
+    for (const m of titleMotes) {
+      m.y += m.vy;
+      m.x += m.vx;
+      m.tw += m.tws;
+      if (m.y < -6) {
+        m.y = H + 6;
+        m.x = Math.random() * W;
+      }
+      if (m.x < -6) m.x = W + 6;
+      else if (m.x > W + 6) m.x = -6;
+      const flick = 0.55 + 0.45 * Math.sin(m.tw);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(240,212,136,${(m.a * flick).toFixed(3)})`;
+      ctx.fill();
+    }
+    titleDecorFrame = window.requestAnimationFrame(tick);
+  };
+  sizeCanvas();
+  seed();
+  tick();
+}
+function stopTitleDecor() {
+  if (titleDecorFrame) window.cancelAnimationFrame(titleDecorFrame);
+  titleDecorFrame = null;
+  if (titlePromptTimer) window.clearTimeout(titlePromptTimer);
+  titlePromptTimer = null;
+}
+// Enter / click / tap → leave the title for the Student/Teacher landing. Nothing else changes.
+function dismissTitle() {
+  if (!showTitle) return;
+  stopTitleDecor();
+  showTitle = false;
+  render();
+}
 
 function mainMenuItemMarkup(item) {
   const enabled = item.enabled();
@@ -11478,6 +11604,17 @@ function completionScreen() {
 }
 
 function render() {
+  if (showTitle) {
+    // Boot calls render() again while the title is still up: a signed-in student's session, profile
+    // and teacher-override hydration each finish with one, a few hundred ms in. Rebuilding the
+    // markup would restart the whole sequence from the first letter, so once the stage is mounted
+    // it is left alone — the title is a pre-screen and has nothing behind it to keep in sync.
+    if (!document.getElementById("titleStage")) {
+      app.innerHTML = titleScreen();
+      window.requestAnimationFrame(startTitleDecor);
+    }
+    return;
+  }
   if (showMainMenu) {
     app.innerHTML = mainMenuScreen();
     return;
@@ -11975,6 +12112,10 @@ function handleChromeClick(target, action) {
 }
 
 function handleLandingClick(target, action) {
+  if (action === "begin") {
+    dismissTitle();
+    return true;
+  }
   if (action === "landing-student") {
     landingMode = "student";
     render();
@@ -13624,6 +13765,15 @@ function handleEscapeDismiss() {
 
 function handleWindowKeydown(event) {
   const key = event.key.toLowerCase();
+  // The title sequence owns all input while it's up: Enter/Space begins, anything else is ignored
+  // so no movement or shortcut leaks to the screen underneath.
+  if (showTitle) {
+    if (key === "enter" || key === " " || key === "spacebar") {
+      event.preventDefault();
+      dismissTitle();
+    }
+    return;
+  }
   if (key === "escape") {
     handleEscapeDismiss();
     return;

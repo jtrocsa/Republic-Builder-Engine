@@ -298,6 +298,7 @@ Ringmann
 Riverbend
 Riverbend's
 Rubios
+rulewrap
 rxhpxqbtrnswjevcuxon
 Sahagún
 Salusa
@@ -322,6 +323,7 @@ sightlines
 simurai
 sindresorhus
 Skanawati
+spacebar
 spritejs
 SPRITESHEET
 srcs
@@ -414,6 +416,8 @@ Wayfinding
 wilsons
 Wirt
 Wirt's
+wordmark
+wordmark's
 workadventure
 Workstream
 workstreams
