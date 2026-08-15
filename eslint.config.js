@@ -73,6 +73,17 @@ export default [
     },
   },
   {
+    // A mockup under docs/ may ship its own Node build step beside the page it builds — the
+    // location-transitions mockup inlines its art for publishing. Same situation as scripts/:
+    // authored source, run by `node`, never loaded by the browser.
+    files: ["docs/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+  {
     // Root-level tool configs also run under plain Node, not the browser
     files: ["vite.config.js", "playwright.config.js"],
     languageOptions: {
