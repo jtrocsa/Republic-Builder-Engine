@@ -277,9 +277,27 @@ export const CANONICAL = {
 // asks rather than forcing a bad fit, and so a future asset purchase has a shopping list.
 // See the Gap Register in art-and-map-style-guide.md for the reasoning behind each.
 export const GAPS = [
-  "architecture.indigenous.northAmerican", // longhouse, pueblo, plains lodge — nothing fits.
-  // Island survival's bohio huts are Caribbean/Taino-appropriate ONLY; do not reuse them as
-  // generic "Native American."
+  // `architecture.indigenous.northAmerican` stood here as ONE entry covering longhouse, pueblo and
+  // plains lodge. That was the register committing in miniature the error it exists to prevent:
+  // three culture areas filed as one line can never close, and treating them as one job is the
+  // same reasoning that made a Caribbean hut look like an acceptable stand-in. Split in Phase 83
+  // into the buildings it was actually naming. The bohio rule is unchanged and binds all of them:
+  // Island survival's huts are Caribbean/Taino-appropriate ONLY.
+  //
+  // The arbor-frame bark-and-mat lodge is CLOSED — commissioned as derived/indigenous-village.png
+  // (earth lodge, bark lodge, two tipis, drying rack, hide stretcher, and the agency stone hut the
+  // Indian Office built beside one). ONE object serves the Powhatan yehakin and the Kanza bark
+  // lodge, and that is not the bohio substitution in another coat: those two are the same building
+  // by the same method — saplings bent into a barrel frame under bark or woven mats — where a
+  // conical tropical thatch hut is a different structure. See the manifest entry for the sourcing.
+  "architecture.indigenous.longhouse", // Haudenosaunee multi-family longhouse: elm-bark clad,
+  // sixty to two hundred feet, with the repeated interior bays that are what make it a longhouse
+  // rather than a long hut. indigenous-village.png's `barkLodge` is the same cladding at a
+  // twelfth the length and is NOT a substitute for it.
+  "architecture.indigenous.pueblo", // Ancestral Puebloan and Rio Grande adobe: stacked storeys,
+  // roof-ladder access between them, vigas projecting through the wall face. Nothing in 250
+  // sheets is masonry of this kind, and the desert packs are landform — buttes and canyons with
+  // no architecture in them at all.
   // `military.civilWar.camp` was here, and is CLOSED — commissioned as derived/civil-war-works.png
   // (wall tent, rampart, abatis, field gun, supply wagon, hospital cot). See the manifest entry for
   // what was generated and for the one object, the chevaux-de-frise, that was dropped.

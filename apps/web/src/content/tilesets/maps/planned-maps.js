@@ -32,15 +32,23 @@ export const PLANNED_MAPS = [
   {
     id: "p1-indigenous-settlement",
     period: 1,
-    status: "blocked",
-    intent: "A pre-contact Indigenous North American settlement.",
-    sheets: [],
-    gap: "architecture.indigenous.northAmerican",
+    status: "planned",
+    intent:
+      "A pre-contact Eastern Woodlands village: bark-and-mat lodges, drying racks, worked hides.",
+    sheets: [
+      "derived/indigenous-village.png", // arbor lodges, tipis, drying rack, hide stretcher
+      "derived/farm-trees.png", // North American vernacular species
+      "farm/1.png", // worked ground and field edges
+    ],
     notes:
-      "BLOCKED, not merely unbuilt. Nothing in the library depicts a longhouse, pueblo or " +
-      "plains lodge. Island survival's bohio huts are Caribbean/Taino-appropriate and are " +
-      "already correctly used for case-001; reusing them as generic 'Native American' would " +
-      "flatten distinct cultures into one wrong image. Needs new art before it can be built.",
+      "UNBLOCKED in Phase 83, and re-scoped in the same pass. This entry used to read 'a " +
+      "pre-contact Indigenous North American settlement' with no people named anywhere in it, " +
+      "which is the same flattening its own blocking gap existed to warn about: a map is one " +
+      "people in one place, and 'North American' is not a place. It is now the Eastern " +
+      "Woodlands, which is the culture area derived/indigenous-village.png actually covers. A " +
+      "Haudenosaunee longhouse town or a Puebloan one is still blocked, and now says so under " +
+      "its own gap id rather than hiding inside this one. Still missing for a fully furnished " +
+      "build: a palisade, and cultivated ground that does not read as a European field.",
   },
 
   // ---------------------------------------------------------------------------- Period 2

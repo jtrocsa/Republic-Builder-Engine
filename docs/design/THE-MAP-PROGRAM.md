@@ -159,19 +159,42 @@ government is writing it down. The right-hand column of §2's table is the half 
 
 A town that exists because a company decided it should: transient, stratified by contract, sitting
 on land whose ownership is actively contested. Connected spaces: depot and freight platform,
-telegraph office, land office, separate Irish and Chinese work camps, a homestead edge, cattle pens,
-and the line the survey crosses. Interiors: the **land office** and the **telegraph office**.
+telegraph office, land office, a graders' camp, a homestead edge, cattle pens, the hide yard, and
+the Kanza village on the far side of the line. Interiors: the **land office** and the **telegraph
+office**.
 
 Records: a **land-office patent** (who is entitled to what, on whose authority); a **railroad
 payroll** (the same work priced differently by who does it); and a **boundary survey that disagrees
 with the treaty text it cites**. The third is the map's spine, and the honest finding is not that
 somebody lied — it is that the disagreement is itself the historical event.
 
-**The map must not treat the West as empty land awaiting settlement.** Indigenous presence is
-current and organised, not residual: named, speaking first, saying what is done to them and what
-they intend. This is the same register rule Unit 5 applies to enslaved and impressed people, and it
-is why `architecture.indigenous.northAmerican` is the highest-priority art commission in §6 — it is
-a curriculum defect, not an art gap.
+**1873 is not an arbitrary year, and the Phase 83 art commission is what established that.** The
+Kanza were forced out of Kansas on 4 June 1873 under a bill Congress passed at the urging of
+railroad and town-site speculators, and their reservation was resold to non-Native buyers in
+160-acre tracts. So the land office is selling the reservation, the survey is the instrument that
+made it sellable, and the payroll and the cattle pens are the industry the sale was for. Those
+three records are one transaction seen from three desks — which is what the unit already wanted
+them to be, except that it is now a documented transaction rather than a plausible one.
+
+The graders' camp is Irish, German and Black: Civil War veterans and immigrant labour. An earlier
+draft of this brief put a **Chinese camp** here as well, and that is wrong by half a continent —
+that workforce was the Central Pacific's, and the Union Pacific and its Kansas branches hired none
+of it. Removed rather than corrected in place, because there is no version of it that belongs on
+this map.
+
+**The map must not treat the West as empty land awaiting settlement**, and after the correction
+above that is a statement about composition rather than a caution. Indigenous presence is current
+and organised, not residual: named, speaking first, saying what is done to them and what they
+intend — the same register rule Unit 5 applies to enslaved and impressed people. The village is a
+village, earth lodges and bark lodges with a working camp beside it, not an encampment adjacent to
+a town; and the people in it are in the middle of being removed rather than already gone.
+
+**The agency stone huts are on this map and they are the cheapest thing on it.** The government
+built 138 one-room limestone houses for the Kanza at Council Grove in 1862. The Kanza declined to
+live in square rooms and stabled animals in them, and in 1866, while they were away on the winter
+hunt, settlers stripped the doors and window sashes and left them unusable. A player walks past a
+house built for somebody who did not want it, wrecked by the people who did. Nothing has to explain
+it, and nothing should.
 
 **The reveal lands here.** Meridian's first visible operation reads as humanitarian — a warning
 given, a claim protected — and complicates who ends up with access to land, movement or a vote.
@@ -224,9 +247,14 @@ sheets across 28 packs, and the `derived-objects` packing pipeline.
 1. ~~**Unit 3's six Revolutionary-era characters.**~~ **Shipped in Phase 82** — generated, built,
    and the `legacy-*` path removed with them. It went first because 81F had just put authored
    interview questions in those six mouths.
-2. **`architecture.indigenous.northAmerican`** — longhouse, pueblo, plains lodge. Blocking for Unit
-   6 and a curriculum defect rather than an art gap. Island survival's bohío huts are
-   Caribbean/Taíno-appropriate **only** and must never stand in as generic Native American art.
+2. ~~**`architecture.indigenous.northAmerican`.**~~ **Shipped in Phase 83, in part, and the entry it
+   was written against no longer exists.** One gap covering longhouse, pueblo and plains lodge was
+   three culture areas filed as one job, which is the register making the mistake it was written to
+   stop. It is now two registered gaps — Haudenosaunee longhouse, Puebloan adobe — and the
+   arbor-frame bark-and-mat lodge is closed: `derived/indigenous-village.png`, seven objects. It
+   unblocked more than the railhead. Riverbend's Powhatan landing has been empty ground since Phase
+   62 for exactly this reason, and a yehakin is the same building as the Kanza bark lodge, so one
+   object serves both.
 3. **Unit 6's cast** — the railhead's people.
 4. **`streetscape.midCentury`** — unblocks Unit 8.
 5. **`liaison-meridian`** — Voss's revealed costume, needed for Unit 6's reveal and not before.

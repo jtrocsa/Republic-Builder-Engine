@@ -248,12 +248,13 @@ Elements with no acceptable tile anywhere in the library. Recorded so a map auth
 rather than forcing a bad fit. Mirrored in `canonical-palette.js`'s `GAPS` export, and the palette
 test fails if a planned map claims a gap that is not registered there.
 
-| Gap                                        | Detail                                                                                                                                                                                                                                                                            |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Indigenous North American architecture** | Longhouse, pueblo, plains lodge. Nothing fits. Island survival's bohío huts are Caribbean/Taíno-appropriate and correctly used for `case-001`; reusing them as generic "Native American" would flatten distinct cultures into one wrong image. Blocks `p1-indigenous-settlement`. |
-| **Antebellum plantation great house**      | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                        |
-| **Mid-century streetscape**                | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged.                                                                                                                                                           |
-| **Antebellum American commercial street**  | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged. |
+| Gap                                       | Detail                                                                                                                                                                                                                                                                            |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Haudenosaunee longhouse**               | Elm-bark clad, sixty to two hundred feet, with the repeated interior bays that make it a longhouse rather than a long hut. `derived/indigenous-village.png`'s `barkLodge` is the same cladding at a twelfth the length and is **not** a substitute.                               |
+| **Puebloan adobe**                        | Ancestral Puebloan and Rio Grande: stacked storeys, roof-ladder access between them, vigas projecting through the wall face. Nothing in 250 sheets is masonry of this kind, and the desert packs are landform — buttes and canyons with no architecture in them.                  |
+| **Antebellum plantation great house**     | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                        |
+| **Mid-century streetscape**               | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged.                                                                                                                                                           |
+| **Antebellum American commercial street** | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged. |
 
 **The Second Empire substitution, as used on `canal-crossroads-field`.** That map does not solve the
 gap above; it manages it. The masonry sheet dresses the six buildings a boomtown would genuinely have
@@ -277,6 +278,38 @@ driven through it" as fencing however it is asked. The rampart and the abatis al
 fortification line, and of the three obstacles the chevaux-de-frise is the least legible at 48px.
 Anyone retrying it should describe the **shape** — crossed poles threaded along a beam, a row of
 X's — rather than name the object.
+
+The **Indigenous North American architecture** gap is **closed in part, and split**, as of Phase 83.
+It was the register's oldest and worst entry, and it was one row reading "longhouse, pueblo, plains
+lodge" — three culture areas filed as a single job, which is the register committing in miniature
+the exact error it exists to prevent. A row like that can never close. It is now two rows, above,
+naming two buildings.
+
+What closed is the **arbor-frame bark-and-mat lodge**, commissioned into
+`derived/indigenous-village.png`: an earth lodge, a bark lodge, two tipis, a meat-drying rack, a
+staked hide on a stretching frame, and the agency stone hut — the one object on that sheet that is
+not Indigenous architecture, and is there because it stood in the village.
+
+**One object serves both the Powhatan yehakin and the Kanza bark lodge, and that is not the bohío
+substitution wearing a different coat.** A yehakin is saplings bent and lashed into a barrel frame
+under bark or woven mats with a smoke hole at the centre of the roof; the Kanza's bark lodge is the
+same building by the same method. Those two are one structure. A Caribbean conical thatch hut is a
+different structure, which is why it never was a stand-in and still is not. The test for reusing a
+building across peoples is whether it is the same construction, not whether the peoples are both
+Indigenous.
+
+This unblocks `p1-indigenous-settlement` — re-scoped in the same pass from "a pre-contact Indigenous
+North American settlement," which named no people and was therefore the same flattening in the
+planned-map slate — and it unblocks Riverbend, where two Powhatan NPCs have stood in open grass with
+no props of their own since Phase 62 with a comment in `main.js` explaining why.
+
+Three of the seven objects took four rolls, and the misses rhyme with the chevaux-de-frise. The bark
+lodge came back a smooth barrel, then a planked tube, then a green-thatched hut on sawn posts: the
+word "barrel" fetches a container and the word "bark" fetches nothing. What worked was the sourced
+description read out flat — a frame of bent saplings wrapped in woven mat panels with the rib poles
+showing through. The stone hut came back half-timbered on the first roll, which is the Medieval
+Fantasy Town silhouette this guide bans by name, and on the third with a circular shop emblem on the
+gable, which is that same failure wearing a sign. **Name the construction, never the thing.**
 
 The **"modern institute interior"** gap this register used to carry is now **closed**, though not
 yet actioned. It was recorded when the only candidate was the off-grid `Modern Interiors` pack;

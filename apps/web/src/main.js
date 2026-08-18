@@ -1515,11 +1515,14 @@ const UNIT2_FIELD_NPCS = [
   },
   {
     // Placed on the open northwest shore, upriver of the English settlement and well clear of it,
-    // at a river landing of their own. The Riverbend map has no Indigenous community zone and one
-    // cannot currently be built: `architecture.indigenous.northAmerican` is a registered gap in
-    // canonical-palette.js, and reusing Island Survival's Taíno bohíos as generic "Native
-    // American" is explicitly forbidden there. So these two stand in open ground with no props of
-    // their own, which is a limitation of the tile library, not of the placement.
+    // at a river landing of their own. These two stand in open ground with no props of their own,
+    // and until Phase 83 that was a hard block: the library held no North American Indigenous
+    // architecture at all, and reusing Island Survival's Taíno bohíos as generic "Native American"
+    // is forbidden in canonical-palette.js. **The art now exists** —
+    // derived/indigenous-village.png's `barkLodge` is an arbor frame under bark and woven mats,
+    // which is what a yehakin is. What is left is map work: riverbend-field.tmj has to be
+    // regenerated with a village zone at this landing. Until it is, the empty ground here is a
+    // scheduling fact and no longer a limitation of the tile library.
     id: "powhatan-man",
     x: 11.0,
     y: 7.0,

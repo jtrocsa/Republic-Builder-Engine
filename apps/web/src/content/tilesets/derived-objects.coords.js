@@ -90,3 +90,14 @@ export const RichmondRuins = {
   deadTreeSmall: tile("derived/richmond-ruins.png", 2, 0, { h: 2, w: 2 }),
   cordwood: tile("derived/richmond-ruins.png", 2, 2, { h: 1, w: 1 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const IndigenousVillage = {
+  earthLodge: tile("derived/indigenous-village.png", 0, 0, { h: 2, w: 3 }),
+  barkLodge: tile("derived/indigenous-village.png", 0, 3, { h: 2, w: 3 }),
+  tipi: tile("derived/indigenous-village.png", 0, 6, { h: 3, w: 2 }),
+  tipiSmall: tile("derived/indigenous-village.png", 0, 8, { h: 2, w: 1 }),
+  agencyStoneHut: tile("derived/indigenous-village.png", 0, 9, { h: 2, w: 3 }),
+  dryingRack: tile("derived/indigenous-village.png", 0, 12, { h: 2, w: 2 }),
+  hideStretcher: tile("derived/indigenous-village.png", 0, 14, { h: 2, w: 2 }),
+};

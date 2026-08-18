@@ -166,6 +166,7 @@ Iztapalapan
 jsprite
 jtrocsa
 justinramsey
+Kanza
 kase
 kastsen
 kayahr
@@ -323,6 +324,7 @@ sightlines
 simurai
 sindresorhus
 Skanawati
+SNCC
 spacebar
 spritejs
 SPRITESHEET
@@ -405,6 +407,7 @@ Varon
 versionable
 Vietnamization
 viewbox
+vigas
 Waldseem
 waldseemuller
 Waldseemüller
@@ -423,5 +426,6 @@ Workstream
 workstreams
 Württemberg
 Yeardley
+yehakin
 yuca
 Zboray

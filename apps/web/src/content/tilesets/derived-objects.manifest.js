@@ -259,4 +259,62 @@ export const DERIVED_OBJECTS = [
       },
     ],
   },
+  {
+    // The register's oldest and worst entry, closed in part. `architecture.indigenous.northAmerican`
+    // has blocked `p1-indigenous-settlement` since the library was first catalogued, and it is the
+    // one gap the style guide calls a curriculum defect rather than an art gap: Island survival's
+    // bohios are Caribbean/Taino and reusing them as generic "Native American" flattens distinct
+    // cultures into one wrong image. Unit 6 cannot be built around it, because THE-MAP-PROGRAM's
+    // rule that the railhead must not treat the West as empty land is a statement about what is
+    // drawn on the map, not about what an NPC says.
+    //
+    // **Researching the commission moved the unit.** The Kanza were forced out of Kansas on 4 June
+    // 1873 under a bill Congress passed at the urging of railroad and town-site speculators, and
+    // their reservation was resold in 160-acre tracts. Unit 6 was already dated 1873 and already
+    // had a land office, a survey and a payroll; it now has the transaction those three records
+    // are three views of. See THE-MAP-PROGRAM.md's Unit 6 brief.
+    //
+    // **`barkLodge` is why this entry pays for itself twice.** A yehakin is saplings bent and
+    // lashed into a barrel frame under bark or woven mats, with a smoke hole at the centre of the
+    // roof; the Kanza's bark lodge is the same building by the same method. So one object serves
+    // Riverbend and the railhead honestly — and that is not the bohio error in another coat,
+    // because a Caribbean conical thatch hut is a *different structure* where these two are the
+    // same one. Riverbend's two Powhatan NPCs have stood in open grass with no props since Phase
+    // 62, with a comment in main.js saying exactly why. This unblocks them.
+    //
+    // **`agencyStoneHut` is the one object here that is not Indigenous architecture**, and it is on
+    // this sheet because it stood in the village. The Indian Office built 138 one-room limestone
+    // houses for the Kanza at Council Grove in 1862. They declined to live in square rooms and
+    // stabled animals in them; in 1866, while they were away on the winter hunt, settlers stripped
+    // the doors and window sashes. It is generated with its frames still in place and the openings
+    // black, which is what that sentence looks like. Nothing on the map needs to explain it.
+    //
+    // Three objects took four rolls each and the misses rhyme. `barkLodge` came back a smooth
+    // barrel, then a planked tube, then a green-thatched hut on sawn posts — the word "barrel"
+    // fetches a container and the word "bark" fetches nothing at all. What worked was the sourced
+    // description read out flat: a frame of bent saplings wrapped in woven mat panels with the rib
+    // poles showing through. `agencyStoneHut` came back half-timbered on the first roll — the
+    // Medieval-Fantasy-Town silhouette this repo bans by name — and on the third with a circular
+    // shop emblem on the gable, which is the same failure wearing a sign. The rule from the
+    // chevaux-de-frise holds and generalises: **name the construction, never the thing.**
+    //
+    // Scale follows the civil-war sheet. Against a 45px body and a library that draws buildings at
+    // 94-183px: the earth lodge is 81px of ink and forty feet across, so it reads low and wide; the
+    // tipi is the tallest object here at 122px because a tipi is roughly three times a person; and
+    // the agency hut at 79px is deliberately the smallest building on the map, which is what a
+    // sixteen-by-twenty-foot one-room house is.
+    //
+    // Cut by explicit box, printed by reports/_review/compose-commission.mjs.
+    from: "Chronicle Commissions/indigenous-village.png",
+    out: "indigenous-village.png",
+    objects: [
+      { name: "earthLodge", box: [8, 41, 144, 122] },
+      { name: "barkLodge", box: [152, 46, 276, 122] },
+      { name: "tipi", box: [284, 0, 360, 122] },
+      { name: "tipiSmall", box: [368, 28, 410, 122] },
+      { name: "agencyStoneHut", box: [418, 43, 524, 122] },
+      { name: "dryingRack", box: [532, 58, 606, 122] },
+      { name: "hideStretcher", box: [614, 39, 693, 122] },
+    ],
+  },
 ];
