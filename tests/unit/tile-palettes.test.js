@@ -32,6 +32,7 @@ import canalBoardingHouse from "../../apps/web/src/content/tilesets/maps/canal-b
 import archiveRoom from "../../apps/web/src/content/tilesets/maps/archive-room.palette.js";
 import hallway from "../../apps/web/src/content/tilesets/maps/hallway.palette.js";
 import instituteHall from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
+import railhead from "../../apps/web/src/content/tilesets/maps/railhead-field.palette.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../..");
@@ -48,6 +49,7 @@ const MAP_PALETTES = [
   richmond,
   richmondCountingRoom,
   richmondHospitalWard,
+  railhead,
   archiveRoom,
   hallway,
   instituteHall,

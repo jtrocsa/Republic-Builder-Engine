@@ -9,6 +9,7 @@ import {
 import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-campaign.js";
 import { UNIT_04, CASE_010_SOURCES, CASE_010_LANES } from "./content/unit-04-campaign.js";
 import { UNIT_05, CASE_013_SOURCES, CASE_013_LANES } from "./content/unit-05-campaign.js";
+import { UNIT_06, CASE_016_SOURCES, CASE_016_LANES } from "./content/unit-06-campaign.js";
 import { CED_THEME_LABEL } from "./content/ced-taxonomy.js";
 import { skillsForQuestSlots } from "./engine/ced-alignment.js";
 import {
@@ -98,6 +99,19 @@ import {
   UNIT_05_ARCHIVE_SAQ_QUESTS,
   UNIT_05_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-05-quests.js";
+// Unit 6 is the first unit to run a hipp and an mcq together in the Archive Room — see the header
+// of content/quests/unit-06-quests.js for why those two, and ARCHIVE_CHALLENGE_QUESTS_BY_TYPE below
+// for where they land.
+import {
+  UNIT_06_MCQ_QUESTS,
+  UNIT_06_SEQUENCING_QUESTS,
+  UNIT_06_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_06_SOURCE_ANALYSIS_QUESTS,
+  UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+  UNIT_06_ARCHIVE_MCQ_QUESTS,
+  UNIT_06_ARCHIVE_SAQ_QUESTS,
+  UNIT_06_ARCHIVE_DBQ_QUESTS,
+} from "./content/quests/unit-06-quests.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 // The activity engines (Phase 68, decision log 0051). These four replaced the three
 // hand-written activity screens that were each welded to one source id. The registry knows no
@@ -166,6 +180,7 @@ import canalBoardingHouseTmjRaw from "./content/maps/canal-boarding-house.tmj?ra
 import richmondTmjRaw from "./content/maps/richmond-field.tmj?raw";
 import richmondCountingRoomTmjRaw from "./content/maps/richmond-counting-room.tmj?raw";
 import richmondHospitalWardTmjRaw from "./content/maps/richmond-hospital-ward.tmj?raw";
+import railheadTmjRaw from "./content/maps/railhead-field.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
@@ -193,6 +208,10 @@ import {
   RICHMOND_FIELD_BLOCKS,
   RICHMOND_FIELD_ROADS,
 } from "./content/maps/richmond-field.blocks.js";
+import {
+  RAILHEAD_FIELD_BLOCKS,
+  RAILHEAD_FIELD_ROADS,
+} from "./content/maps/railhead-field.blocks.js";
 // The two rooms that map opens into. No `*_ROADS` companion: a route is pathfound over road cells
 // discounted 4:1, and nothing in a twenty-tile room is far enough from anything for a road to mean
 // what it means outdoors.
@@ -775,6 +794,53 @@ function renderRichmondTiledMap() {
   renderTiledMapWithOverlay("richmondTiledCanvas", richmondTmj, resolveRichmondTilesetImage);
 }
 
+// Cottonwood Junction (Unit 6). Nine sheets, and three of them are new to the bundle: this is the
+// first map in the game drawn from the `Wild West` pack, which is the library's only rail art and
+// its only American frontier town.
+//
+// A palette gaining a sheet always costs a glob here as well, and forgetting one is not a missing-
+// texture bug: createTilesetImageResolver() throws, the canvas never sets data-rendered, and the
+// whole map renders as an empty frame. It happened three times before Phase 84 made it
+// tests/unit/tile-palettes.test.js's business, and that test caught this map's nine before a single
+// render — which is the first time the trap was sprung by a test instead of by a person.
+const railheadTmj = JSON.parse(railheadTmjRaw);
+const resolveRailheadTilesetImage = createTilesetImageResolver(
+  // The line itself: depot, covered platform, running track, water tanks, freight deck.
+  import.meta.glob("./assets/tilesets/Wild West/tile-B-04.png", { eager: true, import: "default" }),
+  // Front Street — the four unsigned frontages, the stable, the hide shed, and the street furniture.
+  import.meta.glob("./assets/tilesets/Wild West/tile-B-02.png", { eager: true, import: "default" }),
+  // The stock pens, the notice board, the claim cabin and the section house.
+  import.meta.glob("./assets/tilesets/Wild West/tile-B-08.png", { eager: true, import: "default" }),
+  // Prairie, worked soil, the wheat, the sunflowers, the corn, the split rail and the well.
+  import.meta.glob("./assets/tilesets/farm/6.png", { eager: true, import: "default" }),
+  // Cottonwood Creek and its banks — the same water Riverbend and Canal Crossroads already bundle.
+  import.meta.glob("./assets/tilesets/Medieval Fishing Village/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Packed earth: every street, yard and door spur on the map.
+  import.meta.glob("./assets/tilesets/Medieval Fantasy Town/2.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Cottonwood along the creek, standing in for a tree the library does not have.
+  import.meta.glob("./assets/tilesets/derived/farm-trees.png", { eager: true, import: "default" }),
+  // The Kanza village — commissioned in Phase 83, first rendered at Riverbend in Phase 84.
+  import.meta.glob("./assets/tilesets/derived/indigenous-village.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Wall tents and a supply wagon for the graders' camp, off the Richmond commission. Army pattern
+  // is right rather than borrowed here: the Kansas branches ran their camps out of war surplus.
+  import.meta.glob("./assets/tilesets/derived/civil-war-works.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderRailheadTiledMap() {
+  renderTiledMapWithOverlay("railheadTiledCanvas", railheadTmj, resolveRailheadTilesetImage);
+}
+
 // Richmond's two rooms. One resolver serves both, as at Canal Crossroads, and every sheet either
 // room names is already in the bundle: the two `19th Century European City` interior sheets come in
 // with the printing office and the boardinghouse, and derived/civil-war-works.png with the outdoor
@@ -1010,6 +1076,25 @@ const CHARACTER_SHEETS = {
   "free-tradesman": characterSheet(`${FIELD}/npc-free-tradesman`, 9),
   "loyalist-merchant": characterSheet(`${FIELD}/npc-loyalist-merchant`, 9),
   farmwife: characterSheet(`${FIELD}/npc-farmwife`, 9),
+  // Unit 6 — Cottonwood Junction, Kansas, 1873. Eleven, the largest single import since Phase 60,
+  // because a company town has more distinct economic positions on it than any map before it.
+  //
+  // Two pairs were designed against rather than assumed apart, and both are recorded in
+  // scripts/assets/character-manifest.js beside the characters themselves: the three men who work
+  // in paper stand within a hundred yards of each other on Front Street and separate by hat and by
+  // coat colour, and the map's two skirted silhouettes are kept a long way apart on top of being
+  // drawn in different blues.
+  "railroad-land-agent": characterSheet(`${FIELD}/npc-railroad-land-agent`, 9),
+  "land-office-register": characterSheet(`${FIELD}/npc-land-office-register`, 9),
+  "townsite-promoter": characterSheet(`${FIELD}/npc-townsite-promoter`, 9),
+  "deputy-surveyor": characterSheet(`${FIELD}/npc-deputy-surveyor`, 9),
+  "telegraph-operator": characterSheet(`${FIELD}/npc-telegraph-operator`, 9),
+  "track-grader": characterSheet(`${FIELD}/npc-track-grader`, 9),
+  "freight-teamster": characterSheet(`${FIELD}/npc-freight-teamster`, 9),
+  "texas-drover": characterSheet(`${FIELD}/npc-texas-drover`, 9),
+  "homesteader-woman": characterSheet(`${FIELD}/npc-homesteader-woman`, 9),
+  "kanza-man": characterSheet(`${FIELD}/npc-kanza-man`, 9),
+  "kanza-woman": characterSheet(`${FIELD}/npc-kanza-woman`, 9),
 };
 /** The sheet for a character key, falling back to the Director rather than throwing on a typo. */
 function sheetFor(key) {
@@ -2684,6 +2769,246 @@ const RICHMOND_CANAL_BOTTOM = 29.9;
 function jamesWaterline(x) {
   return 33.4 - Math.sin((x - 4) * 0.075) * 0.8;
 }
+// ---- Unit 6 · Cottonwood Junction, Kansas, June 1873 -------------------------------------------
+//
+// Eleven people, and the map's whole argument is which side of the line each of them is standing
+// on. North of the rails everyone works in paper; south of them everyone works with their hands or
+// is being counted. Nobody here is a villain and nobody is a bystander: the land agent, the
+// register and the promoter are three ordinary men executing a procedure, and the procedure is the
+// finding.
+//
+// **The register rule from Unit 5 governs the two Kanza characters and is stricter here than
+// anywhere.** Willow Pahonka and Joseph Kahegah are named, speak in the first person, say plainly
+// what is being done to them and what they intend, and neither is explained by anyone else on this
+// map. They are in the middle of being removed rather than already gone — THE-MAP-PROGRAM.md §5 —
+// and the map's one unforgivable failure would be drawing them as the past tense of it.
+const UNIT6_FIELD_NPCS = [
+  {
+    // North-east of the spawn on the street apron, off the grade crossing and off the depot's
+    // cardinals — a stationed body is furniture to the nav grid, and one standing in the crossing
+    // re-plans every route that uses it.
+    id: "liaison",
+    x: 34.5,
+    y: 13.0,
+    group: "town",
+    name: "Emery Voss",
+    label: "Emery Voss",
+    sprite: "liaison",
+    // Reveal ladder, Unit 6: Meridian's first visible operation, and it reads as a kindness
+    // (THE-MAP-PROGRAM.md §5). Voss reports it as a fact she is puzzled by rather than as a
+    // confession, which is what keeps both readings live. "Anchor glass" is not re-explained, per
+    // canon §8; nothing is named Meridian, because nothing on this map knows the word yet.
+    text: "Before you go in anywhere — somebody was here ahead of us. A woman in a good coat sat with the Kanza headmen for two hours on Monday and told them, correctly, what the appraisal would fetch and which sections would go first. She gave them better figures than their own agent has. Then she left. I have been trying all week to decide whether that was a kindness, and the honest answer is that it depends entirely on what she wanted the figures used for. Log what you find. Do not log what I just said.",
+  },
+  {
+    // Two tiles east of the depot on the apron: the first person the player meets, and the one who
+    // explains the shape of the town.
+    id: "railroad-land-agent",
+    x: 31.8,
+    y: 13.6,
+    group: "paper",
+    name: "Hollis Meade",
+    label: "Railroad land agent",
+    sprite: "railroad-land-agent",
+    text: "Land agent for the division, and I will tell you what I tell everybody off the cars: there are two land offices on this street and they are not the same office. Mine sells the company's grant, section by section, on time if your credit is good. The government's is up the walk with the flag on it, and what it is selling this summer is the Kaw reserve, at auction, cash only. Different land, different paper, same street. People confuse them constantly, and I have stopped correcting them, because it does me no harm.",
+  },
+  {
+    // At the land office, on the street side of its door and clear of the notice board at (19,13).
+    id: "land-office-register",
+    x: 18.6,
+    y: 12.3,
+    group: "paper",
+    name: "Elias Fenn",
+    label: "Register, United States land office",
+    sprite: "land-office-register",
+    text: "Twenty-two years in the land offices and I have never once been asked to decide anything. A tract is appraised, advertised, offered, and struck to the highest bidder for cash, and I write the receipt. The proceeds are credited to the tribe's account in the Treasury, which is the law and which I am careful about. No, I have not seen the account. No, I could not tell you what is drawn against it. My office ends at the receipt, and I would rather you took that as a limit than as an excuse.",
+  },
+  {
+    // At the town-site office, nine tiles from the register and three from the land agent's beat:
+    // the three paper men are meant to be read as a group and told apart at a glance.
+    id: "townsite-promoter",
+    x: 27.6,
+    y: 12.3,
+    group: "paper",
+    name: "Ambrose Kell",
+    label: "Town-site promoter",
+    sprite: "townsite-promoter",
+    text: "I own the Clarion and I own two hundred lots, and the Clarion says the Junction is the coming point on this division. Both of those are true and neither is a secret; you may read the card in my own paper saying I have no interest in any town site whatever, and you may laugh at it, and I will laugh with you. What I will not do is apologise for it. A town is a thing somebody decides to believe in first. The believing is the work.",
+  },
+  {
+    // At the telegraph office. Stationed rather than routed: an operator does not leave the key.
+    id: "telegraph-operator",
+    x: 22.6,
+    y: 12.3,
+    group: "paper",
+    name: "Rufus Ply",
+    label: "Telegraph operator",
+    sprite: "telegraph-operator",
+    text: "Everything that happens here happens twice — once on the ground and once on the wire, and the wire is faster, so the wire is what the East believes. Grain out of Kansas City at eight, stock at noon, and whatever the town site wants said about itself in between. I sent forty words on Wednesday about the Kaws going south. I did not write them. I have thought since about what I would have written.",
+  },
+  {
+    // Out on the section lines north of town, where a deputy surveyor closing township corners
+    // would be. Deliberately the one paper man who is not on Front Street.
+    id: "deputy-surveyor",
+    x: 35.0,
+    y: 7.4,
+    group: "paper",
+    name: "Whitfield Doss",
+    label: "Deputy surveyor",
+    sprite: "deputy-surveyor",
+    text: "Township eighteen south, range eight east, and I am closing the section corners so a tract can be described in a deed. You want to know whether the lines are true. They are true to the monuments I found, and the monuments I found are not all where the last man's notes put them, and where the notes and the ground disagree I have written down both. My field book is not tidy. A tidy field book out of this country would be a lie.",
+  },
+  {
+    // The graders' camp, north of the yard road and clear of both tent rows.
+    id: "track-grader",
+    x: 29.0,
+    y: 24.0,
+    group: "work",
+    name: "Padraic Byrne",
+    label: "Track grader",
+    sprite: "track-grader",
+    text: "Dollar seventy-five the day, whistle to whistle, and I have not had a dollar seventy-five in my hand since March. Board comes off it, blankets came off it, the shovel came off it, and what is left comes as a time check payable at the quarter — which the store will cash for you today at whatever rate suits them. Half this camp came out of the army and the other half came off a boat, and the company knows exactly what that difference is worth. It is written on the sheet. Go and read the sheet.",
+  },
+  {
+    // At the freight deck, on the south side of the line where a teamster loads off the platform.
+    id: "freight-teamster",
+    x: 36.5,
+    y: 20.0,
+    group: "work",
+    name: "Otho Vance",
+    label: "Freight teamster",
+    sprite: "freight-teamster",
+    text: "I haul what the cars will not, which is everything going anywhere that is not on the line. And here is the joke of this country: it costs a man more to send his wheat the ninety miles from here to Kansas City than it costs the elevator to send that same car twelve hundred miles to Chicago. Ninety miles. There is one road here, you see, and there are four roads there. Distance has nothing to do with it.",
+  },
+  {
+    // Between the chute and the pens, clear of the yard road.
+    id: "texas-drover",
+    x: 41.0,
+    y: 23.8,
+    group: "work",
+    name: "Cordell Yates",
+    label: "Texas drover",
+    sprite: "texas-drover",
+    text: "Brought eleven hundred head up from Bosque County, and I am paid on what walks into that chute, not on what left Texas. The town wants us and does not want us, both at once — they want the shipping and they want the quarantine line drawn north of wherever we happen to be standing. Next season the pens will be forty miles west of here and this street will wonder where its money went.",
+  },
+  {
+    // At the claim, west of the wheat and clear of the well's footprint.
+    id: "homesteader-woman",
+    x: 44.0,
+    y: 7.2,
+    group: "claim",
+    name: "Marta Lindqvist",
+    label: "Homesteader",
+    sprite: "homesteader-woman",
+    text: "We came from Sweden by way of Illinois and we bought this quarter at the sale — bought it, mind, cash, not filed on it, because trust land was not open to filing. So we are not homesteaders whatever the paper in town calls us. And I know whose ground this was. The agent said it was appraised and offered lawfully and I do not doubt him. I also planted corn in June in furrows somebody else had already broken, and I am not going to pretend I did not notice.",
+  },
+  {
+    // The village, in the open between the four lodges and the corn ground.
+    id: "kanza-man",
+    x: 12.0,
+    y: 26.8,
+    group: "village",
+    name: "Joseph Kahegah",
+    label: "Kanza headman",
+    sprite: "kanza-man",
+    text: "We go on Wednesday. Not because we agreed — we said no in council, we said no in writing, and Allegawaho went to Washington to say it there — but because the bill passed anyway and the wagons are counted. Five hundred and thirty-three of us. They will write that the removal was effected without disturbance. That will be true, and it will be the least true thing anybody says about this month. Ask me for the roll. I will tell you what is on it and what is not.",
+  },
+  {
+    // In the corn she is still working, four tiles from Kahegah. The map's two skirted silhouettes
+    // are the pair the cast had to separate, and they are also the pair kept furthest apart on it —
+    // Lindqvist is on the claim, thirty-three tiles away.
+    id: "kanza-woman",
+    x: 11.0,
+    y: 23.2,
+    group: "village",
+    name: "Willow Pahonka",
+    label: "Kanza woman",
+    sprite: "kanza-woman",
+    text: "You are looking at the corn and wondering why I am hoeing it. Because it is June, and because it is mine until the day it is not, and because I will not spend my last week here standing still so somebody can write down that we had already stopped. The clerk who made the roll set me down as the wife of the man above me. I have a name. It is Willow Pahonka. Write that one.",
+  },
+];
+
+const UNIT6_FIELD_NPC_BEHAVIOURS = {
+  liaison: { kind: "station", at: { x: 34.5, y: 13.0 }, facing: "left" },
+  // Stationed, and it was a route twice before it was this. Front Street is the only road on the
+  // town side and three of the four paper men stand on it, so a routed body walking it hugged the
+  // road — engine/npc-routing.js costs a road cell a quarter of open ground — and passed 1.12 tiles
+  // from Voss and 1.20 from the promoter. That is inside the 1.45-tile interaction reach, so the
+  // wrong man answered. Moving the beat a row south did not fix it, because the router simply
+  // detoured back onto the road. A street this narrow with this many posts on it cannot also carry
+  // a patrol; the map's motion is the teamster, the grader and the two who work in place.
+  "railroad-land-agent": { kind: "station", at: { x: 31.8, y: 13.6 }, facing: "left" },
+  "land-office-register": { kind: "station", at: { x: 18.6, y: 12.3 }, facing: "down" },
+  "townsite-promoter": { kind: "station", at: { x: 27.6, y: 12.3 }, facing: "down" },
+  "telegraph-operator": { kind: "station", at: { x: 22.6, y: 12.3 }, facing: "down" },
+  // A small disc around the section corner he is closing, which is what a man with a transit does.
+  "deputy-surveyor": { kind: "wander", home: { x: 35.0, y: 7.4 }, radius: 1.4 },
+  // The camp's open ground between the two tent rows, which is where a man walks off a shift. The
+  // south side has the room the town side does not.
+  "track-grader": {
+    kind: "route",
+    stops: [
+      { x: 29.0, y: 24.0 },
+      { x: 33.5, y: 24.0 },
+    ],
+  },
+  // Platform to wagon and back: the whole of a teamster's day, and it keeps him off the yard road,
+  // which the drover already crowds.
+  "freight-teamster": {
+    kind: "route",
+    stops: [
+      { x: 36.5, y: 20.0 },
+      { x: 43.0, y: 20.0 },
+    ],
+  },
+  "texas-drover": { kind: "station", at: { x: 41.0, y: 23.8 }, facing: "up" },
+  "homesteader-woman": { kind: "station", at: { x: 44.0, y: 7.2 }, facing: "right" },
+  "kanza-man": { kind: "station", at: { x: 12.0, y: 26.8 }, facing: "down" },
+  // She is working, so she moves. A tight disc inside her own corn rather than a route: the ground
+  // she is hoeing is the point, and a circuit would walk her out of it.
+  "kanza-woman": { kind: "wander", home: { x: 11.0, y: 23.2 }, radius: 1.2 },
+};
+
+const UNIT6_FIELD_SOURCE_POINTS = {
+  "railhead-land-office-receipt": {
+    anchor: { npc: "land-office-register" },
+    label: "Receiver's receipt",
+    kind: "Source",
+  },
+  "railhead-construction-payroll": {
+    anchor: { npc: "track-grader" },
+    label: "Pay sheet, Section 4",
+    kind: "Source",
+  },
+  // Gated on the receipt, which the record itself declares through `requiresSourceId` rather than
+  // through a case-id literal in here — the pattern Phase 70 established. The field book only means
+  // anything once a student has seen the tract description it is supposed to support.
+  "railhead-survey-field-book": {
+    anchor: { npc: "deputy-surveyor" },
+    label: "Survey field notes",
+    kind: "Source",
+  },
+  "railhead-freight-tariff": {
+    anchor: { npc: "freight-teamster" },
+    label: "Tariff No. 9",
+    kind: "Source",
+  },
+  "railhead-removal-roll": {
+    anchor: { npc: "kanza-man" },
+    label: "Agency roll",
+    kind: "Source",
+  },
+  // The one record on this map anchored to an object rather than a person, and deliberately: the
+  // Clarion is pasted in its own office window, where the man who owns it can watch you read it.
+  "railhead-town-paper": {
+    x: 29.4,
+    y: 12.2,
+    anchor: { object: "The Clarion, pasted in the office window" },
+    label: "The Cottonwood Junction Clarion",
+    kind: "Source",
+  },
+};
+
 export function isRichmondLand(x, y) {
   if (x < 2.0 || x > 54.0 || y < 1.5 || y > 34.5) return false;
   // Mayo's Bridge, on the 14th Street line: the road south out of the city, and the only thing that
@@ -2697,6 +3022,29 @@ export function isRichmondLand(x, y) {
 }
 function richmondWorldMarkup() {
   return `<canvas class="field-world-art" id="richmondTiledCanvas" role="img" aria-label="Top-down wartime Richmond, Virginia: a government quarter of brick offices around a columned capitol on a green hill, a market street of terraced housing and a price board, a hospital ward with tents beside it, a stone retaining wall dropping to an ironworks with a furnace stack and a warehouse district below, a canal crossed by two footbridges and Mayo's Bridge, a paved dock quay with cranes and cargo, and the rocky falls of the James along the south edge"></canvas><canvas class="field-world-overlay" id="richmondTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+// Cottonwood Junction's creek. scripts/generate-railhead-tmj.js duplicates these three functions
+// verbatim to paint the same water the player collides with (decision log 0036). Do not deduplicate
+// them: main.js is a browser bundle entry, and the one thing that must never silently diverge is the
+// coastline the player collides with versus the coastline that got painted.
+function railheadCreekEastBank(y) {
+  return 4.6 + Math.max(0, y - 16.0) * 0.3 + Math.sin(y * 0.31) * 1.3;
+}
+function railheadCreekWestBank(y) {
+  return railheadCreekEastBank(y) - 3.4;
+}
+export function isRailheadLand(x, y) {
+  // The ford: three rows either side of the line are dry ground, which is why a town is here at
+  // all. A locomotive takes water, and a grade crosses where the banks are lowest.
+  if (y >= 17 && y < 20) {
+    return x >= 7.0 && x <= 53.5;
+  }
+  if (x < 7.0 || x > 53.5 || y < 4.0 || y > 32.0) return false;
+  return !(x <= railheadCreekEastBank(y) && x >= railheadCreekWestBank(y));
+}
+function railheadWorldMarkup() {
+  return `<canvas class="field-world-art" id="railheadTiledCanvas" role="img" aria-label="A top-down Kansas railhead town in 1873: a single rail line running east to west across open prairie with a station and a covered platform on it, a street of unsigned false-front buildings on the north side including a land office and a telegraph office, a homestead claim of fenced wheat and sunflowers in the north-east, and on the south side a Kanza village of bark lodges and stone agency huts beside a creek, a hide shed, a graders' camp of wall tents, and empty cattle pens at a loading chute"></canvas><canvas class="field-world-overlay" id="railheadTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
 
 export const FIELD_MAPS = {
@@ -2769,6 +3117,22 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT5_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: richmondWorldMarkup,
+  },
+  "unit-06": {
+    id: "unit-06",
+    // On the street apron between the depot and the covered platform, facing the line. Everything
+    // this map is about is in the opening frame: the rails, the two station buildings, the paper
+    // quarter behind the player's shoulder, and the working side across the track.
+    spawn: { x: 30.0, y: 16.5 },
+    recall: { x: 31.5, y: 16.5 },
+    isLand: isRailheadLand,
+    blocks: RAILHEAD_FIELD_BLOCKS,
+    roads: RAILHEAD_FIELD_ROADS,
+    npcs: UNIT6_FIELD_NPCS,
+    behaviours: UNIT6_FIELD_NPC_BEHAVIOURS,
+    sourcePoints: UNIT6_FIELD_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: railheadWorldMarkup,
   },
 };
 /** The unit's outdoor map, whatever room the player is currently standing in. */
@@ -3962,6 +4326,7 @@ if (bootEntryParam === "join" || bootEntryParam === "teacher-login") {
 // The tour finished, which is what every warp past the Entrance Hall assumes.
 const WARP_TOUR_DONE = { tutorial: { step: "complete", completed: true, skipped: false } };
 const WARP_CASE_ONE = { activeCaseId: "case-001", selectedCaseId: "case-001" };
+const WARP_CASE_SIXTEEN = { activeCaseId: "case-016", selectedCaseId: "case-016" };
 /**
  * Dev-only fast travel: `?warp=<name>` boots straight into a named save state.
  *
@@ -3982,6 +4347,9 @@ const DEV_WARPS = {
   hub: { currentScreen: "institute", currentHubRoom: "main", ...WARP_TOUR_DONE },
   table: { currentScreen: "archive", ...WARP_TOUR_DONE },
   field: { currentScreen: "field", ...WARP_CASE_ONE, ...WARP_TOUR_DONE },
+  // The newest map, which is the one most often being looked at. A named state per map is more
+  // than this table wants; this one earns its line while Unit 6 is under construction.
+  railhead: { currentScreen: "field", ...WARP_CASE_SIXTEEN, ...WARP_TOUR_DONE },
   // Straight onto the interview's board, past its Mission Instructions. `ensureSourceActivity()`
   // fills in the engine's own default state, so the flag alone is the whole seed.
   mission: {
@@ -4083,13 +4451,14 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05];
+const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06];
 const UNIT_SOURCES = {
   "case-001": CASE_001_SOURCES,
   "case-004": CASE_004_SOURCES,
   "case-007": CASE_007_SOURCES,
   "case-010": CASE_010_SOURCES,
   "case-013": CASE_013_SOURCES,
+  "case-016": CASE_016_SOURCES,
 };
 const PRACTICE_CHECK_QUESTS = {
   "case-001": {
@@ -4122,6 +4491,12 @@ const PRACTICE_CHECK_QUESTS = {
     evidenceOrganizing: UNIT_05_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_05_SOURCE_ANALYSIS_QUESTS,
   },
+  "case-016": {
+    mcq: UNIT_06_MCQ_QUESTS,
+    sequencing: UNIT_06_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_06_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_06_SOURCE_ANALYSIS_QUESTS,
+  },
 };
 // Quest content for both kinds of authored challenge, resolved by
 // (questType, questId): a case's own `archiveChallenge` pointer — which
@@ -4145,23 +4520,29 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
     ...UNIT_05_ARCHIVE_SEQUENCING_QUESTS,
   ],
-  mcq: [...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS, ...UNIT_03_ARCHIVE_MCQ_QUESTS],
+  mcq: [
+    ...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
+    ...UNIT_03_ARCHIVE_MCQ_QUESTS,
+    ...UNIT_06_ARCHIVE_MCQ_QUESTS,
+  ],
   saq: [
     ...UNIT_01_ARCHIVE_SAQ_QUESTS,
     ...UNIT_02_ARCHIVE_SAQ_QUESTS,
     ...UNIT_03_ARCHIVE_SAQ_QUESTS,
     ...UNIT_04_ARCHIVE_SAQ_QUESTS,
     ...UNIT_05_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_06_ARCHIVE_SAQ_QUESTS,
   ],
   dbq: [
     ...UNIT_03_ARCHIVE_DBQ_QUESTS,
     ...UNIT_04_ARCHIVE_DBQ_QUESTS,
     ...UNIT_05_ARCHIVE_DBQ_QUESTS,
+    ...UNIT_06_ARCHIVE_DBQ_QUESTS,
   ],
   // Unit 4's case-012 is the first mission in the game whose quest is a hipp — see the header of
   // content/quests/unit-04-quests.js. Missions resolve through this same table, so the type needed
   // a key here as well as in INVESTIGATION_QUESTS_BY_TYPE below.
-  hipp: UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+  hipp: [...UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS, ...UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS],
 };
 // Returns {questType, quest} rather than just the content — a published
 // teacher-authored replacement can be a genuinely different quest type than
@@ -10632,6 +11013,12 @@ const FIELD_COPY = {
     progressHint:
       "Six records: the impressment requisition, the price and ration notices, the Tredegar payroll, the labourer's pass, the commission house day book, and the ward register.",
   },
+  "unit-06": {
+    intro:
+      "You arrive on the street apron between the depot and the covered platform, in a town two years old that exists because a company decided it should. Everything north of the rails is paper — a United States land office, a telegraph office, a town-site office — and everything south of them is what the paper is for. Six records are out here, and the last one is not in the town at all: it is across the line, in a village whose people leave on Wednesday.",
+    progressHint:
+      "Six records: the receiver's receipt, the Section 4 pay sheet, the survey field notes, Tariff No. 9, the agency roll, and the Clarion in the office window.",
+  },
 };
 function fieldScreen() {
   const map = activeFieldMap();
@@ -11625,6 +12012,20 @@ const RECONSTRUCTION_LANES = {
         "A record that defines a person by what a bureaucracy wrote down — and raises the question of who is missing from it.",
     }[lane.id],
   })),
+  // Unit 6's lanes are three readings of one transaction rather than three topics, which is what
+  // this case is for: the receipt, the survey and the roll are the same June seen from three desks,
+  // and every record on the map can be argued into at least two of these lanes.
+  "case-016": CASE_016_LANES.map((lane) => ({
+    ...lane,
+    hint: {
+      "what-the-paper-grants":
+        "A record that creates or transfers a right — title, wage, passage, entitlement — and says on whose authority.",
+      "what-the-rate-decides":
+        "A record where a price, a rate or a deduction settles something that looks like it ought to be settled some other way.",
+      "who-the-paper-leaves-out":
+        "A record whose own form cannot hold somebody it concerns — a name, a claim, or a party absent from a transaction made about them.",
+    }[lane.id],
+  })),
 };
 function reconstructionScreen() {
   const caseId = activeFieldCaseId();
@@ -11845,6 +12246,7 @@ function render() {
       if (activeFieldMap().id === "unit-03") renderCommonCauseTiledMap();
       if (activeFieldMap().id === "unit-04") renderCanalCrossroadsTiledMap();
       if (activeFieldMap().id === "unit-05") renderRichmondTiledMap();
+      if (activeFieldMap().id === "unit-06") renderRailheadTiledMap();
       if (activeFieldMap().id === "canal-print-shop") renderCanalPrintShopTiledMap();
       if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
       if (activeFieldMap().id === "richmond-counting-room") renderRichmondCountingRoomTiledMap();

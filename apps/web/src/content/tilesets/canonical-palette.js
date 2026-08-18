@@ -301,6 +301,10 @@ export const GAPS = [
   // `military.civilWar.camp` was here, and is CLOSED — commissioned as derived/civil-war-works.png
   // (wall tent, rampart, abatis, field gun, supply wagon, hospital cot). See the manifest entry for
   // what was generated and for the one object, the chevaux-de-frise, that was dropped.
+  // Not partial — absent. The library has no cattle sprite of any kind: Wild West draws a corral
+  // as a finished enclosure and the one animal on its sheets is a horse inside a stable frontage,
+  // so railhead-field ships its stock pens empty in the shipping season. Registered in Phase 86.
+  "livestock.cattle",
   "architecture.plantation.greatHouse", // Greek Revival columned house. Fields and quarters are
   // covered (farm + Wild West tile-B-08); the great house is not.
   "streetscape.midCentury", // 1950s-specific. Highway Rest Area / Modern Park read contemporary.

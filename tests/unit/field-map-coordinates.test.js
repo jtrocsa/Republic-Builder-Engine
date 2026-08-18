@@ -151,7 +151,25 @@ const TMJ_BY_UNIT = {
   "unit-03": "common-cause-field.tmj",
   "unit-04": "canal-crossroads-field.tmj",
   "unit-05": "richmond-field.tmj",
+  "unit-06": "railhead-field.tmj",
 };
+
+// FIELD_COPY is not exported — it is a template-literal table deep inside a browser entry point —
+// so this reads the source. Crude, and worth it: the table falls back to Unit 1 when a map has no
+// entry of its own, silently, and `fieldScreen()`'s own comment records that a student who walked
+// into a Chesapeake building was once told to follow the Caribbean shoreline. Unit 6 shipped with
+// exactly that defect and it took a browser to catch it, which is the cost this removes.
+const MAIN_JS_SOURCE = readFileSync(path.join(REPO_ROOT, "apps/web/src/main.js"), "utf8");
+describe("every field map briefs the player about itself", () => {
+  const table = MAIN_JS_SOURCE.slice(MAIN_JS_SOURCE.indexOf("const FIELD_COPY = {"));
+  it.each(Object.keys(FIELD_MAPS))("%s has its own FIELD_COPY entry", (unitId) => {
+    expect(
+      table.includes(`"${unitId}": {`),
+      `${unitId} has no FIELD_COPY entry, so fieldScreen() falls back to Unit 1's briefing and ` +
+        `tells this map's player to follow the Caribbean shoreline`
+    ).toBe(true);
+  });
+});
 
 function loadTmj(file) {
   return JSON.parse(readFileSync(path.join(REPO_ROOT, "apps/web/src/content/maps", file), "utf8"));
