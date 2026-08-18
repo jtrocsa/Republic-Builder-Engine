@@ -307,4 +307,25 @@ export const CASE_016_SOURCES = [
     externalUrl: "https://www.loc.gov/collections/chronicling-america/",
     reconstruction: "who-the-paper-leaves-out",
   },
+  {
+    id: "railhead-telegram-file",
+    type: "Reconstructed record · a telegraph operator's file of messages sent",
+    title: "Messages Sent, This Office, 4 June 1873",
+    creator: "The operator at the Cottonwood Junction office",
+    date: "4 June 1873",
+    record: "The day's file of sent messages, which every operating room was required to keep",
+    visual: "context",
+    activityRoute: null,
+    excerpt:
+      "MESSAGES SENT, THIS OFFICE, JUNE 4. Rates: twenty-five cents the first ten words, two cents each word thereafter; address and signature not counted; press matter forwarded at association rates. — No. 41, 8.02 a.m., to Kansas City. “Cattle steady natives four ten to five twenty wintered texans three sixty to four fifteen receipts light.” 16 wds. — No. 44, 8.31 a.m., to Chicago. “Wheat number two spring one eleven and a quarter corn thirty eight and a half unchanged.” 15 wds. — No. 52, 11.40 a.m., PRESS. “Kaws took departure this morning for the Indian Territory. Removal effected without disturbance. Their late reserve now open. Large immigration expected.” 22 wds, association rate. — No. 53, 11.52 a.m., to Boston. “Have bought eleven quarters at the appraisal will take more at these figures wire authority two thousand.” 18 wds. — No. 61, 3.20 p.m., to Topeka. “Send surgeon. Man hurt on the grade, section four.” 9 wds, minimum charge. — TOTAL FORWARDED THIS DATE, 63.",
+    prompt:
+      "Every line on this sheet is priced by the word. Put No. 52 and No. 61 side by side — count the words each was given and what each of them is about — and then say what a price per word does to the things a place can afford to know about itself.",
+    feedback:
+      "Institute Context: this is the cheapest document on the map and the one that moves fastest, and both of those are the finding. A telegram was charged by the word, so the wire taught a generation to write without articles — and what a message could afford to say became a commercial decision before it was an editorial one. Read the file as one day of a town's outgoing thought and the priorities are legible without any interpretation at all: two market quotations before nine in the morning, one land purchase for an eastern account, one injured man at the minimum charge, and 533 people leaving their reserve in twenty-two words at a reduced rate. Then notice what those twenty-two words are. They are the same sentences the Clarion prints — “the removal was effected without disturbance” — because the town's news of the removal *is* this dispatch. After the consolidation of 1866 Western Union carried nearly all of the country's telegraph traffic, and it had an exclusive arrangement with the New York Associated Press: the association got priority and a press rate, and in exchange one company's wires carried one association's news to every interior paper in the United States. Contemporaries called it a monopoly over information and meant it literally. The two market quotations are the other half. The wire did not move a single steer or a single bushel; it moved the number that valued them, and it delivered that number to the buyer's house in Kansas City at the same instant as to the seller standing in a Kansas pen — which is why a drover ninety miles from a market was a price-taker in it.",
+    citation:
+      "Composite record reconstructed for Chronicle from the form of Western Union sent-message files and posted tariffs; it is not a transcription of a single surviving document. The word-rate structure with a ten-word minimum, free address and signature, the required file of sent messages and the reduced press rate follow standard company practice of the period. The Western Union–New York Associated Press arrangement and its consequences for what interior papers could print follow Menahem Blondheim, News Over the Wires: The Telegraph and the Flow of Public Information in America, 1844–1897 (Cambridge, Mass.: Harvard University Press, 1994), and Richard R. John, Network Nation: Inventing American Telecommunications (Cambridge, Mass.: Harvard University Press, 2010). The removal date follows Unrau, The Kansa Indians.",
+    externalUrl:
+      "https://www.kshs.org/kansapedia/kansas-historical-quarterly-the-telegraph-comes-to-kansas/13043",
+    reconstruction: "what-the-rate-decides",
+  },
 ];

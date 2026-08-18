@@ -442,3 +442,4 @@ yehakin
 yehakins
 yuca
 ﻿# Chronicle project dictionary - cSpell
+Blondheim

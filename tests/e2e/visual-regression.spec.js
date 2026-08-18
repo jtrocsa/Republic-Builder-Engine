@@ -576,6 +576,34 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("field-richmond-hospital-ward"));
   });
 
+  // Unit 6 arrived in Phase 85 with no baseline of its own, which left the one map in the game whose
+  // whole composition is an argument — paper north of the rails, what the paper is for south of them
+  // — as the only field surface nothing was watching. Its two rooms went in with it in Phase 86.
+  test("field: the railhead and both of its offices (Unit 6)", async ({ page }) => {
+    const seed = {
+      currentScreen: "field",
+      activeCaseId: "case-016",
+      unlocked: ["case-001", "case-016"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    };
+    await seedProgress(page, seed);
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "railheadTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-railhead"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "railhead-land-office" });
+    await waitForTiledCanvas(page, "railheadLandOfficeTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-railhead-land-office"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "railhead-telegraph-office" });
+    await waitForTiledCanvas(page, "railheadTelegraphOfficeTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-railhead-telegraph-office"));
+  });
+
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({
     page,
   }) => {

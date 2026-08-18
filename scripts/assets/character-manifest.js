@@ -965,6 +965,46 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "kanza-woman-walk",
   },
+  // ---- Unit 6 interiors · the land office and the telegraph office (Phase 86) --------------------
+  //
+  // Two, and only two, because Elias Fenn and Rufus Ply were already in the cast and only moved
+  // indoors. Each of these is an economic position the outdoor map has no room for, and each is
+  // seen beside exactly one other person, which is what both costume briefs were written against.
+  {
+    key: "land-buyer-agent",
+    stem: "chronicle-sprites/field/npc-land-buyer-agent",
+    name: "Land buyer agent 2",
+    // Oatmeal linen duster over a dark maroon waistcoat, charcoal trousers, brown flat-crowned hat,
+    // full dark beard. He shares the land office with the register and nobody else, so the whole
+    // brief was written against that one man: Fenn is elderly, grey-haired, bare-headed and in
+    // black, and this is a bearded man in a pale coat and a hat. Nothing else had to be avoided.
+    //
+    // **Generated twice, and the reason is Meridian again.** The first roll came back a dark
+    // blue-green frock coat and matching hat — 44% inside the teal hue band by pixel count on the
+    // south rotation and 68% on the east — against a brief that had already said 'absolutely no
+    // teal, turquoise or cyan.' That is the second time this pack has drifted into the frame's
+    // reserved accent (see `telegraph-operator`, Phase 85), and the first time it did so against a
+    // brief that named the colour. Saying it in the negative is evidently not enough: the second
+    // brief named the coat's colour positively, twice, and banned green as well. Scanned to zero
+    // teal and zero green across all four cardinal rotations before it was accepted, and the
+    // failed character was deleted rather than left in the account.
+    id: "dc6fe8e8-2ede-404d-8e8f-cc9c9bcbfb69",
+    frames: 8,
+    walkGroup: "buyer-walk",
+  },
+  {
+    key: "stock-commission-man",
+    stem: "chronicle-sprites/field/npc-stock-commission-man",
+    name: "Stock commission man",
+    // Navy sack coat, buff waistcoat, cream straw boater, fawn trousers, clean-shaven. He shares
+    // the telegraph office with the operator, who is white shirt, oxblood waistcoat, charcoal
+    // trousers and a dark hat — so navy against oxblood and straw against dark is the whole
+    // separation, and it is the same distance apart at 45px of body as it is on a colour wheel.
+    // Right first time.
+    id: "feabb5ca-9f88-43ce-8b8f-fbc4ca5dfecd",
+    frames: 8,
+    walkGroup: "broker-walk",
+  },
 ];
 
 /**

@@ -106,6 +106,8 @@ const CAST = [
   ["chronicle-sprites/field/npc-homesteader-woman", 9],
   ["chronicle-sprites/field/npc-kanza-man", 9],
   ["chronicle-sprites/field/npc-kanza-woman", 9],
+  ["chronicle-sprites/field/npc-land-buyer-agent", 9],
+  ["chronicle-sprites/field/npc-stock-commission-man", 9],
 ];
 
 // Characters that also ship a breathing cycle, and its column count. Mirrors the `idleColumns`

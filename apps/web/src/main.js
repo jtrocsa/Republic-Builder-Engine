@@ -181,6 +181,8 @@ import richmondTmjRaw from "./content/maps/richmond-field.tmj?raw";
 import richmondCountingRoomTmjRaw from "./content/maps/richmond-counting-room.tmj?raw";
 import richmondHospitalWardTmjRaw from "./content/maps/richmond-hospital-ward.tmj?raw";
 import railheadTmjRaw from "./content/maps/railhead-field.tmj?raw";
+import railheadLandOfficeTmjRaw from "./content/maps/railhead-land-office.tmj?raw";
+import railheadTelegraphOfficeTmjRaw from "./content/maps/railhead-telegraph-office.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
@@ -218,6 +220,8 @@ import {
 import { CANAL_PRINT_SHOP_BLOCKS } from "./content/maps/canal-print-shop.blocks.js";
 import { CANAL_BOARDING_HOUSE_BLOCKS } from "./content/maps/canal-boarding-house.blocks.js";
 import { RICHMOND_COUNTING_ROOM_BLOCKS } from "./content/maps/richmond-counting-room.blocks.js";
+import { RAILHEAD_LAND_OFFICE_BLOCKS } from "./content/maps/railhead-land-office.blocks.js";
+import { RAILHEAD_TELEGRAPH_OFFICE_BLOCKS } from "./content/maps/railhead-telegraph-office.blocks.js";
 import { RICHMOND_HOSPITAL_WARD_BLOCKS } from "./content/maps/richmond-hospital-ward.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
@@ -841,6 +845,55 @@ function renderRailheadTiledMap() {
   renderTiledMapWithOverlay("railheadTiledCanvas", railheadTmj, resolveRailheadTilesetImage);
 }
 
+// Cottonwood Junction's two rooms. One resolver serves both, as at Canal Crossroads and Richmond:
+// they name five sheets between them and every one is shared, so a resolver per room would only
+// duplicate globs.
+//
+// Three of the five are new to the bundle. Two of those are the shared A4 material sheets, and they
+// are addressed through their `Medieval Tavern/` path rather than the `Wild West/` copy the rest of
+// this unit's art comes from — the two files are byte-identical (verified by content hash) and
+// naming both would make Vite bundle the same image twice. That rule has been written in
+// canonical-palette.js since it was authored and these are the first two maps to consume it, so
+// the glob paths below deliberately do not match the pack the rest of Unit 6 is drawn from.
+const railheadLandOfficeTmj = JSON.parse(railheadLandOfficeTmjRaw);
+const railheadTelegraphOfficeTmj = JSON.parse(railheadTelegraphOfficeTmjRaw);
+const resolveRailheadInteriorTilesetImage = createTilesetImageResolver(
+  // The plank floor of both rooms. See above for why this path and not the Wild West one.
+  import.meta.glob("./assets/tilesets/Medieval Tavern/Auto-tile-A4-Walls-1.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Both walls: the land office's white painted panelling and the telegraph office's dark stained
+  // panelling, two blocks apart on the same sheet.
+  import.meta.glob("./assets/tilesets/Medieval Tavern/Auto-tile-A4-walls-3.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The counters and rails, the message window, the tract books and the office safe.
+  import.meta.glob("./assets/tilesets/Wild West/tile-B-03.png", { eager: true, import: "default" }),
+  // Every desk, bench and cupboard in both rooms.
+  import.meta.glob("./assets/tilesets/Wild West/tile-B-09.png", { eager: true, import: "default" }),
+  // The four-panel door and the sash windows — already carried by all four existing interiors.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderRailheadLandOfficeTiledMap() {
+  renderTiledMapWithOverlay(
+    "railheadLandOfficeTiledCanvas",
+    railheadLandOfficeTmj,
+    resolveRailheadInteriorTilesetImage
+  );
+}
+function renderRailheadTelegraphOfficeTiledMap() {
+  renderTiledMapWithOverlay(
+    "railheadTelegraphOfficeTiledCanvas",
+    railheadTelegraphOfficeTmj,
+    resolveRailheadInteriorTilesetImage
+  );
+}
+
 // Richmond's two rooms. One resolver serves both, as at Canal Crossroads, and every sheet either
 // room names is already in the bundle: the two `19th Century European City` interior sheets come in
 // with the printing office and the boardinghouse, and derived/civil-war-works.png with the outdoor
@@ -1095,6 +1148,10 @@ const CHARACTER_SHEETS = {
   "homesteader-woman": characterSheet(`${FIELD}/npc-homesteader-woman`, 9),
   "kanza-man": characterSheet(`${FIELD}/npc-kanza-man`, 9),
   "kanza-woman": characterSheet(`${FIELD}/npc-kanza-woman`, 9),
+  // Unit 6 interiors. Two people who exist because two doors opened — and Elias Fenn and Rufus Ply,
+  // who were already here and only moved indoors, which is where a register and an operator work.
+  "land-buyer-agent": characterSheet(`${FIELD}/npc-land-buyer-agent`, 9),
+  "stock-commission-man": characterSheet(`${FIELD}/npc-stock-commission-man`, 9),
 };
 /** The sheet for a character key, falling back to the Director rather than throwing on a typo. */
 function sheetFor(key) {
@@ -2764,6 +2821,115 @@ function richmondHospitalWardWorldMarkup() {
 //
 // scripts/generate-richmond-tmj.js duplicates these three functions verbatim to paint the same banks
 // the player collides with (decision log 0036). Do not deduplicate them.
+
+// ---- Cottonwood Junction's two interiors -----------------------------------------------------------
+//
+// Attached to FIELD_MAPS["unit-06"] further down the file, not inline in the literal — see the
+// temporal-dead-zone note at the field-interiors block.
+//
+// Both rooms open south, because both buildings front Front Street from the north side of it, and
+// both entries sit at y = 11.1 for the reason the Canal Crossroads block records at length:
+// footBoxFor() runs 0.78 tiles below a character's anchor and the south wall's rect starts at
+// y = 12, so a player spawned any lower arrives already blocked and the room reads as frozen on
+// entry.
+//
+// **Four people, and only two of them are new.** Elias Fenn and Rufus Ply were standing on Front
+// Street until this phase and had to come inside for the doors to work at all — see the note on the
+// outdoor cast. That turned out to be the right content decision as well as the necessary one: a
+// register belongs behind his counter and an operator does not leave the key, and putting them
+// where they work is what let each room have somebody to put across from them. Ezra Holt and
+// Milton Sears are those two, and each is an economic position the outdoor map has no room for —
+// the man buying the reserve in bulk for money that is not his, and the man who turns a herd
+// standing in a pen into a number that arrived by wire an hour before it.
+
+const UNIT6_LAND_OFFICE_NPCS = [
+  {
+    id: "land-office-register",
+    // Behind the counter, in the open band the generator leaves at rows 4-5. Two numbers pin this
+    // one. A body's collision is its feet — footBoxFor() runs y+0.40 to y+0.78 — so past 6.22 he
+    // stands in the counter's own row and the interior traversal test says so by name. And his name
+    // pill hangs a fixed distance below his feet, so at 5.2 it landed on row 6 and the counter rail,
+    // which draws on the overlay layer, cut the label in half. 4.4 puts the pill clear of it. Found
+    // in a browser; nothing in the suite looks at where a label lands.
+    x: 5.0,
+    y: 4.4,
+    group: "railhead",
+    name: "Elias Fenn",
+    label: "Register, United States land office",
+    sprite: "land-office-register",
+    text: "Twenty-two years in the land offices and I have never once been asked to decide anything. A tract is appraised, advertised, offered, and struck to the highest bidder for cash, and I write the receipt. The proceeds are credited to the tribe's account in the Treasury, which is the law and which I am careful about. No, I have not seen the account. No, I could not tell you what is drawn against it. My office ends at the receipt, and I would rather you took that as a limit than as an excuse.",
+  },
+  {
+    id: "land-buyer-agent",
+    // On the public side of the counter and square in the walk from the door to it, because he is
+    // the first thing this room has to say. Offset three columns from Fenn so the two of them are
+    // across the counter from each other rather than in a line.
+    x: 8.5,
+    y: 8.2,
+    group: "railhead",
+    name: "Ezra Holt",
+    label: "Buying at the appraisal",
+    sprite: "land-buyer-agent",
+    text: "Eleven quarters this week and I will take eleven more if the wire says yes. Not for me — I am agent for a house in Boston that has never seen Kansas and does not intend to. And before you ask: every bid was public, cash, at or above the appraisal, one hundred and sixty acres to a tract, exactly as the act requires. I broke nothing. What the act did not say is that a man may bid on eleven tracts on eleven separate slips, and so I did, and so did four others in this room last Tuesday. The settler the newspapers keep writing about will buy this ground from me in the autumn, at my figure.",
+  },
+];
+const UNIT6_LAND_OFFICE_BEHAVIOURS = {
+  "land-office-register": { kind: "station", at: { x: 5.0, y: 4.4 }, facing: "down" },
+  "land-buyer-agent": { kind: "station", at: { x: 8.5, y: 8.2 }, facing: "up" },
+};
+const UNIT6_LAND_OFFICE_SOURCE_POINTS = {
+  // The receipt was anchored to this same man out on the street until Phase 86; anchoring by npc id
+  // rather than by coordinate is why moving him indoors moved the record with him and cost nothing.
+  "railhead-land-office-receipt": {
+    anchor: { npc: "land-office-register" },
+    label: "Receiver's receipt",
+    kind: "Source",
+  },
+};
+function railheadLandOfficeWorldMarkup() {
+  return `<canvas class="field-world-art" id="railheadLandOfficeTiledCanvas" role="img" aria-label="Interior of a United States district land office in Kansas, 1873: a white-panelled room divided by a long counter with an iron rail on it and one gate at the far end, the register's desk and a plat table behind it beside a press of tract books and a floor safe, and on the public side two plank benches against the wall and a writing desk"></canvas><canvas class="field-world-overlay" id="railheadLandOfficeTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+const UNIT6_TELEGRAPH_OFFICE_NPCS = [
+  {
+    id: "telegraph-operator",
+    // At the key table's south face, in the open band behind the rail. He does not leave the key,
+    // which was true of the line he was already carrying and is now also true of where he stands.
+    x: 3.0,
+    y: 4.2,
+    group: "railhead",
+    name: "Rufus Ply",
+    label: "Telegraph operator",
+    sprite: "telegraph-operator",
+    text: "Everything that happens here happens twice — once on the ground and once on the wire, and the wire is faster, so the wire is what the East believes. Grain out of Kansas City at eight, stock at noon, and whatever the town site wants said about itself in between. I sent forty words on Wednesday about the Kaws going south. I did not write them. I have thought since about what I would have written.",
+  },
+  {
+    id: "stock-commission-man",
+    // At the message window on the public side, which is where a man waiting on a quotation stands.
+    x: 7.5,
+    y: 8.3,
+    group: "railhead",
+    name: "Milton Sears",
+    label: "Commission merchant, Kansas City house",
+    sprite: "stock-commission-man",
+    text: "I buy on the morning quotation and I have not laid eyes on a steer since Thursday. Four ten to five twenty, natives; the Texas stock is under four because of the fever line and because everybody knows it is under four, which is the same reason. Understand me — I am not cheating that drover out in the pens. I am telling him a number that was decided in Kansas City at eight o'clock and got here before he had his herd counted. He can take it or hold his cattle another week at his own cost on this grass. That is the whole of the bargain, and the wire is the only reason it is a bargain and not a negotiation.",
+  },
+];
+const UNIT6_TELEGRAPH_OFFICE_BEHAVIOURS = {
+  "telegraph-operator": { kind: "station", at: { x: 3.0, y: 4.2 }, facing: "down" },
+  "stock-commission-man": { kind: "station", at: { x: 7.5, y: 8.3 }, facing: "up" },
+};
+const UNIT6_TELEGRAPH_OFFICE_SOURCE_POINTS = {
+  "railhead-telegram-file": {
+    anchor: { npc: "telegraph-operator" },
+    label: "Messages sent, 4 June",
+    kind: "Source",
+  },
+};
+function railheadTelegraphOfficeWorldMarkup() {
+  return `<canvas class="field-world-art" id="railheadTelegraphOfficeTiledCanvas" role="img" aria-label="Interior of a Kansas telegraph office in 1873: a small dark-panelled room railed across the middle, with the operator's key table, his desk and a cupboard of filed messages behind the rail, a message window let into it where a form is handed across, and on the public side two plank benches and a writing desk"></canvas><canvas class="field-world-overlay" id="railheadTelegraphOfficeTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
 const RICHMOND_CANAL_TOP = 27.9;
 const RICHMOND_CANAL_BOTTOM = 29.9;
 function jamesWaterline(x) {
@@ -2771,11 +2937,20 @@ function jamesWaterline(x) {
 }
 // ---- Unit 6 · Cottonwood Junction, Kansas, June 1873 -------------------------------------------
 //
-// Eleven people, and the map's whole argument is which side of the line each of them is standing
-// on. North of the rails everyone works in paper; south of them everyone works with their hands or
-// is being counted. Nobody here is a villain and nobody is a bystander: the land agent, the
-// register and the promoter are three ordinary men executing a procedure, and the procedure is the
-// finding.
+// Nine people out on the map and four more behind two doors, and the map's whole argument is which
+// side of the line each of them is standing on. North of the rails everyone works in paper; south of
+// them everyone works with their hands or is being counted. Nobody here is a villain and nobody is a
+// bystander: the land agent, the register and the promoter are three ordinary men executing a
+// procedure, and the procedure is the finding.
+//
+// **The register and the operator moved indoors in Phase 86 and both had to.** Their outdoor posts
+// were (18.6, 12.3) and (22.6, 12.3), which are four tenths and a half tile from the door markers
+// their own buildings put at (19,12) and (23,12). A door competes for the same 1.45-tile reach as a
+// person and `nearestFieldInteraction()` answers with whoever is closest, so each of them was
+// standing on his own threshold winning the sort against it. Neither room would have been reachable
+// from any approach. This is the doorstep-NPC rule CLAUDE.md records from Canal Crossroads, and it
+// is the second time it has bitten — the difference is that here the fix was also the right content
+// decision, because a register works behind a counter and an operator does not leave the key.
 //
 // **The register rule from Unit 5 governs the two Kanza characters and is stricter here than
 // anywhere.** Willow Pahonka and Joseph Kahegah are named, speak in the first person, say plainly
@@ -2813,17 +2988,6 @@ const UNIT6_FIELD_NPCS = [
     text: "Land agent for the division, and I will tell you what I tell everybody off the cars: there are two land offices on this street and they are not the same office. Mine sells the company's grant, section by section, on time if your credit is good. The government's is up the walk with the flag on it, and what it is selling this summer is the Kaw reserve, at auction, cash only. Different land, different paper, same street. People confuse them constantly, and I have stopped correcting them, because it does me no harm.",
   },
   {
-    // At the land office, on the street side of its door and clear of the notice board at (19,13).
-    id: "land-office-register",
-    x: 18.6,
-    y: 12.3,
-    group: "paper",
-    name: "Elias Fenn",
-    label: "Register, United States land office",
-    sprite: "land-office-register",
-    text: "Twenty-two years in the land offices and I have never once been asked to decide anything. A tract is appraised, advertised, offered, and struck to the highest bidder for cash, and I write the receipt. The proceeds are credited to the tribe's account in the Treasury, which is the law and which I am careful about. No, I have not seen the account. No, I could not tell you what is drawn against it. My office ends at the receipt, and I would rather you took that as a limit than as an excuse.",
-  },
-  {
     // At the town-site office, nine tiles from the register and three from the land agent's beat:
     // the three paper men are meant to be read as a group and told apart at a glance.
     id: "townsite-promoter",
@@ -2834,17 +2998,6 @@ const UNIT6_FIELD_NPCS = [
     label: "Town-site promoter",
     sprite: "townsite-promoter",
     text: "I own the Clarion and I own two hundred lots, and the Clarion says the Junction is the coming point on this division. Both of those are true and neither is a secret; you may read the card in my own paper saying I have no interest in any town site whatever, and you may laugh at it, and I will laugh with you. What I will not do is apologise for it. A town is a thing somebody decides to believe in first. The believing is the work.",
-  },
-  {
-    // At the telegraph office. Stationed rather than routed: an operator does not leave the key.
-    id: "telegraph-operator",
-    x: 22.6,
-    y: 12.3,
-    group: "paper",
-    name: "Rufus Ply",
-    label: "Telegraph operator",
-    sprite: "telegraph-operator",
-    text: "Everything that happens here happens twice — once on the ground and once on the wire, and the wire is faster, so the wire is what the East believes. Grain out of Kansas City at eight, stock at noon, and whatever the town site wants said about itself in between. I sent forty words on Wednesday about the Kaws going south. I did not write them. I have thought since about what I would have written.",
   },
   {
     // Out on the section lines north of town, where a deputy surveyor closing township corners
@@ -2938,9 +3091,7 @@ const UNIT6_FIELD_NPC_BEHAVIOURS = {
   // detoured back onto the road. A street this narrow with this many posts on it cannot also carry
   // a patrol; the map's motion is the teamster, the grader and the two who work in place.
   "railroad-land-agent": { kind: "station", at: { x: 31.8, y: 13.6 }, facing: "left" },
-  "land-office-register": { kind: "station", at: { x: 18.6, y: 12.3 }, facing: "down" },
   "townsite-promoter": { kind: "station", at: { x: 27.6, y: 12.3 }, facing: "down" },
-  "telegraph-operator": { kind: "station", at: { x: 22.6, y: 12.3 }, facing: "down" },
   // A small disc around the section corner he is closing, which is what a man with a transit does.
   "deputy-surveyor": { kind: "wander", home: { x: 35.0, y: 7.4 }, radius: 1.4 },
   // The camp's open ground between the two tent rows, which is where a man walks off a shift. The
@@ -2970,11 +3121,6 @@ const UNIT6_FIELD_NPC_BEHAVIOURS = {
 };
 
 const UNIT6_FIELD_SOURCE_POINTS = {
-  "railhead-land-office-receipt": {
-    anchor: { npc: "land-office-register" },
-    label: "Receiver's receipt",
-    kind: "Source",
-  },
   "railhead-construction-payroll": {
     anchor: { npc: "track-grader" },
     label: "Pay sheet, Section 4",
@@ -3442,6 +3588,53 @@ FIELD_MAPS["unit-05"].interiors = {
     // Street. Jane Ferris used to stand at (42.5, 8.4), two and a half tiles east of here; she is
     // inside now, and nothing else on that stretch of pavement is within reach of this marker.
     door: { x: 40.0, y: 8.0, label: "Chimborazo ward" },
+  },
+};
+
+// Cottonwood Junction's two rooms. `musicScene` is `settlement` on both, matching the town outside
+// them for the reason Canal Crossroads recorded first: an interior is a room in that place, not a
+// change of place, and walking through a door should not restart the score.
+//
+// Both doorsteps were unreachable before this phase and neither was a bug in this block. Each
+// building's own `withDoor()` stamp puts its door cell one row below its base, and the register and
+// the operator were posted four tenths and half a tile from those cells — inside the 1.45-tile reach
+// a door competes for. They are indoors now, which is the fix and also the content.
+const RAILHEAD_LAND_OFFICE_GRID = { columns: 18, rows: 14, tile: 48 };
+const RAILHEAD_TELEGRAPH_OFFICE_GRID = { columns: 16, rows: 14, tile: 48 };
+FIELD_MAPS["unit-06"].interiors = {
+  "railhead-land-office": {
+    id: "railhead-land-office",
+    grid: RAILHEAD_LAND_OFFICE_GRID,
+    isLand: interiorGround(RAILHEAD_LAND_OFFICE_GRID),
+    blocks: RAILHEAD_LAND_OFFICE_BLOCKS,
+    roads: [],
+    npcs: UNIT6_LAND_OFFICE_NPCS,
+    behaviours: UNIT6_LAND_OFFICE_BEHAVIOURS,
+    sourcePoints: UNIT6_LAND_OFFICE_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: railheadLandOfficeWorldMarkup,
+    entry: { x: 9.0, y: 11.1, facing: "up" },
+    exit: { x: 9.0, y: 12.1 },
+    // The doorstep on Front Street. generate-railhead-tmj.js stamps the land office at (18,10) two
+    // wide and two tall, so doorCellOf() puts its door cell at (19,12) — the strip between the
+    // frontage and the street proper, with the notice board immediately south-east of it.
+    door: { x: 19.0, y: 12.0, label: "Land office" },
+  },
+  "railhead-telegraph-office": {
+    id: "railhead-telegraph-office",
+    grid: RAILHEAD_TELEGRAPH_OFFICE_GRID,
+    isLand: interiorGround(RAILHEAD_TELEGRAPH_OFFICE_GRID),
+    blocks: RAILHEAD_TELEGRAPH_OFFICE_BLOCKS,
+    roads: [],
+    npcs: UNIT6_TELEGRAPH_OFFICE_NPCS,
+    behaviours: UNIT6_TELEGRAPH_OFFICE_BEHAVIOURS,
+    sourcePoints: UNIT6_TELEGRAPH_OFFICE_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: railheadTelegraphOfficeWorldMarkup,
+    entry: { x: 8.0, y: 11.1, facing: "up" },
+    exit: { x: 8.0, y: 12.1 },
+    // The telegraph office is stamped at (22,10) two by two, so its door cell is (23,12).
+    door: { x: 23.0, y: 12.0, label: "Telegraph office" },
   },
 };
 
@@ -11015,9 +11208,9 @@ const FIELD_COPY = {
   },
   "unit-06": {
     intro:
-      "You arrive on the street apron between the depot and the covered platform, in a town two years old that exists because a company decided it should. Everything north of the rails is paper — a United States land office, a telegraph office, a town-site office — and everything south of them is what the paper is for. Six records are out here, and the last one is not in the town at all: it is across the line, in a village whose people leave on Wednesday.",
+      "You arrive on the street apron between the depot and the covered platform, in a town two years old that exists because a company decided it should. Everything north of the rails is paper — a United States land office, a telegraph office, a town-site office — and everything south of them is what the paper is for. Seven records: five out in the open, two behind doors on Front Street, and one of the five is not in the town at all. It is across the line, in a village whose people leave on Wednesday.",
     progressHint:
-      "Six records: the receiver's receipt, the Section 4 pay sheet, the survey field notes, Tariff No. 9, the agency roll, and the Clarion in the office window.",
+      "Seven records: the Section 4 pay sheet, the survey field notes, Tariff No. 9, the agency roll and the Clarion in the office window are out on the map; the receiver's receipt is inside the land office and the day's telegrams are inside the telegraph office.",
   },
 };
 function fieldScreen() {
@@ -12251,6 +12444,9 @@ function render() {
       if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
       if (activeFieldMap().id === "richmond-counting-room") renderRichmondCountingRoomTiledMap();
       if (activeFieldMap().id === "richmond-hospital-ward") renderRichmondHospitalWardTiledMap();
+      if (activeFieldMap().id === "railhead-land-office") renderRailheadLandOfficeTiledMap();
+      if (activeFieldMap().id === "railhead-telegraph-office")
+        renderRailheadTelegraphOfficeTiledMap();
     });
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {

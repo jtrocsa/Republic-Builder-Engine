@@ -33,6 +33,8 @@ import archiveRoom from "../../apps/web/src/content/tilesets/maps/archive-room.p
 import hallway from "../../apps/web/src/content/tilesets/maps/hallway.palette.js";
 import instituteHall from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
 import railhead from "../../apps/web/src/content/tilesets/maps/railhead-field.palette.js";
+import railheadLandOffice from "../../apps/web/src/content/tilesets/maps/railhead-land-office.palette.js";
+import railheadTelegraphOffice from "../../apps/web/src/content/tilesets/maps/railhead-telegraph-office.palette.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../..");
@@ -50,6 +52,8 @@ const MAP_PALETTES = [
   richmondCountingRoom,
   richmondHospitalWard,
   railhead,
+  railheadLandOffice,
+  railheadTelegraphOffice,
   archiveRoom,
   hallway,
   instituteHall,
