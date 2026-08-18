@@ -12,8 +12,8 @@ This document is kept as the parameter sheet and the record of what was ordered.
 is not what the account contains.** It was written for a 22-character cast covering Riverbend as a
 1620s Puritan settlement and Philadelphia in the 1770s; what was actually generated is a
 22-character cast covering the Caribbean in 1492, Jamestown and Tsenacommacah in 1607-1620, the
-Institute, and the two Chroniclers. Philadelphia was never generated, and Unit 3 is frozen on its
-six `legacy-*` placeholder sheets as a result. The live mapping from character to sprite key lives
+Institute, and the two Chroniclers. Philadelphia was generated last, in **Phase 82**, and the
+six `legacy-*` placeholder sheets it had been frozen on are gone. The live mapping from character to sprite key lives
 in [`scripts/assets/character-manifest.js`](../../scripts/assets/character-manifest.js), which is
 the file to trust.
 
@@ -22,7 +22,10 @@ Phase 64 import: 51 of 40 used, $0.91 credit, `generations_remaining: 0`. **Neit
 any of it** — both drew on characters already generated in the account. The Unit 4/5 import is the
 first that actually generated: the subscription allowance stays exhausted, but **credit fallback
 works and is what gets billed**, at roughly $0.02 per job (a create is 1 job, a four-direction walk
-is 4). Unit 3 was never blocked on anything but a decision to spend.
+is 4). Unit 3 was never blocked on anything but a decision to spend, and Phase 82 made it — six
+creates plus 24 walk directions, 30 jobs, against $19.40 of credit. **The account runs eight
+concurrent jobs**, so a six-character import queues in batches rather than all at once; the
+animate call fails fast with the slot count rather than silently dropping directions.
 
 **The canvas is pinned, not derived.** Since Phase 64, `canonicalCanvas()` clamps to
 `SPRITE_CANVAS` (48×56, ground row 49) instead of sizing itself from the widest cast member. Adding

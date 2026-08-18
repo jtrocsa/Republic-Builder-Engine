@@ -221,8 +221,9 @@ control access to historical evidence.
 Ranked by what unblocks the most, working from what already exists — 140 character sheets, 250 tile
 sheets across 28 packs, and the `derived-objects` packing pipeline.
 
-1. **Unit 3's six Revolutionary-era characters.** Philadelphia is frozen on `legacy-*` placeholders
-   and Phase 81F puts authored interview questions in those mouths.
+1. ~~**Unit 3's six Revolutionary-era characters.**~~ **Shipped in Phase 82** — generated, built,
+   and the `legacy-*` path removed with them. It went first because 81F had just put authored
+   interview questions in those six mouths.
 2. **`architecture.indigenous.northAmerican`** — longhouse, pueblo, plains lodge. Blocking for Unit
    6 and a curriculum defect rather than an art gap. Island survival's bohío huts are
    Caribbean/Taíno-appropriate **only** and must never stand in as generic Native American art.
