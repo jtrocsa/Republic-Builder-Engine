@@ -148,22 +148,10 @@ export const UNIT_03_SEQUENCING_QUESTS = [
       "Arrange these Case 7 developments in the order that reflects how each one caused or enabled the next — not simply the order the dates occurred in.",
     items: [
       {
-        id: "frontier-encroachment-pontiac",
-        label:
-          "After the Seven Years' War, British forts and settlers push onto lands recently promised to Indigenous nations, and Pontiac calls for resistance at a 1763 council near Detroit",
-        position: 0,
-      },
-      {
         id: "townshend-protest-dickinson",
         label:
           "Parliament's new revenue acts on imported goods draw organized protest, including John Dickinson's 1767 newspaper letters denying Parliament's right to tax colonists for revenue",
         position: 1,
-      },
-      {
-        id: "armed-resistance-henry",
-        label:
-          "Protest escalates toward open resistance, and Patrick Henry urges the Second Virginia Convention to arm its militia in March 1775",
-        position: 2,
       },
       {
         id: "war-exploited-dunmore",
@@ -172,10 +160,22 @@ export const UNIT_03_SEQUENCING_QUESTS = [
         position: 3,
       },
       {
+        id: "frontier-encroachment-pontiac",
+        label:
+          "After the Seven Years' War, British forts and settlers push onto lands recently promised to Indigenous nations, and Pontiac calls for resistance at a 1763 council near Detroit",
+        position: 0,
+      },
+      {
         id: "ideals-claimed-hall-adams",
         label:
           "As independence is declared, groups excluded from the Revolution's promises invoke its own natural-rights language for themselves — Abigail Adams for women's legal standing, Prince Hall for enslaved Black Bostonians' freedom",
         position: 4,
+      },
+      {
+        id: "armed-resistance-henry",
+        label:
+          "Protest escalates toward open resistance, and Patrick Henry urges the Second Virginia Convention to arm its militia in March 1775",
+        position: 2,
       },
     ],
     explanation:

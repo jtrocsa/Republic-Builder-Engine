@@ -73,6 +73,15 @@ The debt is paid in authored companion dialogue and a scripted beat on that map,
 — not by hoping nobody notices. **If it plays as a hallway, the rotation moves**, and shipping Units
 3–5 before 6–9 is what keeps that recoverable.
 
+**Shipped in Phase 81F, and the debt cost something concrete.** A DISCREPANCY's evidence column is
+normally gated by `asked:<npc>:<question>` tokens minted from an interview's logged answers, so two
+players audit the same record holding different evidence. With no interview on the map there is
+nothing to mint one, so every observation in Canal Crossroads' audit is `requires: null` — and each
+is therefore held to a stricter standard instead: on the record's own page, said by somebody
+standing on the outdoor map, or established by the mission before it. Nothing in that column is
+evidence a player might not have. Whether that reads as a design or as a flat panel is the question
+to put to the first playtest of that map.
+
 ---
 
 ## 3. Geography
@@ -139,6 +148,12 @@ federal statute, so a map's records are the paperwork that actually existed ther
 saying so in its own first sentence. The canonical documents live in `content/primary-source-library/`
 — **already written for all four units, 159 cited records** — and feed the missions and Archive
 Challenges rather than the map.
+
+**Units 3–5's activities shipped in Phase 81F** — nine missions across the three maps, running the
+slates above. Three interviews now exist and none of them asks the same thing, which is the rule
+that actually binds: Riverbend asks how one arrangement looks from eight positions inside it,
+Philadelphia asks what a public position is made of, Richmond asks what testimony costs when the
+government is writing it down. The right-hand column of §2's table is the half to author against.
 
 ### Unit 6 — the railhead. Kansas plains, 1873. Slate C.
 
@@ -226,8 +241,8 @@ every rule written down.
 
 ## 7. What this document does not do
 
-- **It does not schedule anything.** Build order is 81E (Voss on the shipped maps) then 81F
-  (activities for Units 3–5); Units 6–9 are designed here and built later.
+- **It does not schedule anything.** Build order was 81E (Voss on the shipped maps) then 81F
+  (activities for Units 3–5), and **both have shipped**; Units 6–9 are designed here and built later.
 - **It does not settle Unit 4's trade.** The no-interview slate is a decision with a stated fallback,
   not a certainty.
 - **It does not resolve anything on `CHRONICLE-CANON.md` §9's deferred list** — the Original Drift

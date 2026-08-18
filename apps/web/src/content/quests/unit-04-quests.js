@@ -88,16 +88,16 @@ export const UNIT_04_SEQUENCING_QUESTS = [
       "Arrange these developments in the order in which each one made the next possible — not simply the order the dates fall in.",
     items: [
       {
-        id: "canal-cuts-freight",
-        label:
-          "The canal opens and freight costs between the western interior and New York City fall by more than ninety percent",
-        position: 0,
-      },
-      {
         id: "farms-grow-for-market",
         label:
           "Farm households along the line shift from growing mainly for their own use to growing wheat for a distant market, and begin buying goods they once made",
         position: 1,
+      },
+      {
+        id: "immigration-and-crowding",
+        label:
+          "Irish and German immigrants arrive in numbers to dig the enlargement and take the new wage work, and crowd into boardinghouses in the quarters nearest the water",
+        position: 3,
       },
       {
         id: "towns-and-workshops",
@@ -106,10 +106,10 @@ export const UNIT_04_SEQUENCING_QUESTS = [
         position: 2,
       },
       {
-        id: "immigration-and-crowding",
+        id: "canal-cuts-freight",
         label:
-          "Irish and German immigrants arrive in numbers to dig the enlargement and take the new wage work, and crowd into boardinghouses in the quarters nearest the water",
-        position: 3,
+          "The canal opens and freight costs between the western interior and New York City fall by more than ninety percent",
+        position: 0,
       },
       {
         id: "reform-and-its-opponents",
@@ -282,24 +282,6 @@ export const UNIT_04_ARCHIVE_SEQUENCING_QUESTS = [
       "Arrange the Bank War in the order in which each step made the next one possible. The dates are given; the reasoning the question wants is why one step follows from the one before it.",
     items: [
       {
-        id: "bank-chartered-1816",
-        label:
-          "Congress charters the Second Bank of the United States for twenty years (1816), giving one federally chartered institution unusual influence over credit and the currency",
-        position: 0,
-      },
-      {
-        id: "jackson-elected-1828",
-        label:
-          "Andrew Jackson is elected on a wave of expanded white male suffrage and a claim to speak for the people against entrenched privilege (1828)",
-        position: 1,
-      },
-      {
-        id: "veto-1832",
-        label:
-          "Bank president Nicholas Biddle seeks an early recharter, and Jackson vetoes the bill, arguing that the Bank serves 'the rich and powerful' and that the president may judge a law's constitutionality for himself (1832)",
-        position: 2,
-      },
-      {
         id: "deposits-removed-1833",
         label:
           "Re-elected, Jackson orders federal deposits withdrawn from the Bank and placed in state 'pet' banks, and removes two Treasury secretaries who refuse (1833)",
@@ -310,6 +292,24 @@ export const UNIT_04_ARCHIVE_SEQUENCING_QUESTS = [
         label:
           "The charter expires with no national bank to replace it, while the Specie Circular requires payment for public land in hard money (1836)",
         position: 4,
+      },
+      {
+        id: "veto-1832",
+        label:
+          "Bank president Nicholas Biddle seeks an early recharter, and Jackson vetoes the bill, arguing that the Bank serves 'the rich and powerful' and that the president may judge a law's constitutionality for himself (1832)",
+        position: 2,
+      },
+      {
+        id: "bank-chartered-1816",
+        label:
+          "Congress charters the Second Bank of the United States for twenty years (1816), giving one federally chartered institution unusual influence over credit and the currency",
+        position: 0,
+      },
+      {
+        id: "jackson-elected-1828",
+        label:
+          "Andrew Jackson is elected on a wave of expanded white male suffrage and a claim to speak for the people against entrenched privilege (1828)",
+        position: 1,
       },
       {
         id: "panic-1837",

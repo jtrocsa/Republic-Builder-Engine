@@ -429,26 +429,30 @@ Ordered by payoff per unit of work. None of this is scheduled; it is the queue t
 | #   | Change                                                                          | Group | Cost | Status                                           |
 | --- | ------------------------------------------------------------------------------- | ----- | ---- | ------------------------------------------------ |
 | 1   | Generalize `map-jigsaw` off `waldseemuller-map` so any unit can use it          | B1    | S    | **Done** (Phase 68)                              |
-| 2   | Fix the pre-solved sequencing quests in Units 3–4 (author them out of order)    | C2    | S    | Open — 4 left of 5                               |
+| 2   | Fix the pre-solved sequencing quests in Units 3–4 (author them out of order)    | C2    | S    | **Done** (Phase 81F) — and now a test            |
 | 3   | Case 1.02 "Atlantic Route Puzzle" → an actual route plot                        | B5    | M    | Engine done, no content                          |
 | 4   | Units 4/5's composite documents → fillable forms with an omission question      | B3    | M    | Open                                             |
 | 5   | Unit 5's "who the record counted" lane → a real tally against the ward register | B4    | M    | Open                                             |
 | 6   | Substrate fields on Richmond's cast, then Corroborate/Contradict as the pilot   | A2    | M    | Open                                             |
 | 7   | `howItWorks` + `terms` on every activity authored from here on                  | —     | S    | **Rule** (Phase 69), enforced by test (Phase 70) |
-| 8   | Author activities on Units 3–5's three field maps (18 records)                  | —     | L    | Open — the standing queue                        |
+| 8   | Author activities on Units 3–5's three field maps (18 records)                  | —     | L    | **Done** (Phase 81F) — 9 of the 18               |
 | 9   | Three instruction steps, a sparse answer grid, and a face on every mission      | A1/A3 | S    | **Rule** (Phase 71), enforced by test and schema |
 
 **The shape of the remaining work changed in Phase 68.** Items 1 and 3 were engine problems and the
 engines now exist — `assembly` takes any image and any grid, `trace` takes any chain of nodes. What
-is left on those rows is authored content, not code. Phase 70 took one of Item 2's five, because it
-already had the file open; the remaining four are still the cheapest real win in this table.
+is left on those rows is authored content, not code. Phase 70 took one of Item 2's five because it already
+had the file open, and Phase 81F took the rest — three, not the four this table claimed, which is
+itself worth noticing about a defect counted by hand for eleven phases. It is a failing test now
+(`tests/unit/sequencing-quest-order.test.js`), which is the only reason to believe the count.
 
 Item 7 is not a task but a standing condition on the rest, added after Phase 69's playtest: an
 activity shipped without it is a mechanic a student has to reverse-engineer. It costs five sentences,
 and since Phase 70 `tests/unit/activity-content.test.js` fails if it is skipped.
 
-Item 8 is the queue Phases 68–70 leave behind, and the realistic budget from Riverbend is **~700
-lines of prose-heavy content per map** plus five registration edits. Note that only a field case can
+**Item 8 is closed as of Phase 81F**, and the budget estimate here was low: the three files came in
+at 878, 842 and 868 lines against a predicted ~700, which matches unit-02's actual 921 rather than
+the figure this paragraph carried. Nine of the eighteen records now open into an activity and the
+other nine stay reader records — three per map is the slate, not a shortfall. Only a field case can
 carry an activity: the ten non-map cases declare no `sources` at all, and reaching one from
 `missionScreen()` needs a path nobody has built.
 
