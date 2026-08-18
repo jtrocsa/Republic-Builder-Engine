@@ -12,10 +12,9 @@
 // observation keyed to a question nobody can ask, an activity with no `howItWorks` that a student
 // has to reverse-engineer.
 //
-// Covers every authored unit. Unit 5 has no activities yet and the loops below simply find nothing
-// for it, which is the correct behaviour for this file until it does. Unit 4 has three and no
-// interview among them, which is the first time the interview rules below have run against a unit
-// that legitimately has nothing for them to check.
+// Covers all five authored units — every one of them has three missions as of Phase 81F. Unit 4 has
+// no interview among its three, which is the one case where the interview rules below legitimately
+// find nothing to check; that is slate D and it is deliberate (THE-MAP-PROGRAM.md §2).
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -29,7 +28,9 @@ import { CASE_001_SOURCES } from "../../apps/web/src/content/unit-01-campaign.js
 import { CASE_004_SOURCES } from "../../apps/web/src/content/unit-02-campaign.js";
 import { UNIT_04_ACTIVITIES } from "../../apps/web/src/content/activities/unit-04-activities.js";
 import { CASE_007_SOURCES } from "../../apps/web/src/content/unit-03-campaign.js";
+import { UNIT_05_ACTIVITIES } from "../../apps/web/src/content/activities/unit-05-activities.js";
 import { CASE_010_SOURCES } from "../../apps/web/src/content/unit-04-campaign.js";
+import { CASE_013_SOURCES } from "../../apps/web/src/content/unit-05-campaign.js";
 
 // `sources` rides along because one rule below is about the *order* a case can be finished in, and
 // that lives on the record (`requiresSourceId`) rather than on the activity.
@@ -38,6 +39,7 @@ const AUTHORED_UNITS = [
   { unitId: "unit-02", activities: UNIT_02_ACTIVITIES, sources: CASE_004_SOURCES },
   { unitId: "unit-03", activities: UNIT_03_ACTIVITIES, sources: CASE_007_SOURCES },
   { unitId: "unit-04", activities: UNIT_04_ACTIVITIES, sources: CASE_010_SOURCES },
+  { unitId: "unit-05", activities: UNIT_05_ACTIVITIES, sources: CASE_013_SOURCES },
 ];
 
 const entriesOf = (activities) => Object.entries(activities);

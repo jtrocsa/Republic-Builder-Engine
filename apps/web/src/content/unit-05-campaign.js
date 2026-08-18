@@ -169,7 +169,7 @@ export const CASE_013_SOURCES = [
     date: "March 1864",
     record: "A printed requisition served on the slaveholders of a Virginia district",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "interview",
     excerpt:
       "ENGINEER BUREAU, RICHMOND. — By authority of the Act of Congress approved the seventeenth of February last, and of the requisition of the Governor thereunder, you are required to deliver at the place named below, on or before the day named, the number of male slaves between the ages of eighteen and fifty set opposite your name, being not more than one fifth of those liable in this district. Term of service, sixty days from the day of delivery, unless sooner discharged. The Government will furnish rations and medical attendance, and will pay to the owner the sum per month hereon endorsed for each hand delivered. Owners failing to deliver will have the number impressed by the enrolling officer of this district without further notice. Should any hand die, or be lost to the owner while in the service of the Government, compensation will be made upon the value sworn to at the time of delivery, and not otherwise. — Names and numbers annexed. Delivery to be made to the officer in charge of the works east of the city.",
     prompt:
@@ -189,7 +189,7 @@ export const CASE_013_SOURCES = [
     date: "August 1864",
     record: "The month's pay roll, posted at the gate of the South's largest ironworks",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "assembly",
     excerpt:
       "PAY ROLL, ROLLING MILL AND FOUNDRY, FOR THE MONTH. — CLASS FIRST, mechanics and skilled hands, paid to themselves: D. Boyle, puddler, wages as agreed, one half advanced in flour and meal at government rates and charged against the month's account; and forty-one further names. — CLASS SECOND, slaves hired by the year, the hire payable to the owner and not to the hand: sixty-three names, with the owner and the county set against each, hire settled quarterly on the owner's order. — CLASS THIRD, hands delivered under the Engineer Bureau's requisition: thirty-one names, no wages payable at these works, term of service as endorsed on the several requisitions. — Rations issued at the works to all three classes alike. Hands of the second and third classes are not to leave the yard without a pass from the office.",
     prompt:
@@ -210,7 +210,12 @@ export const CASE_013_SOURCES = [
     record:
       "A grocer's board at a Richmond public market, with the week's public notices beside it",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "discrepancy",
+    // The audit's evidence column is a transcript of what this player actually asked at the
+    // requisition, so the interview has to have happened. Same shape as Riverbend's letter and
+    // Canal Crossroads' time book — and it decides which mission can be last, which is what
+    // `arcClose` is authored against. See the header on unit-05-activities.js.
+    requiresSourceId: "richmond-impressment-order",
     excerpt:
       "[chalked, three figures to a line, the two older ones left standing] FLOUR, the barrel — 40 — 125 — 250. BACON, the pound — 1.25 — 6 — 11. SALT, the pound — 1.50. WOOD, the cord — 30. COFFEE — none. — [pasted] FREE MARKET. The ladies' committee will distribute on Wednesday morning to the families of soldiers in the service, upon the certificate of the ward visitor, while the supply holds out. — [pasted] A SUBSTITUTE WANTED. A sound man not liable to conscription may hear of an advantageous arrangement by applying within. — [pasted] ABSENT WITHOUT LEAVE. The following men of this city have failed to report to their commands and are to be arrested wherever found, the reward as by the regulation: [twenty-one names].",
     prompt:

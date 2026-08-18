@@ -526,6 +526,13 @@ function main() {
     )
   );
   results.push(
+    runSchema(
+      "unit-05-activities.js: UNIT_05_ACTIVITIES",
+      ActivityMapSchema,
+      content.unit05.activities
+    )
+  );
+  results.push(
     runSchema("unit-05-quests.js: UNIT_05_MCQ_QUESTS", McqQuestListSchema, content.unit05.mcqQuests)
   );
   results.push(

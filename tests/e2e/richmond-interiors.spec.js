@@ -64,6 +64,12 @@ test.describe("Richmond interiors", () => {
       ...BASE_SEED,
       currentFieldRoom: "richmond-counting-room",
       fieldReturn: { x: 33.0, y: 23.0, facing: "up" },
+      // The price board is gated behind the requisition as of Phase 81F, and a locked record draws
+      // no world marker — which is correct, and is not what this test is about. Seeding the
+      // requisition secured opens the gate so the assertion below still measures the thing it was
+      // written to measure: outdoors you see the records with markers of their own and none of the
+      // ones behind doors.
+      caseEvidence: { "case-013": ["richmond-impressment-order"] },
     });
     await loadSeededSave(page);
     await expect(page.locator("#richmondCountingRoomTiledCanvas")).toBeVisible();

@@ -22,6 +22,7 @@ import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js"
 import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js";
 import { UNIT_04_ACTIVITIES } from "../content/activities/unit-04-activities.js";
+import { UNIT_05_ACTIVITIES } from "../content/activities/unit-05-activities.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -116,6 +117,7 @@ export function loadChronicleContent() {
       unit: unit05Campaign.UNIT_05,
       sources: unit05Campaign.CASE_013_SOURCES,
       lanes: unit05Campaign.CASE_013_LANES,
+      activities: UNIT_05_ACTIVITIES,
       mcqQuests: unit05Quests.UNIT_05_MCQ_QUESTS,
       evidenceOrganizingQuests: unit05Quests.UNIT_05_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit05Quests.UNIT_05_SEQUENCING_QUESTS,
