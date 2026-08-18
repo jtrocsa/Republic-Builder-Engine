@@ -987,17 +987,22 @@ const CHARACTER_SHEETS = {
   "richmond-bookkeeper": characterSheet(`${FIELD}/npc-richmond-bookkeeper`, 9),
   "richmond-hired-out-man": characterSheet(`${FIELD}/npc-richmond-hired-out-man`, 9),
   "richmond-ward-nurse": characterSheet(`${FIELD}/npc-richmond-ward-nurse`, 9),
-  // Unit 3 · Philadelphia, 1767. No PixelLab art exists for the Revolutionary era, so these six
-  // keep the placeholder art Unit 3 already used, rebuilt into the same strip format. Giving them
-  // their own keys is the point: without it, upgrading `columbus` to real 1492 art would silently
-  // redraw Philadelphia's town crier as Christopher Columbus. Three columns, no north pose — the
-  // placeholders never had one, and this reproduces exactly what Unit 3 renders today.
-  "legacy-scribe": characterSheet(`${FIELD}/legacy-scribe`, 3),
-  "legacy-columbus": characterSheet(`${FIELD}/legacy-columbus`, 3),
-  "legacy-sailor": characterSheet(`${FIELD}/legacy-sailor`, 3),
-  "legacy-elder": characterSheet(`${FIELD}/legacy-elder`, 3),
-  "legacy-fisher": characterSheet(`${FIELD}/legacy-fisher`, 3),
-  "legacy-gardener": characterSheet(`${FIELD}/legacy-gardener`, 3),
+  // Unit 3 · Philadelphia, 1767. Real art as of Phase 82, replacing the six `legacy-*` placeholder
+  // sheets this map had been frozen on since Phase 60 — no Revolutionary-era characters existed in
+  // the account, and inheriting Unit 1's would have put Christopher Columbus on a Philadelphia
+  // street. Nine columns and four real directions like the rest of the cast, where the placeholders
+  // had three columns and no north pose at all.
+  //
+  // Colour is doing the separating here, because two pairs on this map stand close enough to be
+  // read in one glance: the crier's route passes the recruiter's muster point, so crimson against
+  // navy; and the tradesman wanders four tiles from Voss's post, so white shirtsleeves under a long
+  // red waistcoat against her cream sleeves under dark leather. Neither pair shares a hat.
+  "john-dickinson": characterSheet(`${FIELD}/npc-john-dickinson`, 9),
+  "town-crier": characterSheet(`${FIELD}/npc-town-crier`, 9),
+  "militia-recruiter": characterSheet(`${FIELD}/npc-militia-recruiter`, 9),
+  "free-tradesman": characterSheet(`${FIELD}/npc-free-tradesman`, 9),
+  "loyalist-merchant": characterSheet(`${FIELD}/npc-loyalist-merchant`, 9),
+  farmwife: characterSheet(`${FIELD}/npc-farmwife`, 9),
 };
 /** The sheet for a character key, falling back to the Director rather than throwing on a typo. */
 function sheetFor(key) {
@@ -1784,11 +1789,11 @@ const UNIT3_FIELD_NPCS = [
     // arrives on a second pass, which is the point.
     text: "I came through ahead of the assignment. The passage was open, and waiting on paperwork has never yet made anybody's notes better. Here is the trick of this square: every person in it has a public position and a private interest, and only the first one gets offered to you. Ask who is permitted to speak here before you decide what the argument is about.",
   },
-  // Frozen placeholder roster. No Revolutionary-era characters exist in PixelLab, so rather than
-  // dress John Dickinson in Christopher Columbus's real 1492 doublet, these six keep the
-  // placeholder art they have always used — rebuilt onto the same sprite-strip canvas as the rest
-  // of the cast, under `legacy-*` keys of their own so Unit 1's art can be replaced without
-  // reaching them. Replacing this roster needs new art, not new code.
+  // Six Revolutionary-era characters, generated in Phase 82. This roster was frozen on `legacy-*`
+  // placeholder art from Phase 60 until then — the account held a 1492 Caribbean and a 1607
+  // Jamestown cast only, and dressing John Dickinson in Christopher Columbus's real doublet is
+  // worse than a placeholder. Each sprite key is now the NPC's own id, which is the convention
+  // Units 4 and 5 already use, and nothing renders `legacy-*` any more.
   // Named, because he was demonstrably here: Dickinson wrote the Farmer's Letters in Philadelphia and
   // they were set and printed in this city's newspapers from December 1767. Standing outside the print
   // shop's door, he carries `commoncause-dickinson-letter` — see UNIT3_FIELD_SOURCE_POINTS, and see
@@ -1800,7 +1805,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "John Dickinson",
     label: "John Dickinson",
-    sprite: "legacy-scribe",
+    sprite: "john-dickinson",
     text: "I publish as a farmer because a farmer may be listened to where a lawyer is only argued with. Read the distinction carefully: Parliament may regulate our trade, and I say so plainly. What it may not do is lay a duty on us for the raising of revenue, without our consent.",
   },
   {
@@ -1810,7 +1815,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Town crier",
     label: "Town crier",
-    sprite: "legacy-columbus",
+    sprite: "town-crier",
     text: "Hear ye — Parliament's duties still stand, and talk in every tavern turns to committees, boycotts, and what a colony owes its King. I only carry the news; deciding what to do with it is your affair.",
   },
   {
@@ -1820,7 +1825,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Militia recruiter",
     label: "Militia recruiter",
-    sprite: "legacy-sailor",
+    sprite: "militia-recruiter",
     text: "Muster on the green Tuesday next. A man who won't drill now may wish later he had — word from Virginia says even the House of Burgesses is arming its militia.",
   },
   {
@@ -1830,7 +1835,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Free Black tradesman",
     label: "Tradesman",
-    sprite: "legacy-elder",
+    sprite: "free-tradesman",
     text: "I read the broadsides same as any freeman here. Strange, to hear talk of chains and slavery from men who'd never let it touch their own thinking on who else wears them.",
   },
   {
@@ -1840,7 +1845,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Loyalist merchant",
     label: "Merchant",
-    sprite: "legacy-fisher",
+    sprite: "loyalist-merchant",
     text: "My ledgers balance because the Crown's ships still call at this port. I'll not pretend disorder in the streets is good for trade, whatever cause it claims to serve.",
   },
   {
@@ -1850,7 +1855,7 @@ const UNIT3_FIELD_NPCS = [
     group: "commoncause",
     name: "Farmwife",
     label: "Farmwife",
-    sprite: "legacy-gardener",
+    sprite: "farmwife",
     text: "My husband's away with the militia and the mending doesn't stop because Parliament's vexed us. Whatever new government they draft, I mean to see it remembers the women keeping the house together.",
   },
 ];

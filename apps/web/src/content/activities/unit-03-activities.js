@@ -21,11 +21,11 @@
 // nothing consumes them here. Every speaker id below is a real NPC id in UNIT3_FIELD_NPCS, which
 // tests/unit/field-map-coordinates.test.js and tests/unit/activity-content.test.js both assert.
 //
-// A note on the cast this content is written into. Philadelphia's six period characters are frozen
-// on `legacy-*` placeholder art (see the roster comment in main.js): no Revolutionary-era sheets
-// exist, and dressing John Dickinson in Christopher Columbus's 1492 doublet is worse than a
-// placeholder. That is an art commission, ranked first in THE-MAP-PROGRAM §6, and it does not block
-// any word of this file — the writing is what these people say, not what they are wearing.
+// A note on the cast this content is written into. Philadelphia's six period characters were
+// frozen on `legacy-*` placeholder art when this file was written — no Revolutionary-era sheets
+// existed, and dressing John Dickinson in Christopher Columbus's 1492 doublet is worse than a
+// placeholder. **Phase 82 generated them**, so these six lines are now spoken by people dressed for
+// 1767; the writing never depended on it, which is why it went first.
 
 // What Philadelphia's three records turn out to be about, said once. See the header.
 const COMMON_CAUSE_ARC =

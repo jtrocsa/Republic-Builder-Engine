@@ -1029,7 +1029,6 @@ function appendix() {
     <p>Carried here because this is a tracking document. All three are recorded in <code>ARCHITECTURE-QUICKREF.md</code> §5.</p>
     <ul class="open-items">
       <li><b>Five sequencing quests across Units 2–4 ship pre-solved.</b> The renderer lays items out in the order they are authored and never shuffles, so a quest whose items are written 0,1,2,3 opens already correct and marks the student right for touching nothing. Unit 1 and Unit 5 author theirs scrambled; the convention was undocumented and three units lost it.</li>
-      <li><b>Unit 3 is frozen on six <code>legacy-*</code> placeholder sprites.</b> Every other unit's cast is built from the current 48×56 pipeline.</li>
       <li><b>The Navigation Table's unit-tab list runs past the fold at 1366×768</b> with five units, and has four more periods to grow into. It scrolls and nothing is broken, but how a nine-unit list should lay out is undecided.</li>
     </ul>
   </section>`;

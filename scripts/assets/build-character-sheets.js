@@ -34,18 +34,10 @@ import sharp from "sharp";
 
 import { SPRITE_CANVAS } from "../../apps/web/src/engine/sprite-animation.js";
 
-import {
-  CHARACTERS,
-  COMPASS,
-  DIRECTIONS,
-  LEGACY_CHARACTERS,
-  frameUrl,
-  rotationUrl,
-} from "./character-manifest.js";
+import { CHARACTERS, COMPASS, DIRECTIONS, frameUrl, rotationUrl } from "./character-manifest.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ASSETS = path.join(REPO_ROOT, "apps/web/src/assets");
-const LEGACY_DIR = path.join(ASSETS, "chronicle-sprites/field");
 const CACHE = path.join(REPO_ROOT, "reports/pixellab-cache");
 
 /**
@@ -619,90 +611,6 @@ async function buildCharacter(entry, canvas) {
   return written;
 }
 
-/**
- * Unit 3's six placeholder characters, rebuilt into the same strip format so the game has exactly
- * one renderer. Their source art has only a down pose and a right-facing side pose, each with one
- * step frame, and no north pose at all — so `up` reuses the down art and `left` is the flipped side
- * art, which is precisely what the old renderer did with them. This changes nothing about how Unit
- * 3 looks; it only stops six 1492 Caribbean and Spanish sprites from being handed to Philadelphia
- * in 1767 once the real Unit 1 art lands on those keys.
- */
-async function buildLegacy(canvas) {
-  const written = [];
-  for (const legacy of LEGACY_CHARACTERS) {
-    const read = (suffix) => readFileSync(path.join(LEGACY_DIR, `${legacy.source}${suffix}.png`));
-    const poses = {
-      down: [read(""), read(""), read("-step")],
-      up: [read(""), read(""), read("-step")],
-      right: [read("-side"), read("-side"), read("-side-step")],
-      left: [read("-side"), read("-side"), read("-side-step")],
-    };
-
-    const boxes = [];
-    let body = 0;
-    const stance = {};
-    for (const [direction, buffers] of Object.entries(poses)) {
-      for (const [column, buffer] of buffers.entries()) {
-        const s = await scan(buffer);
-        boxes.push(s.box);
-        if (column !== 0) continue;
-        const span = bodySpan(s.rows);
-        if (direction === "down") body = span.height;
-        stance[direction] = { ground: span.bottom, centreX: s.medianX };
-      }
-    }
-    const window = unionBounds(boxes);
-    const scale = canvas.body / body;
-    const scaled = {
-      width: Math.max(1, Math.round(window.width * scale)),
-      height: Math.max(1, Math.round(window.height * scale)),
-    };
-
-    const legacyWheres = {};
-    for (const direction of DIRECTIONS) {
-      const normalized = [];
-      for (const buffer of poses[direction]) {
-        let frame = await normalizeFrame(buffer, window, scaled);
-        if (direction === "left") frame = await sharp(frame).flop().png().toBuffer();
-        normalized.push(frame);
-      }
-      const where = await placements(normalized[0], normalized.slice(1), canvas);
-      legacyWheres[direction] = where;
-      const strip = blankCanvas({ width: canvas.width * 3, height: canvas.height });
-      const composites = [];
-      for (const [column, frame] of normalized.entries()) {
-        const at = column === 0 ? where.stand : where.walk;
-        const placed = await placeInCell(frame, at, canvas);
-        if (!placed) continue;
-        composites.push({
-          input: placed.input,
-          left: column * canvas.width + placed.left,
-          top: placed.top,
-        });
-      }
-      const target = path.join(ASSETS, `chronicle-sprites/field/${legacy.key}-${direction}.png`);
-      await strip.composite(composites).png({ palette: true, dither: 0 }).toFile(target);
-      written.push(target);
-    }
-
-    const portraitTarget = path.join(ASSETS, `chronicle-sprites/field/${legacy.key}-portrait.png`);
-    await blankCanvas(canvas)
-      .composite(
-        [
-          await placeInCell(
-            await normalizeFrame(poses.down[0], window, scaled),
-            legacyWheres.down.stand,
-            canvas
-          ),
-        ].filter(Boolean)
-      )
-      .png({ palette: true, dither: 0 })
-      .toFile(portraitTarget);
-    written.push(portraitTarget);
-  }
-  return written;
-}
-
 // ---- entry point ---------------------------------------------------------------------------------
 
 async function main() {
@@ -744,9 +652,6 @@ async function main() {
       `${entry.character.key.padEnd(24)} scale ${entry.scale.toFixed(3)}  ${written.length} files`
     );
   }
-  const legacy = await buildLegacy(canvas);
-  count += legacy.length;
-  console.log(`legacy (unit 3)          ${legacy.length} files`);
   console.log(`\nwrote ${count} files onto a shared ${canvas.width}x${canvas.height} canvas`);
 }
 

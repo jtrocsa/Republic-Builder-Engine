@@ -119,18 +119,19 @@ const SHEETS_BY_CASE = {
     "angolan-laborer": "npc-jamestown-african-man",
     "field-servant-south": "npc-jamestown-servant",
   },
-  // Unit 3 is deliberately frozen on its placeholder art: no Revolutionary-era characters exist,
-  // and inheriting Unit 1's would put Christopher Columbus on a Philadelphia street in 1767. Voss
-  // is the exception and always was — she is Institute staff, not a period character, so her own
-  // sheet travels with her onto every map (Phase 81E put her on this one).
+  // Unit 3 was frozen on `legacy-*` placeholder art until Phase 82 — no Revolutionary-era
+  // characters existed, and inheriting Unit 1's would have put Christopher Columbus on a
+  // Philadelphia street in 1767. Six real sheets now, each keyed by the NPC's own id. Voss is the
+  // one entry that did not change: she is Institute staff rather than a period character, so her
+  // sheet has always travelled with her onto every map.
   "case-007": {
     liaison: LIAISON_SHEET,
-    "john-dickinson": "legacy-scribe",
-    "town-crier": "legacy-columbus",
-    "militia-recruiter": "legacy-sailor",
-    "free-tradesman": "legacy-elder",
-    "loyalist-merchant": "legacy-fisher",
-    farmwife: "legacy-gardener",
+    "john-dickinson": "npc-john-dickinson",
+    "town-crier": "npc-town-crier",
+    "militia-recruiter": "npc-militia-recruiter",
+    "free-tradesman": "npc-free-tradesman",
+    "loyalist-merchant": "npc-loyalist-merchant",
+    farmwife: "npc-farmwife",
   },
 };
 
@@ -155,7 +156,8 @@ for (const [caseId, sheets] of Object.entries(SHEETS_BY_CASE)) {
               // `field-liaison-` is its own alternative rather than folded into a looser pattern:
               // Voss is the only cast member whose stem starts with neither `npc-` nor a role word,
               // and widening this to `[a-z-]+` would stop it catching a genuinely missing sheet.
-              /(npc-[a-z-]+|legacy-[a-z]+|chronicler-[ab]|director-[a-z-]+|field-liaison-[a-z-]+)-(?:down|up|left|right)\.png/
+              // The `legacy-` branch came out in Phase 82 along with the sheets themselves.
+              /(npc-[a-z-]+|chronicler-[ab]|director-[a-z-]+|field-liaison-[a-z-]+)-(?:down|up|left|right)\.png/
               // A character with an `idleColumns` sheet is drawn from `<stem>-idle-<direction>.png`
               // while it stands, and the greedy stem above captures that suffix. Voss is the first
               // NPC on a *field* map to declare a breathing idle, so this branch had never been

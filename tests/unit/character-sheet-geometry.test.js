@@ -84,12 +84,15 @@ const CAST = [
   ["chronicle-sprites/field/npc-richmond-refugee-woman", 9],
   ["chronicle-sprites/field/npc-richmond-relief-society-woman", 9],
   ["chronicle-sprites/field/npc-richmond-government-messenger", 9],
-  ["chronicle-sprites/field/legacy-scribe", 3],
-  ["chronicle-sprites/field/legacy-columbus", 3],
-  ["chronicle-sprites/field/legacy-sailor", 3],
-  ["chronicle-sprites/field/legacy-elder", 3],
-  ["chronicle-sprites/field/legacy-fisher", 3],
-  ["chronicle-sprites/field/legacy-gardener", 3],
+  // Unit 3 · Philadelphia. Nine columns as of Phase 82, where the `legacy-*` placeholders these
+  // replaced had three and no north strip at all — so this map's cast is now held to the same
+  // geometry as everyone else's rather than being the one exception in this list.
+  ["chronicle-sprites/field/npc-john-dickinson", 9],
+  ["chronicle-sprites/field/npc-town-crier", 9],
+  ["chronicle-sprites/field/npc-militia-recruiter", 9],
+  ["chronicle-sprites/field/npc-free-tradesman", 9],
+  ["chronicle-sprites/field/npc-loyalist-merchant", 9],
+  ["chronicle-sprites/field/npc-farmwife", 9],
 ];
 
 // Characters that also ship a breathing cycle, and its column count. Mirrors the `idleColumns`

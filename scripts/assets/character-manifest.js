@@ -716,6 +716,89 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "ward-nurse-walk8",
   },
+  // ---- Unit 3 · Philadelphia, 1767 (generated last, Phase 82) --------------------------------
+  //
+  // The last map to get real art, and it went last for a reason worth keeping: Phase 60's import
+  // covered 1492 and 1607 and Phase 65's covered 1845 and 1864, so Philadelphia sat between two
+  // imports on borrowed Caribbean sheets for twenty phases. It was never blocked on anything but a
+  // decision to spend.
+  //
+  // Two pairs on this map stand close enough to be read in one glance, so colour does the
+  // separating: the crier's route passes the recruiter's muster point (crimson against navy), and
+  // the tradesman wanders four tiles from Voss's post (white shirtsleeves under a long red
+  // waistcoat against her cream sleeves under dark leather). Neither pair shares a hat either.
+  // That is Phase 80b's rule applied — check a new character against whoever stands *nearest*
+  // them, not against the cast list.
+  {
+    key: "john-dickinson",
+    stem: "chronicle-sprites/field/npc-john-dickinson",
+    name: "Philadelphia Farmer Lawyer",
+    // The only named historical figure on the map, and the costume is the mission's own subject:
+    // he was a wealthy lawyer with a Delaware estate who signed himself "A Farmer" in print. So
+    // the sprite is a gentleman — dark coat, buff waistcoat, white breeches and stockings, hair
+    // tied back and no wig — because the gap between how he dressed and how he signed is what
+    // "A Public Position" is about.
+    id: "6b5733e2-ede3-4941-a343-afa3bfc0fb24",
+    frames: 8,
+    walkGroup: "dickinson-walk",
+  },
+  {
+    key: "town-crier",
+    stem: "chronicle-sprites/field/npc-town-crier",
+    name: "Philadelphia Town Crier",
+    // The brief asked for a small hand bell at his hip and the generator dropped it, which is the
+    // right outcome rather than a miss: a held prop at this scale exceeds the canvas, and
+    // canonicalCanvas() clips rather than resizes. The crimson coat and black tricorne carry him.
+    id: "e61780ec-e933-466a-93e8-5db72a12f0a3",
+    frames: 8,
+    walkGroup: "crier-walk",
+  },
+  {
+    key: "militia-recruiter",
+    stem: "chronicle-sprites/field/npc-militia-recruiter",
+    name: "Philadelphia Militia Recruiter",
+    // Explicitly no weapon in the brief. A shouldered musket is the single most obvious prop for
+    // this character and it is exactly the kind that leaves the 48x56 canvas — the white cross
+    // belt does the same job of saying "under arms" and costs nothing.
+    id: "680dd328-1187-4eae-abcf-24536fb782e2",
+    frames: 8,
+    walkGroup: "recruiter-walk",
+  },
+  {
+    key: "free-tradesman",
+    stem: "chronicle-sprites/field/npc-free-tradesman",
+    name: "Philadelphia Free Tradesman",
+    // A thigh-length red waistcoat over white shirtsleeves with a wide tan leather apron. The
+    // waistcoat came back longer than the brief implied and that is period-correct for the 1770s
+    // rather than a miss; the apron's wide block at the waist is what separates his silhouette
+    // from Voss's four tiles away.
+    id: "671d5178-1027-45ec-809e-82aeb57ba817",
+    frames: 8,
+    walkGroup: "tradesman-walk",
+  },
+  {
+    key: "loyalist-merchant",
+    stem: "chronicle-sprites/field/npc-loyalist-merchant",
+    name: "Philadelphia Loyalist Merchant",
+    // Plum rather than the teal the first draft of this brief carried: teal is Meridian's accent
+    // colour (MERIDIAN-VISUAL-IDENTITY.md §3) and putting it on a period character in a unit where
+    // Voss already stands is exactly the kind of quiet collision that is impossible to unpick
+    // later. Powdered grey hair is the other half of his read at distance.
+    id: "69673fc9-987b-45c9-93a9-80c434d8a9ad",
+    frames: 8,
+    walkGroup: "merchant-walk",
+  },
+  {
+    key: "farmwife",
+    stem: "chronicle-sprites/field/npc-farmwife",
+    name: "Philadelphia Farmwife",
+    // Short gown, petticoat, white apron and linen cap. She is the only skirted silhouette on this
+    // map, which does the separating work colour does for the men — and the white apron and cap
+    // read from every facing, including the back view, where most of this cast goes dark.
+    id: "b88d7aa9-5bbf-413b-be3d-bacf4d5b2d08",
+    frames: 8,
+    walkGroup: "farmwife-walk",
+  },
 ];
 
 /**
@@ -743,20 +826,13 @@ export const CHARACTERS = [
  */
 
 /**
- * Unit 3 (Philadelphia, 1767) has no PixelLab art — the account holds a 1492 Caribbean and a
- * 1607 Jamestown cast only. Rather than dress John Dickinson as Christopher Columbus, Unit 3's six
- * NPCs keep the placeholder art they already use, rebuilt into the same strip format so the game
- * has exactly one renderer. Each legacy character has only down/side idle+step art, and no north
- * pose at all, which is precisely what it renders today.
+ * `LEGACY_CHARACTERS` lived here until Phase 82. It rebuilt six Unit 1 placeholder sprites into
+ * Unit 3's strip format under `legacy-*` keys of their own — the point being that upgrading
+ * `columbus` would not silently redraw Philadelphia's town crier as Christopher Columbus. Those
+ * six now have real Revolutionary-era art in `CHARACTERS` above, so the shim and its whole
+ * separate build path (`buildLegacy()`) are gone rather than left behind as a second way to make
+ * a sprite sheet.
  */
-export const LEGACY_CHARACTERS = [
-  { key: "legacy-scribe", source: "npc-scribe" },
-  { key: "legacy-columbus", source: "npc-columbus" },
-  { key: "legacy-sailor", source: "npc-spanish-sailor" },
-  { key: "legacy-elder", source: "npc-taino-elder" },
-  { key: "legacy-fisher", source: "npc-taino-fisher" },
-  { key: "legacy-gardener", source: "npc-taino-gardener" },
-];
 
 export function rotationUrl(character, compass) {
   return `${PIXELLAB_CDN}/${PIXELLAB_TENANT}/${character.id}/rotations/${compass}.png`;
