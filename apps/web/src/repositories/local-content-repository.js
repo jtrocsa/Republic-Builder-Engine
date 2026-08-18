@@ -13,11 +13,13 @@ import * as unit02Campaign from "../content/unit-02-campaign.js";
 import * as unit03Campaign from "../content/unit-03-campaign.js";
 import * as unit04Campaign from "../content/unit-04-campaign.js";
 import * as unit05Campaign from "../content/unit-05-campaign.js";
+import * as unit06Campaign from "../content/unit-06-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
 import * as unit04Quests from "../content/quests/unit-04-quests.js";
 import * as unit05Quests from "../content/quests/unit-05-quests.js";
+import * as unit06Quests from "../content/quests/unit-06-quests.js";
 import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js";
@@ -126,6 +128,26 @@ export function loadChronicleContent() {
       archiveEvidenceQuests: unit05Quests.UNIT_05_ARCHIVE_EVIDENCE_QUESTS,
       archiveSaqQuests: unit05Quests.UNIT_05_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit05Quests.UNIT_05_ARCHIVE_DBQ_QUESTS,
+    },
+    // Unit 6 is registered here for validation and is deliberately NOT wired into main.js's UNITS
+    // yet: its map is unbuilt, so a Chronotravel to case-016 has nowhere to land. It carries no
+    // `activities` key for the same reason Units 3-5 carried none before Phase 81F — every one of
+    // its six sources has `activityRoute: null`, and checkActivityRoutes() only demands an activity
+    // for a route that names an engine. Its two missions are a hipp and an mcq, so it has
+    // archiveSourceAnalysisQuests and archiveMcqQuests where Unit 5 has archiveSequencingQuests and
+    // archiveEvidenceQuests. First unit to carry that pair.
+    unit06: {
+      unit: unit06Campaign.UNIT_06,
+      sources: unit06Campaign.CASE_016_SOURCES,
+      lanes: unit06Campaign.CASE_016_LANES,
+      mcqQuests: unit06Quests.UNIT_06_MCQ_QUESTS,
+      evidenceOrganizingQuests: unit06Quests.UNIT_06_EVIDENCE_ORGANIZING_QUESTS,
+      sequencingQuests: unit06Quests.UNIT_06_SEQUENCING_QUESTS,
+      sourceAnalysisQuests: unit06Quests.UNIT_06_SOURCE_ANALYSIS_QUESTS,
+      archiveSourceAnalysisQuests: unit06Quests.UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+      archiveMcqQuests: unit06Quests.UNIT_06_ARCHIVE_MCQ_QUESTS,
+      archiveSaqQuests: unit06Quests.UNIT_06_ARCHIVE_SAQ_QUESTS,
+      archiveDbqQuests: unit06Quests.UNIT_06_ARCHIVE_DBQ_QUESTS,
     },
   };
 }

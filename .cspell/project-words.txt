@@ -17,6 +17,7 @@ ABCDEFGHJKLMNPQRSTUVWXYZ
 actfl
 adaltas
 Agafonkin
+Allegawaho
 Amani
 Amerigo
 Amerigo's
@@ -102,6 +103,7 @@ dragleave
 dragover
 dragstart
 dred
+Dykstra
 easystarjs
 Echota
 Ellsberg
@@ -119,6 +121,7 @@ firstgid
 firstgids
 flipbook
 FOIA
+Fong
 footgun
 freedmens
 freedpeople
@@ -166,9 +169,11 @@ Iztapalapan
 jsprite
 jtrocsa
 justinramsey
+Kansa
 Kanza
 kase
 kastsen
+Kaws
 kayahr
 kekht
 Kell
@@ -389,6 +394,7 @@ unioning
 unlayered
 unmigrated
 unpathable
+Unrau
 unresized
 unreusable
 unromanticized
