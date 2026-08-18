@@ -117,6 +117,17 @@ plot(42, 7, 51, 13, T.plotMaize); // north plot — maize
 plot(42, 23, 51, 29, T.plotCabbage); // south plot — kitchen garden
 plot(31, 24, 38, 29, T.plotRoot); // river-side plot — roots
 plot(44, 16, 49, 18, T.plotPumpkin); // the field the indentured servant works
+// The Powhatan women's corn ground, immediately south of where the Powhatan woman works and
+// between her and the shore. Her line on this map is that the corn the strangers ate through the
+// winter grew in these fields and that women plant it, tend it and decide what may be spared —
+// which until Phase 84 was said standing in empty grass.
+//
+// `plotMaize` is a known compromise and is flagged rather than hidden: the pack draws a bed of
+// European rows, and a Powhatan field was hills of maize intercropped with beans and squash. It is
+// the right crop in the wrong arrangement, which is a smaller error than no field at all — the same
+// call the style guide records for Canal Crossroads' Second Empire brick. It carries no fencing,
+// because split rail is the settlement's way of saying a thing is owned.
+plot(10, 12, 16, 15, T.plotMaize); // the Powhatan women's corn ground
 
 // --- waterfront floor: decking and moored boats, all on the ground layer ----------------------
 // These are river tiles with planking or a hull painted into them, opaque edge to edge. Stamped
@@ -230,6 +241,26 @@ for (const [col, row, entry] of FARM_PROPS) {
   map.stamp(c, r, entry, "solid", "farm stores");
 }
 
+// --- the Powhatan landing ---------------------------------------------------------------------
+// Upriver of the English settlement and well clear of it. Two Powhatan NPCs have worked this ground
+// since Phase 62 with no structures of their own, because the tile library had no North American
+// Indigenous architecture and reusing Island Survival's Taino bohios as generic "Native American"
+// is forbidden. Phase 83 commissioned the art (decision log 0067); this places it.
+//
+// **None of these is added to `doors`.** A door here would run the settlement's dirt tracks up to a
+// yehakin, and the road network is the English settlement's — annexing the landing onto it is the
+// map making a claim the unit spends three missions complicating. The landing has its own ground.
+//
+// Placement is against the two route beats rather than by eye: the man works the north bank between
+// (11,7) and (14,5.5), the woman the ground between (12,11.5) and (14.5,12.5), and every stamp below
+// is clear of both circuits and of the cells the stops snap to. A lodge dropped on a stop does not
+// error — the stop silently snaps to the nearest open cell and the authored coordinate is lost.
+map.stamp(15, 5, T.barkLodge, "solid", "yehakin"); // north, behind his beat on the bank
+map.stamp(11, 8, T.barkLodge, "solid", "yehakin"); // west, over the corn ground
+map.stamp(15, 8, T.barkLodge, "solid", "yehakin"); // east, closing the working ground
+map.stamp(18, 6, T.dryingRack, "solid", "drying rack");
+map.stamp(18, 9, T.hideStretcher, "solid", "hide stretcher");
+
 // --- tree line --------------------------------------------------------------------------------
 // Frames the playfield on the north, east and south margins. Every site is outside the walkable
 // rectangle, which is the whole point: `decor` solidity, no collision rects at all. A tree the
@@ -292,10 +323,15 @@ const GRASS_GIDS = new Set([
   map.blockGidAt(0, 1, T.grass),
   map.blockGidAt(1, 1, T.grass),
 ]);
+// The rose, the berry and the flowering shrub are an English cottage garden's plants, scattered
+// over the settlement's grass. The landing is excluded: one ornamental shrub between a drying rack
+// and a yehakin says the two grounds are the same ground, and they are the thing this map is about.
+const inLanding = (col, row) => col >= 8 && col <= 21 && row >= 4 && row <= 16;
 for (let row = 0; row < HEIGHT; row += 1) {
   for (let col = 0; col < WIDTH; col += 1) {
     if (map.occupied(col, row) || map.occupied(col + 1, row)) continue; // bushes are 2 wide
     if (!isRiverbendLand(col + 0.5, row + 0.5)) continue;
+    if (inLanding(col, row)) continue;
     if (!GRASS_GIDS.has(map.ground[map.index(col, row)])) continue; // tracks, soil and shore stay clear
     if (hash01(col, row, 4) >= 0.05) continue;
     map.stamp(col, row, pick(BUSHES, col, row, 5), "decor", "bush");

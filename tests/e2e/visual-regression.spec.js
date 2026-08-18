@@ -319,6 +319,17 @@ test.describe("Gameplay visual-regression baselines", () => {
     await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
     await expect(page).toHaveScreenshot(snap("field-riverbend"));
 
+    // **The Powhatan landing has no baseline of its own, deliberately.** This shot frames the spawn
+    // at (26,18) and the landing is upriver at cols 9-20, so the yehakins, the drying rack, the hide
+    // stretcher and the corn ground added in Phase 84 are all outside it. Getting the camera there
+    // would mean walking fourteen tiles across the settlement with a helper that steers rather than
+    // pathfinds, and a flaky screenshot is worth less than no screenshot. What covers that art
+    // instead: tile-palettes.test.js proves the sheet is globbed (a missing glob throws in the
+    // resolver and renders the whole map as an empty frame), field-map-coordinates.test.js proves
+    // the two NPCs' routes still reach their stops around the new collision rects, and this very
+    // test proves the map still draws at all with the new tileset in its .tmj. What is NOT covered
+    // is the landing's composition, which was checked with scripts/assets/preview-map.js.
+
     // Riverbend's three missions (Phase 70). Two of the three engines are shared with Case 1.01 and
     // are baselined there already — what these add is the *content's* layout: an eight-row notebook
     // in two panels, a five-claim audit whose record leads with four paragraphs of the letter, and

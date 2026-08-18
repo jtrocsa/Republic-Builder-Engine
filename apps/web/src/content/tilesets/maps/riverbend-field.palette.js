@@ -18,7 +18,7 @@
 //
 // Coordinates are [labeled] — read off `npm run assets:label` grid renders of each sheet.
 
-import { FarmBuildings, FarmTrees } from "../derived-objects.coords.js";
+import { FarmBuildings, FarmTrees, IndigenousVillage } from "../derived-objects.coords.js";
 import { CANONICAL, tile } from "../canonical-palette.js";
 
 export default {
@@ -46,6 +46,8 @@ export default {
     // `soil` below) and its ploughed furrows read as a *field*, not a road. Nothing else from this
     // pack is drawn here.
     { path: "Medieval Fantasy Town/2.png", name: "medieval-fantasy-town-2" },
+    // The Powhatan landing, Phase 84. Appended rather than inserted: firstgid follows this order.
+    { path: "derived/indigenous-village.png", name: "derived-indigenous-village" },
   ],
 
   tiles: {
@@ -105,6 +107,18 @@ export default {
     houseCream: FarmBuildings.houseCream,
     meetinghouse: FarmBuildings.meetinghouse,
     barn: FarmBuildings.barn,
+
+    // --- the Powhatan landing ------------------------------------------------------------------
+    // A yehakin: saplings bent and lashed into a barrel frame, clad in bark or woven mats, with a
+    // smoke hole at the centre of the roof. Commissioned in Phase 83 (decision log 0067) and drawn
+    // here for the first time. THREE of the seven objects on that sheet belong on this map and the
+    // other four do not — the earth lodge is a Missouri-valley form and the two tipis are Plains,
+    // and putting either here would be the bohio substitution running the other way. The
+    // `barkLodge` is stamped three times on purpose: a Powhatan town was rows of houses built the
+    // same way, and three different silhouettes would be the wrong claim about it.
+    barkLodge: IndigenousVillage.barkLodge,
+    dryingRack: IndigenousVillage.dryingRack,
+    hideStretcher: IndigenousVillage.hideStretcher,
 
     /** Stone well with a shingled roof. */
     well: tile("farm/6.png", 14, 0, { h: 2, w: 2 }),

@@ -300,8 +300,12 @@ Indigenous.
 
 This unblocks `p1-indigenous-settlement` — re-scoped in the same pass from "a pre-contact Indigenous
 North American settlement," which named no people and was therefore the same flattening in the
-planned-map slate — and it unblocks Riverbend, where two Powhatan NPCs have stood in open grass with
-no props of their own since Phase 62 with a comment in `main.js` explaining why.
+planned-map slate — and it unblocked Riverbend, where two Powhatan NPCs had stood in open grass with
+no props of their own since Phase 62. **Phase 84 built that village**: three yehakins, a drying
+rack, a staked hide and a maize ground, laid out around the two NPCs' existing route circuits
+rather than the other way round. Three of the seven objects on the sheet belong on that map and the
+other four do not — the earth lodge is a Missouri-valley form and the tipis are Plains, and putting
+either in Virginia would be the bohío substitution running in the opposite direction.
 
 Three of the seven objects took four rolls, and the misses rhyme with the chevaux-de-frise. The bark
 lodge came back a smooth barrel, then a planked tube, then a green-thatched hut on sawn posts: the

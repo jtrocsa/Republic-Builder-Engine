@@ -157,6 +157,33 @@ describe("per-map palettes", () => {
   });
 });
 
+describe("every live palette's sheets are reachable from main.js", () => {
+  // **This has shipped three times and never once failed loudly.** A per-map palette gains a
+  // sheet; the generator writes a .tmj referencing it; nothing in main.js globs it; and
+  // createTilesetImageResolver() throws on the missing entry. The symptom is not a missing
+  // texture — it is that the canvas never sets data-rendered and the ENTIRE map is an empty
+  // frame, which reads like a routing or a save bug and gets debugged as one. Phase 84 hit it
+  // adding one sheet to Riverbend and lost a test run to it.
+  //
+  // Vite requires a literal in import.meta.glob, so this is deliberately a text scan of main.js
+  // rather than anything cleverer: the glob patterns cannot be imported and read at runtime.
+  // Scoped to sheets, which is where the whole class of failure lives.
+  const MAIN_JS = readFileSync(path.join(REPO_ROOT, "apps/web/src/main.js"), "utf8");
+
+  it.each(MAP_PALETTES.map((palette) => [palette.id, palette]))(
+    "%s: every sheet it declares is globbed in main.js",
+    (_id, palette) => {
+      for (const sheet of palette.sheets) {
+        expect(
+          MAIN_JS.includes(`./assets/tilesets/${sheet.path}`),
+          `${palette.id} draws ${sheet.path}, but main.js has no import.meta.glob for it — ` +
+            "the resolver will throw and the map will render as an empty frame"
+        ).toBe(true);
+      }
+    }
+  );
+});
+
 describe("planned map slate", () => {
   it("names only sheets that exist, for every non-blocked map (normal case)", () => {
     for (const map of PLANNED_MAPS) {

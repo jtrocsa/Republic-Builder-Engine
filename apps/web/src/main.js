@@ -371,6 +371,13 @@ const resolveRiverbendTilesetImage = createTilesetImageResolver(
   import.meta.glob("./assets/tilesets/Medieval Fantasy Town/2.png", {
     eager: true,
     import: "default",
+  }),
+  // The Powhatan landing, Phase 84. A palette gaining a sheet always costs a glob here as well,
+  // and forgetting one is not a missing-texture bug: createTilesetImageResolver() throws, the
+  // canvas never sets data-rendered, and the whole map is an empty frame. Third time.
+  import.meta.glob("./assets/tilesets/derived/indigenous-village.png", {
+    eager: true,
+    import: "default",
   })
 );
 function renderRiverbendTiledMap() {
@@ -1515,14 +1522,17 @@ const UNIT2_FIELD_NPCS = [
   },
   {
     // Placed on the open northwest shore, upriver of the English settlement and well clear of it,
-    // at a river landing of their own. These two stand in open ground with no props of their own,
-    // and until Phase 83 that was a hard block: the library held no North American Indigenous
-    // architecture at all, and reusing Island Survival's Taíno bohíos as generic "Native American"
-    // is forbidden in canonical-palette.js. **The art now exists** —
-    // derived/indigenous-village.png's `barkLodge` is an arbor frame under bark and woven mats,
-    // which is what a yehakin is. What is left is map work: riverbend-field.tmj has to be
-    // regenerated with a village zone at this landing. Until it is, the empty ground here is a
-    // scheduling fact and no longer a limitation of the tile library.
+    // at a river landing of their own — and as of Phase 84 there is a town standing on it. Three
+    // yehakins, a drying rack, a staked hide and a maize ground, from the art commissioned in
+    // Phase 83 (decision log 0067) and placed by scripts/generate-riverbend-tmj.js.
+    //
+    // For twenty-two phases these two stood in empty grass, because the library held no North
+    // American Indigenous architecture and reusing Island Survival's Taíno bohíos as generic
+    // "Native American" is forbidden in canonical-palette.js. The dialogue below carried the whole
+    // claim on its own: he says the canoes have carried corn and news between these towns for
+    // generations, and there were no towns; she says the corn grew in our fields, and there was no
+    // field. Their coordinates are unchanged — the village was laid out around the two circuits,
+    // not the other way round.
     id: "powhatan-man",
     x: 11.0,
     y: 7.0,

@@ -252,9 +252,9 @@ sheets across 28 packs, and the `derived-objects` packing pipeline.
    three culture areas filed as one job, which is the register making the mistake it was written to
    stop. It is now two registered gaps — Haudenosaunee longhouse, Puebloan adobe — and the
    arbor-frame bark-and-mat lodge is closed: `derived/indigenous-village.png`, seven objects. It
-   unblocked more than the railhead. Riverbend's Powhatan landing has been empty ground since Phase
-   62 for exactly this reason, and a yehakin is the same building as the Kanza bark lodge, so one
-   object serves both.
+   unblocked more than the railhead: a yehakin is the same building as the Kanza bark lodge, so one
+   object serves both, and **Phase 84 built Riverbend's Powhatan landing** — empty ground since
+   Phase 62 for exactly this reason.
 3. **Unit 6's cast** — the railhead's people.
 4. **`streetscape.midCentury`** — unblocks Unit 8.
 5. **`liaison-meridian`** — Voss's revealed costume, needed for Unit 6's reveal and not before.
