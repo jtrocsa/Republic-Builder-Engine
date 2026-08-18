@@ -799,6 +799,172 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "farmwife-walk",
   },
+
+  // ---- Unit 6 · Cottonwood Junction, Kansas, 1873 (Phase 85) ------------------------------------
+  //
+  // Eleven, which is the largest single import since Phase 60, because this map has more distinct
+  // economic positions on it than any that came before: a company town has a seller, a registrar,
+  // a speculator, a surveyor, three kinds of hired labour, a claimant, a clerk, and the people
+  // whose land is being sold out from under them. The cast IS the argument.
+  //
+  // No props on any of them. The Phase 2 run report established that a shovel, a newspaper and an
+  // apron all fail to survive rotation, and the 48x56 canvas clips rather than resizes — so a
+  // surveyor's chain and a teamster's whip were excluded from the briefs rather than ordered and
+  // lost. Costume carries the trade instead, which at 45px of body is the stronger signal anyway.
+  //
+  // No `idleGroup` either, matching every other field cast. Voss is still the only character in
+  // the game that declares one.
+  {
+    key: "railroad-land-agent",
+    stem: "chronicle-sprites/field/npc-railroad-land-agent",
+    name: "Railroad land agent",
+    // Brown frock coat, gold waistcoat, wide-brim brown hat. He sells the railroad's grant land,
+    // and he is one of three men on this map who do their work with paper — the trio that has to
+    // separate at a glance, because all three have business at the land office. He is the one
+    // wearing a hat, and the only one in brown.
+    id: "bf937f72-ad9f-4d56-be99-bbb9c8fa2428",
+    frames: 8,
+    walkGroup: "land-agent-walk",
+  },
+  {
+    key: "land-office-register",
+    stem: "chronicle-sprites/field/npc-land-office-register",
+    name: "Land office register",
+    // Black frock coat, grey hair, bare-headed, elderly. The federal registrar: he does not sell
+    // anything, he records who is entitled to what. Second of the three paper men, separated from
+    // the land agent by having no hat and from the promoter by being the darkest figure on the map.
+    // Deliberately not sinister, on the same reasoning as `richmond-bookkeeper` — the mission is
+    // that an ordinary clerk executing an ordinary procedure is what a removal looks like from the
+    // inside, and a theatrical villain here would let a student off the hook.
+    id: "1faef98a-18ac-49f6-b0f5-5f82cba2c5b0",
+    frames: 8,
+    walkGroup: "register-walk",
+  },
+  {
+    key: "townsite-promoter",
+    stem: "chronicle-sprites/field/npc-townsite-promoter",
+    name: "Town-site promoter",
+    // Cream suit, black bowler, red cravat. Third paper man and the only light-coloured figure in
+    // the cast, which is what separates him from the other two across a street. He is also the
+    // only one selling something that does not exist yet — the town — and the suit is the point:
+    // he is dressed better than anybody here and does none of the work.
+    // Built at scale 0.938, one of two in the whole cast; the bowler is what costs him the pixels.
+    id: "5af81aee-b2e5-4bd5-b457-79ae8e81b94a",
+    frames: 8,
+    walkGroup: "promoter-walk",
+  },
+  {
+    key: "deputy-surveyor",
+    stem: "chronicle-sprites/field/npc-deputy-surveyor",
+    name: "Deputy surveyor",
+    // Tan field clothing and a wide tan hat — the one paper man who works outdoors, which is why
+    // he is dressed like the labourers and not like the other three. He runs the section lines,
+    // and his survey is the map's spine: the instrument that made the reservation sellable.
+    // No chain and no staff. See the note on props above.
+    id: "af435e95-9a90-468a-b7d2-0d59967af7e9",
+    frames: 8,
+    walkGroup: "surveyor-walk",
+  },
+  {
+    key: "telegraph-operator",
+    stem: "chronicle-sprites/field/npc-telegraph-operator",
+    name: "Telegraph operator",
+    // White shirt, oxblood waistcoat, charcoal trousers, dark hat.
+    //
+    // **Regenerated, and the reason is Meridian.** The first roll came back 40% dark teal by pixel
+    // count — cap, waistcoat and trousers — and teal is Meridian's reserved accent
+    // (docs/art/MERIDIAN-VISUAL-IDENTITY.md §3). Phase 82 caught the same collision in a brief and
+    // changed a merchant's coat from teal to plum before it was generated; this one got through to
+    // the art because the brief never said the word. It matters more here than it did there: §5 of
+    // THE-MAP-PROGRAM.md puts Meridian's first visible operation on this map, so a period character
+    // wearing the frame's reserved colour is arguing against the reveal from inside it.
+    //
+    // The replacement brief said bare-headed three times and the generator gave him a hat anyway.
+    // Kept, because the blocking defect was the colour and the hat costs nothing: he works in the
+    // telegraph office interior, where the only person he is ever seen beside is whoever else is in
+    // that room. `track-grader` is the one he would collide with in a line-up, and they never share
+    // a surface.
+    id: "43b11f42-e257-4ee6-8d60-4f4bb7ed4815",
+    frames: 8,
+    walkGroup: "operator-walk",
+  },
+  {
+    key: "track-grader",
+    stem: "chronicle-sprites/field/npc-track-grader",
+    name: "Track grader",
+    // White shirt, suspenders, dark flat cap, grey trousers. Graders moved the earth the track was
+    // laid on, and the camp they live in is Irish, German and Black — Civil War veterans and
+    // immigrant labour, per the brief. He is the cheapest silhouette in the cast on purpose: no
+    // coat, no waistcoat, nothing but shirt and braces, which is what separates him from every
+    // other man here at a distance.
+    id: "92fbb401-ee74-4f63-8f6c-9c10d6ab9592",
+    frames: 8,
+    walkGroup: "grader-walk",
+  },
+  {
+    key: "freight-teamster",
+    stem: "chronicle-sprites/field/npc-freight-teamster",
+    name: "Freight teamster",
+    // Brown wide-brim hat, dark waistcoat, maroon shirt, brown trousers. He hauls what the railroad
+    // brings, and he is the character the map uses to show that the line does not go everywhere —
+    // freight comes off the platform and onto a wagon, and somebody is paid differently for each leg.
+    id: "b4a3d242-d0d2-4a46-aac3-bf67329decc8",
+    frames: 8,
+    walkGroup: "teamster-walk",
+  },
+  {
+    key: "texas-drover",
+    stem: "chronicle-sprites/field/npc-texas-drover",
+    name: "Texas drover",
+    // Tan hat, red shirt, blue neckerchief. Up the trail with the cattle, which is the industry
+    // the land sale was for. Shares a red torso with `kanza-man` and nothing else: the hat is the
+    // separator, and the two of them are at opposite ends of the map by construction — pens on
+    // one side of the line, village on the other.
+    id: "c4fde8ea-16f3-4cb8-b4c2-db191b2783ae",
+    frames: 8,
+    walkGroup: "drover-walk",
+  },
+  {
+    key: "homesteader-woman",
+    stem: "chronicle-sprites/field/npc-homesteader-woman",
+    name: "Homesteader woman",
+    // Mid-blue dress and bonnet. One of two skirted silhouettes in this cast, and the pair has to
+    // be designed against rather than assumed apart: she is #385192 with a bonnet where
+    // `kanza-woman` is #2a334e bare-headed, so value and headwear do the work colour alone would
+    // not. **They must not be posted within sight of each other**, which the map's composition
+    // gives for free — the claim is on one side of the track and the village on the other.
+    id: "748e1f28-fb88-4ca2-84eb-261b989c412d",
+    frames: 8,
+    walkGroup: "homesteader-walk",
+  },
+  {
+    key: "kanza-man",
+    stem: "chronicle-sprites/field/npc-kanza-man",
+    name: "Kanza man",
+    // Red trade-cloth coat over dark blue trousers, bare-headed. The red is not a liberty: red and
+    // blue wool stroud were the staple of the prairie trade and were worn as outer garments, so
+    // this is a man in the cloth his people bought, not a costume.
+    //
+    // He and `kanza-woman` are on this map in June 1873 in the middle of being removed, not after
+    // — THE-MAP-PROGRAM.md §5 is explicit that the Indigenous presence here is current and
+    // organised, named and speaking first, on the same register rule Unit 5 applies to enslaved and
+    // impressed people. Two characters is thin for that and is the floor rather than the intent;
+    // the village itself carries the rest through `derived/indigenous-village.png`.
+    id: "7552d378-6271-4fe5-9bf0-2983164f3573",
+    frames: 8,
+    walkGroup: "kanza-man-walk",
+  },
+  {
+    key: "kanza-woman",
+    stem: "chronicle-sprites/field/npc-kanza-woman",
+    name: "Kanza woman",
+    // Dark navy dress, belted, bare-headed. See the note on `homesteader-woman` for why those two
+    // are the pair this cast had to separate, and the note on `kanza-man` for the register both of
+    // them speak in.
+    id: "534b1b28-4883-4c83-937d-f77863934733",
+    frames: 8,
+    walkGroup: "kanza-woman-walk",
+  },
 ];
 
 /**

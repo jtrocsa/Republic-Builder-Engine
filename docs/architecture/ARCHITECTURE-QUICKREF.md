@@ -189,7 +189,7 @@ Nothing else from `THE-FIELD-LIAISON.md` is scheduled: the reveal, `liaison-meri
 
 ## 6. Next approved phase
 
-**Phase 84 — Unit 6, the railhead. Kansas plains, 1873.** The first of Periods 6–9, and the
+**Phase 85 — Unit 6, the railhead. Kansas plains, 1873.** The first of Periods 6–9, and the
 standing product priority per `POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md` §7 and decision log
 `0033`. It is decided rather than proposed: `THE-MAP-PROGRAM.md` §5 fixes the place, slate C
 (`interview · assembly · trace`), the interview's question, three composite records, two interiors

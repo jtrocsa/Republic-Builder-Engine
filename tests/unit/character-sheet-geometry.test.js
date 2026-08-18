@@ -93,6 +93,19 @@ const CAST = [
   ["chronicle-sprites/field/npc-free-tradesman", 9],
   ["chronicle-sprites/field/npc-loyalist-merchant", 9],
   ["chronicle-sprites/field/npc-farmwife", 9],
+
+  // Unit 6 — Cottonwood Junction, Kansas, 1873 (Phase 85).
+  ["chronicle-sprites/field/npc-railroad-land-agent", 9],
+  ["chronicle-sprites/field/npc-land-office-register", 9],
+  ["chronicle-sprites/field/npc-townsite-promoter", 9],
+  ["chronicle-sprites/field/npc-deputy-surveyor", 9],
+  ["chronicle-sprites/field/npc-telegraph-operator", 9],
+  ["chronicle-sprites/field/npc-track-grader", 9],
+  ["chronicle-sprites/field/npc-freight-teamster", 9],
+  ["chronicle-sprites/field/npc-texas-drover", 9],
+  ["chronicle-sprites/field/npc-homesteader-woman", 9],
+  ["chronicle-sprites/field/npc-kanza-man", 9],
+  ["chronicle-sprites/field/npc-kanza-woman", 9],
 ];
 
 // Characters that also ship a breathing cycle, and its column count. Mirrors the `idleColumns`
