@@ -79,4 +79,26 @@ test.describe("Boot and onboarding", () => {
     expect(stored.tutorial.step).toBe("tour-intro");
     expect(stored.profile.name).toBe("Test Player");
   });
+
+  // The wordmark's glow used to be switched on by a `.lit` class that JS added 2.7s in — which is
+  // after every letter had already arrived, so the word assembled unlit and then brightened as a
+  // block. The glow now travels with each letter (tsLetterIn ignites and settles it), and `.lit`
+  // is only the slow ambient breathe that joins once the word is whole.
+  //
+  // Removing the class rather than racing that timer is deliberate: the assertion is that the
+  // letters do not depend on it, and a test that raced the 2.7s would be a flake on a slow machine
+  // and would still pass if the glow moved back.
+  test("the wordmark's letters carry their own glow, not a class added later", async ({ page }) => {
+    await page.goto("/");
+    const wordmark = page.locator(".title-wordmark");
+    await expect(wordmark).toBeVisible();
+    await wordmark.evaluate((el) => el.classList.remove("lit"));
+
+    const shadow = await wordmark
+      .locator("span")
+      .first()
+      .evaluate((el) => getComputedStyle(el).textShadow);
+    expect(shadow).not.toBe("none");
+    expect(shadow).toContain("rgba(225, 182, 93");
+  });
 });

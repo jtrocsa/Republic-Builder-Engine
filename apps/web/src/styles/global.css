@@ -10821,6 +10821,12 @@ details[open] > summary.manage-content-unit-toggle::before {
   --ts-navy-deep: #020d13;
   --ts-navy-lift: #0a2b3b;
   --ts-gold-deep: #a67c34;
+  /* The wordmark's glow, stated once because two rules have to agree on it: the resting value is
+     both a letter's base text-shadow and tsLetterIn's last stop, so a letter that ignites settles
+     onto exactly what an unanimated one already has and the animation's forwards fill changes
+     nothing when it takes over. --ts-flare is the ignition, brighter and wider. */
+  --ts-glow: 0 0 18px rgba(225, 182, 93, 0.34), 0 0 46px rgba(225, 182, 93, 0.14);
+  --ts-flare: 0 0 26px rgba(240, 212, 136, 0.72), 0 0 66px rgba(225, 182, 93, 0.4);
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -10909,16 +10915,15 @@ details[open] > summary.manage-content-unit-toggle::before {
   display: inline-block;
   position: relative;
   opacity: 0;
+  text-shadow: var(--ts-glow);
   transform: translateY(0.14em) scale(1.04);
   filter: blur(6px);
   animation: tsLetterIn 0.6s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
   animation-delay: calc(1.55s + var(--i) * 0.1s);
 }
-.title-wordmark.lit span {
-  text-shadow:
-    0 0 18px rgba(225, 182, 93, 0.34),
-    0 0 46px rgba(225, 182, 93, 0.14);
-}
+/* The letters light themselves as they arrive (see tsLetterIn), so .lit is only the slow ambient
+   bloom that joins once the word is whole. Don't put a text-shadow back here: tsLetterIn runs
+   `forwards`, and an animation's fill beats a plain declaration, so it would never be seen. */
 .title-wordmark.lit {
   animation: tsGlowBreathe 5s ease-in-out infinite;
 }
@@ -11001,15 +11006,18 @@ details[open] > summary.manage-content-unit-toggle::before {
     opacity: 0;
     transform: translateY(0.14em) scale(1.04);
     filter: blur(6px);
+    text-shadow: var(--ts-flare);
   }
   45% {
     opacity: 1;
     filter: blur(1.2px);
+    text-shadow: var(--ts-flare);
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
+    text-shadow: var(--ts-glow);
   }
 }
 @keyframes tsGlowBreathe {

@@ -5137,8 +5137,10 @@ function titleScreen() {
 let titleDecorFrame = null;
 let titlePromptTimer = null;
 let titleMotes = [];
-// The gold motes drifting up behind the wordmark. Reveals the prompt (and the wordmark's glow) after
-// the letters have finished animating in. Reduced motion: no canvas loop, prompt shown immediately.
+// The gold motes drifting up behind the wordmark. Reveals the prompt, and starts the wordmark's slow
+// ambient breathe, once the letters have finished animating in — each letter lights *itself* on
+// arrival, in tsLetterIn, so `lit` is no longer what makes the word glow. Reduced motion: no canvas
+// loop, prompt shown immediately.
 function startTitleDecor() {
   stopTitleDecor();
   const reduce = prefersReducedMotion();
