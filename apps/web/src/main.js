@@ -133,6 +133,7 @@ import { UNIT_02_ACTIVITIES } from "./content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "./content/activities/unit-03-activities.js";
 import { UNIT_04_ACTIVITIES } from "./content/activities/unit-04-activities.js";
 import { UNIT_05_ACTIVITIES } from "./content/activities/unit-05-activities.js";
+import { UNIT_06_ACTIVITIES } from "./content/activities/unit-06-activities.js";
 // The Codex's own arithmetic, kept pure and out here: what a filed record looks like, and how two
 // of them relate. main.js keeps the wiring and the screen.
 import {
@@ -4803,14 +4804,20 @@ const caseById = (id) => {
 // classroom customization is active, so official content renders unchanged
 // by default — see remote-content-selection-repository.js.
 export const sourcesForCase = (caseId) => (UNIT_SOURCES[caseId] || []).map(resolveSourceSlot);
+// Reads UNIT_SOURCES rather than naming each unit's array, the same way caseById() reads UNITS
+// rather than naming each unit's cases. It was a hand-written chain of five `CASE_0NN_SOURCES.find`
+// calls and **Unit 6 was never added to it** — so from Phase 85 until Phase 87 no record on the
+// railhead could be resolved by id at all. Nothing failed loudly: the field draws its markers and
+// its "Examine →" buttons from `activeFieldMap().sourcePoints`, which is a different table, so all
+// seven records looked present and pressing any of them landed on "Nothing open." A registration
+// site that can go stale silently is one this file does not need, since UNIT_SOURCES already has
+// every array in it.
 export const sourceById = (id) => {
-  const official =
-    CASE_001_SOURCES.find((item) => item.id === id) ||
-    CASE_004_SOURCES.find((item) => item.id === id) ||
-    CASE_007_SOURCES.find((item) => item.id === id) ||
-    CASE_010_SOURCES.find((item) => item.id === id) ||
-    CASE_013_SOURCES.find((item) => item.id === id);
-  return official ? resolveSourceSlot(official) : undefined;
+  for (const sources of Object.values(UNIT_SOURCES)) {
+    const official = sources.find((item) => item.id === id);
+    if (official) return resolveSourceSlot(official);
+  }
+  return undefined;
 };
 // Author Mode unlocks every unit/case for design navigation without touching the save.
 const isUnlocked = (id) => authorMode || progress.unlocked.includes(id);
@@ -10481,14 +10488,16 @@ function runFieldMovementLoop(now) {
   fieldMoveFrame = window.requestAnimationFrame(runFieldMovementLoop);
 }
 // Every unit's activities in one flat lookup keyed by source id, the same shape as the quest
-// lookups above. A source with no entry here falls through to sourceReader() exactly as the 18
-// remaining sources in Units 3-5 still do.
+// lookups above. A source with no entry here falls through to sourceReader() exactly as the 22
+// remaining sources in Units 3-6 still do — four of them Unit 6's, which has seven records and the
+// same three missions every other map gets.
 const ACTIVITIES_BY_SOURCE = {
   ...UNIT_01_ACTIVITIES,
   ...UNIT_02_ACTIVITIES,
   ...UNIT_03_ACTIVITIES,
   ...UNIT_04_ACTIVITIES,
   ...UNIT_05_ACTIVITIES,
+  ...UNIT_06_ACTIVITIES,
 };
 
 function activityFor(sourceId) {

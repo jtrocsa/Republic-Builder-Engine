@@ -149,11 +149,18 @@ saying so in its own first sentence. The canonical documents live in `content/pr
 — **already written for all four units, 159 cited records** — and feed the missions and Archive
 Challenges rather than the map.
 
-**Units 3–5's activities shipped in Phase 81F** — nine missions across the three maps, running the
-slates above. Three interviews now exist and none of them asks the same thing, which is the rule
-that actually binds: Riverbend asks how one arrangement looks from eight positions inside it,
-Philadelphia asks what a public position is made of, Richmond asks what testimony costs when the
-government is writing it down. The right-hand column of §2's table is the half to author against.
+**Units 3–5's activities shipped in Phase 81F and Unit 6's in Phase 87** — twelve missions across
+four maps, running the slates above, and every authored field map in the game now has three. Four
+interviews exist and none of them asks the same thing, which is the rule that actually binds:
+Riverbend asks how one arrangement looks from eight positions inside it, Philadelphia asks what a
+public position is made of, Richmond asks what testimony costs when the government is writing it
+down, and Cottonwood Junction asks what entitles a person to be standing here and on whose paper.
+The right-hand column of §2's table is the half to author against.
+
+**Unit 6 is also where an interview first names people standing indoors.** Two of its eight speakers
+are in the land office, which is where the record the mission opens from is anchored — so the door
+has to be opened before the interview exists at all, and the cost to the player is nothing they were
+not already paying. See decision log `0071` §4 for the test that had to be widened to allow it.
 
 ### Unit 6 — the railhead. Kansas plains, 1873. Slate C.
 

@@ -25,6 +25,7 @@ import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js"
 import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js";
 import { UNIT_04_ACTIVITIES } from "../content/activities/unit-04-activities.js";
 import { UNIT_05_ACTIVITIES } from "../content/activities/unit-05-activities.js";
+import { UNIT_06_ACTIVITIES } from "../content/activities/unit-06-activities.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -129,17 +130,15 @@ export function loadChronicleContent() {
       archiveSaqQuests: unit05Quests.UNIT_05_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit05Quests.UNIT_05_ARCHIVE_DBQ_QUESTS,
     },
-    // Unit 6 is registered here for validation and is deliberately NOT wired into main.js's UNITS
-    // yet: its map is unbuilt, so a Chronotravel to case-016 has nowhere to land. It carries no
-    // `activities` key for the same reason Units 3-5 carried none before Phase 81F — every one of
-    // its six sources has `activityRoute: null`, and checkActivityRoutes() only demands an activity
-    // for a route that names an engine. Its two missions are a hipp and an mcq, so it has
-    // archiveSourceAnalysisQuests and archiveMcqQuests where Unit 5 has archiveSequencingQuests and
-    // archiveEvidenceQuests. First unit to carry that pair.
+    // Unit 6 reached parity with Units 1-5 in Phase 87: its map shipped in Phase 85, its two
+    // interiors in Phase 86, and its three activities here. Its two missions are a hipp and an mcq,
+    // so it has archiveSourceAnalysisQuests and archiveMcqQuests where Unit 5 has
+    // archiveSequencingQuests and archiveEvidenceQuests. First unit to carry that pair.
     unit06: {
       unit: unit06Campaign.UNIT_06,
       sources: unit06Campaign.CASE_016_SOURCES,
       lanes: unit06Campaign.CASE_016_LANES,
+      activities: UNIT_06_ACTIVITIES,
       mcqQuests: unit06Quests.UNIT_06_MCQ_QUESTS,
       evidenceOrganizingQuests: unit06Quests.UNIT_06_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit06Quests.UNIT_06_SEQUENCING_QUESTS,

@@ -588,10 +588,6 @@ function main() {
     )
   );
 
-  // Unit 6 has no UNIT_06_ACTIVITIES block, and that is not an omission: all six of its sources
-  // carry `activityRoute: null` until the activities are authored, which is the state Units 3-5
-  // shipped in until Phase 81F. checkActivityRoutes() only demands an activity for a route that
-  // names an engine, so adding the block before the content exists would fail on an empty map.
   results.push(runSchema("unit-06-campaign.js: UNIT_06", UnitSchema, content.unit06.unit));
   results.push(
     runSchema("unit-06-campaign.js: CASE_016_LANES", CaseLanesSchema, content.unit06.lanes)
@@ -601,6 +597,13 @@ function main() {
       "unit-06-campaign.js: CASE_016_SOURCES",
       buildSourcesSchema({ reconstructionIds: content.unit06.lanes.map((lane) => lane.id) }),
       content.unit06.sources
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-06-activities.js: UNIT_06_ACTIVITIES",
+      ActivityMapSchema,
+      content.unit06.activities
     )
   );
   results.push(

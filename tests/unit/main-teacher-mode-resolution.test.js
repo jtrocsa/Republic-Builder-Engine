@@ -24,4 +24,23 @@ describe("sourcesForCase / sourceById (Teacher Mode resolution wiring)", () => {
   it("returns undefined for an unknown source id, same as before Teacher Mode existed", () => {
     expect(sourceById("not-a-real-source")).toBeUndefined();
   });
+
+  // The regression this exists for: `sourceById` was a hand-written chain of five
+  // `CASE_0NN_SOURCES.find` calls, and Unit 6 was never added to it. From Phase 85 until Phase 87
+  // every record on the railhead was unresolvable — and nothing failed loudly, because the field
+  // draws its markers and its "Examine →" buttons from `activeFieldMap().sourcePoints`, a different
+  // table entirely. All seven looked present; pressing one landed on "Nothing open."
+  //
+  // Checked through `sourcesForCase` rather than against a list of unit modules, so a seventh unit
+  // is covered the moment its array is registered in UNIT_SOURCES — which is the same thing the
+  // implementation now reads.
+  it.each(["case-001", "case-004", "case-007", "case-010", "case-013", "case-016"])(
+    "resolves every one of %s's sources by id",
+    (caseId) => {
+      const sources = sourcesForCase(caseId);
+      expect(sources.length, `${caseId} has no sources`).toBeGreaterThan(0);
+      const unresolvable = sources.map((s) => s.id).filter((id) => !sourceById(id));
+      expect(unresolvable, `${caseId} has records no screen could open`).toEqual([]);
+    }
+  );
 });

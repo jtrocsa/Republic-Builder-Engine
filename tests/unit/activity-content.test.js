@@ -12,7 +12,7 @@
 // observation keyed to a question nobody can ask, an activity with no `howItWorks` that a student
 // has to reverse-engineer.
 //
-// Covers all five authored units — every one of them has three missions as of Phase 81F. Unit 4 has
+// Covers all six authored units — every one of them has three missions as of Phase 87. Unit 4 has
 // no interview among its three, which is the one case where the interview rules below legitimately
 // find nothing to check; that is slate D and it is deliberate (THE-MAP-PROGRAM.md §2).
 
@@ -31,6 +31,8 @@ import { CASE_007_SOURCES } from "../../apps/web/src/content/unit-03-campaign.js
 import { UNIT_05_ACTIVITIES } from "../../apps/web/src/content/activities/unit-05-activities.js";
 import { CASE_010_SOURCES } from "../../apps/web/src/content/unit-04-campaign.js";
 import { CASE_013_SOURCES } from "../../apps/web/src/content/unit-05-campaign.js";
+import { UNIT_06_ACTIVITIES } from "../../apps/web/src/content/activities/unit-06-activities.js";
+import { CASE_016_SOURCES } from "../../apps/web/src/content/unit-06-campaign.js";
 
 // `sources` rides along because one rule below is about the *order* a case can be finished in, and
 // that lives on the record (`requiresSourceId`) rather than on the activity.
@@ -40,7 +42,24 @@ const AUTHORED_UNITS = [
   { unitId: "unit-03", activities: UNIT_03_ACTIVITIES, sources: CASE_007_SOURCES },
   { unitId: "unit-04", activities: UNIT_04_ACTIVITIES, sources: CASE_010_SOURCES },
   { unitId: "unit-05", activities: UNIT_05_ACTIVITIES, sources: CASE_013_SOURCES },
+  { unitId: "unit-06", activities: UNIT_06_ACTIVITIES, sources: CASE_016_SOURCES },
 ];
+
+/**
+ * Everybody standing on this unit's map, indoors and out.
+ *
+ * Deliberately the same set main.js's `fieldSurfaces()` walks, and it used to be narrower than that:
+ * this file read `FIELD_MAPS[unitId].npcs` alone, which is the outdoor roster. `fieldNpcById()` has
+ * always resolved a briefing, a debrief and an inline question chip across every surface of the map,
+ * so the test was rejecting content the game plays correctly — and it went unnoticed only because
+ * no interior had a person in it worth briefing a mission until Phase 86. Unit 6's land office has
+ * two, and the receipt the interview opens from is anchored to one of them.
+ */
+const castOf = (unitId) => {
+  const map = FIELD_MAPS[unitId] || {};
+  const rooms = Object.values(map.interiors || {});
+  return new Set([map, ...rooms].flatMap((surface) => (surface.npcs || []).map((npc) => npc.id)));
+};
 
 const entriesOf = (activities) => Object.entries(activities);
 const ofKind = (activities, kind) =>
@@ -79,7 +98,7 @@ describe("activity content: the rules every authored mission is held to", () => 
     //
     // The debrief's optional speaker is held to the same rule, and for the same reason — it renders
     // through the same plate at the other end of the mission.
-    const npcIds = new Set((FIELD_MAPS[unitId]?.npcs || []).map((npc) => npc.id));
+    const npcIds = castOf(unitId);
     for (const [sourceId, activity] of entriesOf(activities)) {
       if (activity.briefing) {
         expect(npcIds, `${sourceId} is briefed by an NPC not on this map`).toContain(
@@ -375,7 +394,7 @@ describe("activity content: a speaker is a person standing on the map", () => {
       // main.js builds interviewTokens() and renders the inline question chips from NPC ids, so a
       // speaker id that does not match an NPC on this unit's map is an activity nobody can play out
       // in the field — and the symptom is silence, not an error.
-      const npcIds = new Set((FIELD_MAPS[unitId]?.npcs || []).map((npc) => npc.id));
+      const npcIds = castOf(unitId);
       for (const [sourceId, activity] of ofKind(activities, "interview")) {
         const strangers = activity.speakers.map((s) => s.id).filter((id) => !npcIds.has(id));
         expect(strangers, `${sourceId} names speakers not on the ${unitId} map`).toEqual([]);

@@ -49,14 +49,13 @@
 // content/primary-source-library/unit-06-source-library.js and feed the missions and the Archive
 // Challenges below.
 //
-// **Every `activityRoute` here is `null`, and that is a stage rather than a decision.** Units 3, 4
-// and 5 shipped in exactly this state and stayed in it until Phase 81F flipped nine of them at
-// once; a route may only name an engine once an activity is authored for that record, because
-// `validate:content` cross-checks the two and fails if a route has nothing behind it. The slate is
-// already fixed — `THE-MAP-PROGRAM.md` §2 gives this map slate C, `interview · assembly · trace` —
-// and it lands on the receipt, the payroll and the survey in that order. The map itself is not
-// built yet either, so this unit is registered for validation and is deliberately **not** wired
-// into `main.js`'s UNITS: the content is real and checked, and nothing routes to it.
+// **Three of the seven `activityRoute`s name an engine as of Phase 87**, which is the state Units
+// 3–5 reached in Phase 81F. `THE-MAP-PROGRAM.md` §2 gives this map slate C, `interview · assembly ·
+// trace`, and this file's own earlier revision said it would land on the receipt, the payroll and
+// the survey in that order; it did. The other four records stay `null` on purpose — a map has three
+// missions, not seven, and the remaining records are read rather than played. A route may only name
+// an engine once an activity is authored for that record, because `validate:content` cross-checks
+// the two and fails if a route has nothing behind it.
 //
 // The forms are documentary and the figures are real. The trust-land sale terms follow the act of
 // 8 May 1872; the survey follows the General Land Office's rectangular system and its printed
@@ -189,7 +188,7 @@ export const CASE_016_SOURCES = [
     date: "June 1873",
     record: "The slip handed back across the counter when a tract has been paid for",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "interview",
     excerpt:
       "UNITED STATES LAND OFFICE. — RECEIVER'S RECEIPT, No. 1,412. Received of the person named below the sum endorsed hereon, being in full for the north-east quarter of section twenty-one, in township eighteen south, of range eight east of the sixth principal meridian, containing one hundred and sixty acres, sold this day at public sale under the act of Congress approved the eighth of May, eighteen hundred and seventy-two, providing for the appraisement and sale of the trust lands and the diminished reserve of the Kansas or Kaw tribe of Indians. Sold to the highest bidder, for cash, no tract exceeding one hundred and sixty acres. The proceeds of this sale, less the expenses thereof, to be placed to the credit of the said tribe. Patent to issue in due course. Purchaser will preserve this receipt: it is his only evidence of title until the patent is delivered. — RECEIVER.",
     prompt:
@@ -209,7 +208,7 @@ export const CASE_016_SOURCES = [
     date: "July 1873",
     record: "The month's sheet for one grading section, and the paper a man is paid in",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "assembly",
     excerpt:
       "CONSTRUCTION DEPARTMENT. — PAY SHEET, SECTION 4, GRADING. Rate allowed, one dollar and seventy-five cents the day; the day to be reckoned from the whistle at six to the whistle at six, dinner not counted. Days worked, 26. GROSS, forty-five dollars and fifty cents. — DEDUCTIONS. Board at the company boarding car, three dollars the week, four weeks, 12.00. Blankets and slicker, issued, charged, 4.50. Shovel and pick, charged on issue, credited on return in good order, 2.25. Store account, order book No. 3, 9.80. Doctor, one half of one per cent, 0.23. Hospital fund, 0.25. TOTAL DEDUCTIONS, 29.03. — BALANCE, sixteen dollars and forty-seven cents, PAYABLE IN TIME CHECK at the company's office at the close of the quarter, or discounted for cash at the store at the rate current there. — No advance of wages will be made. Men leaving before the completion of the section forfeit the unpaid balance.",
     prompt:
@@ -230,7 +229,7 @@ export const CASE_016_SOURCES = [
     date: "1873, returning a line first run in 1859",
     record: "The bound field book a contract surveyor returns with his plat",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "trace",
     // The audit chain reads the land office's own instrument, so the receipt has to have been
     // recovered first. Same shape as Riverbend's letter, Canal Crossroads' time book and
     // Richmond's requisition — and it decides which mission can be last, which is what `arcClose`
