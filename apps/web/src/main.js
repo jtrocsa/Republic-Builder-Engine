@@ -146,6 +146,7 @@ import {
   codexStats,
 } from "./engine/codex-archive.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
+import { createWarpTunnel } from "./engine/warp-tunnel.js";
 import { createScene, stepScene, advanceScene, skipScene } from "./engine/cutscene.js";
 import { CUTSCENES, MERIDIAN_REVEAL_TRIGGER } from "./content/cutscenes.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
@@ -4670,6 +4671,19 @@ let briefingStep = 0;
  * promise chain has nothing to clear.
  */
 let warpRun = 0;
+/**
+ * The warp tunnel currently painting, if one is.
+ *
+ * Module-level rather than closed over inside `beginWarp()` because `render()` has to be able to
+ * stop it: leaving a warp screen mid-tunnel — skipped, reloaded, or any other navigation — must
+ * not leave an rAF loop drawing into a canvas this render is about to replace. Same shape and same
+ * reason as `stopHubScene()`, which is called from the same place.
+ */
+let warpTunnel = null;
+function stopWarpTunnel() {
+  warpTunnel?.stop();
+  warpTunnel = null;
+}
 // Director intro scene (intro-welcome/intro-briefing/intro-protocol) typewriter state.
 // introLineIndex tracks position within the current step's body-line array; introSeenSteps
 // is runtime-only (not persisted to progress) so a step only ever types out once per session
@@ -10425,8 +10439,22 @@ function miniGamesScreen() {
 // picture, and the title sequence already established that a full-bleed screen here drops the
 // header rather than framing it.
 
-/** How long a warp is held, and how long its bar takes to fill. */
+/**
+ * How long the plate is held once the warp has arrived on it, and how long the ring takes to fill.
+ *
+ * The floor, not the whole wait — `beginWarp()` still gates the hand-over on the destination's art
+ * as well, and the player leaves when they press the prompt.
+ */
 const WARP_DWELL_MS = 2500;
+/**
+ * The warp itself — the canvas beat in front of the plate.
+ *
+ * Zero under `prefers-reduced-motion: reduce`, where the tunnel does not exist at all: the screen
+ * opens on the plate. That is the correct behaviour for a full-screen rushing streak field, and it
+ * is also what keeps this screen's visual baselines deterministic, since they are captured under
+ * exactly that media state and the tunnel is the one looping thing here.
+ */
+const WARP_TUNNEL_MS = 2000;
 /**
  * The longest a slow network may add to that.
  *
@@ -10437,11 +10465,21 @@ const WARP_DWELL_MS = 2500;
 const WARP_ASSET_CEILING_MS = 6000;
 
 /**
- * One warp screen.
+ * One warp screen — both of its beats.
  *
  * `plate` is a CHRONOTRAVEL_PLATES entry — the painting, its alt text and its one flavour line.
  * Everything else on the card comes from the case and the unit, so a renamed mission renames its
  * own loading screen and no string is written twice.
+ *
+ * `locking`, `syncing` and `enter` are the three strings that differ between travelling out and
+ * being recalled home, and they are arguments rather than a `kind` lookup inside here for the same
+ * reason the rest of the card is: the caller already knows which screen it is building.
+ *
+ * The screen is one render with three phases on `data-warp-phase`, flipped by `beginWarp()`:
+ * `tunnel` (the canvas beat, its own bar, the card resolving out of blur), `plate` (the painting
+ * settles, the ring fills over `--warp-dwell`) and `ready` (the ring reads Synced and the prompt
+ * appears). Everything for all three is emitted once — CSS decides what is visible — so no phase
+ * change ever rebuilds markup, which is what would restart the plate's own settle animation.
  *
  * The card leads the markup and the painting follows it, deliberately: a screen reader should say
  * where the player is going before it reads forty words describing the picture. Nothing stacks on
@@ -10449,8 +10487,11 @@ const WARP_ASSET_CEILING_MS = 6000;
  * plate sitting at auto — so this is free, and it is the kind of thing a later pass would tidy
  * back if the reason were not written down.
  */
-function warpScreen({ kind, plate, eyebrow, name, place, status }) {
-  return `<main class="warp-screen warp-screen--${kind}" data-warp="${kind}" aria-busy="true" style="--warp-dwell:${WARP_DWELL_MS}ms">
+function warpScreen({ kind, plate, eyebrow, name, place, status, locking, syncing, enter }) {
+  // The tunnel is not merely hidden under reduced motion, it is not emitted: a canvas nobody ever
+  // paints into is a thing a future reader has to open this file to explain.
+  const reduced = prefersReducedMotion();
+  return `<main class="warp-screen warp-screen--${kind}" data-warp="${kind}" data-warp-phase="${reduced ? "plate" : "tunnel"}" aria-busy="true" style="--warp-dwell:${WARP_DWELL_MS}ms;--warp-tunnel:${reduced ? 0 : WARP_TUNNEL_MS}ms">
   <section class="warp-card">
     <p class="kicker">${esc(eyebrow)}</p>
     <h1>${esc(name)}</h1>
@@ -10459,9 +10500,23 @@ function warpScreen({ kind, plate, eyebrow, name, place, status }) {
   </section>
   <div class="warp-foot">
     <p class="warp-status">${esc(status)}</p>
-    <button class="btn btn-outline warp-skip" data-action="skip-warp">Skip transition</button>
+    <div class="warp-ring" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuetext="${esc(syncing)}">
+      <svg viewBox="0 0 180 180" aria-hidden="true">
+        <circle class="warp-ring__track" cx="90" cy="90" r="70"></circle>
+        <circle class="warp-ring__fill" cx="90" cy="90" r="70"></circle>
+      </svg>
+      <span class="warp-ring__pct" aria-hidden="true"></span>
+      <span class="warp-ring__word" aria-hidden="true">Synced</span>
+      <span class="warp-ring__label">${esc(syncing)}</span>
+    </div>
+    <div class="warp-actions">
+      <button class="btn btn-gold warp-enter" data-action="warp-enter">${esc(enter)}</button>
+      <button class="btn btn-outline warp-skip" data-action="skip-warp">Skip transition</button>
+    </div>
   </div>
+  <p class="warp-locking">${esc(locking)}</p>
   <div class="warp-progress" aria-hidden="true"><span></span></div>
+  ${reduced ? "" : `<canvas class="warp-tunnel" aria-hidden="true"></canvas>`}
   <img class="warp-plate" src="${plate.image}" alt="${esc(plate.alt)}">
   <div class="warp-veil" aria-hidden="true"></div>
   <div class="warp-anchor" aria-hidden="true"><i></i><i></i><i></i><span>✦</span></div>
@@ -10516,22 +10571,71 @@ function tilesetsFor(surfaceId) {
 }
 
 /**
- * Holds the warp screen up, fetches the destination's art while it is there, and then goes.
+ * Drives the warp screen's phases, and fetches the destination's art while it is up.
  *
- * Two gates, and the player leaves when both are open: the dwell, which is how long the bar takes
- * and the least time the card needs to be readable, and the art, which is the honest half — this
- * is a loading screen that loads. `WARP_ASSET_CEILING_MS` is the release valve, because a gate
- * that can stick is worse than a map that paints a moment late.
+ * The two gates are unchanged from when this screen advanced itself: the dwell, which is the least
+ * time the card needs to be readable and exactly how long the ring takes to fill, and the art,
+ * which is the honest half — this is a loading screen that loads. `WARP_ASSET_CEILING_MS` is the
+ * release valve, because a gate that can stick is worse than a map that paints a moment late.
+ *
+ * What changed is what opening them does. The screen no longer routes: it reveals the prompt, and
+ * the player presses it. Both ways off are buttons now, and the skip is live the whole time.
+ *
+ * The dwell is measured from the plate's arrival rather than from mount, so the ring's fill and its
+ * gate are the same 2.5 s — a dwell counted from mount would be two thirds spent behind the tunnel
+ * and the ring would land on a screen that was already free to leave.
+ *
+ * Every step re-checks `warpRun` before touching anything: a promise chain has nothing to clear, so
+ * that token is the only thing standing between a skipped warp and a phase flip landing on whatever
+ * screen replaced it.
  */
-function beginWarp(advance) {
+function beginWarp({ direction }) {
   const run = warpRun;
+  const screen = document.querySelector(".warp-screen");
+  if (!screen) return;
   const art = Promise.all(warpArtUrls().map(warmImage));
-  Promise.all([afterMs(WARP_DWELL_MS), Promise.race([art, afterMs(WARP_ASSET_CEILING_MS)])]).then(
-    () => {
+  const gate = Promise.race([art, afterMs(WARP_ASSET_CEILING_MS)]);
+  const tunnel = prefersReducedMotion() ? 0 : WARP_TUNNEL_MS;
+
+  stopWarpTunnel();
+  if (tunnel > 0) {
+    warpTunnel = createWarpTunnel(screen.querySelector(".warp-tunnel"), {
+      direction,
+      durationMs: tunnel,
+    });
+  }
+
+  afterMs(tunnel).then(() => {
+    if (run !== warpRun) return;
+    stopWarpTunnel();
+    screen.dataset.warpPhase = "plate";
+    Promise.all([afterMs(WARP_DWELL_MS), gate]).then(() => {
       if (run !== warpRun) return;
-      advance();
-    }
-  );
+      screen.dataset.warpPhase = "ready";
+      screen.setAttribute("aria-busy", "false");
+      // The ring swaps its number for the word in CSS; a screen reader reads the attribute, so it
+      // has to be told too or it goes on saying "Syncing record" over a ring that reads Synced.
+      screen.querySelector(".warp-ring")?.setAttribute("aria-valuetext", "Synced");
+      // The prompt is the only thing on the screen worth being on, and the screen does not scroll
+      // (`.warp-screen` is `overflow: hidden` at exactly 100vh), so this cannot move the view.
+      screen.querySelector(".warp-enter")?.focus();
+    });
+  });
+}
+
+/**
+ * Where a warp goes when the player leaves it.
+ *
+ * One function for both buttons: the arrival prompt and the skip route identically, because where
+ * a warp goes was already answered in one place and the two differ only in when they are reachable
+ * and what they say.
+ */
+function leaveWarp() {
+  stopWarpTunnel();
+  if (progress.currentScreen === "return-warp") progress.currentScreen = "institute";
+  else progress.currentScreen = caseById(progress.activeCaseId)?.route || "archive";
+  save();
+  render();
 }
 
 function travelScreen() {
@@ -10544,6 +10648,9 @@ function travelScreen() {
     name: resolvedCaseName(active),
     place: active?.location || active?.date || "",
     status: "Do not alter the moment. Follow the evidence.",
+    locking: "Locking onto the record",
+    syncing: "Syncing record",
+    enter: "Follow the evidence →",
   });
 }
 
@@ -12538,6 +12645,9 @@ function returnWarpScreen() {
     name: "Chronicle Institute",
     place: "Institute Archive · present day",
     status: "Temporal return in progress.",
+    locking: "Locking onto the Archive beacon",
+    syncing: "Syncing archive",
+    enter: "Enter the Archive →",
   });
 }
 
@@ -12597,6 +12707,10 @@ function render() {
   // rAF loop or typewriter timer running against DOM nodes this render is about to replace.
   // Re-entering the room is what starts it again, from the top.
   if (progress.currentScreen !== "institute") stopHubScene();
+  // Same reason as the hub scene above, and unconditional: the tunnel's canvas is replaced by every
+  // render including the warp's own re-entry, so there is no screen it is correct to leave running
+  // on. `beginWarp()` starts a fresh one after mount.
+  stopWarpTunnel();
   let html;
   try {
     // Any registered activity engine renders through the one host screen, and the screen id *is*
@@ -12630,12 +12744,6 @@ function render() {
         break;
       case "travel":
         html = travelScreen();
-        beginWarp(() => {
-          const c = caseById(progress.activeCaseId);
-          progress.currentScreen = c?.route || "archive";
-          save();
-          render();
-        });
         break;
       case "field":
         html = fieldScreen();
@@ -12678,11 +12786,6 @@ function render() {
         break;
       case "return-warp":
         html = returnWarpScreen();
-        beginWarp(() => {
-          progress.currentScreen = "institute";
-          save();
-          render();
-        });
         break;
       case "review":
         html = reviewScreen();
@@ -12720,6 +12823,12 @@ function render() {
   app.innerHTML = html;
   syncManageContentNativeDialogs();
   if (currentIntroLines()) window.requestAnimationFrame(startIntroTypewriter);
+  // The warp needs its canvas mounted before it can paint into it, so its phase driver starts here
+  // rather than in the switch above — the same post-mount slot startIntroTypewriter uses.
+  if (progress.currentScreen === "travel" || progress.currentScreen === "return-warp")
+    window.requestAnimationFrame(() =>
+      beginWarp({ direction: progress.currentScreen === "return-warp" ? "in" : "out" })
+    );
   if (progress.currentScreen === "field")
     window.requestAnimationFrame(() => {
       updateFieldPlayer();
@@ -13295,14 +13404,12 @@ function handleHubClick(target, action) {
     goToCase(target.dataset.case);
     return true;
   }
-  // One skip for both warps, because there are two of them now — the recall used to be the one
-  // transition in the game a player could not get out of. Which screen it lands on is the same
-  // question `beginWarp()`'s two callers answer; asking it here keeps the button identical on both.
-  if (action === "skip-warp") {
-    if (progress.currentScreen === "return-warp") progress.currentScreen = "institute";
-    else progress.currentScreen = caseById(progress.activeCaseId)?.route || "archive";
-    save();
-    render();
+  // Two ways off a warp and one route: the arrival prompt, live once both gates open, and the skip,
+  // live the whole time. The recall used to be the one transition in the game a player could not get
+  // out of; since Phase 88B it is also the one that no longer leaves on its own, so the skip matters
+  // more rather than less. `leaveWarp()` is the shared body — see its own comment.
+  if (action === "warp-enter" || action === "skip-warp") {
+    leaveWarp();
     return true;
   }
   return false;

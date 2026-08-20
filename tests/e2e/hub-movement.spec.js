@@ -141,6 +141,12 @@ test.describe("Main Hall movement", () => {
     // from breaking. main.js delegates clicks off `#app`, so a dispatched bubbling event is the same
     // code path.
     await page.locator(".recall-beacon").dispatchEvent("click");
+    // The beacon plays the recall warp (Phase 88A) and that warp waits for the player (Phase 88B),
+    // so the walk back to the hall now runs through the arrival prompt. Where the player is put down
+    // is what this test is about, and that is unchanged.
+    const enter = page.getByRole("button", { name: "Enter the Archive →" });
+    await expect(enter).toBeVisible({ timeout: 15_000 });
+    await enter.click();
     await expect(page.locator("#instituteMap")).toBeVisible();
     await expect(page.locator("#hubInteractPrompt")).toContainText("Chronicle Navigation Table");
   });

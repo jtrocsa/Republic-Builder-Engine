@@ -394,8 +394,12 @@ test.describe("Archive Challenge", () => {
     );
     await travel.click();
 
-    // travelScreen() self-advances after 2500ms.
-    await expect(page.locator(".mission-shell")).toBeVisible({ timeout: 10000 });
+    // The warp no longer leaves on its own (Phase 88B): the tunnel runs, the plate arrives, and
+    // the prompt appears once both gates are open. Waiting for it is also what proves they opened.
+    const enter = page.getByRole("button", { name: "Follow the evidence →" });
+    await expect(enter).toBeVisible({ timeout: 15_000 });
+    await enter.click();
+    await expect(page.locator(".mission-shell")).toBeVisible();
     await expect(page.locator(".mission-shell h1")).toContainText("Exchange Ledger");
     // Case number in the eyebrow, mission name in the heading — the same split the teacher's
     // Manage Content wizard header uses.

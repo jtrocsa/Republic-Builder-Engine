@@ -3839,17 +3839,39 @@ dd {
    The warp screens — Chronotravel out, Archive recall back.
 
    Both are built by warpScreen() in main.js and differ only in which painted
-   plate they load and which way the anchor rings run. They are the one pair
-   of screens in the game with no chrome: full-bleed painting, a card naming
-   where you are going, and a bar along the bottom edge.
+   plate they load, which way the anchor rings run, and three strings. They are
+   the one pair of screens in the game with no chrome.
 
-   --warp-dwell is set inline by main.js from WARP_DWELL_MS, so the bar
-   finishes exactly when the screen is due to hand over. Nothing here loops:
-   the visual-regression pass disables animations by fast-forwarding them to
-   their end state, and an idling animation would make this screen's baseline
-   a coin toss. The reduced-motion umbrella near the top of this file collapses
-   every duration to 0.01ms, which lands the whole screen on that same end
-   state — a still painting, a full bar — with no separate rules needed here.
+   TWO BEATS, THREE PHASES, ONE RENDER. `data-warp-phase` is flipped on the
+   <main> by beginWarp(); nothing is ever re-rendered, so no phase change can
+   restart the plate's own settle. What each phase shows is decided here:
+
+     tunnel  the canvas streak field, its own bar along the bottom edge, and
+             the "locking on" line. The card is blurred to nothing and resolves
+             out of it over the tunnel's last stretch.
+     plate   the painting settles in, the anchor rings expire, and the ring in
+             the foot fills 0% -> 100% over --warp-dwell.
+     ready   the ring reads "Synced" and the arrival prompt appears. The screen
+             stops here and waits: the player presses it.
+
+   TWO CUSTOM PROPERTIES, BOTH SET INLINE by main.js from WARP_DWELL_MS and
+   WARP_TUNNEL_MS, so a duration here cannot disagree with the gate that
+   actually opens. Everything belonging to the second beat is delayed by
+   --warp-tunnel rather than being started by the phase flip — a CSS delay is
+   exact where a JS-scheduled class swap is a frame or two late.
+
+   THE RING SHOWS THE DWELL, NOT THE BYTES (decision log 0073 §2, still true).
+   It is a CSS animation over --warp-dwell and an animated <integer> registered
+   property for the number; no JS reads load state into it. If the art is slower
+   than the dwell it sits at "Synced" for a moment while the real gate finishes.
+
+   NOTHING HERE LOOPS. The tunnel canvas does, which is why main.js does not
+   emit it at all under prefers-reduced-motion — the media state the visual
+   baselines are captured in. Under that umbrella --warp-tunnel is 0ms and every
+   duration collapses to 0.01ms, so the whole screen lands on its end state.
+   Do not give anything here a delay that is not built on --warp-tunnel: that
+   umbrella collapses durations and NOT delays, which is the trap 0073 §7
+   records catching the anchor rings in.
    ------------------------------------------------------------------------- */
 .warp-screen {
   position: relative;
@@ -3859,6 +3881,59 @@ dd {
   isolation: isolate;
   background: #04141f;
 }
+
+/* --- what each phase shows ------------------------------------------------
+   Gated on the parent's attribute rather than by toggling a class per element,
+   so the whole screen's state is one string a reader can find in the DOM. */
+.warp-tunnel,
+.warp-locking,
+.warp-progress {
+  display: none;
+}
+[data-warp-phase="tunnel"] .warp-tunnel,
+[data-warp-phase="tunnel"] .warp-locking,
+[data-warp-phase="tunnel"] .warp-progress {
+  display: block;
+}
+/* The plate, its veil and the anchor rings are painted from mount and merely covered by the
+   tunnel — hiding them would restart their delayed animations against a different clock. */
+[data-warp-phase="tunnel"] .warp-plate,
+[data-warp-phase="tunnel"] .warp-veil,
+[data-warp-phase="tunnel"] .warp-anchor,
+[data-warp-phase="tunnel"] .warp-ring,
+[data-warp-phase="tunnel"] .warp-status {
+  visibility: hidden;
+}
+.warp-enter {
+  display: none;
+}
+[data-warp-phase="ready"] .warp-enter {
+  display: inline-flex;
+}
+
+/* --- the tunnel ---------------------------------------------------------- */
+.warp-tunnel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+.warp-locking {
+  position: absolute;
+  z-index: 2;
+  top: clamp(34px, 10vh, 92px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  color: #7ee7ec;
+  font:
+    700 0.76rem "Cinzel",
+    serif;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  text-transform: uppercase;
+}
 .warp-plate {
   position: absolute;
   inset: 0;
@@ -3866,7 +3941,8 @@ dd {
   height: 100%;
   object-fit: cover;
   transform-origin: 50% 45%;
-  animation: warpPlateSettle var(--warp-dwell) cubic-bezier(0.16, 0.72, 0.24, 1) forwards;
+  animation: warpPlateSettle var(--warp-dwell) cubic-bezier(0.16, 0.72, 0.24, 1) var(--warp-tunnel)
+    forwards;
 }
 /* Two jobs: sink the painting far enough that gold type reads on any of the ten (some are noon
    skies, some are dusk), and build the ground the card and the foot sit on. */
@@ -3901,14 +3977,15 @@ dd {
   border: 1px solid rgba(167, 244, 237, 0.4);
   border-radius: 50%;
   box-shadow: 0 0 42px rgba(126, 231, 236, 0.16);
-  animation: warpAnchorOut var(--warp-dwell) cubic-bezier(0.2, 0.6, 0.2, 1) forwards;
+  animation: warpAnchorOut var(--warp-dwell) cubic-bezier(0.2, 0.6, 0.2, 1) var(--warp-tunnel)
+    forwards;
 }
 .warp-anchor i:nth-child(2) {
-  animation-delay: calc(var(--warp-dwell) * 0.18);
+  animation-delay: calc(var(--warp-tunnel) + var(--warp-dwell) * 0.18);
   border-color: rgba(var(--c-gold-rgb), 0.4);
 }
 .warp-anchor i:nth-child(3) {
-  animation-delay: calc(var(--warp-dwell) * 0.36);
+  animation-delay: calc(var(--warp-tunnel) + var(--warp-dwell) * 0.36);
 }
 .warp-anchor span {
   display: grid;
@@ -3923,7 +4000,7 @@ dd {
     0 0 0 9px rgba(126, 231, 236, 0.07),
     0 0 34px rgba(126, 231, 236, 0.3);
   font-size: 1.6rem;
-  animation: warpSealIn var(--warp-dwell) ease-out forwards;
+  animation: warpSealIn var(--warp-dwell) ease-out var(--warp-tunnel) forwards;
 }
 /* Recall runs the same rings the other way: on a Chronotravel the anchor opens outward onto a
    place you have not been, and on the way home it closes back down onto the Institute. */
@@ -3936,6 +4013,13 @@ dd {
   left: clamp(26px, 5.6vw, 88px);
   bottom: clamp(76px, 13vh, 128px);
   max-width: min(48ch, 56vw);
+  /* The destination resolves out of the warp rather than arriving with the plate: it starts
+     blurred to nothing and comes up over the tunnel's last third, so the name is already legible
+     by the time the painting is behind it. Both numbers are fractions of --warp-tunnel, which is
+     0ms under reduced motion — so there the card is simply present. */
+  opacity: 0;
+  animation: warpCardResolve calc(var(--warp-tunnel) * 0.45) ease-out
+    calc(var(--warp-tunnel) * 0.62) forwards;
 }
 .warp-card .kicker {
   margin: 0 0 10px;
@@ -3985,8 +4069,121 @@ dd {
     serif;
   letter-spacing: 0.05em;
 }
+.warp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
 .warp-skip {
   background: rgba(4, 26, 38, 0.6);
+}
+
+/* --- the sync ring -------------------------------------------------------
+   The percentage is an animated registered property read back through a
+   counter, so the number and the sweep are the same animation and no script
+   ever touches either. An engine that has not registered @property lands on
+   0% and still gets the "Synced" swap, which is the graceful half. */
+@property --warp-pct {
+  syntax: "<integer>";
+  initial-value: 0;
+  /* Inherited on purpose: the number is drawn by ::after, and a pseudo-element does not see a
+     non-inherited custom property its originating element is animating — it reads the initial
+     value and the ring sits on 0% for the whole dwell while the sweep runs behind it. */
+  inherits: true;
+}
+.warp-ring {
+  position: relative;
+  width: clamp(96px, 12vw, 132px);
+  aspect-ratio: 1;
+  /* A centred column rather than absolute placement inside the circle: the number and its caption
+     have to stay clear of each other and of the stroke at every clamped size. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+/* Keeps the ring legible over any of the ten paintings, some of which are noon skies. */
+.warp-ring::before {
+  content: "";
+  position: absolute;
+  inset: -16%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(3, 14, 22, 0.74) 42%,
+    rgba(3, 14, 22, 0.34) 64%,
+    transparent 78%
+  );
+}
+.warp-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.warp-ring__track {
+  fill: none;
+  stroke: rgba(var(--c-gold-rgb), 0.18);
+  stroke-width: 5;
+}
+.warp-ring__fill {
+  fill: none;
+  /* Same gold the field tracker's bar fills with, so the two read as one family. */
+  stroke: #f3ce76;
+  stroke-width: 6;
+  stroke-linecap: round;
+  /* 2πr for r=70, rounded up so the sweep closes rather than leaving a hairline. */
+  stroke-dasharray: 440;
+  stroke-dashoffset: 440;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 0 6px rgba(var(--c-gold-rgb), 0.5));
+  animation: warpRingSweep var(--warp-dwell) ease-in-out var(--warp-tunnel) forwards;
+}
+.warp-ring__pct {
+  position: relative;
+  color: #fff5df;
+  font:
+    700 clamp(1.15rem, 2.1vw, 1.6rem) / 1 "Spectral",
+    serif;
+  font-variant-numeric: tabular-nums;
+  animation: warpRingCount var(--warp-dwell) ease-in-out var(--warp-tunnel) forwards;
+}
+.warp-ring__pct::after {
+  counter-reset: warp-pct var(--warp-pct);
+  content: counter(warp-pct) "%";
+}
+.warp-ring__word {
+  position: relative;
+  display: none;
+  color: #7ee7ec;
+  font:
+    700 0.92rem / 1 "Spectral",
+    serif;
+  letter-spacing: 0.04em;
+}
+[data-warp-phase="ready"] .warp-ring__pct {
+  display: none;
+}
+[data-warp-phase="ready"] .warp-ring__word {
+  display: block;
+}
+.warp-ring__label {
+  position: relative;
+  color: #f0d184;
+  font:
+    700 0.5rem "Cinzel",
+    serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 9ch;
+  line-height: 1.2;
+}
+[data-warp-phase="ready"] .warp-ring__label {
+  visibility: hidden;
 }
 .warp-progress {
   position: absolute;
@@ -4003,7 +4200,7 @@ dd {
   height: 100%;
   background: linear-gradient(90deg, #7ee7ec, #f3ce76);
   box-shadow: 0 0 18px rgba(243, 206, 118, 0.55);
-  animation: warpFill var(--warp-dwell) linear forwards;
+  animation: warpFill var(--warp-tunnel) linear forwards;
 }
 @keyframes warpPlateSettle {
   from {
@@ -4066,6 +4263,26 @@ dd {
     width: 100%;
   }
 }
+@keyframes warpCardResolve {
+  from {
+    opacity: 0;
+    filter: blur(14px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes warpRingSweep {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes warpRingCount {
+  to {
+    --warp-pct: 100;
+  }
+}
 @media (max-width: 900px) {
   .warp-card,
   .warp-foot {
@@ -4078,14 +4295,25 @@ dd {
     gap: 22px;
     padding: 0 22px 34px;
   }
+  /* At this width the foot is a row rather than a stack, so the ring sits beside the buttons and
+     the status line — which the card above has already made redundant — drops out of the flow. */
   .warp-foot {
     justify-items: start;
     grid-auto-flow: column;
     justify-content: space-between;
     align-items: center;
   }
+  .warp-status {
+    display: none;
+  }
+  .warp-ring {
+    width: clamp(74px, 18vw, 96px);
+  }
   .warp-anchor i {
     width: 52vmin;
+  }
+  .warp-locking {
+    top: clamp(24px, 6vh, 48px);
   }
 }
 @keyframes uploadFlow {

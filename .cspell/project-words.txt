@@ -219,6 +219,7 @@ conuco
 conuco's
 crossfade
 crossfaded
+crossfades
 crossfading
 dedup
 deprioritized
@@ -412,6 +413,7 @@ ungated
 unglobbed
 unheld
 unhighlighted
+ultrawide
 unioning
 unlayered
 unmigrated
@@ -429,6 +431,7 @@ unwalkable
 upserted
 usct
 valuenow
+valuetext
 versionable
 viewbox
 vigas

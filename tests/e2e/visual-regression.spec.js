@@ -221,20 +221,31 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("mini-games-select"));
   });
 
-  // Both warp screens, which as of Phase 88A are the same screen with a different painting on it.
-  // Nothing here loops, so `animations: "disabled"` lands each on its settled end state: the plate
-  // full-strength, the anchor rings expired, the bar full.
+  // Both warp screens, which as of Phase 88A are the same screen with a different painting on it
+  // and since Phase 88B have two beats. Two things make these deterministic, and both matter:
+  //
+  //   - The reduced motion this file already emulates means main.js does not emit the tunnel canvas
+  //     at all, so the one looping thing on the screen is absent rather than merely frozen. If a
+  //     canvas ever shows up in one of these baselines, that branch has regressed and the baseline
+  //     is a coin toss — do not accept it.
+  //   - Waiting for `data-warp-phase="ready"` pins the settled end state: plate full-strength,
+  //     anchor rings expired, ring reading "Synced", prompt shown. The screen stops there and waits
+  //     for the player, so unlike every earlier version of it there is no moment after this one.
   test("travel transition (Case 1.01)", async ({ page }) => {
     await seedProgress(page, { currentScreen: "travel", activeCaseId: "case-001" });
     await loadSeededSave(page);
-    await expect(page.locator('[data-warp="travel"]')).toBeVisible();
+    const screen = page.locator('[data-warp="travel"]');
+    await expect(screen).toBeVisible();
+    await expect(screen).toHaveAttribute("data-warp-phase", "ready", { timeout: 15_000 });
     await expect(page).toHaveScreenshot(snap("travel-transition"));
   });
 
   test("recall transition", async ({ page }) => {
     await seedProgress(page, { currentScreen: "return-warp", activeCaseId: null });
     await loadSeededSave(page);
-    await expect(page.locator('[data-warp="recall"]')).toBeVisible();
+    const screen = page.locator('[data-warp="recall"]');
+    await expect(screen).toBeVisible();
+    await expect(screen).toHaveAttribute("data-warp-phase", "ready", { timeout: 15_000 });
     await expect(page).toHaveScreenshot(snap("recall-transition"));
   });
 
