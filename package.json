@@ -25,6 +25,7 @@
     "assets:label": "node scripts/assets/label-tilesheet.js",
     "assets:measure": "node scripts/assets/measure-sprite.js",
     "assets:pack-objects": "node scripts/assets/pack-objects.js",
+    "assets:build-plates": "node scripts/assets/build-chronotravel-plates.js",
     "assets:optimize:waldseemuller": "node scripts/assets/optimize-waldseemuller.js",
     "assets:normalize-sprites": "node scripts/assets/normalize-sprite-frames.js",
     "assets:preview-map": "node scripts/assets/preview-map.js"

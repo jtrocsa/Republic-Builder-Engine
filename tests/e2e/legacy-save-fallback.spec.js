@@ -30,7 +30,7 @@ test.describe("Legacy-save route fallback", () => {
     await seedProgress(page, { currentScreen: "travel", activeCaseId: "case-001" });
     await loadSeededSave(page);
 
-    await expect(page.locator(".chronotravel-screen")).toBeVisible();
+    await expect(page.locator('[data-warp="travel"]')).toBeVisible();
     const stored = await readProgress(page);
     expect(stored.currentScreen).toBe("travel");
   });

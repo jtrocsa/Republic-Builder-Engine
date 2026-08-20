@@ -822,7 +822,6 @@ select {
 }
 .institute-copy h1,
 .archive-copy h1,
-.travel-copy h1,
 .field-intro h1,
 .reader-copy h1,
 .codex-head h1,
@@ -838,7 +837,6 @@ select {
 }
 .institute-copy > p:not(.kicker):not(.subtitle),
 .archive-copy > p:not(.kicker),
-.travel-copy p,
 .field-intro > p:not(.kicker):not(.field-question),
 .review-copy > p:not(.kicker) {
   max-width: 56ch;
@@ -1504,54 +1502,6 @@ select {
   margin: 16px 0 0;
   color: #d8e1df;
   font-size: 0.86rem;
-}
-.chronotravel-screen {
-  width: min(1480px, calc(100% - 56px));
-  min-height: calc(100vh - 58px);
-  margin: auto;
-  padding: 52px 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(270px, 0.55fr);
-  align-items: center;
-  gap: 42px;
-}
-/* .chronotravel-map/.map-camera/.travel-route(+case modifiers)/.travel-destination/.warp-rings
-   removed entirely (Phase 45D dead-CSS sweep) — an old Navigation-Table zoom-transition effect
-   with zero remaining references anywhere in main.js; the current travelScreen() renders a
-   fully different .chronotravel-vortex/.chronotravel-tunnel markup instead. Their exclusive
-   @keyframes (tableZoom, tableZoomTarget, warpFlash, routeTrace, destinationPulse, ring)
-   removed too — each was referenced only within this dead cluster. .chronotravel-screen right
-   above and .travel-copy/.travel-progress right below are unrelated and stay; they're real,
-   live classes on the current travel screen. */
-.travel-copy h1 {
-  font-size: clamp(3rem, 4.8vw, 5.2rem);
-}
-.travel-copy p {
-  color: #d0ddda;
-  font-size: 1rem;
-  line-height: 1.75;
-}
-.travel-progress {
-  height: 9px;
-  margin: 24px 0;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(243, 208, 130, 0.17);
-}
-.travel-progress span {
-  display: block;
-  width: 46%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, transparent, #f3ce76, transparent);
-  animation: progressMove 1.55s linear infinite;
-}
-.travel-status {
-  color: #f0d184 !important;
-  font:
-    700 0.8rem "Cinzel",
-    serif !important;
-  letter-spacing: 0.04em;
 }
 .case-field {
   display: grid;
@@ -3532,14 +3482,6 @@ dd {
     border-color: rgba(241, 205, 114, 0.16);
   }
 }
-@keyframes progressMove {
-  from {
-    transform: translateX(-110%);
-  }
-  to {
-    transform: translateX(270%);
-  }
-}
 @keyframes waterShift {
   from {
     transform: translateX(0);
@@ -3577,7 +3519,6 @@ dd {
   .puzzle-shell,
   .review-shell,
   .institute-home,
-  .chronotravel-screen,
   .reader-shell {
     grid-template-columns: 1fr;
   }
@@ -3606,17 +3547,10 @@ dd {
   .evidence-cards {
     grid-template-columns: repeat(2, 1fr);
   }
-  .chronotravel-map {
-    max-width: 900px;
-  }
-  .travel-copy {
-    max-width: 620px;
-  }
 }
 @media (max-width: 700px) {
   .chrome,
   .shell,
-  .chronotravel-screen,
   .reader-shell {
     width: calc(100% - 28px);
   }
@@ -3631,7 +3565,6 @@ dd {
   }
   .institute-copy h1,
   .archive-copy h1,
-  .travel-copy h1,
   .field-intro h1,
   .reader-copy h1,
   .codex-head h1,
@@ -3902,146 +3835,258 @@ dd {
     0.75rem "DM Sans",
     sans-serif;
 }
-.return-warp-shell {
-  width: min(1480px, calc(100% - 56px));
-  min-height: calc(100vh - 58px);
-  margin: auto;
-  padding: 52px 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
-  align-items: center;
-  gap: 42px;
-}
-.return-warp-vortex {
+/* -------------------------------------------------------------------------
+   The warp screens — Chronotravel out, Archive recall back.
+
+   Both are built by warpScreen() in main.js and differ only in which painted
+   plate they load and which way the anchor rings run. They are the one pair
+   of screens in the game with no chrome: full-bleed painting, a card naming
+   where you are going, and a bar along the bottom edge.
+
+   --warp-dwell is set inline by main.js from WARP_DWELL_MS, so the bar
+   finishes exactly when the screen is due to hand over. Nothing here loops:
+   the visual-regression pass disables animations by fast-forwarding them to
+   their end state, and an idling animation would make this screen's baseline
+   a coin toss. The reduced-motion umbrella near the top of this file collapses
+   every duration to 0.01ms, which lands the whole screen on that same end
+   state — a still painting, a full bar — with no separate rules needed here.
+   ------------------------------------------------------------------------- */
+.warp-screen {
   position: relative;
-  min-height: 520px;
+  width: 100%;
+  min-height: 100vh;
   overflow: hidden;
-  border: 1px solid rgba(126, 231, 236, 0.38);
-  border-radius: 24px;
+  isolation: isolate;
+  background: #04141f;
+}
+.warp-plate {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 45%;
+  animation: warpPlateSettle var(--warp-dwell) cubic-bezier(0.16, 0.72, 0.24, 1) forwards;
+}
+/* Two jobs: sink the painting far enough that gold type reads on any of the ten (some are noon
+   skies, some are dusk), and build the ground the card and the foot sit on. */
+.warp-veil {
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(circle at 50% 50%, rgba(126, 231, 236, 0.18), transparent 20%),
-    linear-gradient(145deg, #0b4c57, #061d2f 66%, #031521);
-  box-shadow:
-    0 28px 60px rgba(var(--c-black-rgb), 0.34),
-    inset 0 0 0 7px rgba(126, 231, 236, 0.045);
+    radial-gradient(128% 96% at 50% 38%, transparent 22%, rgba(3, 18, 28, 0.66) 100%),
+    linear-gradient(
+      to top,
+      rgba(3, 17, 26, 0.95) 0%,
+      rgba(3, 17, 26, 0.78) 26%,
+      rgba(3, 17, 26, 0.12) 62%,
+      transparent 100%
+    );
 }
-.return-warp-vortex::before {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background: conic-gradient(
-    from 0deg,
-    transparent,
-    rgba(126, 231, 236, 0.28),
-    transparent,
-    rgba(240, 205, 118, 0.2),
-    transparent
-  );
-  animation: returnWarpSpin 2.5s cubic-bezier(0.16, 0.8, 0.2, 1) forwards;
-}
-.return-warp-vortex::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 50% 50%,
-    transparent 0 12%,
-    rgba(var(--c-gold-rgb), 0.18) 13%,
-    transparent 23%,
-    rgba(126, 231, 236, 0.22) 24%,
-    transparent 37%,
-    rgba(3, 18, 28, 0.82) 74%
-  );
-  animation: returnWarpCollapse 2.5s ease-in forwards;
-}
-.return-warp-tunnel {
+.warp-anchor {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  perspective: 700px;
+  pointer-events: none;
 }
-.return-warp-tunnel i {
+.warp-anchor i {
   position: absolute;
-  width: 72%;
+  width: 36vmin;
   aspect-ratio: 1;
-  border: 1px solid rgba(167, 244, 237, 0.42);
+  /* Invisible until its own keyframe raises it, and invisible again after. The two delayed rings
+     would otherwise sit at full strength while they wait — which is what a reader with reduced
+     motion sees for the whole screen, since that umbrella collapses durations and not delays. */
+  opacity: 0;
+  border: 1px solid rgba(167, 244, 237, 0.4);
   border-radius: 50%;
-  box-shadow: 0 0 30px rgba(126, 231, 236, 0.18);
-  animation: returnWarpRing 2.5s ease-in forwards;
+  box-shadow: 0 0 42px rgba(126, 231, 236, 0.16);
+  animation: warpAnchorOut var(--warp-dwell) cubic-bezier(0.2, 0.6, 0.2, 1) forwards;
 }
-.return-warp-tunnel i:nth-child(2) {
-  width: 56%;
-  animation-delay: 0.16s;
-  border-color: rgba(var(--c-gold-rgb), 0.42);
+.warp-anchor i:nth-child(2) {
+  animation-delay: calc(var(--warp-dwell) * 0.18);
+  border-color: rgba(var(--c-gold-rgb), 0.4);
 }
-.return-warp-tunnel i:nth-child(3) {
-  width: 40%;
-  animation-delay: 0.32s;
+.warp-anchor i:nth-child(3) {
+  animation-delay: calc(var(--warp-dwell) * 0.36);
 }
-.return-warp-tunnel i:nth-child(4) {
-  width: 24%;
-  animation-delay: 0.48s;
-  border-color: rgba(var(--c-gold-rgb), 0.5);
-}
-.return-warp-tunnel span {
-  position: relative;
-  z-index: 3;
+.warp-anchor span {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
-  border: 1px solid rgba(245, 213, 132, 0.72);
+  width: 62px;
+  height: 62px;
+  border: 1px solid rgba(245, 213, 132, 0.66);
   border-radius: 50%;
   color: #f9df9a;
-  background: #0f4350;
+  background: rgba(8, 45, 56, 0.62);
   box-shadow:
-    0 0 0 10px rgba(126, 231, 236, 0.08),
-    0 0 38px rgba(126, 231, 236, 0.36);
-  font-size: 2rem;
-  animation: returnWarpBeacon 2.5s ease-in forwards;
+    0 0 0 9px rgba(126, 231, 236, 0.07),
+    0 0 34px rgba(126, 231, 236, 0.3);
+  font-size: 1.6rem;
+  animation: warpSealIn var(--warp-dwell) ease-out forwards;
 }
-.chronotravel-tunnel b {
+/* Recall runs the same rings the other way: on a Chronotravel the anchor opens outward onto a
+   place you have not been, and on the way home it closes back down onto the Institute. */
+.warp-screen--recall .warp-anchor i {
+  animation-name: warpAnchorIn;
+}
+.warp-card {
   position: absolute;
-  left: 50%;
-  top: calc(50% + 62px);
-  z-index: 4;
-  transform: translateX(-50%);
-  padding: 9px 12px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.48);
-  border-radius: 12px;
-  color: #ffe8ad;
-  background: rgba(4, 29, 42, 0.82);
-  box-shadow: 0 12px 24px rgba(var(--c-black-rgb), 0.24);
-  font:
-    700 0.78rem "Cinzel",
-    serif;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  animation: chronotravelLabel 2.5s ease-in forwards;
+  z-index: 2;
+  left: clamp(26px, 5.6vw, 88px);
+  bottom: clamp(76px, 13vh, 128px);
+  max-width: min(48ch, 56vw);
 }
-.chronotravel-tunnel b small {
-  display: block;
-  margin-top: 4px;
-  color: #c9f5f2;
-  font:
-    700 0.56rem "Cinzel",
-    serif;
-  letter-spacing: 0.08em;
+.warp-card .kicker {
+  margin: 0 0 10px;
 }
-.return-warp-copy h1 {
+.warp-card h1 {
   margin: 0;
   color: #f9e9bd;
   font:
-    700 clamp(3rem, 4.8vw, 5.2rem)/0.96 "Spectral",
+    700 clamp(2.5rem, 4.6vw, 4.8rem)/0.98 "Spectral",
     serif;
   letter-spacing: -0.045em;
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
 }
-.return-warp-copy p:not(.kicker):not(.travel-status) {
-  max-width: 56ch;
-  color: #d1dcda;
-  font-size: 1rem;
-  line-height: 1.7;
+.warp-place {
+  margin: 14px 0 0;
+  color: #f0d184;
+  font:
+    700 0.82rem "Cinzel",
+    serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.warp-note {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(var(--c-gold-rgb), 0.24);
+  max-width: 44ch;
+  color: #dbe6e2;
+  font:
+    italic 600 1.02rem/1.6 "Spectral",
+    serif;
+}
+.warp-foot {
+  position: absolute;
+  z-index: 2;
+  right: clamp(26px, 5.6vw, 88px);
+  bottom: clamp(76px, 13vh, 128px);
+  display: grid;
+  gap: 14px;
+  justify-items: end;
+}
+.warp-status {
+  margin: 0;
+  color: #f0d184;
+  font:
+    700 0.78rem "Cinzel",
+    serif;
+  letter-spacing: 0.05em;
+}
+.warp-skip {
+  background: rgba(4, 26, 38, 0.6);
+}
+.warp-progress {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(243, 208, 130, 0.15);
+}
+.warp-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #7ee7ec, #f3ce76);
+  box-shadow: 0 0 18px rgba(243, 206, 118, 0.55);
+  animation: warpFill var(--warp-dwell) linear forwards;
+}
+@keyframes warpPlateSettle {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes warpAnchorOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+@keyframes warpAnchorIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+@keyframes warpSealIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+@keyframes warpFill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+@media (max-width: 900px) {
+  .warp-card,
+  .warp-foot {
+    position: static;
+    max-width: none;
+  }
+  .warp-screen {
+    display: grid;
+    align-content: end;
+    gap: 22px;
+    padding: 0 22px 34px;
+  }
+  .warp-foot {
+    justify-items: start;
+    grid-auto-flow: column;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .warp-anchor i {
+    width: 52vmin;
+  }
 }
 @keyframes uploadFlow {
   from {
@@ -4063,93 +4108,12 @@ dd {
       0 0 26px rgba(var(--c-gold-rgb), 0.38);
   }
 }
-@keyframes returnWarpSpin {
-  from {
-    transform: rotate(0) scale(1);
-    filter: blur(0);
-  }
-  to {
-    transform: rotate(430deg) scale(1.9);
-    filter: blur(4px);
-  }
-}
-@keyframes returnWarpCollapse {
-  0% {
-    opacity: 0.45;
-    transform: scale(1.2);
-  }
-  58% {
-    opacity: 1;
-    transform: scale(0.86);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(0.25);
-    filter: brightness(1.8) blur(7px);
-  }
-}
-@keyframes returnWarpRing {
-  0% {
-    transform: translateZ(0) scale(1.25);
-    opacity: 0;
-  }
-  22% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateZ(360px) scale(0.22);
-    opacity: 0;
-  }
-}
-@keyframes returnWarpBeacon {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  70% {
-    transform: scale(0.72);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.18);
-    opacity: 0;
-  }
-}
-@keyframes chronotravelLabel {
-  0%,
-  66% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-18px) scale(0.78);
-  }
-}
-@media (max-width: 1180px) {
-  .return-warp-shell {
-    grid-template-columns: 1fr;
-  }
-  .return-warp-vortex {
-    min-height: 420px;
-  }
-}
 @media (max-width: 700px) {
   .upload-core {
     padding: 28px 19px;
   }
   .case-field-player {
     width: 11%;
-  }
-  .return-warp-shell {
-    width: calc(100% - 28px);
-    padding: 28px 0;
-  }
-  .return-warp-vortex {
-    min-height: 340px;
-  }
-  .return-warp-copy h1 {
-    font-size: 2.85rem;
   }
 }
 

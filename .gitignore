@@ -14,3 +14,9 @@ apps/web/src/assets/generated/
 # PixelLab MCP server's Authorization header — the committed .mcp.json carries the variable name
 # only, never the token.
 .claude/settings.local.json
+
+# Painted Chronotravel plate sources: ~2.5 MB 1672x941 PNGs, one per destination. The committed
+# artefact is apps/web/src/assets/plates/*.webp, built from these by `npm run assets:build-plates`.
+# They stay out of git for their size, and out of apps/web/src/assets/ so nothing can reference the
+# 2.5 MB copy by accident.
+art-source/

@@ -112,6 +112,7 @@ import {
   UNIT_06_ARCHIVE_SAQ_QUESTS,
   UNIT_06_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-06-quests.js";
+import { INSTITUTE_PLATE, plateForUnit } from "./content/chronotravel-plates.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 // The activity engines (Phase 68, decision log 0051). These four replaced the three
 // hand-written activity screens that were each welded to one source id. The registry knows no
@@ -933,6 +934,29 @@ function renderRichmondHospitalWardTiledMap() {
     resolveRichmondInteriorTilesetImage
   );
 }
+/**
+ * Every tileset image a surface paints with, as bundled URLs.
+ *
+ * This exists so the warp screens can fetch the destination's art while they are up, which is the
+ * whole reason a loading screen that loaded nothing was worth replacing: the tilesets are eagerly
+ * globbed *URLs*, not bytes, so before this the first visit to a map spent its opening moment
+ * looking at an empty frame while `renderTiledMap()` went and got them.
+ *
+ * Outdoor surfaces and the Main Hall only — those are the two things a Chronotravel and a recall
+ * can arrive on. An interior is always reached by walking through a door on a map that is already
+ * painted, so warming its sheets here would be paying on every travel for a room most players do
+ * not open.
+ */
+const SURFACE_TILESETS = {
+  "unit-01": () => caribbeanTmj.tilesets.map(resolveCaribbeanTilesetImage),
+  "unit-02": () => riverbendTmj.tilesets.map(resolveRiverbendTilesetImage),
+  "unit-03": () => commonCauseTmj.tilesets.map(resolveCommonCauseTilesetImage),
+  "unit-04": () => canalCrossroadsTmj.tilesets.map(resolveCanalCrossroadsTilesetImage),
+  "unit-05": () => richmondTmj.tilesets.map(resolveRichmondTilesetImage),
+  "unit-06": () => railheadTmj.tilesets.map(resolveRailheadTilesetImage),
+  "institute-hall": () => instituteHallTmj.tilesets.map(resolveInstituteHallTilesetImage),
+};
+
 const waldseemuller = new URL("./assets/documents/source-waldseemuller-1507.jpg", import.meta.url)
   .href;
 
@@ -4637,7 +4661,15 @@ function applyDevWarp() {
   saveProgress(progress);
 }
 let briefingStep = 0;
-let activeTravelTimeout = null;
+/**
+ * Which warp is in flight.
+ *
+ * Bumped by every render(), so a warp screen the player has left — skipped, reloaded, or replaced
+ * by any other navigation — cannot still route them somewhere when its dwell finishes. It
+ * replaced a cleared `setTimeout` because a warp now waits on images as well as on time, and a
+ * promise chain has nothing to clear.
+ */
+let warpRun = 0;
 // Director intro scene (intro-welcome/intro-briefing/intro-protocol) typewriter state.
 // introLineIndex tracks position within the current step's body-line array; introSeenSteps
 // is runtime-only (not persisted to progress) so a step only ever types out once per session
@@ -10383,9 +10415,136 @@ function miniGamesScreen() {
   return `${chrome()}<main class="shell mini-games-shell"><section class="mini-games-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">Institute Archive · Pacing break</p><h1>Mini-Games</h1><p>A short arcade break between cases — not scored, not required for any badge.</p></section>${body}</main>${authorPanel()}`;
 }
 
+// ---- The warp screens -----------------------------------------------------------------------
+//
+// Chronotravel out and recall back. Both are the same screen with a different painting on it and
+// the rings turning the other way, so both are built here — `returnWarpScreen()` further down is
+// two lines and this is the one place the layout lives.
+//
+// They are deliberately chrome-less. This is the one screen in the game whose entire job is the
+// picture, and the title sequence already established that a full-bleed screen here drops the
+// header rather than framing it.
+
+/** How long a warp is held, and how long its bar takes to fill. */
+const WARP_DWELL_MS = 2500;
+/**
+ * The longest a slow network may add to that.
+ *
+ * The dwell is a floor and the destination's art is a gate, but the gate must not be able to trap
+ * a player on a loading screen: past this the game goes on without the images and the map paints
+ * a moment late, exactly as it did before any of this existed.
+ */
+const WARP_ASSET_CEILING_MS = 6000;
+
+/**
+ * One warp screen.
+ *
+ * `plate` is a CHRONOTRAVEL_PLATES entry — the painting, its alt text and its one flavour line.
+ * Everything else on the card comes from the case and the unit, so a renamed mission renames its
+ * own loading screen and no string is written twice.
+ *
+ * The card leads the markup and the painting follows it, deliberately: a screen reader should say
+ * where the player is going before it reads forty words describing the picture. Nothing stacks on
+ * source order here — the card and foot are positioned at z-index 2 and the bar at 3, all above a
+ * plate sitting at auto — so this is free, and it is the kind of thing a later pass would tidy
+ * back if the reason were not written down.
+ */
+function warpScreen({ kind, plate, eyebrow, name, place, status }) {
+  return `<main class="warp-screen warp-screen--${kind}" data-warp="${kind}" aria-busy="true" style="--warp-dwell:${WARP_DWELL_MS}ms">
+  <section class="warp-card">
+    <p class="kicker">${esc(eyebrow)}</p>
+    <h1>${esc(name)}</h1>
+    <p class="warp-place">${esc(place)}</p>
+    <p class="warp-note">${esc(plate.note)}</p>
+  </section>
+  <div class="warp-foot">
+    <p class="warp-status">${esc(status)}</p>
+    <button class="btn btn-outline warp-skip" data-action="skip-warp">Skip transition</button>
+  </div>
+  <div class="warp-progress" aria-hidden="true"><span></span></div>
+  <img class="warp-plate" src="${plate.image}" alt="${esc(plate.alt)}">
+  <div class="warp-veil" aria-hidden="true"></div>
+  <div class="warp-anchor" aria-hidden="true"><i></i><i></i><i></i><span>✦</span></div>
+</main>`;
+}
+
+/** Resolves when the image is in the browser's cache — or when it has failed and never will be. */
+function warmImage(url) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = url;
+  });
+}
+
+const afterMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Everything the screen on the far side of this warp will paint with.
+ *
+ * The plate always — it is the picture the player is looking at, and it is the one image whose
+ * loading the loading screen cannot hide. Then the destination surface's tilesets, which is the
+ * part that earns the wait: they are eagerly globbed URLs rather than bytes, so a first visit to a
+ * map used to open on an empty frame while `renderTiledMap()` went and fetched them.
+ *
+ * A case that does not route to a field map has no tilesets to warm, so it warms none — its
+ * mission screen is HTML.
+ */
+function warpArtUrls() {
+  if (progress.currentScreen === "return-warp")
+    return [INSTITUTE_PLATE.image, ...tilesetsFor("institute-hall")];
+  const unit = unitForCase(progress.activeCaseId);
+  const onAMap = caseById(progress.activeCaseId)?.route === "field";
+  return [plateForUnit(unit?.id).image, ...(onAMap ? tilesetsFor(unit?.id) : [])];
+}
+
+/**
+ * A surface's tileset URLs, or none if the lookup blows up.
+ *
+ * `createTilesetImageResolver()` throws on a sheet the .tmj names and no `import.meta.glob` here
+ * resolves — the mistake CLAUDE.md records as having shipped three times. That already costs the
+ * map, and it must not also cost the warp: an exception raised here would leave `beginWarp()` with
+ * a promise that never settles and the player on a loading screen with no way off but the skip.
+ */
+function tilesetsFor(surfaceId) {
+  try {
+    return SURFACE_TILESETS[surfaceId]?.() || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Holds the warp screen up, fetches the destination's art while it is there, and then goes.
+ *
+ * Two gates, and the player leaves when both are open: the dwell, which is how long the bar takes
+ * and the least time the card needs to be readable, and the art, which is the honest half — this
+ * is a loading screen that loads. `WARP_ASSET_CEILING_MS` is the release valve, because a gate
+ * that can stick is worse than a map that paints a moment late.
+ */
+function beginWarp(advance) {
+  const run = warpRun;
+  const art = Promise.all(warpArtUrls().map(warmImage));
+  Promise.all([afterMs(WARP_DWELL_MS), Promise.race([art, afterMs(WARP_ASSET_CEILING_MS)])]).then(
+    () => {
+      if (run !== warpRun) return;
+      advance();
+    }
+  );
+}
+
 function travelScreen() {
   const active = caseById(progress.activeCaseId);
-  return `${chrome()}<main class="chronotravel-screen chronotravel-screen--warp"><section class="return-warp-vortex chronotravel-vortex" aria-label="Chronotraveling to ${esc(resolvedCaseName(active))}"><div class="return-warp-tunnel chronotravel-tunnel"><i></i><i></i><i></i><i></i><span>✦</span><b>${esc(resolvedCaseName(active))}<small>${esc(active.date)}</small></b></div></section><section class="travel-copy"><p class="kicker">Chronotravel sequence</p><h1>Route in motion.</h1><p>The Archive is following the selected point through the recall tunnel. The signal will resolve into its historical setting; the Codex will remain synchronized with this case.</p><div class="travel-progress"><span></span></div><p class="travel-status">Do not alter the moment. Follow the evidence.</p><button class="btn btn-outline" data-action="skip-travel">Skip transition</button></section></main>`;
+  const unit = unitForCase(progress.activeCaseId);
+  return warpScreen({
+    kind: "travel",
+    plate: plateForUnit(unit?.id),
+    eyebrow: `Chronotravel · ${unit?.period || "Chronicle Institute"}`,
+    name: resolvedCaseName(active),
+    place: active?.location || active?.date || "",
+    status: "Do not alter the moment. Follow the evidence.",
+  });
 }
 
 function fieldWorldStyle() {
@@ -12370,7 +12529,16 @@ function uploadScreen() {
 }
 
 function returnWarpScreen() {
-  return `${chrome()}<main class="return-warp-shell"><section class="return-warp-vortex" aria-label="Returning to the Chronicle Institute"><div class="return-warp-tunnel"><i></i><i></i><i></i><i></i><span>✦</span></div></section><section class="return-warp-copy"><p class="kicker">Archive recall sequence</p><h1>Returning to Institute.</h1><p>The Codex has locked the archived case record. The recall beacon is pulling your signal back to the Institute floor.</p><div class="travel-progress"><span></span></div><p class="travel-status">Temporal return in progress.</p></section></main>`;
+  // The one destination that is not a unit, and the only one the player has already been to — so
+  // the card names the room rather than a mission, and the rings run inward instead of out.
+  return warpScreen({
+    kind: "recall",
+    plate: INSTITUTE_PLATE,
+    eyebrow: "Archive recall sequence",
+    name: "Chronicle Institute",
+    place: "Institute Archive · present day",
+    status: "Temporal return in progress.",
+  });
 }
 
 const UNIT_REVIEWS = { "unit-01": REVIEW, "unit-02": UNIT_02_REVIEW };
@@ -12422,7 +12590,7 @@ function render() {
     app.innerHTML = mainMenuScreen();
     return;
   }
-  clearTimeout(activeTravelTimeout);
+  warpRun += 1;
   clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
   // Leaving a hub room mid-scene (refresh, reset, a stray render() call) must not leave an orphaned
@@ -12462,12 +12630,12 @@ function render() {
         break;
       case "travel":
         html = travelScreen();
-        activeTravelTimeout = setTimeout(() => {
+        beginWarp(() => {
           const c = caseById(progress.activeCaseId);
           progress.currentScreen = c?.route || "archive";
           save();
           render();
-        }, 2500);
+        });
         break;
       case "field":
         html = fieldScreen();
@@ -12510,11 +12678,11 @@ function render() {
         break;
       case "return-warp":
         html = returnWarpScreen();
-        activeTravelTimeout = setTimeout(() => {
+        beginWarp(() => {
           progress.currentScreen = "institute";
           save();
           render();
-        }, 2500);
+        });
         break;
       case "review":
         html = reviewScreen();
@@ -13127,9 +13295,12 @@ function handleHubClick(target, action) {
     goToCase(target.dataset.case);
     return true;
   }
-  if (action === "skip-travel") {
-    const c = caseById(progress.activeCaseId);
-    progress.currentScreen = c?.route || "archive";
+  // One skip for both warps, because there are two of them now — the recall used to be the one
+  // transition in the game a player could not get out of. Which screen it lands on is the same
+  // question `beginWarp()`'s two callers answer; asking it here keeps the button identical on both.
+  if (action === "skip-warp") {
+    if (progress.currentScreen === "return-warp") progress.currentScreen = "institute";
+    else progress.currentScreen = caseById(progress.activeCaseId)?.route || "archive";
     save();
     render();
     return true;
@@ -13196,7 +13367,12 @@ function handleFieldClick(target, action) {
     progress.activeFieldNpc = null;
     progress.hubNotice = "Temporal recall complete. You rematerialized at the Navigation Table.";
     safeInstituteSpawn(...instituteRecallSpawn());
-    progress.currentScreen = "institute";
+    // Through the recall warp, the same as the archived-record path. instituteRecallSpawn()'s own
+    // comment has treated these as "both recall paths" since Phase 57, and one of them cutting
+    // straight to the hall while the other played a sequence was the last place that wasn't true.
+    // It is also the arrival that most needs the pause: the Main Hall's tilesets are fetched here.
+    playSfx("return-warp");
+    progress.currentScreen = "return-warp";
     save();
     render();
     return true;
