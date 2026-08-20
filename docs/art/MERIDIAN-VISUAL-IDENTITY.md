@@ -286,7 +286,22 @@ helper" floor of the reveal ladder: Voss carries no visible mark there, and
 still shapes the whole costume — navy coat, sea-green lining, brass fittings, the plate's silhouette
 — which is exactly what makes the reveal land later.
 
-**`liaison-meridian` — revealed. Written now, generated later.**
+**`liaison-meridian` — revealed. Generated in Phase 88, and not from this prompt.**
+
+The description below is still an accurate account of the costume, and the shipped sprite matches
+it. It is not what produced the sprite, and the difference is the useful part of this section.
+
+**A fresh `create_character` from it returned a different person** — same size, view, outline,
+shading, detail and proportions as the shipped Voss, and the result had her hair down, no navy coat
+and no mark. That is this section’s own predicted failure (“two characters who happen to share a
+haircut”), and no wording fixes it: a description is all the model has to hold identity with.
+
+**`create_character_state` does the thing this section asked for.** It takes the existing character
+and applies one edit across all eight rotations, so the face, the bun, the boots and the silhouette
+are the same pixels and only the coat changes; locking the source palette also holds §3’s floor on
+how light Meridian’s teal may go. So **“design the revealed version first, then cover it up” is
+executable after all** — by editing the shipped state rather than by writing a better prompt. Order
+the walk and idle from the state exactly as for any other character. See decision log `0072` §5.
 
 > The same woman, same face, same hair, same boots, same coat pattern. The navy coat turned to show
 > the muted sea-green lining fully across the chest. The leather shoulder panel now carrying the

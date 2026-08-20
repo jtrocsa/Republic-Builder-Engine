@@ -136,7 +136,7 @@ on a replay — which is the whole reason replay exists.
 rather than preserved. The Director gives a defensible institutional answer. Neither sounds evil,
 neither sounds correct.
 
-**D · Meridian reveal.** Voss has been working with Meridian; some early interventions were
+**D · Meridian reveal.** _Shipped in Phase 88 — `meridian-reveal` in `content/cutscenes.js`, decision log `0072`._ Voss has been working with Meridian; some early interventions were
 deliberate. Plain language, no monologue. Betrayal and disagreement carry equal weight. The core:
 
 > Chronicle taught us how to enter the past. Then it decided that only Chronicle could be trusted

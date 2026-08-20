@@ -175,8 +175,22 @@ async function fetchBulk(character, kinds = cyclesOf(character).map(([kind]) => 
     throw new Error(`${response.status} ${response.statusText} for ${character.key}`);
   }
   const files = unzip(Buffer.from(await response.arrayBuffer()));
-  const state = JSON.parse(files.get("metadata.json").toString("utf8")).states?.[0];
-  if (!state) throw new Error(`${character.key}: archive has no character state`);
+  // A PixelLab character can hold more than one *state* — the same individual in a second costume,
+  // filed under its own folder in the same archive. Emery Voss has two (Phase 88: `Idle` is the
+  // Chronicle-facing coat, `Revealed` is the turned one with the Meridian mark), so "the first
+  // state" stopped being a safe default the moment the second existed. Both her manifest entries
+  // name theirs; everything else in the cast has exactly one and keeps the old behaviour.
+  const states = JSON.parse(files.get("metadata.json").toString("utf8")).states ?? [];
+  const state = character.state
+    ? states.find((entry) => entry.folder === character.state)
+    : states[0];
+  if (!state) {
+    throw new Error(
+      character.state
+        ? `${character.key}: archive has no state "${character.state}" (has ${states.map((s) => s.folder).join(", ") || "none"})`
+        : `${character.key}: archive has no character state`
+    );
+  }
   // A character can hold more than one animation group, so which one to build from is stated
   // rather than guessed. Most of the Unit 4/5 cast carries two: an abandoned v3 walk whose back
   // view drifts several pixels up the canvas over the cycle, and the template walk that replaced

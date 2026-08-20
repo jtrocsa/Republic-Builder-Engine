@@ -25,7 +25,12 @@ import {
   advanceScene,
   skipScene,
 } from "../../apps/web/src/engine/cutscene.js";
-import { CUTSCENES } from "../../apps/web/src/content/cutscenes.js";
+import {
+  CUTSCENES,
+  LIAISON_INTRO,
+  MERIDIAN_REVEAL,
+  MERIDIAN_REVEAL_TRIGGER,
+} from "../../apps/web/src/content/cutscenes.js";
 
 /** Records every effect the interpreter asks for, and pretends a walk takes three ticks. */
 function spyEffects() {
@@ -283,19 +288,81 @@ describe("the shipped scenes", () => {
     }
   });
 
-  it("Voss says nothing that breaks the Units 1-2 reveal floor", () => {
+  /** Every line Voss speaks in one scene. */
+  const vossLines = (scene) =>
+    scene.commands
+      .filter((command) => command.op === "say" && command.speaker === "liaison")
+      .map((command) => command.line);
+
+  it("Voss says nothing that breaks the reveal floor in any scene below it", () => {
     // THE-FIELD-LIAISON.md §4. field-liaison.test.js already pins this for the NPC tables; a scene
     // is a second place a line can ship from, and it would not have been covered.
+    //
+    // Scoped by exclusion rather than by an allow-list of scene ids, so an eighth scene authored
+    // for Units 7-9 is banned by default and has to be excused deliberately. The reveal is the one
+    // exemption, and the test below is what it costs — an exemption nobody checks is a hole.
     for (const [id, scene] of Object.entries(CUTSCENES)) {
-      const lines = scene.commands
-        .filter((command) => command.op === "say" && command.speaker === "liaison")
-        .map((command) => command.line);
-      for (const line of lines) {
-        expect(line, `${id} puts Meridian in a Units 1-2 Voss line`).not.toMatch(
+      if (id === MERIDIAN_REVEAL.id) continue;
+      for (const line of vossLines(scene)) {
+        expect(line, `${id} puts Meridian in a Voss line below the reveal`).not.toMatch(
           /meridian|insignia/i
         );
       }
     }
+  });
+
+  // The other half of the same rule, and the half a ban cannot express: a reveal that stops
+  // revealing fails nothing. Phase 88 moved the floor, and this is where it now sits.
+  describe("Scene D, the reveal", () => {
+    const lines = vossLines(MERIDIAN_REVEAL);
+
+    it("names Meridian, which no other scene may", () => {
+      expect(lines.filter((line) => /Meridian Institute/.test(line)).length).toBeGreaterThan(0);
+    });
+
+    it("carries §5 D's two quoted lines verbatim", () => {
+      // CUTSCENE-AND-DIALOGUE-CONVENTIONS.md §5 D quotes both in full. They are the scene's whole
+      // argument in the author's own words, so a rewrite of either is the one edit here that
+      // should have to be deliberate rather than incidental.
+      expect(lines).toContain(
+        "Chronicle taught us how to enter the past. Then it decided that only Chronicle could be " +
+          "trusted with what we found there."
+      );
+      expect(lines).toContain("I helped people. I also changed lives I never meant to touch.");
+    });
+
+    it("turns the coat before the last line rather than on the way out", () => {
+      // `sheetFor()` swaps Voss's sprite the moment this flag is set, so where it sits in the list
+      // is where the costume changes on screen. At the end it would be a reveal the player never
+      // watches happen; the scene is written so they are looking straight at her.
+      const flagAt = MERIDIAN_REVEAL.commands.findIndex(
+        (command) => command.op === "setFlag" && command.flag === MERIDIAN_REVEAL_TRIGGER.flag
+      );
+      const says = MERIDIAN_REVEAL.commands.filter((command) => command.op === "say").length;
+      const saysAfter = MERIDIAN_REVEAL.commands
+        .slice(flagAt)
+        .filter((command) => command.op === "say").length;
+
+      expect(flagAt, "the reveal never sets its flag").toBeGreaterThan(-1);
+      expect(saysAfter, "the coat turns after Voss has finished talking").toBeGreaterThan(says / 2);
+    });
+
+    it("leaves Voss where the other scene leaves her", () => {
+      // Same trap LIAISON_INTRO's own comment names: `HUB_TARGETS.liaison` is a fixed coordinate
+      // for the marker, the proximity check and the dialogue, so a Voss left standing where the
+      // scene put her would be interactable from somewhere she is not. Checked against the other
+      // scene rather than against `HUB_TARGETS` so this file stays off main.js — that the two
+      // agree is the property, and field-liaison.test.js pins both to the real post.
+      const homeOf = (scene) => {
+        const walks = scene.commands.filter(
+          (command) => command.op === "moveActor" && command.actor === "liaison"
+        );
+        return walks[walks.length - 1]?.to;
+      };
+
+      expect(homeOf(MERIDIAN_REVEAL), "the reveal never moves her at all").toBeTruthy();
+      expect(homeOf(MERIDIAN_REVEAL)).toEqual(homeOf(LIAISON_INTRO));
+    });
   });
 });
 

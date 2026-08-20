@@ -49,6 +49,22 @@ test.describe("Dev warp", () => {
     expect(saved.tutorial.step).toBe("hallway");
   });
 
+  test("lands inside Emery Voss's reach with the railhead filed", async ({ page }) => {
+    // The one warp that also places the player. Scene D only opens when you are standing in front
+    // of her, so a warp that dropped the player at the room's default spawn would leave the review
+    // pass walking the hall — which is the friction this table exists to remove.
+    await page.goto("/?warp=reveal");
+    await expect(page.locator("#institutePlayer")).toBeVisible();
+    await expect(page.locator("#hubInteractPrompt")).toContainText("Emery Voss");
+
+    const saved = await readProgress(page);
+    expect(saved.currentHubRoom).toBe("main");
+    expect(saved.activeCaseId).toBe("case-016");
+    expect(Object.values(saved.sourceActivities).every((entry) => entry.debriefed)).toBe(true);
+    // Not yet seen — the warp is the state *before* the scene, not after it.
+    expect(saved.story.flags.sawMeridianMark).toBeUndefined();
+  });
+
   test("ignores a name it does not have, without touching the save (edge case)", async ({
     page,
   }) => {

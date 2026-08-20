@@ -203,8 +203,13 @@ hunt, settlers stripped the doors and window sashes and left them unusable. A pl
 house built for somebody who did not want it, wrecked by the people who did. Nothing has to explain
 it, and nothing should.
 
-**The reveal lands here.** Meridian's first visible operation reads as humanitarian — a warning
-given, a claim protected — and complicates who ends up with access to land, movement or a vote.
+**The reveal lands here, and it shipped in Phase 88** (decision log `0072`). Meridian's first
+visible operation reads as humanitarian — a warning given, a claim protected — and complicates who
+ends up with access to land, movement or a vote: a woman in a good coat gave the Kanza headmen the
+appraisal figures before their own agent did. **The operation is on this map and the conversation is
+not.** Voss reports it here as a fact she cannot place; she explains it in the Institute Main Hall,
+standing at the Navigation Table with the Director in the room, because what she is confessing to is
+what she has been doing with filed evidence.
 
 ### Unit 7 — the immigrant port. 1907. Slate A.
 
@@ -264,7 +269,9 @@ sheets across 28 packs, and the `derived-objects` packing pipeline.
    Phase 62 for exactly this reason.
 3. **Unit 6's cast** — the railhead's people.
 4. **`streetscape.midCentury`** — unblocks Unit 8.
-5. **`liaison-meridian`** — Voss's revealed costume, needed for Unit 6's reveal and not before.
+5. ~~**`liaison-meridian`**~~ — Voss's revealed costume. **Built in Phase 88**, by editing the
+   shipped character into a second _state_ rather than generating a second character; see
+   `MERIDIAN-VISUAL-IDENTITY.md` §6 for why that distinction is the whole job.
 6. **The three Meridian props** — the anchor ring is blocking, but nothing is scheduled to build
    `meridian-interior`; these wait on that decision.
 

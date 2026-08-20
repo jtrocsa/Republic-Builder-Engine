@@ -242,15 +242,25 @@ as canon will build content on it, and unbuilding that is expensive.
   is real save state. The character, the name, her pronouns (**she/her**, settled in Phase 81) and
   the `liaison` registry key may now all be relied on.
   See [`THE-FIELD-LIAISON.md`](./THE-FIELD-LIAISON.md) and decision log `0063`. **Her Meridian
-  connection did not move with her** — see below.
+  connection moved up here in Phase 88**, when the reveal shipped — see the four entries below.
+- **Voss has been working with Meridian**, and says so herself in Unit 6 — promoted from provisional
+  in Phase 88 (decision log `0072`). The scene is `meridian-reveal` in `content/cutscenes.js`; it
+  plays in the Institute Main Hall on the visit after the railhead's three missions are debriefed,
+  and `progress.story.flags.sawMeridianMark` is real save state. What she says there may be relied
+  on: Meridian came out of Chronicle over an argument about disclosure, selected evidence has been
+  going to it for some time, and she chose which.
+- **The relationship is real and stays real.** She is right that Chronicle is concealing evidence
+  (§5), she raises what her help cost without being asked, and the player is left unable to say
+  cleanly that she was wrong. The reveal damages the relationship and does not end it.
+- **The reveal lands in Unit 6** — the later end of §4's band, so Unit 5 is still a deniable beat.
+- **"Meridian Institute" is the permanent name.** It is spoken on screen now, so it is no longer
+  cheap to change.
 
 ### Provisional — usable in planning, not yet in shipped content
 
-- Voss's eventual Meridian connection. Nothing shipped in Phase 80 alludes to it; the Units 1–2
-  floor of the reveal ladder is enforced by `tests/unit/field-liaison.test.js`.
-- That the relationship with the player is genuine and stays genuine after the reveal.
-- The reveal's placement in Units 5–6.
-- "Meridian Institute" as the permanent name.
+- The reveal ladder above Unit 6: Units 7–8's reluctant alliance and Unit 9's alignment. Nothing
+  shipped alludes to either, and the Units 1–5 floor is still enforced by
+  `tests/unit/field-liaison.test.js`.
 
 ### Deferred — deliberately unwritten
 

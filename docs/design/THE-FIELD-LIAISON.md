@@ -5,8 +5,9 @@ it appears to be.
 
 Written in Phase 78 alongside decision log `0061`. **Phase 80 shipped the character** — the
 Institute post, both field posts and `progress.story` are real, and `CHRONICLE-CANON.md` §9 has
-moved Voss and the name to canonical. See decision log `0063`. Everything about the **reveal**
-remains provisional or deferred: the Meridian connection, its placement, and §7's list.
+moved Voss and the name to canonical. See decision log `0063`. **Phase 88 shipped the reveal** —
+§4's Units 5–6 rung, decision log `0072` — so the Meridian connection, its placement and the
+revealed costume are canonical too. §7's list is what remains deferred.
 
 **Voss's pronouns changed to she/her in Phase 81**, by the author's decision. This document argued
 at some length that presentation and pronouns were independent, and kept them apart deliberately;
@@ -124,12 +125,25 @@ budget is per-map and it is spent; see [`THE-MAP-PROGRAM.md`](./THE-MAP-PROGRAM.
 
 **The reveal lands in Unit 6, the railhead**, by the author's decision — the later end of this band,
 which means Unit 5 is still a deniable beat and not the reveal. `field-liaison.test.js` enforces
-that by scoping its Meridian ban to all five authored maps rather than to the trusted-helper floor.
+that by scoping its Meridian ban to all six authored maps rather than to the trusted-helper floor —
+Unit 6 included, because the reveal lands in that unit but not on that map.
 
 The player finds Voss using Meridian equipment or wearing the insignia. She explains Meridian as a
 response to Chronicle's secrecy and refusal to act. She does not ask the player to approve of
 everything Meridian has done. The player learns selected evidence has been going to Meridian for
 some time. The relationship is damaged and not ended.
+
+**Shipped in Phase 88** — decision log `0072`, and `CHRONICLE-CANON.md` §9 has moved this rung to
+canonical. Three notes for anyone reading the ladder from here:
+
+- **The operation is at the railhead; the conversation is at the Institute.** She says it standing
+  at the Navigation Table with the Director in the room, because what she is confessing to is what
+  she has been doing with filed evidence, and that is where evidence gets filed.
+- **"Finds" is literal.** Nothing fires the scene. The player walks over to her the way they have
+  all game, once the railhead's three missions are debriefed, and this time the coat is turned.
+- **The costume is a `sheetFor()` lookup**, exactly as §6's table predicted: `liaison` resolves to
+  `liaison-meridian` once `story.flags.sawMeridianMark` is set, and nothing else in the game learns
+  she has two.
 
 ### Units 7–8 — reluctant alliance
 
@@ -193,7 +207,7 @@ phases that had already shipped under different numbers. They now cite the real 
 | Sprite                  | `CHARACTER_SHEETS.liaison` + a `character-manifest.js` entry                         | **Shipped, Phase 80b**                             |
 | Narrative state         | `progress.story`                                                                     | **Shipped, Phase 80**                              |
 | Cutscenes               | See [`CUTSCENE-AND-DIALOGUE-CONVENTIONS.md`](./CUTSCENE-AND-DIALOGUE-CONVENTIONS.md) | **Shipped, Phase 81C** — Scene A                   |
-| Revealed costume        | `CHARACTER_SHEETS["liaison-meridian"]` — a second sheet key                          | Art, with Unit 6's reveal                          |
+| Revealed costume        | `CHARACTER_SHEETS["liaison-meridian"]` — a second sheet key                          | **Shipped, Phase 88** — see `0072` §5              |
 
 Two costume states as **two sheet keys** is the right shape: a sheet key is one registry entry, the
 revealed state is a genuinely different set of PNGs, and switching between them is a lookup rather

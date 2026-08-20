@@ -128,6 +128,11 @@ test.describe("the Field Liaison in the field", () => {
     { unit: "Philadelphia", caseId: "case-007", says: "I came through ahead of the assignment" },
     { unit: "Canal Crossroads", caseId: "case-010", says: "Two rules on a towpath" },
     { unit: "Richmond", caseId: "case-013", says: "anchor glass out there that is not ours" },
+    // Cottonwood Junction, added in Phase 88 — this file's own header has claimed six posts since
+    // Unit 6's map shipped and covered five. The line asserted is the *pre-reveal* one: Voss
+    // reports the woman in the good coat as a fact she cannot place, which is what the reveal is
+    // written against. Her second line on this map is meridian-reveal.spec.js's.
+    { unit: "Cottonwood Junction", caseId: "case-016", says: "somebody was here ahead of us" },
   ];
 
   for (const { unit, caseId, says } of LATER_MAPS) {

@@ -146,7 +146,7 @@ import {
 } from "./engine/codex-archive.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
 import { createScene, stepScene, advanceScene, skipScene } from "./engine/cutscene.js";
-import { CUTSCENES } from "./content/cutscenes.js";
+import { CUTSCENES, MERIDIAN_REVEAL_TRIGGER } from "./content/cutscenes.js";
 import { ellipse, rectsOverlap, footBoxFor } from "./engine/geometry.js";
 import { landPathD, projectPoint } from "./engine/geo-projection.js";
 import landCoastlines from "./content/maps/land-coastlines.json";
@@ -1048,6 +1048,13 @@ const CHARACTER_SHEETS = {
   // full-length coat in this room, and the two read as one silhouette at 48px if Voss wears another.
   // See docs/art/MERIDIAN-VISUAL-IDENTITY.md §6.
   liaison: characterSheet("institute/field-liaison-emery-voss", 9, { idleColumns: 5 }),
+  // Voss's second costume, and the only character in the game with one. Never named by an NPC id, a
+  // behaviour table or a scene command — `sheetFor()` is the single place that resolves `liaison` to
+  // this key, which is what keeps the reveal a lookup rather than a save migration
+  // (MERIDIAN-VISUAL-IDENTITY.md §6, "two states, two sheet keys").
+  "liaison-meridian": characterSheet("institute/field-liaison-emery-voss-meridian", 9, {
+    idleColumns: 5,
+  }),
   // Player appearances.
   "chronicler-a": characterSheet(`${FIELD}/chronicler-a`, 9),
   "chronicler-b": characterSheet(`${FIELD}/chronicler-b`, 9),
@@ -1154,9 +1161,24 @@ const CHARACTER_SHEETS = {
   "land-buyer-agent": characterSheet(`${FIELD}/npc-land-buyer-agent`, 9),
   "stock-commission-man": characterSheet(`${FIELD}/npc-stock-commission-man`, 9),
 };
-/** The sheet for a character key, falling back to the Director rather than throwing on a typo. */
+/**
+ * The sheet for a character key, falling back to the Director rather than throwing on a typo.
+ *
+ * One special case, and it is the only two-costume character in the game. Emery Voss keeps the id
+ * `liaison` everywhere — behaviour tables, field rosters, scene commands, `HUB_TARGETS` — and the
+ * reveal swaps which PNGs that id draws from rather than swapping the id. Doing it here means every
+ * caller changes at once: the hub sprite, both field sprites, the scene painter's per-frame
+ * repaint, and the portrait. Nothing downstream has to learn that she has two, which is what
+ * THE-FIELD-LIAISON.md §6 predicted when it argued for two sheet keys over a runtime tint.
+ *
+ * Read through optional chaining because `progress` is assigned after this module's constants are.
+ */
 function sheetFor(key) {
-  return CHARACTER_SHEETS[key] || CHARACTER_SHEETS.director;
+  const resolved =
+    key === "liaison" && progress?.story?.flags?.[MERIDIAN_REVEAL_TRIGGER.flag]
+      ? "liaison-meridian"
+      : key;
+  return CHARACTER_SHEETS[resolved] || CHARACTER_SHEETS.director;
 }
 /** The player's character key, from the saved appearance choice. */
 function chroniclerKey() {
@@ -2975,6 +2997,11 @@ const UNIT6_FIELD_NPCS = [
     // confession, which is what keeps both readings live. "Anchor glass" is not re-explained, per
     // canon §8; nothing is named Meridian, because nothing on this map knows the word yet.
     text: "Before you go in anywhere — somebody was here ahead of us. A woman in a good coat sat with the Kanza headmen for two hours on Monday and told them, correctly, what the appraisal would fetch and which sections would go first. She gave them better figures than their own agent has. Then she left. I have been trying all week to decide whether that was a kindness, and the honest answer is that it depends entirely on what she wanted the figures used for. Log what you find. Do not log what I just said.",
+    // The only `revealedText` in the game, and the only field line in it that says the word. Unit 6
+    // is the top of the reveal ladder; the five earlier maps keep their lines exactly as authored,
+    // because those are the deniable beats and their innocent reading is what a second pass is for.
+    revealedText:
+      "You know now, so here is the rest of it. She is Meridian. A warning given early is the cheapest thing they do — no law broken, nobody's life rewritten, just four headmen who walked into their own agent's office already knowing the number. I would have done it myself. What I cannot tell you is who else is holding that appraisal, or what it was worth to them. I did ask. Not getting an answer is what I have instead of one.",
   },
   {
     // Two tiles east of the depot on the apron: the first person the player meets, and the one who
@@ -3333,8 +3360,18 @@ export const HUB_BLOCK_RECTS = INSTITUTE_HALL_BLOCKS;
 // authored units have. The bands are deliberately coarse: trust selects which line plays, never
 // which scenes exist and nothing curricular (docs/design/THE-FIELD-LIAISON.md §5).
 export const MAX_LIAISON_TRUST = 6;
-/** Which of the Liaison's Institute lines a trust score plays. Pure, and exported for tests. */
-export function liaisonLine(trust) {
+/**
+ * Which of the Liaison's Institute lines a trust score plays. Pure, and exported for tests.
+ *
+ * `revealed` supersedes the bands rather than adding a fourth one. After Scene D the trust score
+ * still means what it meant — how much she has watched the player file — but it is no longer the
+ * interesting thing about standing in front of her, and three variations on "keep reading the
+ * paperwork" would read as though the game had forgotten what she just said. Passed in rather than
+ * read off `progress` so this stays a pure function of its arguments.
+ */
+export function liaisonLine(trust, revealed = false) {
+  if (revealed)
+    return "Still here. I did wonder. Nothing I said about the work was untrue — that is the part I would defend, and the part that makes the rest worse. Ask me what you like. I would rather answer it than have you go quiet on me.";
   if (trust >= 3)
     return "You have enough filed that I can stop handing you procedure. So, honestly: a fair amount of what the Institute calls a settled record is only a well-kept one. When the evidence will not close a question, write that it will not — I would rather read that than something tidy.";
   if (trust >= 1)
@@ -3358,7 +3395,8 @@ export const HUB_TARGETS = {
     // captioning her "Field Liaison" every time she speaks reintroduces somebody the player
     // already knows. The kicker is omitted rather than blank; "Field Liaison" stays the internal
     // name for the role, in the docs and the `liaison` registry key.
-    dialogue: () => liaisonLine(progress.story.liaisonTrust),
+    dialogue: () =>
+      liaisonLine(progress.story.liaisonTrust, progress.story.flags[MERIDIAN_REVEAL_TRIGGER.flag]),
   },
   director: {
     // The central opening in front of the foyer entrance — the first thing in front of the player
@@ -4544,6 +4582,21 @@ const DEV_WARPS = {
   // The newest map, which is the one most often being looked at. A named state per map is more
   // than this table wants; this one earns its line while Unit 6 is under construction.
   railhead: { currentScreen: "field", ...WARP_CASE_SIXTEEN, ...WARP_TOUR_DONE },
+  // Standing in the Main Hall with the railhead's three missions debriefed, which is the exact and
+  // only state in which walking up to Emery Voss opens Scene D. Reaching it by hand costs the intro,
+  // the escort, the tour, a Chronotravel and three full missions, so without this line the game's
+  // largest story beat is the one thing nobody re-checks.
+  reveal: {
+    currentScreen: "institute",
+    currentHubRoom: "main",
+    sourceActivities: {
+      "railhead-land-office-receipt": { debriefed: true, completed: true, briefed: true },
+      "railhead-construction-payroll": { debriefed: true, completed: true, briefed: true },
+      "railhead-survey-field-book": { debriefed: true, completed: true, briefed: true },
+    },
+    ...WARP_CASE_SIXTEEN,
+    ...WARP_TOUR_DONE,
+  },
   // Straight onto the interview's board, past its Mission Instructions. `ensureSourceActivity()`
   // fills in the engine's own default state, so the flag alone is the whole seed.
   mission: {
@@ -4568,7 +4621,14 @@ function applyDevWarp() {
   showMainMenu = false;
   showTitle = false; // a named warp lands where it says — never behind the title sequence
   // Both clear held keys and stop the hub movement loop, so a warp cannot land mid-walk.
+  //
+  // Two named spawns rather than the default. `hall` is a different room; `reveal` is the same room
+  // with the player already inside Voss's reach, because that warp exists to check a scene that
+  // only opens when you are standing in front of her, and "now walk across the hall" is exactly the
+  // friction the table is here to remove.
   if (name === "hall") enterHallwayRoom();
+  else if (name === "reveal")
+    safeInstituteSpawn(HUB_TARGETS.liaison.x, HUB_TARGETS.liaison.y + 1.0, "up");
   else safeInstituteSpawn();
   // After the spawn helpers, which write `currentHubRoom` themselves — the warp's own value wins.
   Object.assign(progress, DEV_WARPS[name]);
@@ -9706,9 +9766,34 @@ function interactWithHubTarget(id) {
     startHubScene("director-orientation", { onDone: enterMainHallFromHallway });
     return;
   }
+  // Scene D, and it is deliberately the last thing checked before the ordinary dialogue box: the
+  // reveal is what happens instead of Voss's usual line, once, on the visit after the railhead's
+  // third debrief. startHubScene() renders, so this returns rather than falling through.
+  if (isRevealEarned(id) && startHubScene("meridian-reveal")) return;
   playSfx(id === "trophy" ? "archive-receive" : "dialogue");
   hubDialogueId = id;
   render();
+}
+/**
+ * Whether talking to this character right now should open the Meridian reveal instead of a line.
+ *
+ * Every APUSH fact in the condition lives in `MERIDIAN_REVEAL_TRIGGER` in content/cutscenes.js —
+ * whose interaction opens it, which case has to be finished, which flag closes it. This function
+ * knows only how to ask those three questions of the save.
+ *
+ * The case is measured in *missions*, not records: case-016 carries seven and three of them are
+ * activities, so requiring all seven would strand the reveal behind four ordinary readings that
+ * have nothing to do with it. `debriefed` rather than `completed`, because the debrief is where
+ * the mission says what it was about and where `liaisonTrust` already moves.
+ */
+function isRevealEarned(targetId) {
+  const trigger = MERIDIAN_REVEAL_TRIGGER;
+  if (targetId !== trigger.target || progress.story.flags[trigger.flag]) return false;
+  const missions = sourcesForCase(trigger.afterCase).filter((source) => activityFor(source.id));
+  return (
+    missions.length > 0 &&
+    missions.every((source) => progress.sourceActivities[source.id]?.debriefed)
+  );
 }
 function instituteNpc(targetId, label) {
   const target = activeHubTargets()[targetId];
@@ -9778,13 +9863,26 @@ function instituteMainRoomScreen() {
     (progress.completedCases.length
       ? `${progress.completedCases.length}/3 Unit 1 cases archived.`
       : "Your first active route awaits at the Navigation Table.");
+  // Scene D is an interaction rather than an arrival, which is what makes it a discovery — but a
+  // beat this size must not be one a player can walk out of the room past. Its own span rather than
+  // a replacement for `status`: the visit it waits on is precisely the visit where a recall has
+  // just written "Field record received" into the notice, and taking that slot would also swallow
+  // the "Move closer to interact" message a click from out of range writes there. One derived
+  // line, no new save state, and it stops being true the moment she has said it.
+  //
+  // Suppressed while a scene owns the room: the flag it writes lands mid-scene, so without this the
+  // line would sit there telling the player to go and find somebody who is currently talking to them.
+  const revealNudge =
+    !isHubSceneActive() && isRevealEarned(MERIDIAN_REVEAL_TRIGGER.target)
+      ? "<span>Emery Voss is waiting for you in the north aisle.</span>"
+      : "";
   const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Active researcher · Unit 1</p><div class="hub-progress"><span><b>${progress.completedCases.length}</b> / 3 cases archived</span><span><b>${countEvidence("case-001")}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Badge case</b><span>Walk to the Preservation Case on its plinth in the west alcove to view Unit 1 badges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${countEvidence("case-001")}</b></button><button class="text-button" data-action="reset">Reset Unit 1 demo</button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
   // Same `.hub-world` + camera structure as archiveRoomScreen(): everything that lives in world
   // space goes inside the translated div, and the interact prompt stays outside it so it can't be
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span></div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span>${revealNudge}</div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -10933,6 +11031,25 @@ function fieldNpcButton(npc) {
   const label = carried ? `${npc.name} — carries a record` : `Talk with ${npc.name}`;
   return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * activeFieldGrid().tile).toFixed(1)}px;top:${(state.y * activeFieldGrid().tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}<span>${esc(npc.label)}</span>${badge}</button>`;
 }
+/**
+ * An NPC's ambient line — the one that tells you a person is worth asking.
+ *
+ * Exactly one character in the game has two, and the field roster says so itself rather than this
+ * function naming her: a `revealedText` is what an NPC says once the reveal has landed, and an NPC
+ * without one is unaffected. That is the `requiresSourceId` pattern — when a second case needs
+ * behaviour a literal hard-codes for the first, make it data — applied before there is a second
+ * case, because the alternative was an id literal in a render path.
+ *
+ * **Units 1-5 deliberately do not get one.** Their Voss lines are the three deniable beats of the
+ * reveal ladder, and their whole design is that the innocent reading is still available. Replacing
+ * them after the reveal would delete the clue the player is now equipped to re-read, which is what
+ * THE-FIELD-LIAISON.md §4 says replay exists for.
+ */
+function fieldNpcLine(npc) {
+  return npc.revealedText && progress.story.flags[MERIDIAN_REVEAL_TRIGGER.flag]
+    ? npc.revealedText
+    : npc.text;
+}
 function fieldDialogueBubble() {
   const npc = activeFieldMap().npcs.find((item) => item.id === progress.activeFieldNpc);
   if (!npc) return "";
@@ -10944,7 +11061,7 @@ function fieldDialogueBubble() {
   // actually answered something, at which point it has done its job and the answer takes its place.
   // Keeping both stacked a name, three lines of ambient text, an answer and four question chips
   // into one bubble, which is taller than the field viewport can show above *or* below a speaker.
-  const line = interview.answering ? "" : `<p>${esc(npc.text)}</p>`;
+  const line = interview.answering ? "" : `<p>${esc(fieldNpcLine(npc))}</p>`;
   // Rendered above the speaker; placeFieldDialogueBubble() may flip it under them after layout, if
   // it does not fit. The speaker's own grid y travels on the element so that pass can recompute
   // both positions without re-deriving anything.

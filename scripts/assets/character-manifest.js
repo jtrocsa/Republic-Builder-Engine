@@ -97,11 +97,42 @@ export const CHARACTERS = [
   // coat entirely (three garment layers is more than 45 pixels of body can hold), and
   // e9ecca13-f6e8-454f-92c3-14515e060f57 produced a full-length coat that read as Dr. Soto's
   // silhouette from across the Main Hall.
+  //
+  // `state` is the folder inside the character's download archive. It was not needed until Phase 88
+  // gave Voss a second costume in the same archive — see the entry below — and it is named on both
+  // of hers rather than only the new one, so neither depends on which order PixelLab lists them in.
   {
     key: "liaison",
     stem: "institute/field-liaison-emery-voss",
     name: "Emery Voss",
     id: "d7ba9b23-1096-4e05-b24b-5fd33c4dc82f",
+    state: "Idle",
+    frames: 8,
+    walkGroup: "walking",
+    idleGroup: "breathing-idle",
+    idleFrames: 4,
+  },
+
+  // The same woman with her coat turned — MERIDIAN-VISUAL-IDENTITY.md §6's "two states, two sheet
+  // keys", generated in Phase 88 when Unit 6's reveal finally needed it. `main.js`'s `sheetFor()`
+  // resolves `liaison` to this key once `sawMeridianMark` is set, so nothing else in the game knows
+  // she has two.
+  //
+  // **Made with `create_character_state`, not `create_character`, and that is the whole story of
+  // getting it right.** A fresh create from §6's revealed prompt — same size, view, outline,
+  // shading, detail and proportions as the shipped Voss — produced a different person: hair down,
+  // no navy coat, no mark. §6 predicted exactly that ("two characters who happen to share a
+  // haircut") and prescribed designing the revealed version first, which is not executable against
+  // a text-to-sprite generator. A *state* is: it takes the existing character and applies one edit
+  // across all eight rotations, so the face, the bun, the boots and the silhouette are the same
+  // pixels. The abandoned create was
+  // 353d883b-1fa8-4fc1-983c-bf49d13425c2 and is deleted; do not re-run that route.
+  {
+    key: "liaison-meridian",
+    stem: "institute/field-liaison-emery-voss-meridian",
+    name: "Emery Voss",
+    id: "d3e4aaf2-1f6f-4a5f-8680-2d2f24b5367a",
+    state: "Revealed",
     frames: 8,
     walkGroup: "walking",
     idleGroup: "breathing-idle",
