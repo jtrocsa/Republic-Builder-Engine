@@ -115,6 +115,41 @@ test.describe("Field objective tracker", () => {
     await expect(page.locator(".field-tracker__row.is-available")).toHaveCount(2);
   });
 
+  test("a locked record is listed by the tracker and drawn nowhere on the map", async ({
+    page,
+  }) => {
+    // Richmond's price board, and the reason Spine Review Part 6 went looking here at all.
+    //
+    // `fieldSourceSignal()` returns "" for a locked record, so it has no world marker — which is
+    // the honest presentation, and was also the coincidence that hid a real bug for six phases. It
+    // made the *click* path unable to reach a locked record (no button to click), which made the
+    // gate look enforced. It was not: `E` goes through `nearestFieldInteraction()`, which offers a
+    // record whether it has a marker or not, and the only thing standing in the way was a
+    // hard-coded `case-001` literal. Six maps declared the gate in content and none applied it.
+    //
+    // This is that presentation pinned on the map it was wrong on. The refusal itself is a unit
+    // test (`field-record-gate.test.js`) rather than a walk: the record has no marker to walk to,
+    // and reaching its cell from the Franklin Street spawn means crossing the bluff, which
+    // walkTo() steers and shoves at rather than pathfinds.
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-013",
+      unlocked: ["case-001", "case-013"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    await expect(
+      page.locator('.source-signal--world[data-source="richmond-price-board"]')
+    ).toHaveCount(0);
+    await expect(page.locator(".field-tracker__row.is-locked")).toHaveCount(1);
+    await expect(page.locator(".field-tracker__row.is-locked")).toContainText("Not yet available");
+    // The other five of Richmond's six records are reachable, so this is a gate on one record and
+    // not a case that opens shut.
+    await expect(page.locator(".field-tracker__row")).toHaveCount(6);
+  });
+
   test("collapses to its header, and the choice survives a reload", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "field",

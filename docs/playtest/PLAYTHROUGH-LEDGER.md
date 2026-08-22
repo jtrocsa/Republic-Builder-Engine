@@ -15,21 +15,22 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 
 ## Status
 
-| №                                              | Part                                                             | Status      | Closed     | Open                                             |
-| ---------------------------------------------- | ---------------------------------------------------------------- | ----------- | ---------- | ------------------------------------------------ |
-| [0](./part-00-unblock.md)                      | Unblock and instrument                                           | **closed**  | 2026-08-03 | 1 S2 _(P0-3, awaiting an owner decision)_ · 1 S3 |
-| [1](./part-01-04-the-intro.md)                 | Cold boot and landing                                            | **closed**  | 2026-08-22 | —                                                |
-| [2](./part-01-04-the-intro.md)                 | The Director and identity                                        | **closed**  | 2026-08-22 | —                                                |
-| [3](./part-01-04-the-intro.md)                 | The Entrance Hall                                                | **closed**  | 2026-08-22 | —                                                |
-| [4](./part-01-04-the-intro.md)                 | Main Hall and the tutorial tour                                  | **closed**  | 2026-08-22 | —                                                |
-| [5](./part-05-archive-and-navigation-table.md) | Archive Room and the Navigation Table                            | **closed**  | 2026-08-22 | —                                                |
-| 6                                              | The field runtime _(two sittings: 6A world, 6B mission surface)_ | not started |            | 1 S3 inbound from Part 5 _(P5-8, two recalls)_   |
-| 7                                              | Mission Instructions and the activity board                      | not started |            |                                                  |
-| 8                                              | The Field Notebook and the debrief                               | not started |            |                                                  |
-| 9                                              | The record and the checks                                        | not started |            |                                                  |
-| 11                                             | The Institute Archive                                            | not started |            | 2 S3 inbound from Part 5 _(P5-9, P5-10)_         |
-| 12                                             | Unit close and the next unit                                     | not started |            |                                                  |
-| 10                                             | The ten non-field missions                                       | not started |            |                                                  |
+| №                                              | Part                                        | Status      | Closed     | Open                                              |
+| ---------------------------------------------- | ------------------------------------------- | ----------- | ---------- | ------------------------------------------------- |
+| [0](./part-00-unblock.md)                      | Unblock and instrument                      | **closed**  | 2026-08-03 | 1 S2 _(P0-3, awaiting an owner decision)_ · 1 S3  |
+| [1](./part-01-04-the-intro.md)                 | Cold boot and landing                       | **closed**  | 2026-08-22 | —                                                 |
+| [2](./part-01-04-the-intro.md)                 | The Director and identity                   | **closed**  | 2026-08-22 | —                                                 |
+| [3](./part-01-04-the-intro.md)                 | The Entrance Hall                           | **closed**  | 2026-08-22 | —                                                 |
+| [4](./part-01-04-the-intro.md)                 | Main Hall and the tutorial tour             | **closed**  | 2026-08-22 | —                                                 |
+| [5](./part-05-archive-and-navigation-table.md) | Archive Room and the Navigation Table       | **closed**  | 2026-08-22 | —                                                 |
+| [6A](./part-06-the-field-runtime.md)           | The field runtime — the world               | **closed**  | 2026-08-22 | —                                                 |
+| [6B](./part-06-the-field-runtime.md)           | The field runtime — the mission surface     | not started |            | 1 S3 inbound from 6A _(P6-5, the beacon's reach)_ |
+| 7                                              | Mission Instructions and the activity board | not started |            |                                                   |
+| 8                                              | The Field Notebook and the debrief          | not started |            |                                                   |
+| 9                                              | The record and the checks                   | not started |            |                                                   |
+| 11                                             | The Institute Archive                       | not started |            | 2 S3 inbound from Part 5 _(P5-9, P5-10)_          |
+| 12                                             | Unit close and the next unit                | not started |            |                                                   |
+| 10                                             | The ten non-field missions                  | not started |            |                                                   |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
 history — no sha column to go stale.

@@ -11772,6 +11772,74 @@ function fieldTooFarNotice(label) {
   }
 }
 /**
+ * Refuse a record whose prerequisite is still outstanding, and say which one it is.
+ *
+ * Returns true if the record is locked — the notice is already written and the caller must stop.
+ * It asks `sourceAvailability()` rather than knowing anything itself about which case gates what.
+ *
+ * **This replaced the last two `caseId === "case-001"` literals in the field runtime.** Phase 70
+ * moved the *display* half of that gate into content as `requiresSourceId` and left both
+ * enforcement copies behind, so six of the seven maps declared the rule and none of them enforced
+ * it. The gap hid because `fieldSourceSignal()` renders no marker at all for a locked record,
+ * which makes the click-path copy unreachable — but `E` goes through `nearestFieldInteraction()`,
+ * which offers a record whether it has a marker or not. Exactly one record outside Unit 1 is both
+ * locked and object-anchored, and it opened: Richmond's price board. See decision log 0082.
+ */
+function refuseLockedRecord(sourceId) {
+  if (sourceAvailability(activeFieldCaseId(), sourceId) !== "locked") return false;
+  const requiredId = sourceById(sourceId)?.requiresSourceId;
+  // Named the way the Mission Tracker names it, and read across every surface for the same reason
+  // the tracker is: the record you have to get first can be behind a door.
+  const points = Object.assign({}, ...fieldSurfaces().map((surface) => surface.sourcePoints || {}));
+  const point = points[requiredId] || {};
+  const where = point.anchor?.npc
+    ? fieldNpcName(point.anchor.npc) || point.label
+    : point.anchor?.object || point.label;
+  // Deliberately points at the checklist rather than re-explaining the case. The old Unit 1 line
+  // named the two records it was blocking and never said where to go instead; this names the
+  // person or object to walk to, which is the thing the tracker is already listing as available.
+  progress.fieldNotice =
+    point.label && where
+      ? `${point.label} comes first. The checklist points to ${where}.`
+      : "Another record in this case has to be secured first.";
+  save();
+  render();
+  return true;
+}
+/**
+ * The two ways into a record, each written once.
+ *
+ * A record can be opened from its world marker, from the person carrying it, or with `E` — and
+ * each of those used to carry its own copy of these state changes. They had drifted: `E` on an
+ * already-secured record set `activeActivitySourceId`, which re-pins its finished mission as the
+ * Mission Tracker's in-flight block, where clicking the same marker does not. The duplication is
+ * also what let the locked-record gate above exist on one path and not the other.
+ *
+ * Neither checks proximity. `E` is already gated by `nearestFieldInteraction()`; the click paths
+ * gate themselves first, because a marker can be clicked from anywhere on the map.
+ */
+function openFieldRecord(sourceId, origin = "field") {
+  openSourceId = sourceId;
+  progress.activeFieldNpc = null;
+  sourceOrigin = origin;
+  progress.currentScreen = "source";
+  save();
+  render();
+}
+function beginFieldRecord(sourceId) {
+  openSourceId = sourceId;
+  progress.activeFieldNpc = null;
+  sourceOrigin = "field";
+  ensureSourceActivity(sourceId);
+  // Persisted alongside the module-local id so a reload inside an activity resumes in the right
+  // one. openSourceId cannot do that job by itself — it dies with the page.
+  progress.activeActivitySourceId = sourceId;
+  playQuestSfx(sourceId);
+  progress.currentScreen = sourceEntryScreen(sourceId);
+  save();
+  render();
+}
+/**
  * Whether a record can be pursued yet: `"secured"`, `"available"`, or `"locked"`.
  *
  * The rule used to live inline inside `fieldSourceSignal()` as an early `return ""`, so it was the
@@ -12176,7 +12244,7 @@ function recallBeacon() {
   if (isInsideFieldInterior()) return "";
   const recall = activeFieldOutdoorMap().recall;
   const grid = activeFieldGrid();
-  return `<button class="recall-beacon" style="left:${(recall.x * grid.tile).toFixed(1)}px;top:${(recall.y * grid.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive room"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
+  return `<button class="recall-beacon" style="left:${(recall.x * grid.tile).toFixed(1)}px;top:${(recall.y * grid.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
 }
 /**
  * The doorstep markers on the outdoor map, and the threshold marker inside a room.
@@ -12279,7 +12347,7 @@ function fieldScreen() {
   const kicker = activeCase.location.includes(activeCase.date)
     ? activeCase.location
     : `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="home">← Recall to Institute</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01 demo</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
 }
 
 // Human-facing name for each engine, used in the activity screen's eyebrow. The engine keys
@@ -13487,7 +13555,7 @@ function render() {
     progress.hubNotice =
       "The Archive display recovered from a render issue. Use Reset Unit 1 demo if you want to retest the full flow.";
     save();
-    html = `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Chronicle recovery</p><h1>Archive display restored.</h1><p>The screen recovered instead of staying blank. Return to the Institute and continue testing.</p><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="reset-case-001">Reset Case 1.01 demo</button></section></main>${authorPanel()}`;
+    html = `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Chronicle recovery</p><h1>Archive display restored.</h1><p>The screen recovered instead of staying blank. Return to the Institute and continue testing.</p><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="reset-case-001">Reset Case 1.01</button></section></main>${authorPanel()}`;
   }
   app.innerHTML = html;
   syncManageContentNativeDialogs();
@@ -13671,22 +13739,52 @@ if (progress.currentScreen === "field" && progress.activeCaseId) {
   progress.fieldNotice = "";
 }
 
+/**
+ * Clear one case's fieldwork out of a save, leaving every other case alone.
+ *
+ * Everything a case owns except its evidence list is keyed by **source id** — `responses`,
+ * `revealedContexts`, `reconstruction` and `sourceActivities` all are — so the case's own source
+ * list is the whole key set, and no other unit can be caught by it.
+ *
+ * Deliberately does not touch `completedCases`, `unlocked` or `codex`. Replaying the fieldwork is
+ * what the control offers; revoking a badge the student already earned, and possibly re-locking
+ * the case after it, is not. The Codex is the one store designed to outlive the case that filled
+ * it (see DEFAULT_PROGRESS).
+ *
+ * Exported for tests/unit, per CLAUDE.md's export-in-place rule.
+ */
+export function resetCaseState(target, caseId, sourceIds) {
+  const owned = new Set(sourceIds);
+  for (const id of owned) {
+    delete target.responses?.[id];
+    delete target.reconstruction?.[id];
+    delete target.sourceActivities?.[id];
+  }
+  target.caseEvidence = { ...target.caseEvidence, [caseId]: [] };
+  target.revealedContexts = (target.revealedContexts || []).filter((id) => !owned.has(id));
+  if (owned.has(target.activeActivitySourceId)) target.activeActivitySourceId = null;
+  return target;
+}
+
 function resetCaseOneDemo() {
-  const profile = progress.profile;
-  progress = resetProgress();
-  progress.profile = profile;
+  // Surgical, which is what the label has always promised and what
+  // CURRENT-REPOSITORY-AUDIT.md has always described this as doing. It was neither: the first
+  // statement was `progress = resetProgress()`, which empties the whole save, and the lines after
+  // it re-seeded a handful of Case 1.01 fields. So a student in Unit 6 who reopened the Caribbean
+  // to revise — the case stays unlocked and replayable all year — and pressed a button naming one
+  // case lost every unit they had finished. Found by reading, in Spine Review Part 6; see decision
+  // log 0082.
+  resetCaseState(
+    progress,
+    "case-001",
+    sourcesForCase("case-001").map((source) => source.id)
+  );
   progress.currentScreen = "field";
   progress.activeCaseId = "case-001";
   progress.selectedCaseId = "case-001";
+  progress.selectedUnitId = "unit-01";
   progress.fieldNotice =
     "Case 1.01 reset. Start near the village, collect observations, then follow the evidence toward the Spanish camp and map fragments.";
-  progress.sourceActivities = {};
-  progress.caseEvidence = { "case-001": [] };
-  progress.responses = {};
-  progress.revealedContexts = [];
-  progress.reconstruction = {};
-  progress.completedCases = [];
-  progress.unlocked = ["case-001"];
   resetFieldPosition();
   save();
 }
@@ -13813,11 +13911,12 @@ function handleChromeClick(target, action) {
     return true;
   }
   if (action === "home") {
-    // Safety net: a teacher previewing a map mission can also leave via the
-    // field screen's own "Recall to Institute" control, not just the
-    // preview banner's "Exit preview" — either must cleanly end the
-    // ephemeral preview session (see previewSession's own comment) rather
-    // than stranding it active on the real institute screen.
+    // Safety net: any way out of a previewed screen that is not the banner's
+    // "Exit preview" must still end the ephemeral preview session (see
+    // previewSession's own comment) rather than strand it active on the real
+    // institute screen. The field's own recall control was the case these
+    // audits describe; it carries its own copy of this guard since Phase 90D,
+    // because it is "field-recall" now rather than a second caller of "home".
     if (exitPreviewIfActive()) return true;
     progress.activeFieldNpc = null;
     safeInstituteSpawn();
@@ -14132,6 +14231,11 @@ function handleFieldClick(target, action) {
     return true;
   }
   if (action === "field-recall") {
+    // The safety net that used to hang on "home": a teacher previewing a map mission can leave via
+    // the field's own recall control as well as the preview banner, and either has to end the
+    // ephemeral session rather than stranding it active on the real institute screen. It moved
+    // here in Phase 90D with the back link, which is the control those audits were describing.
+    if (exitPreviewIfActive()) return true;
     progress.activeFieldNpc = null;
     progress.hubNotice = "Temporal recall complete. You rematerialized at the Navigation Table.";
     safeInstituteSpawn(...instituteRecallSpawn());
@@ -14149,32 +14253,13 @@ function handleFieldClick(target, action) {
     // Closing the dialogue is what *succeeding* does, so it happens once every guard below has
     // passed. Nulling it up here closed the bubble on the two refusal paths as well, which is how
     // "too far" and "not yet available" both came out looking like the button had eaten the click.
-    openSourceId = target.dataset.source;
-    if (!isNearFieldSource(openSourceId)) {
-      fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
+    const sourceId = target.dataset.source;
+    if (!isNearFieldSource(sourceId)) {
+      fieldTooFarNotice((activeFieldMap().sourcePoints[sourceId] || {}).label || "this record");
       return true;
     }
-    if (
-      activeFieldCaseId() === "case-001" &&
-      openSourceId !== "taino-context" &&
-      !hasEvidence("case-001", "taino-context")
-    ) {
-      progress.fieldNotice =
-        "The Spanish camp and map fragments will make more sense after the village record is stabilized.";
-      save();
-      render();
-      return true;
-    }
-    progress.activeFieldNpc = null;
-    sourceOrigin = "field";
-    ensureSourceActivity(openSourceId);
-    // Persisted alongside the module-local id so a reload inside an activity resumes in the right
-    // one. openSourceId cannot do that job by itself — it dies with the page.
-    progress.activeActivitySourceId = openSourceId;
-    playQuestSfx(openSourceId);
-    progress.currentScreen = sourceEntryScreen(openSourceId);
-    save();
-    render();
+    if (refuseLockedRecord(sourceId)) return true;
+    beginFieldRecord(sourceId);
     return true;
   }
   if (action === "open-activity-source") {
@@ -14270,17 +14355,14 @@ function handleSourceReaderClick(target, action) {
     return true;
   }
   if (action === "open-source") {
-    openSourceId = target.dataset.source;
-    if ((target.dataset.origin || "field") === "field" && !isNearFieldSource(openSourceId)) {
-      fieldTooFarNotice((activeFieldMap().sourcePoints[openSourceId] || {}).label || "this record");
+    const sourceId = target.dataset.source;
+    const origin = target.dataset.origin || "field";
+    if (origin === "field" && !isNearFieldSource(sourceId)) {
+      fieldTooFarNotice((activeFieldMap().sourcePoints[sourceId] || {}).label || "this record");
       return true;
     }
     // After the guard, for the same reason as "start-source-activity" above.
-    progress.activeFieldNpc = null;
-    sourceOrigin = target.dataset.origin || "field";
-    progress.currentScreen = "source";
-    save();
-    render();
+    openFieldRecord(sourceId, origin);
     return true;
   }
   if (action === "return-source") {
@@ -15620,28 +15702,12 @@ function handleWindowKeydown(event) {
         if (nearby.type === "door") enterFieldInterior(nearby.id);
         if (nearby.type === "exit") exitFieldInterior();
         if (nearby.type === "source") {
-          progress.activeFieldNpc = null;
-          openSourceId = nearby.id;
-          if (
-            activeFieldCaseId() === "case-001" &&
-            openSourceId !== "taino-context" &&
-            !hasEvidence("case-001", "taino-context")
-          ) {
-            progress.fieldNotice =
-              "The Spanish camp and map fragments will make more sense after the village record is stabilized.";
-            save();
-            render();
-            return;
-          }
-          sourceOrigin = "field";
-          ensureSourceActivity(openSourceId);
-          progress.activeActivitySourceId = openSourceId;
-          playQuestSfx(openSourceId);
-          progress.currentScreen = hasEvidence(activeFieldCaseId(), openSourceId)
-            ? "source"
-            : sourceEntryScreen(openSourceId);
-          save();
-          render();
+          if (refuseLockedRecord(nearby.id)) return;
+          // The same two functions the world marker's own two actions call, so `E` and a click on
+          // the record cannot drift apart again. This branch used to inline both and set
+          // `activeActivitySourceId` even on the secured path, which "open-source" does not.
+          if (hasEvidence(activeFieldCaseId(), nearby.id)) openFieldRecord(nearby.id);
+          else beginFieldRecord(nearby.id);
         }
       }
       return;

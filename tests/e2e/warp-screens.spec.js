@@ -170,7 +170,12 @@ test.describe("Archive recall", () => {
 
     // Dispatched rather than clicked: the beacon is a world button inside the scrolling map
     // transform, and Playwright reads it as outside the viewport even when the camera has it.
-    await page.locator('[data-action="field-recall"]').dispatchEvent("click");
+    //
+    // Scoped to `.recall-beacon` since Phase 90D, when the field's back link stopped running `home`
+    // — an instant cut to the foyer, no warp — and became the second caller of this action. The
+    // bare attribute now matches both, which is the point of the change and a strict-mode
+    // violation here. This test is about the beacon; field-recall.spec.js covers the back link.
+    await page.locator('.recall-beacon[data-action="field-recall"]').dispatchEvent("click");
     await expect(recallWarp(page)).toBeVisible();
     await expect(plate(page)).toHaveAttribute("src", /institute-archive/);
 
