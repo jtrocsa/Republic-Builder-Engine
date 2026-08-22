@@ -36,6 +36,8 @@ import railhead from "../../apps/web/src/content/tilesets/maps/railhead-field.pa
 import railheadLandOffice from "../../apps/web/src/content/tilesets/maps/railhead-land-office.palette.js";
 import railheadTelegraphOffice from "../../apps/web/src/content/tilesets/maps/railhead-telegraph-office.palette.js";
 import immigrantPort from "../../apps/web/src/content/tilesets/maps/immigrant-port-field.palette.js";
+import immigrantPortInspectionHall from "../../apps/web/src/content/tilesets/maps/immigrant-port-inspection-hall.palette.js";
+import immigrantPortInquiryRoom from "../../apps/web/src/content/tilesets/maps/immigrant-port-inquiry-room.palette.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../..");
@@ -56,6 +58,8 @@ const MAP_PALETTES = [
   railheadLandOffice,
   railheadTelegraphOffice,
   immigrantPort,
+  immigrantPortInspectionHall,
+  immigrantPortInquiryRoom,
   archiveRoom,
   hallway,
   instituteHall,

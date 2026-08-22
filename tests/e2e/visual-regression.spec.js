@@ -630,18 +630,34 @@ test.describe("Gameplay visual-regression baselines", () => {
   // solidity change that quietly moved either would look like nothing in the collision tests and
   // like a fence lying flat on the quay here. The two landing stages are the other reason — they
   // are ground-layer decking painted over water, which is a treatment no other map uses.
-  test("field: the immigrant station's wharf (Unit 7)", async ({ page }) => {
-    await seedProgress(page, {
+  //
+  // Its two rooms went in in Phase 89D. The hall is the first interior in the game bigger than the
+  // viewport on both axes, so its baseline is also the only one that frames a *part* of a room; and
+  // its railings are the wharf's own rail tile indoors, which means one solidity change would show
+  // up in both shots at once.
+  test("field: the immigrant station's wharf and both of its rooms (Unit 7)", async ({ page }) => {
+    const seed = {
       currentScreen: "field",
       activeCaseId: "case-019",
       unlocked: ["case-001", "case-019"],
       tutorial: { step: "complete", completed: true, skipped: false },
-    });
+    };
+    await seedProgress(page, seed);
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "immigrantPortTiledCanvas");
     await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
     await expect(page).toHaveScreenshot(snap("field-immigrant-port"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "immigrant-port-inspection-hall" });
+    await waitForTiledCanvas(page, "immigrantPortInspectionHallTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-immigrant-port-inspection-hall"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "immigrant-port-inquiry-room" });
+    await waitForTiledCanvas(page, "immigrantPortInquiryRoomTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-immigrant-port-inquiry-room"));
   });
 
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({

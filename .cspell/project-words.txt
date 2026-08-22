@@ -30,6 +30,7 @@ Bidwell
 Bohío
 Bosman
 Bosman's
+Bregman
 Bundlephobia
 Cady
 Caladan
@@ -48,8 +49,10 @@ Cordell
 Cortés
 Cortés's
 Culloch
+Cuthbert
 Dijkstras
 Donnan's
+doorcase
 Dykstra
 Echota
 Ellsberg
@@ -68,6 +71,7 @@ Genericity
 Gerardus
 Ginés
 Gowrie
+Grasso
 Grimké
 Guanahaní
 Halka
@@ -88,6 +92,7 @@ Kell
 Keppler
 Keppler's
 Korematsu
+Krajewska
 Labratory
 Lanczos
 Leitner
@@ -97,6 +102,7 @@ Lucayan
 López
 Malolos
 Mancuso
+Mudge
 MULT
 Mansarded
 Mapbox
@@ -143,6 +149,7 @@ Powderly's
 Publius
 Puebloan
 QUICKREF
+Rathke
 Requerimiento's
 restrictionists
 Richmonder
@@ -191,6 +198,7 @@ Waldseemüller
 Waldseemüller's
 Waldseemüller’s
 Wayfinding
+Wieniawski
 Wirt
 Wirt's
 Workstream

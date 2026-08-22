@@ -239,8 +239,12 @@ export const PLANNED_MAPS = [
   //     carries the only wrought-iron railing the library has, which is this map's whole
   //     composition, and the plank decking both landing stages are laid in.
   //
-  // 19th Century European City/tile-B-04 is still the right call for the hall interior and stays
-  // named here, unbuilt, until the two rooms ship.
+  // Both interiors have shipped too, as immigrant-port-inspection-hall and
+  // immigrant-port-inquiry-room. tile-B-04 of the City pack was the right call and carries almost
+  // all of both rooms; the two additions it needed were the shared A4 floor sheet, because every
+  // "stone floor" block on the City sheet turns out to be a wall at 48px, and the Dock pack's
+  // tile-B-04 again — the registry floor's railings are the same tile as the rail across the wharf,
+  // which is the point rather than the economy.
   {
     id: "p7-tenement-street",
     period: 7,

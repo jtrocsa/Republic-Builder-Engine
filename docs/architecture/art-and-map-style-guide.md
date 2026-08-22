@@ -272,6 +272,30 @@ every fence, railing, hoarding and balustrade in 250 sheets faces south. A north
 exist and cannot be faked by rotation. Not a gap — a property of the whole library, and one to check a
 composition against before drawing it rather than after.
 
+**Most "stone floor" blocks in these packs are walls, and a preview will not tell you.** Two rules,
+both established on `immigrant-port-inspection-hall`, and the second is the more useful one.
+
+The first is old and was only ever half-written down: `richmond-counting-room.palette.js` records
+taking coursed grey masonry for flagstone and finding out at full size that it was a wall. The hall
+lost four candidates to it in one pass — `19th Century European City/tile-B-04` (0,14), which the
+boarding house lays as a kitchen floor, tiles a 22×18 room into a brick-walled courtyard; the shared
+A4 sheet's pale ashlar at (13,14) does it in a lighter colour; its cracked white at (12,12) draws a
+ruin; and the City sheet's black-and-white terrazzo at (14,8) is so busy it fights the cast. **A
+block reads as a floor when it has no coursing and no drawn edge**, and at 48px that is a much
+shorter list than the sheets suggest.
+
+The second only appears in the game. **`scripts/assets/preview-map.js` renders a `.tmj` against
+nothing; a room is played inside a deep-navy page with a gold-on-navy tracker over it.** The hall's
+fifth candidate was the shared sheet's pale grouted tile at (11,10) — the most historically accurate
+block available, close to what the real registry floor was — and it passed two preview renders before
+the e2e visual baseline showed twenty-two by eighteen tiles of it reading as **graph paper**. It was
+replaced by the sheet's large blue-grey slab at (8,8), which sits in the game's own blue family and is
+dark enough to carry black ironwork the length of the room.
+
+So: a preview answers _is the art laid out the way I intended_. Only a screenshot answers _is this a
+room I want to stand in_ — and for a large, flat, single-material surface the second question is the
+one that decides the tile. Capture the baseline before defending the palette choice, not after.
+
 **The Second Empire substitution, as used on `canal-crossroads-field`.** That map does not solve the
 gap above; it manages it. The masonry sheet dresses the six buildings a boomtown would genuinely have
 built in brick — the free bank, the printing office, the Market Street block, the immigrant terraces —

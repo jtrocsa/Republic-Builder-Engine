@@ -223,10 +223,19 @@ and the people answering them are being described by a vocabulary they did not c
 
 **The wharf shipped in Phase 89C** (decision log `0076`), and the brief's "organised entirely around
 sorting people" is drawn as one iron rail across it with exactly one gate — deliberately the inverse
-of Cottonwood Junction's line, which is walkable on purpose. The two interiors and the three
-activities are still owed. Note for whoever builds them: **half this unit's cast works indoors**,
-which is the highest interior share in the program and the reason the wharf ships with two of seven
-records on it.
+of Cottonwood Junction's line, which is walkable on purpose. **Both interiors shipped in Phase 89D**
+(decision log `0077`), and the same sentence of the brief is drawn twice more: the inspection hall
+takes that rail indoors, doubles it, and puts the two gates at opposite ends, so the room is a
+switchback a player walks rather than a space they cross. The hearing room does the opposite and is
+mostly floor.
+
+Only the three activities are still owed. Two notes for whoever authors them. **Half this unit's cast
+works indoors** — the highest interior share in the program — so two of the three givers are in the
+inspection hall and the third is behind the second door; `fieldNpcById()` resolves across every
+surface of a map, so that is legal for `briefing.speaker` as well as for the anchors. And **the
+TRACE's record is already ordered last by the content**: the board minute carries
+`requiresSourceId: "port-ship-manifest-page"`, the only cross-surface lock in the game, so it cannot
+open until the manifest the INTERVIEW is authored on has been secured.
 
 ### Unit 8 — the suburban corridor. 1957. Slate B.
 

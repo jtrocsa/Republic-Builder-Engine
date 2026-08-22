@@ -201,6 +201,8 @@ import railheadTmjRaw from "./content/maps/railhead-field.tmj?raw";
 import immigrantPortTmjRaw from "./content/maps/immigrant-port-field.tmj?raw";
 import railheadLandOfficeTmjRaw from "./content/maps/railhead-land-office.tmj?raw";
 import railheadTelegraphOfficeTmjRaw from "./content/maps/railhead-telegraph-office.tmj?raw";
+import immigrantPortInspectionHallTmjRaw from "./content/maps/immigrant-port-inspection-hall.tmj?raw";
+import immigrantPortInquiryRoomTmjRaw from "./content/maps/immigrant-port-inquiry-room.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
@@ -245,6 +247,8 @@ import { RICHMOND_COUNTING_ROOM_BLOCKS } from "./content/maps/richmond-counting-
 import { RAILHEAD_LAND_OFFICE_BLOCKS } from "./content/maps/railhead-land-office.blocks.js";
 import { RAILHEAD_TELEGRAPH_OFFICE_BLOCKS } from "./content/maps/railhead-telegraph-office.blocks.js";
 import { RICHMOND_HOSPITAL_WARD_BLOCKS } from "./content/maps/richmond-hospital-ward.blocks.js";
+import { IMMIGRANT_PORT_INSPECTION_HALL_BLOCKS } from "./content/maps/immigrant-port-inspection-hall.blocks.js";
+import { IMMIGRANT_PORT_INQUIRY_ROOM_BLOCKS } from "./content/maps/immigrant-port-inquiry-room.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
 import { HALLWAY_BLOCKS } from "./content/maps/hallway.blocks.js";
@@ -957,6 +961,55 @@ function renderRailheadTelegraphOfficeTiledMap() {
   );
 }
 
+// Ellis Island's two rooms. One resolver serves both, as everywhere else, and **every sheet either
+// room names is already in the bundle**: the two City interior sheets come in with Canal Crossroads'
+// and Richmond's four rooms, the shared A4 floor sheet with Cottonwood Junction's two, and the Dock
+// sheet with the wharf these rooms open off. Four globs, zero bytes added.
+//
+// That last one is the interesting entry rather than the cheap one. The registry floor's railings
+// are the *same tile* as the rail across the wharf outside — see the inspection hall's palette
+// header — so the sheet is here because the object is the same object, not because it was to hand.
+const immigrantPortInspectionHallTmj = JSON.parse(immigrantPortInspectionHallTmjRaw);
+const immigrantPortInquiryRoomTmj = JSON.parse(immigrantPortInquiryRoomTmjRaw);
+const resolveImmigrantPortInteriorTilesetImage = createTilesetImageResolver(
+  // The hall's floor: pale grouted tile. Addressed through its `Medieval Tavern/` path rather than
+  // any of the twelve byte-identical copies, per canonical-palette.js's one-path rule.
+  import.meta.glob("./assets/tilesets/Medieval Tavern/Auto-tile-A4-Walls-1.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Both walls, both doors, the sash windows, the clocks, the benches, the luggage, the presses,
+  // the safe, the clerk's table and the carpet.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The registry desks, the money exchange counter and the board of inquiry's own table.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-02.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The railings across the registry floor — the wharf's rail, indoors.
+  import.meta.glob("./assets/tilesets/19th Centruy European Dock/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderImmigrantPortInspectionHallTiledMap() {
+  renderTiledMapWithOverlay(
+    "immigrantPortInspectionHallTiledCanvas",
+    immigrantPortInspectionHallTmj,
+    resolveImmigrantPortInteriorTilesetImage
+  );
+}
+function renderImmigrantPortInquiryRoomTiledMap() {
+  renderTiledMapWithOverlay(
+    "immigrantPortInquiryRoomTiledCanvas",
+    immigrantPortInquiryRoomTmj,
+    resolveImmigrantPortInteriorTilesetImage
+  );
+}
+
 // Richmond's two rooms. One resolver serves both, as at Canal Crossroads, and every sheet either
 // room names is already in the bundle: the two `19th Century European City` interior sheets come in
 // with the printing office and the boardinghouse, and derived/civil-war-works.png with the outdoor
@@ -1255,6 +1308,16 @@ const CHARACTER_SHEETS = {
   "port-steerage-elder": characterSheet(`${FIELD}/npc-port-steerage-elder`, 9),
   "port-aid-society-agent": characterSheet(`${FIELD}/npc-port-aid-society-agent`, 9),
   "port-waiting-relative": characterSheet(`${FIELD}/npc-port-waiting-relative`, 9),
+  // Unit 7's other seven, generated in the same Phase 89B import and landing here with the two
+  // doors they work behind. Half the cast of this map works indoors, which is the highest interior
+  // share in the game and is the station stating its own shape.
+  "port-immigrant-inspector": characterSheet(`${FIELD}/npc-port-immigrant-inspector`, 9),
+  "port-line-surgeon": characterSheet(`${FIELD}/npc-port-line-surgeon`, 9),
+  "port-interpreter": characterSheet(`${FIELD}/npc-port-interpreter`, 9),
+  "port-station-matron": characterSheet(`${FIELD}/npc-port-station-matron`, 9),
+  "port-exchange-clerk": characterSheet(`${FIELD}/npc-port-exchange-clerk`, 9),
+  "port-board-clerk": characterSheet(`${FIELD}/npc-port-board-clerk`, 9),
+  "port-detained-woman": characterSheet(`${FIELD}/npc-port-detained-woman`, 9),
 };
 /**
  * The sheet for a character key, falling back to the Director rather than throwing on a typo.
@@ -3473,6 +3536,176 @@ const UNIT7_FIELD_SOURCE_POINTS = {
   },
 };
 
+// ---- Ellis Island's two interiors ----------------------------------------------------------------
+//
+// Attached to FIELD_MAPS["unit-07"] further down the file, not inline in the literal — see the
+// temporal-dead-zone note at the field-interiors block.
+//
+// Both rooms open south, because the frontage runs along the north edge of the wharf and every door
+// in it faces the water. The hall's entry sits at y = 15.1 and the inquiry room's at y = 11.1 for
+// the reason the Canal Crossroads block records at length: footBoxFor() runs 0.78 tiles below a
+// character's anchor and each room's south wall rect starts two rows from its own bottom edge, so a
+// player spawned any lower arrives already blocked and the room reads as frozen on entry.
+//
+// **Seven people, and all seven are new** — which is the opposite of Richmond's and Cottonwood
+// Junction's rooms, where the doors opened because somebody standing on the doorstep had to be moved
+// off it. Nobody on this wharf was in the way: decision log 0076 posted the outdoor cast against the
+// two door cells at (26,4) and (38,4) before either room existed. So these two rooms cost the map no
+// rearrangement at all, and every one of the seven is a position the wharf could not hold — the
+// people who ask the question, the man who carries it between two languages, the officer who is
+// paid while it happens, and the nineteen-year-old it is being decided about.
+
+const UNIT7_INSPECTION_HALL_NPCS = [
+  {
+    id: "port-line-surgeon",
+    // At the head of the line, in the open band the player walks into, and east of the door so he is
+    // met on the way to the first gate rather than looked for. Nothing overlays this band, so his
+    // name pill hangs on bare floor.
+    x: 14.0,
+    y: 13.4,
+    group: "port",
+    name: "Dr. Aurelio Grasso",
+    label: "Surgeon, Public Health and Marine-Hospital Service",
+    sprite: "port-line-surgeon",
+    text: "Six seconds, and I will tell you exactly what six seconds buys, because people assume it buys nothing. I watch you come up the line carrying your own bag: that is the heart, the lungs and the legs. I look at your face for a fixed expression, at your neck, at your hands. Then I turn your eyelid with this button hook, and that is trachoma, and trachoma is the one that sends people back. What six seconds cannot buy is why you are limping today. It cannot buy the difference between a lame man and a man who has been standing up for fourteen days. I mark a chalk letter on the coat, and what that letter is taken to mean is somebody else's decision and not mine.",
+  },
+  {
+    id: "port-station-matron",
+    // In the middle pen, west of the walk between the two gates. Capped at y = 8.4 by the rail on
+    // row 10: --cast-label-top hangs her name pill roughly 1.0-1.6 tiles below her anchor, and the
+    // rail's ironwork draws on the overlay layer, so at 9.2 the pill was cut in half by it. The
+    // Kansas land office found this the same way and recorded the same number.
+    x: 7.0,
+    y: 8.4,
+    group: "port",
+    name: "Mrs. Ada Cuthbert",
+    label: "Station matron",
+    sprite: "port-station-matron",
+    text: "Every woman and every child held overnight is mine, and I sleep in the building. What that means in practice is that I am the only person here whose work is not finished when the form is filled in. A girl of nineteen is detained because she has no money and no husband to meet her, and the board will sit on Thursday, and between now and Thursday somebody has to feed her, find her a bed, and telegraph the aunt in Newark whose address is in her shoe. I do not decide anything. I have never decided anything. I would say that is the whole trouble, except that the people who do decide are working from the same sheet I am.",
+  },
+  {
+    id: "port-immigrant-inspector",
+    // Behind the first registry desk, on the officers' side of the last rail, in the open band at
+    // rows 4-6. Same 4.4 as the land office's register and for the same reason: the rail on row 6
+    // draws on the overlay and a pill hung any lower lands on it.
+    x: 4.5,
+    y: 4.4,
+    group: "port",
+    name: "Inspector Harlan Mudge",
+    label: "Immigrant inspector, registry desk",
+    sprite: "port-immigrant-inspector",
+    text: "Twenty-nine questions, and I did not write one of them and I cannot add a thirtieth. What I do is read a man his own answers off a sheet a purser filled in at Naples and watch whether they change. Most days that is all it is. Where it stops being clerical is the last two: is anyone paying your passage, and have you employment waiting. Say yes to either and I am obliged to hold you, because the law of eighty-five forbids a contract; say no to both and you may be excluded as likely to become a public charge. I am aware of what that looks like from where you are standing. I have two minutes, and the sheet is what I have.",
+  },
+  {
+    id: "port-interpreter",
+    // Beside the second desk, five tiles east of the inspector — comfortably past the 1.5-tile bar
+    // tests/unit/field-map-coordinates.test.js holds two people to, and close enough to read as
+    // working the same line.
+    x: 9.5,
+    y: 4.4,
+    group: "port",
+    name: "Piotr Wieniawski",
+    label: "Bureau interpreter",
+    sprite: "port-interpreter",
+    text: "Six languages, no uniform, no badge and no authority whatever, and every question at that desk and every answer to it passes through me. I will tell you the hardest part, and it is not the words. A man is asked his race and he says Polish. There is no Poland. The instruction sheet says the officer enters the race his own observation indicates, so the officer writes Hebrew, or Slovak, or whatever he judges, and I am the one who has to say that back to the man in his own language while he is nodding. I have not once been asked to translate an objection, because the form has no line for one.",
+  },
+  {
+    id: "port-exchange-clerk",
+    // At the money exchange counter at the east end of the same band, past the desks — which is
+    // where a person went once they had been let through, and the nearest thing this flat door graph
+    // has to the stairs of separation.
+    x: 15.5,
+    y: 4.4,
+    group: "port",
+    name: "Sol Bregman",
+    label: "Clerk, money exchange",
+    sprite: "port-exchange-clerk",
+    text: "I am not a government man. The exchange is a concession, and so is the ticket window, and so is the food counter, and all three of us pay the Treasury for the privilege of standing on this floor. Twenty-five dollars in kronen becomes twenty-five dollars in American money at a rate I post every morning, and the difference is the house's. Before you make a face about it: the alternative, which is what the last contractor did, was to work a rate nobody posted at all. What I will say is that the commissioner's daily statement counts my takings in a column next to the head tax, and a man reading it in Washington cannot tell from the page which of those two is a tax and which is a business.",
+  },
+];
+const UNIT7_INSPECTION_HALL_BEHAVIOURS = {
+  "port-line-surgeon": { kind: "station", at: { x: 14.0, y: 13.4 }, facing: "down" },
+  "port-station-matron": { kind: "station", at: { x: 7.0, y: 8.4 }, facing: "down" },
+  "port-immigrant-inspector": { kind: "station", at: { x: 4.5, y: 4.4 }, facing: "down" },
+  "port-interpreter": { kind: "station", at: { x: 9.5, y: 4.4 }, facing: "down" },
+  "port-exchange-clerk": { kind: "station", at: { x: 15.5, y: 4.4 }, facing: "down" },
+};
+// Four of the case's seven records, which is the largest share any one surface in the game carries.
+// All four anchor by `npc` id rather than by coordinate, so the person and the record cannot drift
+// apart and moving somebody is a one-line edit.
+const UNIT7_INSPECTION_HALL_SOURCE_POINTS = {
+  "port-ship-manifest-page": {
+    anchor: { npc: "port-immigrant-inspector" },
+    label: "Manifest sheet 14",
+    kind: "Source",
+  },
+  "port-races-or-peoples-circular": {
+    anchor: { npc: "port-interpreter" },
+    label: "Instructions for column nine",
+    kind: "Source",
+  },
+  "port-medical-inspection-card": {
+    anchor: { npc: "port-line-surgeon" },
+    label: "Medical inspection card",
+    kind: "Source",
+  },
+  "port-commissioners-daily-statement": {
+    anchor: { npc: "port-exchange-clerk" },
+    label: "Statement of business",
+    kind: "Source",
+  },
+};
+function immigrantPortInspectionHallWorldMarkup() {
+  return `<canvas class="field-world-art" id="immigrantPortInspectionHallTiledCanvas" role="img" aria-label="Interior of the registry floor of a United States immigrant station in 1907: a very large pale-tiled hall crossed by two ornate iron railings whose single gates are at opposite ends, so the room is walked as a switchback; two long registry desks, a press of filed manifest sheets, a long-case clock, a money exchange counter and a floor safe along the north wall, and public benches and stacked travelling luggage in the two pens below"></canvas><canvas class="field-world-overlay" id="immigrantPortInspectionHallTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+const UNIT7_INQUIRY_ROOM_NPCS = [
+  {
+    id: "port-board-clerk",
+    // At his own table on the east side, in the open band in front of it, facing across the room at
+    // the table he is minuting. Nothing draws on the overlay layer in this room, so his pill is
+    // clear wherever he stands.
+    x: 13.0,
+    y: 4.4,
+    group: "port",
+    name: "Emil Rathke",
+    label: "Clerk to the board",
+    sprite: "port-board-clerk",
+    text: "Three inspectors, a quorum of three, decided by majority, and I type what is said. Not all of what is said — what is said in answer to a question. If a woman explains something nobody asked her about, there is no place on the form for it and it does not go in. Understand what that means about this piece of paper. In four years, if she appeals, or her lawyer writes to Washington, this minute is the hearing. It is the only thing that will still exist. And I have written it out of the answers to twelve questions, in about eleven minutes, and I am good at my job.",
+  },
+  {
+    id: "port-detained-woman",
+    // On the carpet in front of the board's table, facing it. Six tiles from the clerk, which is
+    // four times the 1.5-tile bar the coordinate test holds two people to — this room is deliberately
+    // mostly floor and the distance across it is most of what it has to say.
+    x: 7.0,
+    y: 4.8,
+    group: "port",
+    name: "Anna Krajewska",
+    label: "Held for a hearing",
+    sprite: "port-detained-woman",
+    text: "Nineteen, travelling alone, eleven dollars, and no man's name to put in the column where they want one — so I am LPC, likely to become a public charge, and I am to come back on Thursday. I want to say what I have already said twice and nobody has written down. I have been a seamstress since I was twelve. I have an aunt in Newark and her address is in my shoe because I was told to keep it safe. Neither of those is a question they ask. What they ask is whether anyone is meeting me, and the true answer is not yes and it is not no, and the form only takes the two.",
+  },
+];
+const UNIT7_INQUIRY_ROOM_BEHAVIOURS = {
+  "port-board-clerk": { kind: "station", at: { x: 13.0, y: 4.4 }, facing: "left" },
+  "port-detained-woman": { kind: "station", at: { x: 7.0, y: 4.8 }, facing: "up" },
+};
+// The seventh record, and the last of the case. It carries `requiresSourceId:
+// "port-ship-manifest-page"` in the content, so this room's document cannot be opened until the
+// manifest it is a hearing about has been secured in the hall next door — which is also the order a
+// person met them in.
+const UNIT7_INQUIRY_ROOM_SOURCE_POINTS = {
+  "port-special-inquiry-minute": {
+    anchor: { npc: "port-board-clerk" },
+    label: "Minute of a hearing",
+    kind: "Source",
+  },
+};
+function immigrantPortInquiryRoomWorldMarkup() {
+  return `<canvas class="field-world-art" id="immigrantPortInquiryRoomTiledCanvas" role="img" aria-label="Interior of a board of special inquiry room at a United States immigrant station in 1907: a panelled committee room with a herringbone parquet floor, a long table with its chairs empty at the far end, a carpet on the floor in front of it, a clerk's writing table and a long-case clock to one side, a press of bound minute books, and two public benches by the door"></canvas><canvas class="field-world-overlay" id="immigrantPortInquiryRoomTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
 // The island's edge. scripts/generate-immigrant-port-tmj.js duplicates these two functions verbatim
 // to paint the same water the player collides with (decision log 0036). Do not deduplicate them:
 // main.js is a browser bundle entry, and the one thing that must never silently diverge is the
@@ -3979,6 +4212,59 @@ FIELD_MAPS["unit-06"].interiors = {
     exit: { x: 8.0, y: 12.1 },
     // The telegraph office is stamped at (22,10) two by two, so its door cell is (23,12).
     door: { x: 23.0, y: 12.0, label: "Telegraph office" },
+  },
+};
+
+// Ellis Island's two rooms. `musicScene` is `settlement` on both, matching the wharf outside them
+// for the reason Canal Crossroads recorded first: an interior is a room in that place, not a change
+// of place, and walking through a door should not restart the score.
+//
+// Neither doorstep had to be cleared for this phase, which is the first time that has been true of a
+// pair of interiors. Decision log 0076 posted the wharf's cast against these two door cells while
+// the rooms were still unbuilt: the nearest outdoor character to either of them is the aid society
+// agent, whose wander disc keeps her 5.8 tiles from the inquiry wing at worst. The rule that has now
+// shipped broken three times cost nothing here because it was applied a slice early.
+const IMMIGRANT_PORT_INSPECTION_HALL_GRID = { columns: 22, rows: 18, tile: 48 };
+const IMMIGRANT_PORT_INQUIRY_ROOM_GRID = { columns: 16, rows: 14, tile: 48 };
+FIELD_MAPS["unit-07"].interiors = {
+  "immigrant-port-inspection-hall": {
+    id: "immigrant-port-inspection-hall",
+    grid: IMMIGRANT_PORT_INSPECTION_HALL_GRID,
+    isLand: interiorGround(IMMIGRANT_PORT_INSPECTION_HALL_GRID),
+    blocks: IMMIGRANT_PORT_INSPECTION_HALL_BLOCKS,
+    roads: [],
+    npcs: UNIT7_INSPECTION_HALL_NPCS,
+    behaviours: UNIT7_INSPECTION_HALL_BEHAVIOURS,
+    sourcePoints: UNIT7_INSPECTION_HALL_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: immigrantPortInspectionHallWorldMarkup,
+    // 22x18 is the first interior in the game bigger than the field viewport on both axes, so this
+    // is also the first room whose camera scrolls rather than centring. Still a pure function of
+    // player position; it is the outdoor formula, which is what a room this size gets.
+    entry: { x: 11.0, y: 15.1, facing: "up" },
+    exit: { x: 11.0, y: 16.1 },
+    // The doorstep on the forecourt. generate-immigrant-port-tmj.js stamps the entrance pavilion at
+    // (24,0) four wide, so doorCellOf() puts its door cell at (26,4) — the first row of paving north
+    // of the rail's one gate, which is on the pavilion's own columns.
+    door: { x: 26.0, y: 4.0, label: "Reception hall" },
+  },
+  "immigrant-port-inquiry-room": {
+    id: "immigrant-port-inquiry-room",
+    grid: IMMIGRANT_PORT_INQUIRY_ROOM_GRID,
+    isLand: interiorGround(IMMIGRANT_PORT_INQUIRY_ROOM_GRID),
+    blocks: IMMIGRANT_PORT_INQUIRY_ROOM_BLOCKS,
+    roads: [],
+    npcs: UNIT7_INQUIRY_ROOM_NPCS,
+    behaviours: UNIT7_INQUIRY_ROOM_BEHAVIOURS,
+    sourcePoints: UNIT7_INQUIRY_ROOM_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: immigrantPortInquiryRoomWorldMarkup,
+    entry: { x: 8.0, y: 11.1, facing: "up" },
+    exit: { x: 8.0, y: 12.1 },
+    // The inquiry wing is stamped at (36,2) four wide, so its door cell is (38,4). Twelve bays east
+    // of the main doors, which is where the detention wing was and as close to the truth as a flat
+    // door graph gets — see decision log 0076 §4.
+    door: { x: 38.0, y: 4.0, label: "Board of special inquiry" },
   },
 };
 
@@ -11904,9 +12190,9 @@ const FIELD_COPY = {
   },
   "unit-07": {
     intro:
-      "You arrive at the head of a landing stage on a made island in the Upper Bay, on the busiest day this station ever had. Everything north of the iron rail across the wharf is the government's ground; everything south of it is where eleven thousand seven hundred and forty-seven people came off the barges today and waited to be read back to themselves off a sheet that was filled in for them in Europe. Two records are out here on the wharf: what a ship's purser carried across the ocean, and what the line that sold the ticket instructs its own agents to do.",
+      "You arrive at the head of a landing stage on a made island in the Upper Bay, on the busiest day this station ever had. Everything north of the iron rail across the wharf is the government's ground; everything south of it is where eleven thousand seven hundred and forty-seven people came off the barges today and waited to be read back to themselves off a sheet filled in for them in Europe. Seven records: two are out here, four are on the registry floor through the main doors, and the last is in the board of special inquiry room twelve bays east — which cannot be read until you hold the manifest it is a hearing about.",
     progressHint:
-      "Two records on the wharf: the boarding division's return, and the line's instructions to its agents at the continental ports.",
+      "Seven records: the boarding division's return and the line's instructions to its agents are out on the wharf; the manifest sheet, the circular on column nine, the medical inspection card and the daily statement are inside the reception hall; the minute of a hearing is in the inquiry room.",
   },
 };
 function fieldScreen() {
@@ -13169,6 +13455,10 @@ function render() {
       if (activeFieldMap().id === "railhead-land-office") renderRailheadLandOfficeTiledMap();
       if (activeFieldMap().id === "railhead-telegraph-office")
         renderRailheadTelegraphOfficeTiledMap();
+      if (activeFieldMap().id === "immigrant-port-inspection-hall")
+        renderImmigrantPortInspectionHallTiledMap();
+      if (activeFieldMap().id === "immigrant-port-inquiry-room")
+        renderImmigrantPortInquiryRoomTiledMap();
     });
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {
