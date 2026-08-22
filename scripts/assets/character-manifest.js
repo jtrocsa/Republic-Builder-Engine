@@ -1036,6 +1036,249 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "broker-walk",
   },
+
+  // ---- Unit 7 · the immigrant port. Ellis Island, 17 April 1907 (Phase 89B) ---------------------
+  //
+  // Fourteen, the largest single import since Phase 60's fifteen, and the composition is the
+  // argument. Unit 6's cast was economic positions on a map about who owns land; this one is
+  // **positions relative to a question** — who asks it, who answers it, who carries it between two
+  // languages, who writes down what was said, who decides, who appeals, who is paid while it
+  // happens, who waits at the gate, and who is being described in a vocabulary they did not choose.
+  //
+  // Seven of the fourteen carry one of `unit-07-campaign.js`'s seven records, so every record on
+  // this map has a body standing somewhere on it. Three of those seven are the slate fixed in
+  // THE-MAP-PROGRAM.md §2 before any of this existed: the inspector's manifest page (INTERVIEW),
+  // the surgeon's inspection card (ASSEMBLY), the board clerk's minute (TRACE).
+  //
+  // **Half the cast stands indoors**, which is the highest interior share of any map so far and is
+  // the station stating its own shape: the wharf is where you wait, the reception hall is where you
+  // are sorted. Seven on the wharf plus Voss, five in the inspection hall, two in the board of
+  // special inquiry room.
+  //
+  // No props on anybody, per the standing finding restated at Unit 6: a shovel, a newspaper and an
+  // apron all fail to survive rotation, and the 48x56 canvas clips rather than resizes. That costs
+  // more here than anywhere before, because this is a map about paper and not one person on it can
+  // be drawn holding a sheet of it. Costume carries the office instead.
+  //
+  // **Zero teal across all fourteen, on all four cardinals, first roll.** Three phases running had
+  // lost a character to Meridian's reserved accent — Phase 82 caught it in a brief, Phases 85 and
+  // 86 caught it in the art — so every brief here banned teal, turquoise, cyan and blue-green by
+  // name *and* named its own garment colour positively wherever that garment was blue. Four of
+  // these people wear navy. The highest reading in the cast is 0.0%.
+  //
+  // One character was generated three times and none of it was about colour: see
+  // `port-steerage-woman`.
+
+  // The wharf: the ferry slip, the canopy, and the ground people stand on before the building.
+  {
+    key: "port-ships-purser",
+    stem: "chronicle-sprites/field/npc-port-ships-purser",
+    name: "Steamship purser",
+    // Mid-blue double-breasted reefer, two rows of brass buttons, gold rings at the cuff, matching
+    // peaked cap, grey beard, heavy build. **He filled in the manifest**, at Hamburg or Naples or
+    // Bremen, weeks ago, from what people told a clerk at an emigration office — which is why what
+    // happens at the inspector's desk is a re-reading rather than an interview. He also holds what
+    // the boarding division left with him at quarantine in the Lower Bay.
+    id: "0a0d188f-9d1a-4f37-bd17-f9a772448ec4",
+    frames: 8,
+    walkGroup: "purser-walk",
+  },
+  {
+    key: "port-steamship-agent",
+    stem: "chronicle-sprites/field/npc-port-steamship-agent",
+    name: "Steamship line shore agent",
+    // Knee-length grey overcoat over a dark suit, black bowler, full ginger moustache. The line's
+    // man ashore. The first inspection most people on this wharf ever had was his company's, in
+    // Europe, conducted by a firm that pays the return passage of anybody rejected here — which is
+    // the whole reason it was thorough. Bulk and a hat: the two things that separate him from the
+    // waiting relative, who is the other civilian man in a dark suit out here.
+    id: "1185679e-dba3-4155-bff3-1f554a471075",
+    frames: 8,
+    walkGroup: "agent-walk",
+  },
+  {
+    key: "port-steerage-man",
+    stem: "chronicle-sprites/field/npc-port-steerage-man",
+    name: "Steerage labourer",
+    // Brown corduroy jacket, collarless cream shirt, rust waistcoat, soft brown flat cap,
+    // twenty-two. He is column 21 of the manifest with no right answer available: an offer of work
+    // waiting for him is contract labour and excludable, and no work waiting for him is likely to
+    // become a public charge and excludable. Nothing about him is a costume choice — that is what a
+    // man travelling in steerage to look for work was wearing.
+    id: "ee3a9bf3-c9cc-49f0-b6c0-8a09c77cf951",
+    frames: 8,
+    walkGroup: "steerage-man-walk",
+  },
+  {
+    key: "port-steerage-woman",
+    stem: "chronicle-sprites/field/npc-port-steerage-woman",
+    name: "Steerage mother v3",
+    // Rust-orange blouse, cream apron, long dark navy skirt to the ankles, brown hair pinned back.
+    //
+    // **Generated three times, and none of it was about colour.** The first brief asked for "a
+    // rust-red headscarf tied under the chin" over "a heavy dark navy blue ankle-length skirt" and
+    // returned a woman with loose bright red hair, no scarf at all, and navy *trousers* — the
+    // colour adjective had migrated to the hair and the garment had been silently swapped. The
+    // second tried to force both by emphasis and negation ("completely covered ... so that no hair
+    // shows at all", "a skirt, not trousers") and reproduced the same two failures with better
+    // colours. That is the lesson the teal briefs taught, arrived at from the other side: **a
+    // negation is not an instruction.** The third dropped every emphasis and simply reused the
+    // sentence structure that had already worked on `port-steerage-elder` two rolls earlier — and
+    // the skirt landed. Copy a brief that worked before rewriting one that did not.
+    //
+    // **The headscarf never landed, and it was dropped rather than chased into a fourth roll.**
+    // Three attempts is where the cost of a head covering on 45 pixels of body stops being worth
+    // paying, and the costume is better without one: the elder two entries up is this map's covered
+    // head, and two headscarves on one wharf were always the weaker separation. Bare-headed with
+    // the hair pinned back is period-ordinary at this station and reads as a working woman at
+    // distance, which is the whole requirement. Both failures were deleted rather than left in the
+    // account.
+    id: "cae91686-5d08-42f1-b1f5-a8974378fa4d",
+    frames: 8,
+    walkGroup: "steerage-woman-walk",
+  },
+  {
+    key: "port-steerage-elder",
+    stem: "chronicle-sprites/field/npc-port-steerage-elder",
+    name: "Elderly steerage passenger",
+    // Black headscarf, black skirt, heavy pale grey shawl, stooped, late sixties. The
+    // likely-to-become-a-public-charge clause with a face on it: she is old, she has no trade, she
+    // has no money of her own, and she is travelling to a son who sent for her. She satisfies every
+    // test for exclusion and none for wrongdoing, and that distinction is exactly what the clause
+    // was written broadly enough to blur. **The only covered head in the cast**, which is what
+    // separates her from the younger steerage woman at a distance — grey and black against rust and
+    // navy, a generation between them, and one of them wearing a scarf.
+    id: "50809f7f-e090-4c61-a0ae-e06c6541b84c",
+    frames: 8,
+    walkGroup: "elder-walk",
+  },
+  {
+    key: "port-aid-society-agent",
+    stem: "chronicle-sprites/field/npc-port-aid-society-agent",
+    name: "Immigrant aid society agent",
+    // Deep plum tailored walking suit, wide plum hat. Immigrant aid societies worked the island on
+    // a permit and could appeal a board's decision — **the only person here who can contest the
+    // paperwork, and who does it with more paperwork.** She is the most saturated figure in the
+    // cast on purpose: she is the one adult on the wharf who is neither an official, a company man,
+    // nor an arrival, and nothing else about that position would show at 45 pixels.
+    id: "76a2c057-136c-4bee-8c6e-690dd9af72b7",
+    frames: 8,
+    walkGroup: "aid-agent-walk",
+  },
+  {
+    key: "port-waiting-relative",
+    stem: "chronicle-sprites/field/npc-port-waiting-relative",
+    name: "Waiting relative",
+    // Cheap black sack suit, dark red tie, bare-headed, thirty. Four years in the country, back at
+    // the gate for a cousin. **Bare-headed is the separation** — every other man on this wharf is
+    // wearing something on his head — and it is also the characterisation: he has been standing
+    // here since the morning boat. He is where the coached answer comes from, which is the reason
+    // boards of special inquiry existed at all.
+    id: "7aeea41b-cd76-46ef-93c9-ebd30e66a1c1",
+    frames: 8,
+    walkGroup: "relative-walk",
+  },
+
+  // The inspection hall: the line, the desks, and the two hundred feet of floor between them.
+  {
+    key: "port-immigrant-inspector",
+    stem: "chronicle-sprites/field/npc-port-immigrant-inspector",
+    name: "Port immigration inspector",
+    // Dark navy sack coat buttoned high on a row of small brass buttons, navy trousers, navy peaked
+    // cap with a brass badge, clean-shaven, under thirty. The registry desk: he reads a traveller
+    // the answers a purser wrote down for them in Europe and asks them to agree to it, at roughly
+    // two minutes a person. **The only covered head in the inspection hall**, which is the whole
+    // separation from the surgeon standing near him — both are in navy, and one of them has no coat.
+    id: "a6d6cc49-df57-43fb-b20e-550e1f7ca595",
+    frames: 8,
+    walkGroup: "inspector-walk",
+  },
+  {
+    key: "port-line-surgeon",
+    stem: "chronicle-sprites/field/npc-port-line-surgeon",
+    name: "Marine hospital line surgeon",
+    // White shirt with the sleeves rolled above the elbow, navy waistcoat and trousers,
+    // bare-headed, dark beard. Public Health and Marine-Hospital Service — its name from 1902 to
+    // 1912, which is why the record says so too. The six-second examination is a man working with
+    // his hands at speed in a moving line, and no coat, no cap and bare forearms are that stated in
+    // costume rather than in a prop he could not have held.
+    id: "350b7386-9150-43a7-8e85-7b1a3ed8feaa",
+    frames: 8,
+    walkGroup: "surgeon-walk",
+  },
+  {
+    key: "port-interpreter",
+    stem: "chronicle-sprites/field/npc-port-interpreter",
+    name: "Bureau interpreter",
+    // Olive-green sack suit, dark tie, bare-headed, slight, twenty-five. **No uniform and no badge,
+    // and that is the character**: every question at that desk and every answer to it passes
+    // through a man with authority over neither. He is also the one holding the circular that
+    // instructs an officer to enter the race his own observation indicates rather than the one the
+    // traveller claims — about a claim he will have just finished translating.
+    id: "a10002c6-1fd5-4570-ad5d-fc881cb2c283",
+    frames: 8,
+    walkGroup: "interpreter-walk",
+  },
+  {
+    key: "port-station-matron",
+    stem: "chronicle-sprites/field/npc-port-station-matron",
+    name: "Immigrant station matron",
+    // Charcoal skirt, high-necked white shirtwaist, fitted dark maroon jacket, grey-streaked hair
+    // pinned up. The one official on this map whose work is people rather than paper: detained
+    // women and children were hers, day and night, and she is the reason a nineteen-year-old held
+    // for a hearing is not simply left on a bench. The maroon jacket rather than a cream upper body
+    // is deliberate — she is a woman with her hair up in dark clothing, which is the exact
+    // silhouette Phase 80b had to separate Voss from Dr Soto on. They do not share a surface here,
+    // and the colour means it would not matter if they did.
+    id: "57d50df4-f0a0-4b63-93a8-22aec6000407",
+    frames: 8,
+    walkGroup: "matron-walk",
+  },
+  {
+    key: "port-exchange-clerk",
+    stem: "chronicle-sprites/field/npc-port-exchange-clerk",
+    name: "Money exchange clerk",
+    // White shirt, black sleeve garters, mustard-gold waistcoat, black bow tie, charcoal trousers,
+    // bare-headed. The money exchange, the ticket office and the food concession were **private
+    // franchises operating on federal property**, and the commissioner's daily statement counts
+    // their takings in a column beside the head tax. He is where the money in this building goes,
+    // and the reason that statement is worth reading twice.
+    id: "78bfe924-1826-4d61-951a-57351dfff126",
+    frames: 8,
+    walkGroup: "exchange-walk",
+  },
+
+  // The board of special inquiry room: a closed door off the registry floor, and two people behind
+  // it. The three sitting inspectors are the room's argument and are deliberately not drawn — a
+  // hearing that fits in a name pill is a hearing a player thinks they have met.
+  {
+    key: "port-board-clerk",
+    stem: "chronicle-sprites/field/npc-port-board-clerk",
+    name: "Board of inquiry clerk",
+    // Bald, small round wire spectacles, white shirt, black sleeve garters, slate-grey waistcoat.
+    // He types the minute, which is the only part of the hearing that outlives it. **Shirtsleeves
+    // and a waistcoat, same as the exchange clerk** — and they never share a surface, one being in
+    // this room and the other on the registry floor, which is the same allowance Unit 6 made for
+    // its telegraph operator and track grader. Mustard against slate and a full head of hair
+    // against none is the separation if they ever did.
+    id: "f277c1d7-c076-4c6a-b9ab-0eae501c6e2c",
+    frames: 8,
+    walkGroup: "board-clerk-walk",
+  },
+  {
+    key: "port-detained-woman",
+    stem: "chronicle-sprites/field/npc-port-detained-woman",
+    name: "Detained steerage passenger",
+    // Dark brown ankle-length travelling dress, cream shawl, hair in a single pinned braid,
+    // nineteen. She stands in front of three inspectors and a stenographer while they decide
+    // whether she is likely to become a public charge. **Not distressed and not defiant in the
+    // art**, deliberately, and for the same reason `land-office-register` is not sinister — a
+    // hearing that looks like a melodrama lets a student conclude it was an unusually wicked one,
+    // and the whole finding is that it was the ordinary one, held four hundred times a day.
+    id: "aa48336b-a45d-440e-823c-020578d94a40",
+    frames: 8,
+    walkGroup: "detained-walk",
+  },
 ];
 
 /**

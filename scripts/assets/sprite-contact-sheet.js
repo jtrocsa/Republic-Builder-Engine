@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
-import { CHARACTERS, DIRECTIONS, LEGACY_CHARACTERS } from "./character-manifest.js";
+import { CHARACTERS, DIRECTIONS } from "./character-manifest.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ASSETS = path.join(REPO_ROOT, "apps/web/src/assets");
@@ -42,16 +42,8 @@ async function standingColumn(file, cell) {
 }
 
 async function main() {
-  const roster = [
-    // The Director first — he is the reference every other body is measured against.
-    ...CHARACTERS.map((c) => ({ key: c.key, stem: c.stem, columns: c.frames + 1 })),
-    // Unit 3's frozen placeholders last, so the break in art style is obvious rather than subtle.
-    ...LEGACY_CHARACTERS.map((l) => ({
-      key: l.key,
-      stem: `chronicle-sprites/field/${l.key}`,
-      columns: 3,
-    })),
-  ];
+  // The Director first — he is the reference every other body is measured against.
+  const roster = CHARACTERS.map((c) => ({ key: c.key, stem: c.stem, columns: c.frames + 1 }));
 
   // The canonical canvas, read off a built strip rather than recomputed: one column wide, one
   // strip tall. If the canvas ever changes, this sheet follows it without being edited.

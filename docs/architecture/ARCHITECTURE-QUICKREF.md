@@ -149,6 +149,7 @@
 - Phase 88A — **The warp screens.** One ADR: `docs/decision-log/0073-the-warp-screens.md`. Taken out of order between Phase 88 and Unit 7: ten painted establishing shots had been sitting unreferenced in `assets/` since early August, and the two transitions they were painted for were an abstract teal vortex that said nothing about where the player was going. Chronotravel and the Archive recall are now one screen (`warpScreen()`) with a different painting on each and the anchor rings running opposite ways — full-bleed, chrome-less, the plate keyed **by unit rather than by case** (a unit is one place and one era; keying by case is eighteen paintings to say six things) in `content/chronotravel-plates.js`. **The loading is real**: the dwell is now a floor and the destination's art is a gate, so `SURFACE_TILESETS` warms the map's tilesets — eagerly globbed _URLs_, not bytes, which is why a first visit used to open on an empty frame — with a 6 s ceiling, a swallowed-resolver guard and a `warpRun` token, because a stuck loading screen is worse than every failure it protects against. **The bar shows the dwell, not the bytes**, said plainly: a JS bar reading real load state was written and thrown away for making the baseline a coin toss, and nothing on this screen loops for the same reason. Three real behaviour changes among the restyle: the **field recall beacon now plays the recall warp** (`instituteRecallSpawn()` has called them "both recall paths" since Phase 57 and only one of them played anything), the **recall can be skipped** (`skip-travel` → `skip-warp`, serving both), and `.chronotravel-screen` is **deleted rather than kept as a test marker**. Art: 25.3 MB of PNG → 1.9 MB of WebP via `npm run assets:build-plates`, sources moved to a gitignored `art-source/plates/`. **Units 7–9's plates are committed unwired on purpose** — Phase 89 adds three table lines, and the new unit test fails both if the table names a unit that does not exist and if one of the three files is deleted as "unused". +17 tests (7 unit, 10 e2e), one visual baseline rewritten and one added.
 - Phase 88B — **The warp becomes two beats.** One ADR: `docs/decision-log/0074-the-warp-becomes-two-beats.md`. Phase 88A gave both transitions a painted plate of where the player was going; what it did not give them was the going. The screen now has a **warp** in front of the arrival — a canvas streak field that accelerates, cruises and decelerates over `WARP_TUNNEL_MS` while the destination card resolves out of blur — and then the plate with a **ring that fills 0%→100%** over the unchanged `WARP_DWELL_MS`, ending on a prompt. Three phases on `data-warp-phase`, **one render**: everything is emitted once and CSS decides what shows, because a phase flip that rebuilt markup would restart the plate's own settle, and everything in the second beat is **delayed by `--warp-tunnel` rather than started by the flip** — a CSS delay is exact, a scheduled class swap is a frame or two late. **The screen no longer leaves on its own**: `warp-enter` and `skip-warp` route through one `leaveWarp()`, the skip live throughout and the prompt once both gates open. Stated because it is real — nothing times out behind a player who walks away; that is the price of making arrival an arrival. **0073's rule survives intact**: the ring shows the dwell, not the bytes — a CSS sweep over `--warp-dwell` with the number an animated `@property --warp-pct` read through a counter, no script reading load state. That property **must declare `inherits: true`**, found in a browser rather than in review: a pseudo-element does not see a non-inherited custom property its originating element is animating, so `::after` read the initial value and the ring sat on 0% for the whole dwell while the sweep ran behind it — the same class of bug as 0073 §7's two. **The tunnel is the one looping thing here, and it does not exist under reduced motion** — `warpScreen()` omits the canvas entirely and the phase starts at `plate`, which is the right behaviour for a full-screen rushing streak field _and_ what keeps the baselines deterministic, since they are captured in exactly that media state; a new e2e test holds that branch because its failure is silent. New `engine/warp-tunnel.js` — engine code in the strict sense (a canvas and a duration, nothing else), its speed curve expressed as fractions of the run so a retune stretches it rather than truncating the decel. +12 tests (9 unit, 3 e2e); four specs that assumed the old self-advance now click through, and both warp baselines were rewritten against `data-warp-phase="ready"` and reviewed as images. 1638 unit tests (68 files) · 202 e2e (38 spec files).
 - Phase 89 — **Unit 7 exists on paper.** One ADR: `docs/decision-log/0075-unit-seven-exists-on-paper.md`. "The Terms of Belonging," Period 7, 1890-1945, and the first slice of the first unit of Periods 7-9. Three cases: Ellis Island on 17 April 1907 with seven cited composite records, the argument over the Philippines as an evidence-organizing, and the removal of 120,000 people from the West Coast as a sequencing. Plus a unit SAQ and a seven-document DBQ. **The content is registered for validation and deliberately not wired into `main.js`'s `UNITS`** — the state Unit 6 shipped in between Phase 85 and Phase 87, and the reason is that `activeFieldMap()` falls back to Unit 1's Caribbean for a unit it has no map for, so a field case registered early does not error, it drops the player onto the wrong continent. `loadChronicleContent()` has **no runtime consumer** (the validator and two unit tests are its only callers), so the phase cannot move a player-visible pixel by construction rather than by inspection. `validate:content` 133 groups -> 144. **One thing did become visible, and a test demanded it**: `chronotravel-plates.test.js` asserts every shipped unit has a plate and went red the moment Unit 7 entered `loadChronicleContent()` — Unit 7's plate has been painted and committed since Phase 88A and cost the four lines its own header predicted; the test's guard that the table must **not** name `unit-07` was correct until it wasn't, and now guards Units 8 and 9. The build confirms the split held: seven unit plates emitted, neither queued file. Three decisions worth not re-arguing. **The place is real and named** where Riverbend, Canal Crossroads and Cottonwood Junction are composite — the station _is_ the subject rather than the setting, and Units 3 and 5 already pair a real place with composite records. **17 April 1907 is load-bearing on four records**: 11,747 people in fourteen hours through a building rated for five thousand; the act of 20 February 1907 signed but not in force until 1 July, so the head tax is still $2 and the station is requisitioning next quarter's forms on its own daily statement; the medical service is the **Public Health and Marine-Hospital Service**, its 1902-1912 name. And **the register rule inverts here** — at this station the paperwork names everyone, including a column for what the Bureau has decided a person is regardless of what they would say, so the map's people supply what the forms get wrong _while filling every column_ rather than what they omit. That is why §5 gives this map the interview question it does. Remaining for Unit 7: cast, map, two interiors, three activities on slate A.
+- Phase 89B — **The port gets a cast.** Fourteen characters for Unit 7's Ellis Island — the largest single import since Phase 60's fifteen — and the composition is the phase's only real decision. Unit 6's cast was economic positions on a map about who owns land; this one is **positions relative to a question**: who asks it, who answers it, who carries it between two languages, who writes down what was said, who decides, who appeals, who is paid while it happens, who waits at the gate, and who is being described in a vocabulary they did not choose. **Seven of the fourteen carry one of the unit's seven records**, so every record on this map has a body; three of those are the slate `THE-MAP-PROGRAM.md` §2 fixed before any of it existed — the inspector's manifest page (INTERVIEW), the surgeon's inspection card (ASSEMBLY), the board clerk's minute (TRACE). **Half the cast stands indoors**, the highest interior share of any map so far and the station stating its own shape: seven on the wharf plus Voss, five in the inspection hall, two in the board of special inquiry room. No props on anybody, which costs more here than anywhere before — this is a map about paper and not one person on it can be drawn holding a sheet of it, so costume carries the office instead. **Zero teal on all fourteen, all four cardinals, first roll** — the fourth phase running to defend Meridian's reserved accent and the first to spend nothing doing it, because every brief banned the four words by name _and_ named its own garment colour positively wherever that garment was blue, which four of them are. **The one character that cost three rolls cost them for grammar, not colour.** "A rust-red headscarf tied under the chin" put the colour on the hair and dropped the scarf; an ankle-length skirt came back as trousers; forcing both with emphasis and negation ("a skirt, not trousers") reproduced both failures with better colours. What worked was reusing, plainly and without emphasis, the sentence structure that had already succeeded on another character two rolls earlier — **a negation is not an instruction**, which is the teal lesson arrived at from the other side. The headscarf never landed and was **dropped rather than chased into a fourth roll**: the elderly passenger is the map's one covered head, and two headscarves on one wharf were always the weaker separation. **PixelLab returned a short direction for the first time in this repo's history** — the inspector's west walk came back with 7 frames where the other three had 8, which `character-manifest.js` cannot express (one `frames` count per character) and which surfaces at build time as a bare `ENOENT ... west-7.png`. `delete_animation` now takes a `direction`, so the fix is one direction re-queued into the same group rather than the whole group destroyed — the note in memory saying otherwise is out of date. **Re-fetching it needs the character's whole cache directory removed**, because `fetchAll()` decides a walk is cached by testing for `south-stand.png` alone. **And the phase found a tool that had been dead for four phases**: `npm run assets:contact-sheet` imports `LEGACY_CHARACTERS`, which Phase 82 deleted from the manifest — an ESM link-time `SyntaxError`, so the script has not run since, and it is the **only** thing that can check cast art, because every visual baseline hides `[data-npc]` first. Phases 85 and 86 both record verifying a cast by contact sheet. Fixed in the commit that needed it. 89 characters on one pinned 48×56 canvas, zero existing PNGs re-written · geometry test 277 → 341 assertions · 1694 unit tests (68 files) · build clean. No `main.js` change and no player-visible change: nothing references these sheets until Unit 7 reaches `FIELD_MAPS`.
 
 ## 5. Current active phase
 
@@ -198,47 +199,43 @@ Nothing else from `THE-FIELD-LIAISON.md` is scheduled: the reveal, `liaison-meri
 
 ## 6. Next approved phase
 
-**Phase 89B — Unit 7's cast, then its map.** Phase 89's first slice shipped the content (decision
-log `0075`): "The Terms of Belonging," three cases, seven cited composite records at Ellis Island on
-17 April 1907, both missions, the unit SAQ and DBQ, and the plate. It is registered for validation
-and **not** wired into `main.js`, which is the whole reason nothing routes to case-019 yet. What
-remains is what Unit 6 spent Phases 85–87 on, in the order Phase 85 used and for the reason it used
-it — each slice verified before the next starts:
+**Phase 89C — the wharf, then the rooms, then the missions.** Unit 7's content landed in Phase 89
+(decision log `0075`) and its cast in Phase 89B — fourteen characters in
+`scripts/assets/character-manifest.js`, seven of whom carry one of the unit's seven records. What is
+left is the map and what hangs off it, in the order Unit 6 used and for the reason it used it, each
+slice verified before the next starts:
 
-1. **The cast**, checked against the PixelLab account for anything reusable first (Phase 64 imported
-   seven characters for zero generations). A 1907 port cast is inspectors, surgeons, a boarding
-   party, an interpreter and the people being sorted.
-2. **The map** — a generated `.tmj` of the wharf, its palette, its collision, a `FIELD_COPY` entry
-   (**forgetting one is silent**: `fieldScreen()` falls back to Unit 1's briefing, which is what
-   Unit 6 shipped with), the `FIELD_MAPS` entry, the tileset `import.meta.glob` in `main.js`, and
-   the `UNITS` line that finally makes the content above reachable. `19th Centruy European Dock` and
-   `19th Century European City` are the packs; the misspelling is upstream and must stay.
-3. **The two interiors** — the **inspection hall** and a **board of special inquiry room**, which
-   are already the rooms three of the seven records are anchored in.
-4. **The three activities** on slate A (`interview` · `assembly` · `trace`), landing on the manifest
+1. **The map** — a generated `.tmj` of the wharf at Ellis Island, its palette, its collision blocks,
+   a **`FIELD_COPY` entry** (**forgetting one is silent**: `fieldScreen()` falls back to Unit 1's
+   briefing, which is what Unit 6 shipped with), the `FIELD_MAPS` entry, the tileset
+   `import.meta.glob` in `main.js`, and the `UNITS` line that finally makes Unit 7 reachable.
+   `19th Centruy European Dock` and `19th Century European City` are the packs; the misspelling is
+   upstream and must stay. Seven of the cast stand out here, plus Voss.
+2. **The two interiors** — the **inspection hall** (five of the cast) and the **board of special
+   inquiry room** (two). Three of the seven records are anchored in them.
+3. **The three activities** on slate A (`interview` · `assembly` · `trace`), landing on the manifest
    page, the medical inspection card and the board minute in that order — the minute already carries
    the `requiresSourceId` that decides which can be last.
 
-Three things are already decided and should not be re-argued:
+Five things are already decided and should not be re-argued:
 
-- **The interview's question is what binds the slate**, not the engine list. Unit 7 shares two
-  engines with Unit 6, which is unavoidable with four engines and three slots; §5 fixes its question
-  as _what the official question fails to ask_. Five interviews, five distinct questions.
-- **The records are the mission**, and they are written. People being described by a vocabulary they
-  did not choose, which is why the forms are the subject rather than the setting.
+- **Post a doorstep NPC two and a half tiles clear of each interior's door.** This has now shipped
+  broken three times (Canal Crossroads' editor, and both of Unit 6's), nothing in the suite catches
+  it because the conflict is between a door and a person rather than between two people, and a
+  station whose whole subject is rooms you are sent into is the worst possible place for a fourth.
+- **Seven record anchors is more than any previous map has carried**, so `fieldSourceSignal()`'s
+  per-surface guard matters more here than anywhere: without it the hall's records stack on the
+  wharf's `sourcePointPosition()` (10,10) fallback.
+- **The interview's question is what binds the slate**, not the engine list. §5 fixes Unit 7's as
+  _what the official question fails to ask_ — the one question the manifest cannot be made to answer
+  about itself. Five interviews, five distinct questions.
 - **`streetscape.midCentury` is not this unit's gap.** It is registered against Unit 8; do not
   commission it here.
-
-**Post a doorstep NPC two and a half tiles clear of each interior's door.** This has now shipped
-broken three times (Canal Crossroads' editor, and both of Unit 6's), nothing in the suite catches it
-because the conflict is between a door and a person rather than between two people, and a station
-whose whole subject is rooms you are sent into is the worst possible place for it to happen again.
-
-**Deferred out of Unit 7 entirely, deliberately:** the reveal ladder's next rung.
-`THE-FIELD-LIAISON.md` §4 puts Units 7–8 at "reluctant alliance", which is Scene E (`client
-operation`) and a real canon decision — Meridian taking private clients — not something to fold into
-a unit build. Voss should be posted on the new map with a line, exactly as on the other six, and
-that is all Unit 7 owes her.
+- **The reveal ladder's next rung stays deferred out of Unit 7 entirely.**
+  `THE-FIELD-LIAISON.md` §4 puts Units 7–8 at "reluctant alliance", which is Scene E (`client
+operation`) and a real canon decision — Meridian taking private clients — not something to fold
+  into a unit build. Voss should be posted on the new map with a line, exactly as on the other six,
+  and that is all Unit 7 owes her.
 
 ## 7. Approved immediate dependencies
 

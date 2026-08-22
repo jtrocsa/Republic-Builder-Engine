@@ -108,6 +108,23 @@ const CAST = [
   ["chronicle-sprites/field/npc-kanza-woman", 9],
   ["chronicle-sprites/field/npc-land-buyer-agent", 9],
   ["chronicle-sprites/field/npc-stock-commission-man", 9],
+
+  // Unit 7 — the immigrant port. Ellis Island, 17 April 1907 (Phase 89B). Seven on the wharf,
+  // five in the inspection hall, two in the board of special inquiry room.
+  ["chronicle-sprites/field/npc-port-ships-purser", 9],
+  ["chronicle-sprites/field/npc-port-steamship-agent", 9],
+  ["chronicle-sprites/field/npc-port-steerage-man", 9],
+  ["chronicle-sprites/field/npc-port-steerage-woman", 9],
+  ["chronicle-sprites/field/npc-port-steerage-elder", 9],
+  ["chronicle-sprites/field/npc-port-aid-society-agent", 9],
+  ["chronicle-sprites/field/npc-port-waiting-relative", 9],
+  ["chronicle-sprites/field/npc-port-immigrant-inspector", 9],
+  ["chronicle-sprites/field/npc-port-line-surgeon", 9],
+  ["chronicle-sprites/field/npc-port-interpreter", 9],
+  ["chronicle-sprites/field/npc-port-station-matron", 9],
+  ["chronicle-sprites/field/npc-port-exchange-clerk", 9],
+  ["chronicle-sprites/field/npc-port-board-clerk", 9],
+  ["chronicle-sprites/field/npc-port-detained-woman", 9],
 ];
 
 // Characters that also ship a breathing cycle, and its column count. Mirrors the `idleColumns`
