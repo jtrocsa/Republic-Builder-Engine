@@ -2746,6 +2746,13 @@ dd {
 }
 .director-scene__head {
   flex: none;
+  margin-bottom: 10px;
+  /* On art rather than a flat panel, so the type carries its own contrast instead of relying on
+     the scrim to be dark enough everywhere. */
+  text-shadow: 0 2px 10px rgba(var(--c-black-rgb), 0.75);
+}
+.director-scene__head .kicker {
+  margin-bottom: 6px;
 }
 .director-scene__stage {
   position: relative;
@@ -2754,7 +2761,13 @@ dd {
   justify-content: center;
   align-items: flex-end;
   min-height: 0;
-  padding-bottom: 12px;
+  /* No bottom padding, and the sprite then hangs below this box by its own negative margin. The
+     stage's floor is the top of the reserved bar space, which against a flat backdrop was simply
+     where the character stood — but against a painting it is a foot above the painted floor, and
+     he read as levitating over the map table. Standing him into the bar's zone puts his feet on
+     the boards and lets the dialogue box overlap his shins, which is the composition this screen
+     was imitating in the first place. */
+  padding-bottom: 0;
 }
 /* The two Chronicler cards. Identical in every dimension on purpose: the choice is between two
    names, not between two kinds of person, and nothing in the layout may imply that one is the
@@ -2785,92 +2798,83 @@ dd {
      clipped the "Begin Orientation" button off the bottom of a 1366x768 Chromebook, this
      project's named target viewport. So it takes the smaller of the two: the full height where
      there is room for it, and a share of the viewport where there is not. */
+  /* Taken out of flow in Phase 90B, which is what lets the height be chosen for the composition
+     instead of for the layout. In flow it was a flex item sizing .director-scene__stage, so 62vh
+     overflowed the stage, grew .director-scene past the viewport and pushed the absolutely
+     positioned bar — and the "Begin Orientation" button with it — below the fold. That is the
+     exact failure the original 52vh was picked to avoid; the cap was doing a job the position
+     should have been doing. Now the stage's height is the stage's business and he can hang out of
+     the bottom of it. */
+  position: absolute;
+  left: 50%;
+  bottom: -34px;
+  transform: translateX(-50%);
   width: auto;
-  height: min(calc(377px * 56 / 45), 52vh);
+  height: min(calc(377px * 56 / 45), 62vh);
   image-rendering: pixelated;
-  filter: drop-shadow(0 18px 24px rgba(var(--c-black-rgb), 0.45));
+  /* Grounding shadow, tightened against art: the old one was a soft 24px halo that read as glow
+     rather than contact once there was a floor behind it. */
+  filter: drop-shadow(0 10px 14px rgba(var(--c-black-rgb), 0.62));
 }
-/* Ambient Institute-archive backdrop: fine letterhead rule lines + soft pillar-glow columns,
-   filling the entire scene rather than a small clipped card. Purely decorative (aria-hidden),
-   CSS/SVG only — no image assets, no word/text content (that's the contextual reveal system's
-   job, see revealCardMarkup(), and the ambient phrase layer's, see .director-scene__phrase).
+/* The room the Director is standing in — INSTITUTE_PLATE, the painted Institute Archive
+   establishing shot the recall warp screen already loads on. Purely decorative (aria-hidden).
    Negative z-index so it paints behind the scene's normal-flow content (title, sprite, dialogue
-   bar) despite being position:absolute, without needing z-index on every sibling. */
+   bar) despite being position:absolute, without needing z-index on every sibling.
+
+   This replaced ~150 lines that drew a room instead of showing one: a letterhead ledger scrim,
+   three blurred pillar-glow columns, a double-ring instrument seal, three monospace readouts and
+   an ambient layer of historical phrases fading in and out at random positions. Six decorative
+   layers on the one screen in the game that is a face and a sentence, and the owner's report on
+   the whole assembly was that it read as a rough draft. Randomly-placed text was the worst of it:
+   it cannot be composed with anything, so it never looks deliberate however faint it is.
+
+   Do not add a seventh layer here. If this screen needs more, it needs a better painting. */
 .director-scene__backdrop {
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  overflow: hidden;
 }
-.director-scene__ledger {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 34%;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(240, 212, 136, 0.05) 0,
-    rgba(240, 212, 136, 0.05) 1px,
-    transparent 1px,
-    transparent 30px
-  );
-}
-.director-scene__pillar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 220px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(var(--c-gold-rgb), 0.16) 42%,
-    rgba(23, 148, 158, 0.14) 58%,
-    transparent
-  );
-  filter: blur(10px);
-}
-.director-scene__pillar--1 {
-  left: 2%;
-}
-.director-scene__pillar--2 {
-  left: 50%;
-  transform: translateX(-50%);
-}
-.director-scene__pillar--3 {
-  right: 2%;
-}
-/* Technical-instrument seal behind the character sprite — a double ring with cardinal/ordinal
-   tick marks, replacing the old full-viewport dashed "portal" globe. Sized relative to
-   .director-scene__stage (its positioned ancestor) so it reads as roughly the character's own
-   scale rather than spanning the screen. Negative z-index (like .director-scene__backdrop) keeps
-   it behind the sprite regardless of DOM order. */
-.director-scene__seal-wrap {
-  position: absolute;
-  left: 50%;
-  bottom: 8px;
-  transform: translateX(-50%);
-  width: min(78%, 300px);
-  z-index: -1;
-  pointer-events: none;
-}
-.director-scene__seal {
+.director-scene__plate {
   width: 100%;
-  height: auto;
-  opacity: 0.2;
+  height: 100%;
+  object-fit: cover;
+  /* Biased above centre: the plate's floor fills the lower third, which is where the sprite stands
+     and where the dialogue bar sits, so the interesting half of the painting is the top half. */
+  object-position: center 38%;
 }
-.director-scene__seal circle,
-.director-scene__seal line {
-  fill: none;
-  stroke: var(--gold-soft);
-  stroke-width: 1;
+/* Legibility, and only legibility. Gold text on a lit painting fails at the top edge and behind
+   the bar; this darkens both ends and leaves the middle — where the Director stands — nearly
+   clear, so the scrim is doing contrast work rather than muting the art. */
+.director-scene__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(var(--c-navy-rgb), 0.88) 0%,
+      rgba(var(--c-navy-rgb), 0.42) 22%,
+      rgba(var(--c-navy-rgb), 0.24) 45%,
+      rgba(var(--c-navy-rgb), 0.66) 78%,
+      rgba(var(--c-navy-rgb), 0.92) 100%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 50% 62%,
+      rgba(var(--c-black-rgb), 0) 0%,
+      rgba(var(--c-black-rgb), 0.34) 100%
+    );
 }
-/* Thin corner-bracket HUD lines marking the stage area, gold accent, low opacity — restrained
-   "instrument panel" framing rather than atmospheric glow. */
+/* Thin corner-bracket lines framing the stage, gold accent, low opacity. The one piece of the old
+   decor that survived Phase 90B, because it was framing the shot rather than competing with it —
+   and a painting wants a frame. Slightly larger and fainter against art than it was against a flat
+   CSS backdrop. */
 .director-scene__bracket {
   position: absolute;
-  width: 26px;
-  height: 26px;
-  border: 1px solid rgba(240, 212, 136, 0.28);
-  opacity: 0.6;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.22);
+  opacity: 0.7;
   pointer-events: none;
 }
 .director-scene__bracket--tl {
@@ -2896,55 +2900,6 @@ dd {
   right: 6px;
   border-left: none;
   border-top: none;
-}
-/* Sparse monospace data readouts (record id, link status, running clock) in the stage's corners —
-   system monospace stack, not a webfont import, to reinforce "Archive connection secure" without
-   adding a dependency. */
-.director-scene__readout {
-  position: absolute;
-  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  opacity: 0.4;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.director-scene__readout--record {
-  top: 10px;
-  left: 10px;
-}
-.director-scene__readout--status {
-  top: 10px;
-  right: 10px;
-}
-.director-scene__readout--timer {
-  bottom: 10px;
-  left: 10px;
-}
-/* Continuous ambient phrase layer (see startDirectorSceneDecor() in main.js) — a handful of faint
-   historical-timeline phrases fading in/out at random safe-zone positions, fully independent of
-   dialogue state. Only opacity (plus a static, non-animated transform for centering) is animated,
-   so this stays GPU-cheap even with several phrases active. */
-.director-scene__phrase-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.director-scene__phrase {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  font-family: "Cinzel", serif;
-  color: var(--gold-soft);
-  opacity: 0;
-  transition-property: opacity;
-  transition-timing-function: ease;
-  will-change: opacity;
-}
-@media (prefers-reduced-motion: reduce) {
-  .director-scene__phrase {
-    transition: none;
-  }
 }
 /* Sits directly above the dialogue box (inside .director-scene__bar) rather than floating in
    the stage's top-right corner, so a reveal visually reads as tied to what's being said. */
@@ -3132,19 +3087,21 @@ dd {
 }
 .director-dialogue-box {
   position: relative;
-  width: min(68%, 620px);
+  /* Wider and capped by a reading measure rather than by a round number: at 620px the two-line
+     briefing bodies broke across three. The right padding is caret clearance, not symmetry. */
+  width: min(74%, 680px);
   margin: 0 auto;
-  padding: 10px 40px 10px 18px;
+  padding: 14px 46px 16px 22px;
   border: 2px solid rgba(var(--c-gold-rgb), 0.66);
-  border-radius: 17px;
-  background: rgba(3, 28, 40, 0.98);
+  border-radius: var(--c-radius-lg);
+  background: rgba(3, 28, 40, 0.96);
   cursor: pointer;
   box-shadow:
     0 16px 26px rgba(var(--c-black-rgb), 0.34),
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .director-dialogue-box__name {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-family: "Cinzel", serif;
   font-size: 0.74rem;
   letter-spacing: 0.08em;
@@ -3157,8 +3114,8 @@ dd {
   max-height: 6em;
   overflow-y: auto;
   font-size: 1.15rem;
-  line-height: 1.5;
-  color: #f6fffb;
+  line-height: 1.62;
+  color: var(--c-text);
 }
 .director-continue-indicator {
   position: absolute;
@@ -3187,14 +3144,42 @@ dd {
    (stacking it would grow the bar and reintroduce the reflow problem this whole layout fixes). */
 .director-extra-content {
   position: absolute;
-  top: 104px;
+  /* 104px until Phase 90B, when the heading pair gained its own bottom margin and the first rule
+     card came up against the h1's descenders. Keep this in step with .director-scene__head. */
+  top: 126px;
   left: clamp(24px, 5vw, 64px);
-  width: min(380px, 42%);
-  max-height: calc(100% - 320px);
+  width: min(392px, 42%);
+  /* Was calc(100% - 320px). The panel is a fixed-height scroll column and the First Assignment
+     block sits at the bottom of it, so this bound is the thing that decides whether the block is
+     above the fold — re-measured against the baseline after the top moved, not adjusted by eye. */
+  max-height: calc(100% - 342px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+/* A backing, because this panel now sits on a painting rather than a flat gradient. The
+   description is plain body text with no pill behind it, and over the lit half of the plate it was
+   the one thing on the screen that had to be squinted at. Padded and inset so the cards keep their
+   own edges rather than reading as one block.
+
+   **Scoped to :not(:empty), and that is load-bearing rather than tidy.** Every director screen
+   renders this element; only intro-protocol puts anything in it, and the other two get an empty
+   div that the typewriter unhides on its last line. Unstyled that was a zero-size no-op. Given
+   padding it became a dark bar under the title on the welcome and briefing screens — and, less
+   obviously, it started reporting as visible to Playwright, so visual-regression's "wait for the
+   protocol panel" loop fired on the welcome screen and captured the wrong shot into
+   director-protocol-scene. An empty box with padding is a visible box. */
+.director-extra-content:not(:empty) {
+  padding: 14px 16px 16px;
+  margin-left: -16px;
+  border-radius: var(--c-radius-md);
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--c-navy-rgb), 0.78),
+    rgba(var(--c-navy-rgb), 0.62)
+  );
+  backdrop-filter: blur(2px);
 }
 .director-extra-content[hidden] {
   display: none;
@@ -5533,6 +5518,125 @@ dd {
 }
 .field-door--exit span {
   opacity: 1;
+}
+/* ---------------------------------------------------------------------------
+   Lit doorways — light spilling out of anything you can walk into
+   ---------------------------------------------------------------------------
+   A warm pool on the ground in front of a door, so an entrance reads as an entrance from across
+   the map rather than only once the player is close enough for its label to fade in. The genre
+   convention, and the reason it works, is that light is the one signal that survives at a distance
+   and at a glance.
+
+   **Only doors that open are lit, and that is the whole design decision.** 155 door cells are
+   generated into the seven blocks modules as *_DOORS arrays, one per painted building, and main.js
+   imports none of them — but exactly six of them lead anywhere, plus the Institute's three.
+   Lighting all 155 would promise a room behind 149 facades that have none, which is a worse lie
+   than lighting nothing: the player learns the signal, tries four doors, and stops believing it.
+   If the other buildings should feel occupied, that is window light and a different treatment.
+
+   Drawn with mix-blend-mode: screen for the same reason .institute-map::after does — additive
+   light over a tile canvas reads as spill, where an opaque gradient reads as a decal stuck to the
+   floor. Pseudo-elements wherever the door already has an element, so this costs no new markup
+   except in the Entrance Hall, whose doorway is painted tiles with no marker of its own.
+
+   Palette from the .hub-marker family so a lit door and a lit target are the same gold. */
+.doorway-light,
+.field-door::before,
+.hub-marker[data-hub-target="archiveDoor"]::before,
+.hub-marker[data-hub-target="exitDoor"]::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    ellipse 50% 50% at 50% 0%,
+    rgba(var(--c-gold-rgb), 0.46) 0%,
+    rgba(var(--c-gold-rgb), 0.2) 38%,
+    rgba(var(--c-gold-rgb), 0.06) 66%,
+    transparent 78%
+  );
+  animation: doorway-breathe 5.2s ease-in-out infinite;
+}
+/* Centred on the door cell and falling south, onto the tile the player stands on to enter. */
+.field-door::before {
+  left: 50%;
+  top: 40%;
+  width: 108px;
+  height: 84px;
+  transform: translateX(-50%);
+}
+/* An interior's way out is daylight from the street, not lamplight from a room. Cooler and a
+   little wider, matching the cyan the exit pill already carries.
+
+   And it falls the other way. Every exit in the game is in its room's south wall, so the light
+   comes from behind the player and reaches *into* the room; thrown south like an entrance it
+   landed on the two rows below the floor and was clipped away by .caribbean-world's overflow,
+   which is exactly what the first pass shipped. Direction is a property of which wall the door is
+   in, not of the door. */
+.field-door--exit::before {
+  top: auto;
+  bottom: 44%;
+  width: 124px;
+  height: 92px;
+  background: radial-gradient(
+    ellipse 50% 50% at 50% 100%,
+    rgba(190, 240, 252, 0.4) 0%,
+    rgba(150, 226, 245, 0.17) 38%,
+    rgba(120, 214, 238, 0.05) 66%,
+    transparent 78%
+  );
+}
+/* A hub marker is a rect laid over the door's own tiles rather than a point, so the spill hangs
+   off its edge instead of being centred in it. The Main Hall's Archive Room door is in the north
+   wall and throws south into the room. */
+.hub-marker[data-hub-target="archiveDoor"]::before,
+.hub-marker[data-hub-target="exitDoor"]::before {
+  left: 50%;
+  top: 82%;
+  width: 152px;
+  height: 92px;
+  transform: translateX(-50%);
+}
+/* The Archive Room's way back out is in the *south* wall, two rows from the bottom of a
+   twelve-row room, so the same spill thrown downward fell off the map entirely. Same flip as
+   .field-door--exit, same reason. */
+.hub-marker[data-hub-target="exitDoor"]::before {
+  top: auto;
+  bottom: 82%;
+  background: radial-gradient(
+    ellipse 50% 50% at 50% 100%,
+    rgba(var(--c-gold-rgb), 0.46) 0%,
+    rgba(var(--c-gold-rgb), 0.2) 38%,
+    rgba(var(--c-gold-rgb), 0.06) 66%,
+    transparent 78%
+  );
+}
+/* The Entrance Hall's doors into the Main Hall — the one openable doorway in the game with no
+   element of its own, because it is not an interaction: the Director walks you through it. Placed
+   by instituteHallwayScreen() in world coordinates, like everything else in that room. */
+.doorway-light {
+  z-index: 8;
+  height: 104px;
+}
+@keyframes doorway-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* A door still reads as lit; it just stops flickering. This also keeps the visual baselines
+   deterministic, since they are captured in exactly this media state. */
+@media (prefers-reduced-motion: reduce) {
+  .doorway-light,
+  .field-door::before,
+  .hub-marker[data-hub-target="archiveDoor"]::before,
+  .hub-marker[data-hub-target="exitDoor"]::before {
+    animation: none;
+    opacity: 0.85;
+  }
 }
 /* ---------------------------------------------------------------------------
    .source-signal--world — the single consolidated rule (Phase 56)

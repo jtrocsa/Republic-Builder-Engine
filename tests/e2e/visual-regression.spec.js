@@ -25,12 +25,12 @@ import {
 //
 // Determinism notes (read before adding more screenshots to this file):
 // - `page.emulateMedia({ reducedMotion: "reduce" })` is set on every test. main.js's own
-//   prefersReducedMotion() checks (drifting ambient-phrase layer, the Entrance Hall's doorway
-//   flicker) key off this, and Playwright's default `animations: "disabled"` on toHaveScreenshot
-//   freezes CSS transitions/animations at their end state regardless.
-// - `#directorArchiveClock` (main.js:5478) is a live elapsed-time readout on the three director
-//   intro scenes, driven by `setInterval`, not CSS — it survives `animations: "disabled"` and
-//   must be masked explicitly.
+//   prefersReducedMotion() checks (the Entrance Hall's doorway cut) key off this, and Playwright's
+//   default `animations: "disabled"` on toHaveScreenshot freezes CSS transitions/animations at
+//   their end state regardless. The director scenes used to need an explicit mask on top of that
+//   for `#directorArchiveClock`, a setInterval-driven elapsed-time readout that CSS freezing could
+//   not touch; Phase 90B deleted the clock along with the rest of that screen's decor, so the two
+//   director shots are plain screenshots now.
 // - Mini-game "playing" states (Storm Navigation, Cargo Sorting) tick via requestAnimationFrame
 //   with randomized hazard/card placement, not CSS — deliberately NOT screenshotted here beyond
 //   the static mini-game *select* screen. Covering the in-progress states would need either a
@@ -122,9 +122,7 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(dialogueBox).toBeVisible();
     // First frame of the shared director-scene shell (intro-welcome). Reduced motion means the
     // typewriter has already resolved to its full first line — deterministic without a wait.
-    await expect(page).toHaveScreenshot(
-      snap("director-welcome-scene", { mask: [page.locator("#directorArchiveClock")] })
-    );
+    await expect(page).toHaveScreenshot(snap("director-welcome-scene"));
 
     const nameInput = page.locator('input[data-profile="name"]');
     // intro-protocol is the only director screen that renders an extra-content panel, and
@@ -143,9 +141,7 @@ test.describe("Gameplay visual-regression baselines", () => {
       if (!(await dialogueBox.isVisible().catch(() => false))) break;
       if (!sawProtocol && (await protocolPanel.isVisible().catch(() => false))) {
         sawProtocol = true;
-        await expect(page).toHaveScreenshot(
-          snap("director-protocol-scene", { mask: [page.locator("#directorArchiveClock")] })
-        );
+        await expect(page).toHaveScreenshot(snap("director-protocol-scene"));
       }
       await dialogueBox.click();
       await page.waitForTimeout(30);

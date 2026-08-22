@@ -4321,6 +4321,18 @@ export const HALLWAY_BLOCK_RECTS = HALLWAY_BLOCKS;
 export const HALLWAY_SPAWN = [10.0, 15.3, "up"];
 // Where the escort walk ends: dead centre of the Main Hall doorway, one tile inside the north wall.
 export const HALLWAY_DOOR_APPROACH = { x: 10.0, y: 2.6 };
+/**
+ * The light spilling out of the doors into the Main Hall.
+ *
+ * Purely decorative, and the only doorway in the game that needs its own element: the other nine
+ * openable doors are either a `.field-door` button or a `.hub-marker` rect and get their spill
+ * from a pseudo-element on that. This one is not an interaction at all — the Director walks the
+ * player through it — so there is nothing to hang it on.
+ *
+ * DOOR_COLS is [9, 10] in scripts/generate-hallway-tmj.js, stamped at row 0 with the door tile's
+ * h2, so the light falls from row 2 down the spine the player is about to walk up.
+ */
+const HALLWAY_DOORWAY_LIGHT = `<span class="doorway-light" aria-hidden="true" style="left:${9 * HALLWAY_GRID.tile}px;top:${1.55 * HALLWAY_GRID.tile}px;width:${2 * HALLWAY_GRID.tile}px"></span>`;
 export const HALLWAY_TARGETS = {
   director: {
     // On the greeting runner in the open band at rows 10-11, on the spine, so he is the first thing
@@ -5290,12 +5302,6 @@ const introSeenSteps = new Set();
 // one frame with the fade overlay at full opacity, then render()'s institute requestAnimationFrame
 // block removes .is-active so it transitions back to 0 (a fade-in cut).
 let enterMainHallFromBlack = false;
-// Ambient decoration on the director intro screens (seal/HUD readouts + drifting phrase layer) —
-// purely cosmetic, independent of dialogue/typewriter state, so it gets its own start/stop loop
-// (see startDirectorSceneDecor()) rather than piggybacking on the typewriter's per-step timers.
-let directorClockInterval = null;
-let directorClockStartedAt = 0;
-let directorPhraseTimers = [];
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward layer, not
 // save-relevant progress — their in-run state lives here, outside `progress`,
 // the same way field/hub movement state does. Only Storm Navigation's best
@@ -5705,7 +5711,7 @@ const STUDENT_SOLO_ITEMS = [
 // --- Title sequence (the Chronicle wordmark cinematic, plays once per load) ------------------
 // Ported from the approved "Chronicle — Title Sequence" artifact. Palette and fonts are the game's
 // own tokens (the artifact was built against them), so nothing new loads. The floating gold motes
-// are a canvas rAF loop (startTitleDecor/stopTitleDecor — same lifecycle as startDirectorSceneDecor);
+// are a canvas rAF loop (startTitleDecor/stopTitleDecor — the same start-on-screen lifecycle);
 // the seal, wordmark, rule and prompt are CSS in .title-sequence. Dismissed by Enter or a click/tap
 // (data-action="begin" → handleLandingClick → dismissTitle), which drops into mainMenuScreen()
 // unchanged. A dev warp skips it (showTitle=false in applyDevWarp).
@@ -9410,135 +9416,37 @@ function handleManageContentClick(target, action) {
   return false;
 }
 
-// Static, content-free background layer (letterhead rule lines + pillar glows) evoking an
-// Institute Archive records room. Built once since it has no dynamic data. No text/word content
-// here — the contextual reveal system (badges/chips/Codex image, see revealCardMarkup()) and the
-// ambient phrase layer (see AMBIENT_HISTORY_PHRASES) are the only word-level content, so nothing
-// else appears in the backdrop unrelated to the current line.
-const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidden="true"><div class="director-scene__ledger"></div><span class="director-scene__pillar director-scene__pillar--1"></span><span class="director-scene__pillar director-scene__pillar--2"></span><span class="director-scene__pillar director-scene__pillar--3"></span></div>`;
+/**
+ * The room the Director is standing in — the painted Institute Archive plate.
+ *
+ * `INSTITUTE_PLATE` is the same establishing shot the recall warp screen loads on, and it has been
+ * in the bundle since Phase 88A doing exactly one job. Using it here costs no new art and makes the
+ * two screens that show the Institute show the same Institute.
+ *
+ * It replaces a CSS diorama: a letterhead ledger scrim and three blurred vertical "pillar" glows,
+ * plus, in DIRECTOR_STAGE_DECOR below, a rotating instrument seal, two monospace readouts reading
+ * `LINK VERIFIED` and `REC. 07734 · SER. AR-1`, and a clock counting the seconds since the screen
+ * opened. None of it meant anything, all of it was drawn rather than painted, and the owner's
+ * report on the whole assembly was that it "feels like a rough draft" — six decorative layers
+ * competing on the one screen in the game that is nothing but a face and a sentence.
+ *
+ * The corner brackets survive. They are the only piece that was framing the shot rather than
+ * decorating it, and a painting wants a frame.
+ */
+const DIRECTOR_SCENE_BACKDROP = `<div class="director-scene__backdrop" aria-hidden="true"><img class="director-scene__plate" src="${INSTITUTE_PLATE.image}" alt=""><span class="director-scene__scrim"></span></div>`;
 
-// Decorative-only markup for the director stage: a technical-instrument seal behind the character,
-// corner HUD brackets, and monospace data readouts.
-// The record readout lives in the stage's top-left corner, which is exactly where
-// intro-protocol's .director-extra-content cards panel renders — kept as a separate fragment
-// (see directorSceneMarkup()) so it can be omitted whenever extraContent is present instead of
-// overlapping the panel's own text.
-const DIRECTOR_STAGE_DECOR_RECORD_READOUT = `<span class="director-scene__readout director-scene__readout--record" aria-hidden="true">REC. 07734 · SER. AR-1</span>`;
-const DIRECTOR_STAGE_DECOR = `<div class="director-scene__seal-wrap" aria-hidden="true"><svg class="director-scene__seal" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46"></circle><circle cx="50" cy="50" r="40"></circle><line x1="50" y1="4" x2="50" y2="10" transform="rotate(0 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(45 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(90 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(135 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(180 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(225 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(270 50 50)"></line><line x1="50" y1="4" x2="50" y2="10" transform="rotate(315 50 50)"></line></svg></div><span class="director-scene__bracket director-scene__bracket--tl" aria-hidden="true"></span><span class="director-scene__bracket director-scene__bracket--tr" aria-hidden="true"></span><span class="director-scene__bracket director-scene__bracket--bl" aria-hidden="true"></span><span class="director-scene__bracket director-scene__bracket--br" aria-hidden="true"></span><span class="director-scene__readout director-scene__readout--status" aria-hidden="true">LINK VERIFIED</span><span class="director-scene__readout director-scene__readout--timer" id="directorArchiveClock" aria-hidden="true">00:00</span>`;
+const DIRECTOR_STAGE_DECOR = `<span class="director-scene__bracket director-scene__bracket--tl" aria-hidden="true"></span><span class="director-scene__bracket director-scene__bracket--tr" aria-hidden="true"></span><span class="director-scene__bracket director-scene__bracket--bl" aria-hidden="true"></span><span class="director-scene__bracket director-scene__bracket--br" aria-hidden="true"></span>`;
 
-// 30 short APUSH-timeline phrases for the ambient drifting-text layer on the director intro
-// screens (see startDirectorSceneDecor()). Purely decorative flavor text, never gameplay content.
-const AMBIENT_HISTORY_PHRASES = [
-  "1607 · Jamestown",
-  "Columbian Exchange",
-  "1620 · Plymouth",
-  "Bacon's Rebellion",
-  "Middle Passage",
-  "Salutary Neglect",
-  "1754 · French and Indian War",
-  "1776 · Declaration of Independence",
-  "Common Sense",
-  "Articles of Confederation",
-  "1787 · Constitutional Convention",
-  "Federalists v. Anti-Federalists",
-  "1803 · Louisiana Purchase",
-  "Marbury v. Madison",
-  "Indian Removal Act",
-  "Manifest Destiny",
-  "1848 · Seneca Falls",
-  "Missouri Compromise",
-  "1861 · Fort Sumter",
-  "Emancipation Proclamation",
-  "1877 · End of Reconstruction",
-  "Gilded Age",
-  "Populist Movement",
-  "1898 · Spanish-American War",
-  "Progressive Era",
-  "1929 · Stock Market Crash",
-  "New Deal",
-  "1941 · Pearl Harbor",
-  "Cold War Containment",
-  "1963 · March on Washington",
-];
-
-// Continuous, dialogue-independent decoration loop for the director intro screens: a running
-// archive-clock readout plus a layer of faintly drifting historical phrases. Started/stopped
-// purely based on which screen is current (see the render() wiring near startMiniGameLoop()) —
-// never paused/reset by dialogue advancing, matching the "runs continuously" requirement.
-function startDirectorSceneDecor() {
-  const layer = document.getElementById("directorPhraseLayer");
-  const clock = document.getElementById("directorArchiveClock");
-  if (!layer || !clock) return;
-  directorClockStartedAt = performance.now();
-  directorClockInterval = setInterval(() => {
-    const elapsed = Math.floor((performance.now() - directorClockStartedAt) / 1000);
-    clock.textContent = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
-  }, 1000);
-  if (prefersReducedMotion()) return;
-  const slotCount = 6 + Math.floor(Math.random() * 5);
-  for (let i = 0; i < slotCount; i++) scheduleNextPhrase(layer, 200 + Math.random() * 3000);
-}
-
-function stopDirectorSceneDecor() {
-  clearInterval(directorClockInterval);
-  directorClockInterval = null;
-  directorPhraseTimers.forEach(clearTimeout);
-  directorPhraseTimers = [];
-}
-
-function scheduleNextPhrase(layer, delayMs) {
-  directorPhraseTimers.push(setTimeout(() => spawnPhrase(layer), delayMs));
-}
-
-// Rejection-sampled random point (as % of the phrase layer's box, which shares .director-scene's
-// full coordinate space — see the phrase-layer placement note in directorSceneMarkup()) that
-// avoids the character sprite, the bottom dialogue bar, and intro-protocol's cards panel. The
-// panel rectangle is excluded unconditionally on all three screens so one algorithm covers all of
-// them rather than threading an "extra content present" flag through.
-function pickSafeZonePoint() {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const x = 6 + Math.random() * 88;
-    const y = Math.random() * 100;
-    const inSprite = x > 32 && x < 68 && y > 42 && y < 94;
-    const inBar = y > 80;
-    const inProtocolPanel = x < 44 && y > 12 && y < 58;
-    if (!inSprite && !inBar && !inProtocolPanel) return { x, y };
-  }
-  return { x: 8, y: 20 };
-}
-
-function spawnPhrase(layer) {
-  if (!document.body.contains(layer)) return;
-  const text = AMBIENT_HISTORY_PHRASES[Math.floor(Math.random() * AMBIENT_HISTORY_PHRASES.length)];
-  const { x, y } = pickSafeZonePoint();
-  const fadeIn = 2000 + Math.random() * 2000;
-  const hold = 2000 + Math.random() * 3000;
-  const fadeOut = 2000 + Math.random() * 2000;
-  const targetOpacity = (0.13 + Math.random() * 0.15).toFixed(2);
-  const el = document.createElement("span");
-  el.className = "director-scene__phrase";
-  el.textContent = text;
-  el.style.left = `${x}%`;
-  el.style.top = `${y}%`;
-  el.style.fontSize = `${11 + Math.random() * 3}px`;
-  el.style.transitionDuration = `${fadeIn}ms`;
-  layer.appendChild(el);
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.style.opacity = targetOpacity;
-    });
-  });
-  const fadeOutId = setTimeout(() => {
-    el.style.transitionDuration = `${fadeOut}ms`;
-    el.style.opacity = "0";
-    const removeId = setTimeout(() => {
-      el.remove();
-      scheduleNextPhrase(layer, 1000 + Math.random() * 3000);
-    }, fadeOut);
-    directorPhraseTimers.push(removeId);
-  }, fadeIn + hold);
-  directorPhraseTimers.push(fadeOutId);
-}
+// The ambient decoration loop lived here: AMBIENT_HISTORY_PHRASES (thirty APUSH timeline
+// phrases), startDirectorSceneDecor()/stopDirectorSceneDecor(), scheduleNextPhrase(),
+// pickSafeZonePoint() and spawnPhrase() — a running archive clock plus faint phrases fading in
+// and out at rejection-sampled random positions. Removed in Phase 90B with the rest of the CSS
+// diorama it belonged to.
+//
+// The clock counted seconds since the screen opened and meant nothing; the phrases were the
+// single largest contributor to the screen reading as unfinished, because text placed at random
+// cannot be composed with anything and so never looked deliberate. It also took a setInterval, a
+// growing timer array and a render() lifecycle branch with it.
 
 // Director intro scene — full-bleed Pokémon-"meet the Professor"-style presentation shared by
 // intro-welcome/intro-briefing/intro-protocol: the backdrop/sprite fill the whole stage below the
@@ -9550,18 +9458,10 @@ function spawnPhrase(layer) {
 // the JS state machine silently drifting out of sync.
 function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" }) {
   const stage = `<img class="director-scene__sprite" src="${CHARACTER_SHEETS.director.portrait}" alt="Director Rowan Hale" draggable="false">`;
-  // The record readout is omitted whenever extraContent is present (intro-protocol only) since
-  // that panel occupies the same top-left corner — see DIRECTOR_STAGE_DECOR_RECORD_READOUT.
-  const stageDecor =
-    DIRECTOR_STAGE_DECOR + (extraContent ? "" : DIRECTOR_STAGE_DECOR_RECORD_READOUT);
-  // The phrase layer is a top-level scene sibling (not nested in .director-scene__stage) so its
-  // inset:0 box shares the same coordinate space as .director-extra-content and the bottom bar —
-  // pickSafeZonePoint() needs to reason about the sprite and the dialogue box together.
-  const phraseLayer = `<div class="director-scene__phrase-layer" id="directorPhraseLayer" aria-hidden="true"></div>`;
   // The reveal rail lives here, directly above the dialogue box it's illustrating, rather than
   // floating in the stage's top-right corner — see docs decision to anchor reveals to what's
   // being said instead of parking them in a disconnected corner.
-  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}${phraseLayer}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${stageDecor}${stage}</div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-reveal-rail" id="directorRevealRail"></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
+  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${DIRECTOR_STAGE_DECOR}${stage}</div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-reveal-rail" id="directorRevealRail"></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
 }
 
 function introWelcomeScreen() {
@@ -10560,7 +10460,7 @@ function instituteHallwayScreen() {
   // p:not(.kicker)` is a descendant selector that outranks `.director-dialogue-box__text`, so nesting
   // the bar would quietly restyle the typewriter it is built around. One wrapper keeps the Director's
   // speech directly under the status card and off the fold, without touching the map's grid column.
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><div class="hub-column"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Entrance Hall</h1><p class="hub-subtitle">Where every recovered record comes in.</p><div class="hub-meta"><span>Chronicle Institute · Orientation · Your first day.</span></div></section>${sidePanel}${dialogue}</div><section class="institute-map institute-map--hallway" id="instituteMap" aria-label="Playable Chronicle Institute entrance hall"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="Top-down stone entrance hall: record cabinets and pigeonhole racks down both long walls, an intake bench and a reading table in the middle, and double doors at the far end leading into the Institute's main hall"></canvas><canvas class="field-world-overlay" id="hallwayTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main><div class="scene-fade" id="sceneFade"></div>`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><div class="hub-column"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Entrance Hall</h1><p class="hub-subtitle">Where every recovered record comes in.</p><div class="hub-meta"><span>Chronicle Institute · Orientation · Your first day.</span></div></section>${sidePanel}${dialogue}</div><section class="institute-map institute-map--hallway" id="instituteMap" aria-label="Playable Chronicle Institute entrance hall"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="Top-down stone entrance hall: record cabinets and pigeonhole racks down both long walls, an intake bench and a reading table in the middle, and double doors at the far end leading into the Institute's main hall"></canvas><canvas class="field-world-overlay" id="hallwayTiledCanvasOverlay" aria-hidden="true"></canvas>${HALLWAY_DOORWAY_LIGHT}${instituteNpc("director", "Director Hale")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main><div class="scene-fade" id="sceneFade"></div>`;
 }
 // `tourCalloutMarkup()` lived here until Phase 90 — the guided tour's caption panel, a portrait and
 // a paragraph and a Next button rendered over a room the player was locked out of walking. The tour
@@ -13563,11 +13463,6 @@ function render() {
     window.requestAnimationFrame(startMiniGameLoop);
   } else {
     stopMiniGameLoop();
-  }
-  if (["intro-welcome", "intro-briefing", "intro-protocol"].includes(progress.currentScreen)) {
-    window.requestAnimationFrame(startDirectorSceneDecor);
-  } else {
-    stopDirectorSceneDecor();
   }
   updateMusicForScreen(sceneForMusic());
 }

@@ -19,9 +19,9 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | ------------------------------ | ---------------------------------------------------------------- | ----------- | ---------- | ------------------------------------------------ |
 | [0](./part-00-unblock.md)      | Unblock and instrument                                           | **closed**  | 2026-08-03 | 1 S2 _(P0-3, awaiting an owner decision)_ · 1 S3 |
 | [1](./part-01-04-the-intro.md) | Cold boot and landing                                            | **closed**  | 2026-08-22 | —                                                |
-| [2](./part-01-04-the-intro.md) | The Director and identity                                        | **closed**  | 2026-08-22 | 1 S2 _(the Director scene's art, → Phase 90B)_   |
+| [2](./part-01-04-the-intro.md) | The Director and identity                                        | **closed**  | 2026-08-22 | —                                                |
 | [3](./part-01-04-the-intro.md) | The Entrance Hall                                                | **closed**  | 2026-08-22 | —                                                |
-| [4](./part-01-04-the-intro.md) | Main Hall and the tutorial tour                                  | **closed**  | 2026-08-22 | 1 S3 _(lit doorways, → Phase 90B)_               |
+| [4](./part-01-04-the-intro.md) | Main Hall and the tutorial tour                                  | **closed**  | 2026-08-22 | —                                                |
 | 5                              | Archive Room and the Navigation Table                            | not started |            |                                                  |
 | 6                              | The field runtime _(two sittings: 6A world, 6B mission surface)_ | not started |            |                                                  |
 | 7                              | Mission Instructions and the activity board                      | not started |            |                                                  |

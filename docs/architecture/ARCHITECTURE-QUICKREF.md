@@ -155,6 +155,8 @@
 
 - Phase 90A — **The intro stops repeating itself.** One ADR: `docs/decision-log/0078-the-intro-stops-repeating-itself.md`, and it closes **Spine Review Parts 1–4** (`docs/playtest/part-01-04-the-intro.md`). An owner playtest of the first five minutes reported six things; four of them were about _feel_ and all four turned out to be arithmetic. **The Director spoke 16 beats before the player could move anything**, and canon §2's object-led travel rule was taught three times in near-identical words — by the briefing, by the tour, and by Voss. Briefing 4→2 screens, Entrance Hall 4→2 beats, tour 4→2, Director **16→8**, with one owner per idea and the owner being whoever the player is standing in front of. **The Main Hall's tutorial tour is a scene** — `DIRECTOR_TOUR`, and it needed **no new command**, which is the test §3 sets. `TUTORIAL_TOUR_STEPS`, `isTutorialTourActive()`, `tourCalloutMarkup()`, the `tutorial-tour-next` handler and `.hub-dialogue--tour` are gone, and **`isHubInputLocked()` is down to one term**. Four bugs behind the rest: `createEscortWalk()` seeded its trail from the _leader_, so the follower teleported onto his path the first engaged frame (this is "the player jumps to the director"); `.hub-world`'s 92ms transform transition turned `render()`'s one-frame camera reset into a visible 281px slide, fired by `startHubScene()`'s own render (this is "the screen jumps"); the 30Hz NPC tick ran straight through scenes and flipped the player's walk cycle between 0.301s and 0.5s ~30×/s (this is "the walking feels off"); and one doorway cost ~885ms of black across two overlays. **The camera function was never touched** — two things that were effectively moving it were removed. Two latent defects surfaced on the way: `stepEscort()` closed the follower _onto_ the leader (invisible behind the Entrance Hall's fade, not invisible at a lit tour stop) and `snapActor()` stranded the follower on skip, which had been holding up a passing `meridian-reveal` assertion. **No visual baseline moved.** `tests/e2e/intro-sequence.spec.js` banks it and is the first coverage of `?warp=intro`, the one dev warp no spec named.
 
+- Phase 90B — **The intro stops looking unfinished.** One ADR: `docs/decision-log/0079-the-intro-stops-looking-unfinished.md`. The other half of the same owner playtest, and it closes the last two findings Parts 1–4 deferred. **The Director scene shows a room instead of drawing one**: `INSTITUTE_PLATE`, painted for the warp screen in Phase 88A and used nowhere else, is the backdrop, and ~150 lines of CSS diorama are gone with it — a ledger scrim, three blurred pillars, an instrument seal, three monospace readouts including a clock counting nothing, and a layer that faded phrases in at **rejection-sampled random positions**. That last one is why the screen read as a rough draft, and the reason is worth keeping: _text placed at random cannot be composed with anything_, so it always looks accidental, and one accidental layer makes the other five look accidental too. **Ten doorways are lit** — a warm pool on the ground via `mix-blend-mode: screen`, the additive technique `.institute-map::after` already used. **Not all 155.** The `*_DOORS` arrays hold 155 generated door cells and exactly six lead anywhere; a lit door is a promise, and lighting 149 facades that open onto nothing teaches the signal, spends it on four dead doors and makes it worth less than no signal. Direction is a property of the wall, not the door: every exit is in a south wall and throws light _into_ its room. Three layout traps paid for on the way, all caught by opening baselines rather than by an assertion — the sprite had to leave the flow (its `52vh` cap was doing a job `position` should have done, and raising it pushed the Begin Orientation button below the fold), `.director-extra-content` needed `:not(:empty)` (**an empty box with padding is a visible box** — it drew a bar on two screens _and_ made Playwright capture the wrong screen into `director-protocol-scene`), and the first exit lights fell off the bottom of the map. Ten baselines moved; seven were read, covering every distinct treatment.
+
 ## 5. Current active phase
 
 **Phase 81** is a six-part program (81A–81F) running from an approved plan: (A) reconcile the rules, (B) rewrite the opening lore against the canon, (C) build the cutscene system and make Emery Voss a character rather than a body, (D) decide Units 3–9's engine slates, places and plot beats as one solve, (E) station Voss on Units 3–5's maps, (F) author activities for Philadelphia, Canal Crossroads and Richmond. **The whole program is closed** — 81A, 81B, 81D, 81E and 81F in sequence, and 81C's remainder folded onto the general scene runner by 81G. See the phase index above and decision log `0064`. The ordering was the point: each pass made the next cheaper, and 81F is the one that could not have been authored first — it needed the slates from 81D and the givers from 81E.
@@ -203,24 +205,8 @@ Nothing else from `THE-FIELD-LIAISON.md` is scheduled: the reveal, `liaison-meri
 
 ## 6. Next approved phase
 
-**Two are queued, and the order between them is an owner decision, not a default.** They came from
-different directions — 89E finishes Unit 7, 90B finishes the intro — and neither blocks the other.
-Nothing here picks one; whichever runs first, the other's entry stays as written.
-
-**Phase 90B — the intro stops looking unfinished.** The two items Phase 90A deferred, both routed
-from Spine Review Parts 2 and 4 with destinations named:
-
-1. **The Director scene's art.** `directorSceneMarkup()` builds its whole world in CSS and SVG —
-   a ledger scrim, three blurred pillars, a rotating seal, four corner brackets, three fake readouts
-   including a clock that counts nothing, and a layer that drops phrases at **random positions**.
-   The owner's word for it was "rough draft". `INSTITUTE_PLATE` — a painted Institute Archive shot —
-   already ships and is imported at `main.js:129` for the warp screen alone. Put the painting behind
-   the scene, delete the diorama, and retune the dialogue box's spacing.
-2. **Lit doorways.** Pokémon-style light spilling from an entrance so it reads as one. **Scope is a
-   real decision here, not a detail**: 155 door cells already exist as generated `*_DOORS` arrays
-   across the seven `.blocks.js` files and `main.js` imports none of them — but only **six** doors
-   open into anything. Lighting all 155 promises entry at 149 that do nothing, which is worse than
-   lighting none. The recommendation is the ten that actually open.
+**Phase 90B has shipped**, so the two-queued note that stood here is spent and 89E is next on its
+own. The intro is closed end to end: Spine Review Parts 1–4, decision logs `0078` and `0079`.
 
 **Phase 89E — the three missions, and Unit 7 is done.** Unit 7's content landed in Phase 89
 (decision log `0075`), its cast in Phase 89B, its wharf in Phase 89C (decision log `0076`) and its
