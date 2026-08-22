@@ -97,7 +97,7 @@ test.describe("Boot and onboarding", () => {
     const shadow = await wordmark
       .locator("span")
       .first()
-      .evaluate((el) => getComputedStyle(el).textShadow);
+      .evaluate((el) => window.getComputedStyle(el).textShadow);
     expect(shadow).not.toBe("none");
     expect(shadow).toContain("rgba(225, 182, 93");
   });
