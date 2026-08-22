@@ -57,7 +57,10 @@ import { resolvePalette } from "./lib/palette-gids.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MAP_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/richmond-hospital-ward.tmj");
-const BLOCKS_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/richmond-hospital-ward.blocks.js");
+const BLOCKS_OUT = path.join(
+  REPO_ROOT,
+  "apps/web/src/content/maps/richmond-hospital-ward.blocks.js"
+);
 
 const WIDTH = 24;
 const HEIGHT = 14;
@@ -117,7 +120,13 @@ function cotRow(row, label) {
     if (atDoor) continue;
     map.stamp(col, row, T.cot, "solid", label);
     map.stamp(col + 1, row, T.cot, "solid", label);
-    map.stamp(col + 2, row, (col / COT_PITCH) % 2 ? T.bedsideTableAlt : T.bedsideTable, "solid", "bedside table");
+    map.stamp(
+      col + 2,
+      row,
+      (col / COT_PITCH) % 2 ? T.bedsideTableAlt : T.bedsideTable,
+      "solid",
+      "bedside table"
+    );
   }
 }
 cotRow(2, "ward cot");
@@ -168,7 +177,10 @@ for (const [col, row] of [
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
-  map.toBlocksModule("RICHMOND_HOSPITAL_WARD_BLOCKS", "scripts/generate-richmond-hospital-ward-tmj.js")
+  map.toBlocksModule(
+    "RICHMOND_HOSPITAL_WARD_BLOCKS",
+    "scripts/generate-richmond-hospital-ward-tmj.js"
+  )
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
 console.log(`  ${map.blocks.length} collision rects`);

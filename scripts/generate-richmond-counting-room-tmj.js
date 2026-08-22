@@ -56,7 +56,10 @@ import { resolvePalette } from "./lib/palette-gids.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MAP_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/richmond-counting-room.tmj");
-const BLOCKS_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/richmond-counting-room.blocks.js");
+const BLOCKS_OUT = path.join(
+  REPO_ROOT,
+  "apps/web/src/content/maps/richmond-counting-room.blocks.js"
+);
 
 const WIDTH = 18;
 const HEIGHT = 14;
@@ -175,7 +178,10 @@ for (const [col, row] of [
 writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
-  map.toBlocksModule("RICHMOND_COUNTING_ROOM_BLOCKS", "scripts/generate-richmond-counting-room-tmj.js")
+  map.toBlocksModule(
+    "RICHMOND_COUNTING_ROOM_BLOCKS",
+    "scripts/generate-richmond-counting-room-tmj.js"
+  )
 );
 console.log(`wrote ${path.relative(REPO_ROOT, MAP_OUT)} and its blocks module`);
 console.log(`  ${map.blocks.length} collision rects`);
