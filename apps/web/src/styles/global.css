@@ -5529,10 +5529,14 @@ dd {
 
    **Only doors that open are lit, and that is the whole design decision.** 155 door cells are
    generated into the seven blocks modules as *_DOORS arrays, one per painted building, and main.js
-   imports none of them — but exactly six of them lead anywhere, plus the Institute's three.
-   Lighting all 155 would promise a room behind 149 facades that have none, which is a worse lie
-   than lighting nothing: the player learns the signal, tries four doors, and stops believing it.
-   If the other buildings should feel occupied, that is window light and a different treatment.
+   imports none of them — but only eight lead anywhere, one per field interior. Lighting all 155
+   would promise a room behind 147 facades that have none, which is a worse lie than lighting
+   nothing: the player learns the signal, tries four dead doors, and stops believing it. If the
+   other buildings should feel occupied, that is window light and a different treatment.
+
+   Ten doorways in total: those eight, plus the Institute's two — the Archive Room's, lit from both
+   sides, and the Entrance Hall's. The count tracks the interiors, so a new one is lit the moment it
+   ships, with nothing to add here. Unit 7's two proved that by arriving mid-phase.
 
    Drawn with mix-blend-mode: screen for the same reason .institute-map::after does — additive
    light over a tile canvas reads as spill, where an opaque gradient reads as a decal stuck to the

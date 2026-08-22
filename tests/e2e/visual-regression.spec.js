@@ -23,6 +23,19 @@ import {
 // `npx playwright test visual-regression --update-snapshots` after an intentional visual
 // change, and review the diff before committing new baselines.
 //
+// **A field baseline frames part of its map, and which part is an accident of that map's spawn.**
+// Every shot here is a `page` screenshot at 1366x768, so it captures the top band of the map frame
+// and nothing below it, while the camera inside that frame is a pure function of where the seeded
+// player is standing. Two consequences worth knowing before reading anything into a diff:
+//
+//   - **A baseline not moving is not evidence a change did not reach that map.** Phase 90B lit
+//     every openable doorway in the game. The railhead's two doors sit inside its visible band and
+//     its baselines moved; Ellis Island's sit at row 4 of a 56x36 wharf whose spawn is down at
+//     (14, 26.5), so they are below the fold and its baselines did not — despite carrying exactly
+//     the same treatment. The absence looked like "Unit 7 has no doors yet" and was not.
+//   - **Adding a shot does not extend coverage downward.** If you need to see something low on a
+//     map, seed the player near it rather than expecting the existing shot to grow.
+//
 // Determinism notes (read before adding more screenshots to this file):
 // - `page.emulateMedia({ reducedMotion: "reduce" })` is set on every test. main.js's own
 //   prefersReducedMotion() checks (the Entrance Hall's doorway cut) key off this, and Playwright's

@@ -62,11 +62,16 @@ an opaque gradient reads as a decal stuck to the floor rather than as light.
 
 **The scope is the decision.** 155 door cells already exist as generated `*_DOORS` arrays across the
 seven `.blocks.js` files, and `main.js` imports none of them. The literal reading of "make all
-doorway entrances" is to light all 155 — and it is wrong, because **exactly six of them lead
-anywhere**, plus the Institute's three. A lit door is a promise. Lighting 149 facades that open onto
-nothing teaches the player the signal, has them try four doors, and stops them believing it; the
-signal is then worth less than no signal. Ten doors are lit: six field interiors, the Main Hall's
-Archive Room door, the Archive Room's way out, and the Entrance Hall's doors into the Main Hall.
+doorway entrances" is to light all 155 — and it is wrong, because **only eight of them lead
+anywhere**, one per field interior. A lit door is a promise. Lighting 147 facades that open onto
+nothing teaches the player the signal, has them spend it on four dead doors, and stops them
+believing it; the signal is then worth less than no signal.
+
+**Ten doorways are lit**: those eight, plus the Institute's two — the Archive Room's, lit from both
+sides, and the Entrance Hall's. Nothing enumerates them, which is the point: the treatment hangs off
+`.field-door` and two `.hub-marker` ids, so the count tracks the interiors rather than a list that
+can go stale. Unit 7's two rooms proved it the hard way — they shipped in Phase 89D while this phase
+was in flight, and were lit the moment it pushed, without a line being added.
 
 If the other buildings should feel occupied, that is window light — a different treatment with no
 promise attached — and its own phase.
