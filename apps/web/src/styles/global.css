@@ -943,8 +943,13 @@ select {
 .archive-copy {
   align-self: center;
 }
+/* Smaller than the other screens' headings on purpose. "Chronicle Navigation Table" is three words
+   that will not sit on one line in a 270px column at any size, so at the shared clamp it was three
+   lines of ~62px — 200px of headline above the seven unit tabs that are this screen's actual
+   navigation, which put the last three periods of the course off the bottom of a 768px viewport.
+   This is the one screen whose left column has a job below the fold. */
 .archive-copy h1 {
-  font-size: clamp(2.7rem, 4.7vw, 5.2rem);
+  font-size: clamp(2.1rem, 3.1vw, 3.4rem);
 }
 .archive-legend {
   display: flex;

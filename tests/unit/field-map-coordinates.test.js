@@ -991,6 +991,35 @@ describe("institute main hall coordinates", () => {
     expect(crowdedPairs(HUB_NPC_BEHAVIOURS, HUB_NAV_GRID)).toEqual([]);
   });
 
+  // The same rule, measured against the furniture instead of against each other — which is the half
+  // that was missing, and Part 5 found it the hard way. Professor Park's route ran the south aisle
+  // to (18.5, 9.4): 1.4 tiles from the Navigation Table's anchor, inside its 1.65 reach. He and the
+  // table were therefore interactable from the same cell, and nearestHubTarget()'s `.find()` handed
+  // every one of those presses to him because `julian` is declared above `table`.
+  //
+  // The sort is fixed and unit-tested in hub-interaction-priority.test.js, but a person standing in
+  // the one approach the room funnels into is still wrong with the sort fixed — the player has to
+  // walk around a body to reach the object, and the prompt flickers between the two as he passes.
+  // This is CLAUDE.md's doorstep-NPC rule generalised: the door is not the only thing an NPC can
+  // stand on top of. Only objects, since staff have no marker of their own to collide with.
+  it("keeps every staff member clear of an object's interaction reach (edge case)", () => {
+    const objects = Object.entries(HUB_TARGETS).filter(([, target]) => target.marker);
+    expect(objects.length).toBeGreaterThan(0);
+    const OBJECT_REACH = { table: 1.65 };
+    const tooClose = [];
+    for (const [npcId, behaviour] of Object.entries(HUB_NPC_BEHAVIOURS)) {
+      const territory = territoryOf(behaviour, HUB_NAV_GRID);
+      for (const [objectId, target] of objects) {
+        const gap = territoryGap(territory, { points: [target], radius: 0 });
+        const reach = OBJECT_REACH[objectId] ?? 1.1;
+        if (gap < reach) {
+          tooClose.push(`${npcId} comes ${gap.toFixed(2)} within ${objectId}'s ${reach} reach`);
+        }
+      }
+    }
+    expect(tooClose).toEqual([]);
+  });
+
   // The reading stools are `decor` and carry no collision, on purpose — the south aisle has no
   // solid stamps in it, which is what keeps the room traversable end to end. That also means
   // nothing stops a staff member standing on one, and before Phase 62 Julian did: his post at

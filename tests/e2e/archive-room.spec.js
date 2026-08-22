@@ -27,7 +27,7 @@ test.describe("Archive Room", () => {
     // Spawn (10.0, 9.5) is within reach (1.1) of exitDoor (10.0, 10.1) but 7.7 tiles from the
     // terminal (16.0, 4.0) — confirms the prompt is genuinely proximity-gated, not just always
     // showing the nearest target's label.
-    await expect(prompt).toContainText("Institute Foyer");
+    await expect(prompt).toContainText("Main Hall");
 
     // Walked rather than timed. The two fixed holds this replaced encoded the pre-Phase-58 furniture
     // layout ("north 1100ms, east 1350ms"), and the room's rebuild moved the Terminal from the
@@ -38,14 +38,14 @@ test.describe("Archive Room", () => {
     await page.keyboard.press("e");
     await expect(page.locator(".archive-challenges-shell")).toBeVisible();
 
-    // The back-link deliberately does not reset currentHubRoom/position (main.js:6271-6274) —
+    // The back-link deliberately does not reset currentHubRoom/position (the "hub-return" branch in handleAppClick) —
     // it returns to whichever room the player was already standing in.
-    await page.locator('[data-action="archive-room"]').click();
+    await page.locator('[data-action="hub-return"]').click();
     await expect(page.locator("#archiveRoomMap")).toBeVisible();
 
     // Walk back to the doorway and leave.
     expect(await walkToHubTarget(page, "exitDoor")).toBe(true);
-    await expect(prompt).toContainText("Institute Foyer");
+    await expect(prompt).toContainText("Main Hall");
     await page.keyboard.press("e");
 
     await expect(page.locator("#instituteMap")).toBeVisible();
