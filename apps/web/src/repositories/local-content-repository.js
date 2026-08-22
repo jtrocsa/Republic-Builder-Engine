@@ -14,12 +14,14 @@ import * as unit03Campaign from "../content/unit-03-campaign.js";
 import * as unit04Campaign from "../content/unit-04-campaign.js";
 import * as unit05Campaign from "../content/unit-05-campaign.js";
 import * as unit06Campaign from "../content/unit-06-campaign.js";
+import * as unit07Campaign from "../content/unit-07-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
 import * as unit04Quests from "../content/quests/unit-04-quests.js";
 import * as unit05Quests from "../content/quests/unit-05-quests.js";
 import * as unit06Quests from "../content/quests/unit-06-quests.js";
+import * as unit07Quests from "../content/quests/unit-07-quests.js";
 import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js";
@@ -147,6 +149,26 @@ export function loadChronicleContent() {
       archiveMcqQuests: unit06Quests.UNIT_06_ARCHIVE_MCQ_QUESTS,
       archiveSaqQuests: unit06Quests.UNIT_06_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit06Quests.UNIT_06_ARCHIVE_DBQ_QUESTS,
+    },
+    // Unit 7 is registered here for validation and is deliberately NOT wired into main.js's UNITS
+    // yet: its map is unbuilt, so a Chronotravel to case-019 has nowhere to land and
+    // activeFieldMap() would silently fall back to Unit 1's Caribbean. It carries no `activities`
+    // key for the same reason Unit 6 carried none between Phase 85 and Phase 87 — every one of its
+    // seven sources has `activityRoute: null`, and checkActivityRoutes() only demands an activity
+    // for a route that names an engine. Its two missions are an evidence-organizing and a
+    // sequencing, which is Unit 5's pair rather than Unit 6's.
+    unit07: {
+      unit: unit07Campaign.UNIT_07,
+      sources: unit07Campaign.CASE_019_SOURCES,
+      lanes: unit07Campaign.CASE_019_LANES,
+      mcqQuests: unit07Quests.UNIT_07_MCQ_QUESTS,
+      evidenceOrganizingQuests: unit07Quests.UNIT_07_EVIDENCE_ORGANIZING_QUESTS,
+      sequencingQuests: unit07Quests.UNIT_07_SEQUENCING_QUESTS,
+      sourceAnalysisQuests: unit07Quests.UNIT_07_SOURCE_ANALYSIS_QUESTS,
+      archiveEvidenceQuests: unit07Quests.UNIT_07_ARCHIVE_EVIDENCE_QUESTS,
+      archiveSequencingQuests: unit07Quests.UNIT_07_ARCHIVE_SEQUENCING_QUESTS,
+      archiveSaqQuests: unit07Quests.UNIT_07_ARCHIVE_SAQ_QUESTS,
+      archiveDbqQuests: unit07Quests.UNIT_07_ARCHIVE_DBQ_QUESTS,
     },
   };
 }

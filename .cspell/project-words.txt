@@ -17,6 +17,7 @@ Agafonkin
 Allegawaho
 Amani
 Amerigo
+Amerika
 Amerigo's
 Antiqua
 Aseprite
@@ -25,15 +26,18 @@ Bartolomé
 Baselined
 Benavente
 Bernal
+Bidwell
 Bohío
 Bosman
 Bosman's
 Bundlephobia
 Cady
 Caladan
+Cannato
 Capenter
 Centruy
 Chnapy
+Chronos
 Chronotraveling
 Cinzel
 Cofer
@@ -49,8 +53,10 @@ Donnan's
 Dykstra
 Echota
 Ellsberg
+Endo
 Equiano
 Equiano's
+excludable
 FOIA
 Farmwife
 Fong
@@ -85,6 +91,7 @@ León
 Lindqvist
 Lucayan
 López
+Malolos
 MULT
 Mansarded
 Mapbox
@@ -103,6 +110,7 @@ Mousedown
 NPCS
 Nahua
 Nast
+Ngai
 Nast's
 Ndongo
 Odawa
@@ -110,11 +118,13 @@ Odysso
 Odysso's
 Olaudah
 Osawatomie
+Ozawa
 Otho
 PATCO
 PRNG
 Padraic
 Pahonka
+Perlmann
 Palacios
 Palatino
 Pember
@@ -128,6 +138,7 @@ Publius
 Puebloan
 QUICKREF
 Requerimiento's
+restrictionists
 Richmonder
 Richmonders
 Riis

@@ -62,7 +62,7 @@ const ACTIVITY_ROUTE_GROUP = "cross-reference: activity routes match activity ki
  */
 function checkActivityRoutes(content) {
   const errors = [];
-  ["unit01", "unit02", "unit03", "unit04", "unit05", "unit06"].forEach((key) => {
+  ["unit01", "unit02", "unit03", "unit04", "unit05", "unit06", "unit07"].forEach((key) => {
     const unit = content[key] || {};
     const activities = unit.activities || {};
     const sources = unit.sources || [];
@@ -662,6 +662,78 @@ function main() {
     )
   );
 
+  // Unit 7 has no UNIT_07_ACTIVITIES block, and that is not an omission: all seven of its sources
+  // carry `activityRoute: null` until the activities are authored, which is the state Units 3-5
+  // shipped in until Phase 81F and Unit 6 until Phase 87. checkActivityRoutes() only demands an
+  // activity for a route that names an engine, so adding the block before the content exists would
+  // fail on an empty map.
+  results.push(runSchema("unit-07-campaign.js: UNIT_07", UnitSchema, content.unit07.unit));
+  results.push(
+    runSchema("unit-07-campaign.js: CASE_019_LANES", CaseLanesSchema, content.unit07.lanes)
+  );
+  results.push(
+    runSchema(
+      "unit-07-campaign.js: CASE_019_SOURCES",
+      buildSourcesSchema({ reconstructionIds: content.unit07.lanes.map((lane) => lane.id) }),
+      content.unit07.sources
+    )
+  );
+  results.push(
+    runSchema("unit-07-quests.js: UNIT_07_MCQ_QUESTS", McqQuestListSchema, content.unit07.mcqQuests)
+  );
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_EVIDENCE_ORGANIZING_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit07.evidenceOrganizingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit07.sequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_SOURCE_ANALYSIS_QUESTS",
+      SourceAnalysisQuestListSchema,
+      content.unit07.sourceAnalysisQuests
+    )
+  );
+  // Unit 7's two missions: case-020 is an evidence-organizing and case-021 a sequencing — Unit 5's
+  // pair rather than Unit 6's, chosen by material rather than by ledger (see the header on
+  // unit-07-quests.js). A mission's quest is an ordinary quest of its type.
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_ARCHIVE_EVIDENCE_QUESTS",
+      EvidenceOrganizingQuestListSchema,
+      content.unit07.archiveEvidenceQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_ARCHIVE_SEQUENCING_QUESTS",
+      SequencingQuestListSchema,
+      content.unit07.archiveSequencingQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_ARCHIVE_SAQ_QUESTS",
+      SaqQuestListSchema,
+      content.unit07.archiveSaqQuests
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-07-quests.js: UNIT_07_ARCHIVE_DBQ_QUESTS",
+      DbqQuestListSchema,
+      content.unit07.archiveDbqQuests
+    )
+  );
+
   // Primary source reference library (apps/web/src/content/primary-source-library/)
   // — syllabus-wide research reference for Units 1-9, not gameplay content.
   // See docs/content-guide/primary-source-library.md.
@@ -727,6 +799,7 @@ function main() {
         source: "unit-06-quests.js:UNIT_06_ARCHIVE_MCQ_QUESTS",
         items: content.unit06.archiveMcqQuests,
       },
+      { source: "unit-07-quests.js:UNIT_07_MCQ_QUESTS", items: content.unit07.mcqQuests },
       {
         source: "unit-01-quests.js:UNIT_01_INVESTIGATION_MCQ_QUESTS",
         items: content.unit01.investigationMcqQuests,
@@ -797,6 +870,14 @@ function main() {
         source: "unit-06-quests.js:UNIT_06_SEQUENCING_QUESTS",
         items: content.unit06.sequencingQuests,
       },
+      {
+        source: "unit-07-quests.js:UNIT_07_SEQUENCING_QUESTS",
+        items: content.unit07.sequencingQuests,
+      },
+      {
+        source: "unit-07-quests.js:UNIT_07_ARCHIVE_SEQUENCING_QUESTS",
+        items: content.unit07.archiveSequencingQuests,
+      },
     ],
     "evidence-organizing": [
       {
@@ -843,6 +924,14 @@ function main() {
         source: "unit-06-quests.js:UNIT_06_EVIDENCE_ORGANIZING_QUESTS",
         items: content.unit06.evidenceOrganizingQuests,
       },
+      {
+        source: "unit-07-quests.js:UNIT_07_EVIDENCE_ORGANIZING_QUESTS",
+        items: content.unit07.evidenceOrganizingQuests,
+      },
+      {
+        source: "unit-07-quests.js:UNIT_07_ARCHIVE_EVIDENCE_QUESTS",
+        items: content.unit07.archiveEvidenceQuests,
+      },
     ],
     hipp: [
       {
@@ -881,6 +970,10 @@ function main() {
         source: "unit-06-quests.js:UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
         items: content.unit06.archiveSourceAnalysisQuests,
       },
+      {
+        source: "unit-07-quests.js:UNIT_07_SOURCE_ANALYSIS_QUESTS",
+        items: content.unit07.sourceAnalysisQuests,
+      },
     ],
     saq: [
       {
@@ -907,6 +1000,10 @@ function main() {
         source: "unit-06-quests.js:UNIT_06_ARCHIVE_SAQ_QUESTS",
         items: content.unit06.archiveSaqQuests,
       },
+      {
+        source: "unit-07-quests.js:UNIT_07_ARCHIVE_SAQ_QUESTS",
+        items: content.unit07.archiveSaqQuests,
+      },
     ],
     dbq: [
       {
@@ -924,6 +1021,10 @@ function main() {
       {
         source: "unit-06-quests.js:UNIT_06_ARCHIVE_DBQ_QUESTS",
         items: content.unit06.archiveDbqQuests,
+      },
+      {
+        source: "unit-07-quests.js:UNIT_07_ARCHIVE_DBQ_QUESTS",
+        items: content.unit07.archiveDbqQuests,
       },
     ],
   };
@@ -977,6 +1078,7 @@ function main() {
       { source: "unit-04-campaign.js:UNIT_04.cases", items: content.unit04.unit.cases },
       { source: "unit-05-campaign.js:UNIT_05.cases", items: content.unit05.unit.cases },
       { source: "unit-06-campaign.js:UNIT_06.cases", items: content.unit06.unit.cases },
+      { source: "unit-07-campaign.js:UNIT_07.cases", items: content.unit07.unit.cases },
     ]),
     ...checkUniqueGlobalIds("cross-reference: source ids", [
       { source: "unit-01-campaign.js:CASE_001_SOURCES", items: content.unit01.sources },
@@ -985,6 +1087,7 @@ function main() {
       { source: "unit-04-campaign.js:CASE_010_SOURCES", items: content.unit04.sources },
       { source: "unit-05-campaign.js:CASE_013_SOURCES", items: content.unit05.sources },
       { source: "unit-06-campaign.js:CASE_016_SOURCES", items: content.unit06.sources },
+      { source: "unit-07-campaign.js:CASE_019_SOURCES", items: content.unit07.sources },
     ]),
     ...checkCasePeriodMatchesUnit("cross-reference: case ced.period matches unit period", [
       content.unit01.unit,
@@ -993,6 +1096,7 @@ function main() {
       content.unit04.unit,
       content.unit05.unit,
       content.unit06.unit,
+      content.unit07.unit,
     ]),
     // Every array feeding one QUEST_TYPES key gets merged into one flat
     // lookup in main.js (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE/
@@ -1013,6 +1117,7 @@ function main() {
         ...archiveChallengeEntries("unit-04-campaign.js:UNIT_04", content.unit04.unit),
         ...archiveChallengeEntries("unit-05-campaign.js:UNIT_05", content.unit05.unit),
         ...archiveChallengeEntries("unit-06-campaign.js:UNIT_06", content.unit06.unit),
+        ...archiveChallengeEntries("unit-07-campaign.js:UNIT_07", content.unit07.unit),
       ],
       questTypeKeys,
       questsByType
@@ -1026,6 +1131,7 @@ function main() {
         ...investigationEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
         ...investigationEntries("unit-05-campaign.js:CASE_013_SOURCES", content.unit05.sources),
         ...investigationEntries("unit-06-campaign.js:CASE_016_SOURCES", content.unit06.sources),
+        ...investigationEntries("unit-07-campaign.js:CASE_019_SOURCES", content.unit07.sources),
       ],
       questTypeKeys,
       questsByType
@@ -1039,6 +1145,7 @@ function main() {
         ...readerEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
         ...readerEntries("unit-05-campaign.js:CASE_013_SOURCES", content.unit05.sources),
         ...readerEntries("unit-06-campaign.js:CASE_016_SOURCES", content.unit06.sources),
+        ...readerEntries("unit-07-campaign.js:CASE_019_SOURCES", content.unit07.sources),
       ],
       questTypeKeys,
       questsByType

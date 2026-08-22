@@ -14,12 +14,15 @@
 // exactly why the temptation to teach through it should be refused — the curriculum rule in
 // CLAUDE.md is about advantage, and this file is about atmosphere.
 //
-// **Units 7-9 are painted and committed ahead of their units, on purpose.** The artwork for the
+// **Units 7-9 were painted and committed ahead of their units, on purpose.** The artwork for the
 // immigrant port, the postwar suburb and the 1990s campus arrived as one commission with the six
-// that ship. Wiring them here would mean inventing unit ids that do not exist, so they sit in
-// apps/web/src/assets/plates/ unreferenced until the unit that opens on them is real: Phase 89
-// adds three lines to this table and nothing else. `tests/unit/chronotravel-plates.test.js` holds
-// both ends of that — every unit must have a plate, and every plate file must exist.
+// that shipped, and sat in apps/web/src/assets/plates/ unreferenced until the unit that opens on
+// them was real — because wiring one early would mean naming a unit id that does not exist.
+// **Unit 7 collected its line in Phase 89** and cost exactly the four lines below, which is what
+// the early commission was for. Units 8 and 9 are still queued.
+// `tests/unit/chronotravel-plates.test.js` holds every end of that: every unit must have a plate,
+// no plate may name a unit that is not shipped, every plate file must exist, and the two files
+// still waiting must not be deleted as "unused".
 
 // Written out one by one rather than through a `plate(file)` helper, which is what this was first:
 // a template literal inside `new URL()` makes Vite treat the folder as a glob and emit all ten
@@ -55,6 +58,11 @@ export const CHRONOTRAVEL_PLATES = {
     image: new URL("../assets/plates/unit-06-cottonwood-junction.webp", import.meta.url).href,
     alt: "A Kansas railhead on the open prairie: a locomotive taking water at a timber tank, cattle pens beside the track, and a dirt street of false-front buildings and telegraph poles running out toward the horizon.",
     note: "Anchor holds. A town the survey drew before anyone arrived to live in it.",
+  },
+  "unit-07": {
+    image: new URL("../assets/plates/unit-07-immigrant-port.webp", import.meta.url).href,
+    alt: "A harbour wharf at first light: a black-hulled liner made fast at the quay with people crowding her rails, families waiting on the wet stone among trunks and bundles, a long brick reception hall with domes and an iron canopy down the right-hand side, and a city of towers across the water.",
+    note: "Anchor holds. Everyone on this quay was written down in Europe before anyone here looked at them.",
   },
   institute: {
     image: new URL("../assets/plates/institute-archive.webp", import.meta.url).href,
