@@ -153,7 +153,16 @@ test.describe("Scene D — the Meridian reveal", () => {
     // that would silently not happen, and the costume is what makes that visible.
     await expect(vossSprite(page)).toHaveAttribute("style", MERIDIAN_COAT);
     await expect(page.locator(".hub-meta")).not.toContainText("Emery Voss is waiting");
-    await expect(page.locator("#hubInteractPrompt")).toContainText("Emery Voss");
+
+    // And the player is left at the Navigation Table, which is where watching it through leaves
+    // them — she walks home alone at the end, so the last thing in reach is the table she was
+    // standing at, not her.
+    //
+    // This asserted "Emery Voss" until Phase 90, and it was passing on a defect: `snapActor` moved
+    // only the actor a command named, so a skipped escort left the player standing wherever the
+    // scene had *started*, which here happens to be beside her post. Skip and watch disagreed about
+    // where the player ended up, which is precisely what this test exists to rule out.
+    await expect(page.locator("#hubInteractPrompt")).toContainText("Chronicle Navigation Table");
 
     await reenterFromLanding(page);
     await expect(sceneBar(page)).toHaveCount(0);

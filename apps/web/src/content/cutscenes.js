@@ -4,11 +4,15 @@
 // facts and no room knowledge — every coordinate, actor id and line lives here, the same split the
 // activity engines make with `content/activities/`.
 //
-// CUTSCENE-AND-DIALOGUE-CONVENTIONS.md §5 names seven scenes, A through G. Three are authored —
-// the Entrance Hall orientation, which predates the interpreter and moved onto it in Phase 81G;
-// Scene A; and Scene D, the Meridian reveal, shipped in Phase 88 once Unit 6's three missions
-// existed to earn it. B, C and E-G belong to the units where they land, and authoring them now
-// would be writing dialogue against maps that do not exist.
+// CUTSCENE-AND-DIALOGUE-CONVENTIONS.md §5 names seven scenes, A through G. Two of them are
+// authored — Scene A, and Scene D, the Meridian reveal, shipped in Phase 88 once Unit 6's three
+// missions existed to earn it. B, C and E-G belong to the units where they land, and authoring
+// them now would be writing dialogue against maps that do not exist.
+//
+// Two more scenes here are not on that list at all, and both are onboarding: the Entrance Hall
+// orientation, which predates the interpreter and moved onto it in Phase 81G, and the Main Hall
+// tour, which was four caption panels until Phase 90 and is now a walk. Neither needed a new
+// command to say, which is the test §3 sets for anything that wants to be a scene.
 //
 // ## Two rules that bind everything here
 //
@@ -23,6 +27,16 @@
 
 /** Emery Voss's Main Hall post, from `HUB_TARGETS.liaison`. The scene starts and ends here. */
 const LIAISON_POST = { x: 14.5, y: 4.5 };
+/**
+ * Where Voss comes to meet the player, rather than talking at them from across the room.
+ *
+ * The north cross-aisle a stride east of where the Director's tour leaves them, so she covers the
+ * distance and they end up about a tile apart — conversation range. Deliberately not her post: she
+ * used to open Scene A standing on it, which put her five tiles from the player and read as
+ * shouting. `findRoute()` snaps this to (12.5, 3.5); it is clear of the Archive Room approach lane
+ * at cols 11-12 and seven tiles east of Amani's shelf circuit.
+ */
+const LIAISON_GREET = { x: 12.6, y: 3.8 };
 /**
  * Where Voss stops to show the player the Navigation Table.
  *
@@ -55,12 +69,20 @@ export const LIAISON_INTRO = {
   title: "Emery Voss",
   summary: "The Field Liaison walks you to the Navigation Table on your first day.",
   commands: [
-    { op: "turnActor", actor: "liaison", facing: "down" },
+    // She crosses the room before she says anything. No follower — the player has just been walked
+    // around by the Director and this is the beat where somebody comes to them instead.
+    { op: "moveActor", actor: "liaison", to: LIAISON_GREET },
+    { op: "turnActor", actor: "liaison", facing: "left" },
+    { op: "turnActor", actor: "player", facing: "right" },
     {
       op: "say",
       speaker: "liaison",
       line: "You're the new one. Emery Voss — field liaison, which mostly means I reach you before the paperwork does.",
     },
+    // Kept through the Phase 90 cut, and it reads better for it: this is the one line that puts the
+    // two of them in relation rather than adding to what either has said, which is §5 A's whole
+    // brief. Hale's own account is genuinely short now, so "the short one" is a straight
+    // description instead of a wink.
     {
       op: "say",
       speaker: "liaison",
@@ -74,15 +96,29 @@ export const LIAISON_INTRO = {
     { op: "moveActor", actor: "liaison", to: TABLE_APPROACH, follower: "player" },
     { op: "turnActor", actor: "liaison", facing: "up" },
     { op: "highlightObject", target: "table" },
+    // These three carry the whole of how travel works, and they are the only place it is taught as
+    // of Phase 90. The Director's briefing used to explain the table and anchor glass on a screen of
+    // its own, and the caption tour explained the table again on the way past it, so the player met
+    // canon §2's object-led rule three times before touching anything.
+    //
+    // Anchor glass and the imprint are named here rather than dropped with that screen: Voss's own
+    // Richmond line in Unit 5 uses the term without re-explaining it, per canon §8, so something
+    // upstream has to introduce it. Standing at the table is a better place to do that than a
+    // briefing slide, which is the argument for the whole rearrangement.
     {
       op: "say",
       speaker: "liaison",
-      line: "Every marker on that is something that survived. You don't pick a year — you pick an object, and you arrive where it was.",
+      line: "Every marker on that is something that survived. Anchor glass reads the imprint it kept, and the table opens a passage through it.",
     },
     {
       op: "say",
       speaker: "liaison",
-      line: "So read the provenance before you commit to one. Most of what goes wrong out there starts with a record nobody checked.",
+      line: "So you don't pick a year. You pick an object, and you arrive where it was.",
+    },
+    {
+      op: "say",
+      speaker: "liaison",
+      line: "Which means you read the provenance before you commit to one. Most of what goes wrong out there starts with a record nobody checked.",
     },
     { op: "highlightObject", target: "table", off: true },
     { op: "turnActor", actor: "liaison", facing: "left" },
@@ -111,8 +147,15 @@ export const LIAISON_INTRO = {
  * in the doorway at the exact frame the screen goes black.
  */
 const HALLWAY_DOOR_APPROACH = { x: 10.0, y: 2.6 };
-/** Matches `@keyframes doorway-flicker` in global.css. The room swap lands under the held frame. */
-const DOORWAY_FLICKER_MS = 900;
+/**
+ * How long the screen is black before the room swaps under it.
+ *
+ * The scene owns this number and the host writes it into `--scene-fade-ms`, so `@keyframes
+ * doorway-flicker` in global.css has no duration of its own beyond a fallback. It was 900ms and
+ * duplicated in the stylesheet; between that hold and the Main Hall's fade-up on the other side,
+ * one doorway cost the player nearly a second and a half of black.
+ */
+const DOORWAY_FLICKER_MS = 420;
 
 /**
  * The Entrance Hall orientation — the player's first minute, and the game's oldest scripted beat.
@@ -139,6 +182,11 @@ export const DIRECTOR_ORIENTATION = {
     // Face each other rather than leaving whichever way they were walking.
     { op: "turnActor", actor: "player", facing: "up" },
     { op: "turnActor", actor: "director", facing: "down" },
+    // Two beats, down from four. The cut ones were "this hall is the oldest part of the Institute"
+    // — atmosphere in the slot before the player has been given anything to do — and a standalone
+    // "Walk with me", which is a stage direction the walk itself already gives. The Archive's own
+    // description went with them: the tour says it in the next room, standing at the door it is
+    // about, which is one place instead of two.
     {
       op: "say",
       speaker: "director",
@@ -147,16 +195,86 @@ export const DIRECTOR_ORIENTATION = {
     {
       op: "say",
       speaker: "director",
-      line: "This hall is the oldest part of the Institute. Every record we have recovered came back through it.",
+      line: "Through those doors is the Institute Archive. Walk with me.",
     },
+    { op: "moveActor", actor: "director", to: HALLWAY_DOOR_APPROACH, follower: "player" },
+    { op: "fade", ms: DOORWAY_FLICKER_MS },
+    { op: "returnControl" },
+  ],
+};
+
+/** The Director's post, from `HUB_NPC_BEHAVIOURS.director.at`. The tour starts and ends here. */
+const DIRECTOR_POST = { x: 9.6, y: 8.6 };
+/**
+ * The Preservation Case's aisle, and then the corner, and then the Archive Room door.
+ *
+ * `findRoute()` snaps these to (4.5, 5.5), (11.5, 5.5) and (11.5, 2.5). Two things decided them:
+ *
+ * **The trophy stop is a row further south than the plinth's own face.** The obvious cell, (4.5,
+ * 4.5), sits on Amani's shelf circuit — the walk passed within 0.2 tiles of her westmost stop, and
+ * a scripted escort does not consult collision, so the Director would have gone through her.
+ *
+ * **The corner is a stop rather than a corner.** Left to itself `findRoute()` cuts the trophy-to-
+ * door leg diagonally across the middle of the room and clips Amani's east stop at 0.28. Naming
+ * the turn makes it an L — east along row 5.5, then north up column 11.5, which is two tiles clear
+ * of her lane at every point and reads as walking the room rather than crossing it.
+ *
+ * Amani is a `route`, so a scene freezes her at an arbitrary point on that circuit; there is no
+ * coordinate that is safe from her by luck. These are safe from all three of her stops.
+ */
+const TOUR_TROPHY = { x: 4.0, y: 5.2 };
+const TOUR_AISLE = { x: 11.5, y: 5.5 };
+const TOUR_ARCHIVE_DOOR = { x: 11.5, y: 2.6 };
+
+/**
+ * The Main Hall tour — the Director walks the player to the two things in the room that are his.
+ *
+ * This was four caption panels with the player's movement locked at the foyer spawn: a portrait, a
+ * paragraph and a Next button, while a gold highlight pulsed on an object twelve tiles away that
+ * nobody approached. It named four things, one of them the Navigation Table, which the opening
+ * briefing had already explained and which Voss explains again a minute later standing at it.
+ *
+ * So it is a scene now, and it names two: the Preservation Case and the Archive Room, both of them
+ * Institute business, which is what the Director is for. **The table is not on it** — that belongs
+ * to Voss, who teaches it by walking the player to it, and one owner per idea is the whole point of
+ * the pass. `highlightObject` drives the same `.is-scene-lit` the old tour's highlight used, so the
+ * gold pulse survives; what changed is that the player is standing in front of the object when it
+ * lights.
+ *
+ * He walks home at the end because `kind: "station"` never walks: a Director left at the Archive
+ * Room door stays there until a reload snaps him back to his post, and `HUB_TARGETS.director` would
+ * be a stale anchor for the marker and the proximity check in the meantime. It is also the right
+ * closing image — he goes back to work and leaves the player standing, which is Voss's cue.
+ */
+export const DIRECTOR_TOUR = {
+  id: "director-tour",
+  title: "Director Rowan Hale",
+  summary: "The Director walks you round the Institute Archive on your first day.",
+  commands: [
+    { op: "turnActor", actor: "director", facing: "down" },
+    { op: "moveActor", actor: "director", to: TOUR_TROPHY, follower: "player" },
+    { op: "turnActor", actor: "director", facing: "up" },
+    { op: "highlightObject", target: "trophy" },
     {
       op: "say",
       speaker: "director",
-      line: "Through those doors is the Institute Archive — where the work gets checked, and where it gets kept.",
+      line: "Your Preservation Case. Every investigation you bring back whole earns its place in it.",
     },
-    { op: "say", speaker: "director", line: "Walk with me." },
-    { op: "moveActor", actor: "director", to: HALLWAY_DOOR_APPROACH, follower: "player" },
-    { op: "fade", ms: DOORWAY_FLICKER_MS },
+    { op: "highlightObject", target: "trophy", off: true },
+    // The named turn. Nothing is said on it — it is the L that keeps the walk out of Amani's lane.
+    { op: "moveActor", actor: "director", to: TOUR_AISLE, follower: "player" },
+    { op: "moveActor", actor: "director", to: TOUR_ARCHIVE_DOOR, follower: "player" },
+    { op: "turnActor", actor: "director", facing: "up" },
+    { op: "highlightObject", target: "archiveDoor" },
+    {
+      op: "say",
+      speaker: "director",
+      line: "And through there, the Archive Room. What you recover gets checked in there, and then it gets kept.",
+    },
+    { op: "highlightObject", target: "archiveDoor", off: true },
+    { op: "moveActor", actor: "director", to: DIRECTOR_POST },
+    { op: "turnActor", actor: "director", facing: "down" },
+    { op: "setFlag", flag: "sawInstituteTour", value: true },
     { op: "returnControl" },
   ],
 };
@@ -311,6 +429,7 @@ export const MERIDIAN_REVEAL = {
 /** Every authored scene, by id. The id is what `progress.story.flags` and the Codex replay key on. */
 export const CUTSCENES = {
   [DIRECTOR_ORIENTATION.id]: DIRECTOR_ORIENTATION,
+  [DIRECTOR_TOUR.id]: DIRECTOR_TOUR,
   [LIAISON_INTRO.id]: LIAISON_INTRO,
   [MERIDIAN_REVEAL.id]: MERIDIAN_REVEAL,
 };

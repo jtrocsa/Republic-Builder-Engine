@@ -123,7 +123,9 @@ test.describe("Institute Entrance Hall", () => {
       expect(box.y + box.height, `beat ${beat} runs past the fold`).toBeLessThanOrEqual(768);
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
     });
-    expect(beats, "the Director's briefing lost its beats").toBeGreaterThanOrEqual(4);
+    // Pinned rather than a floor. It was four beats and >= 4; Phase 90 cut it to two, and the
+    // point of that pass is that the number stops creeping back up — so an addition fails here too.
+    expect(beats, "the Entrance Hall beat count moved").toBe(2);
   });
 
   test("clears the interaction prompt when the player walks back out of reach (edge case)", async ({
@@ -181,11 +183,12 @@ test.describe("Institute Entrance Hall", () => {
     // from what the interpreter is actually waiting on.
     await expect(page.locator("#hubSceneIndicator")).toBeHidden();
 
-    // Ends in the Main Hall, at its own spawn, with the guided tour queued.
+    // Ends in the Main Hall, at its own spawn, with the guided tour already running: "tour" is
+    // the step the arrival writes, and director-tour starts under the same held black frame.
     await expect(page.locator(".institute-map--main-hall")).toBeVisible({ timeout: 15000 });
     const progress = await readProgress(page);
     expect(progress.currentHubRoom).toBe("main");
-    expect(progress.tutorial.step).toBe("tour-intro");
+    expect(progress.tutorial.step).toBe("tour");
   });
 
   test("replays the scene from the top when a save resumes mid-conversation (edge case)", async ({

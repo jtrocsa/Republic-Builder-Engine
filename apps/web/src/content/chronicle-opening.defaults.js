@@ -88,32 +88,15 @@ export const CHRONICLE_OPENING_DEFAULTS = {
     // `DIRECTOR_ORIENTATION` in content/cutscenes.js, which is where scene lines belong now that
     // there is a scene format — this file is the opening *screens*.
   },
-  tour: {
-    intro: {
-      name: "Director Rowan Hale",
-      role: "Director of Field Studies",
-      body: "This is the Institute Archive — your home base between investigations. Dr. Amani Soto and Professor Julian Park keep the record straight; lean on both of them once real casework begins.",
-      cta: "Next →",
-    },
-    table: {
-      name: "Director Rowan Hale",
-      role: "Director of Field Studies",
-      body: "The Chronicle Navigation Table. Those are not destinations — they are objects that survived, and each one opens onto wherever it was. You'll return here between cases to choose which one the record needs next.",
-      cta: "Next →",
-    },
-    archiveDoor: {
-      name: "Director Rowan Hale",
-      role: "Director of Field Studies",
-      body: "Through there is the Archive Room, where recovered records are organized, reviewed, and preserved.",
-      cta: "Next →",
-    },
-    trophy: {
-      name: "Director Rowan Hale",
-      role: "Director of Field Studies",
-      body: "And that's your Preservation Case. Every investigation you complete earns its place there.",
-      cta: "Got it →",
-    },
-  },
+  // The Main Hall tour's four caption panels used to live here as `tour`, read by
+  // `tourCalloutMarkup()`. Phase 90 made the tour a walk — `DIRECTOR_TOUR` in content/cutscenes.js
+  // — so its two surviving lines are scene lines now and live with the other scene lines, which is
+  // the same move Phase 81G made with `scenes.hallway` above. This file is the opening *screens*.
+  //
+  // Two of the four were not carried over. `tour.intro` was room narration in the slot where the
+  // player has just walked into the room and can see it. `tour.table` explained the Navigation
+  // Table, which the briefing below had already explained and which Voss explains a third time a
+  // minute later, standing at it — the duplication this pass exists to remove. Voss keeps it.
   director: {
     kicker: "Institute Director",
     title: "Director of the Archive",
@@ -122,37 +105,21 @@ export const CHRONICLE_OPENING_DEFAULTS = {
   directorBriefing: {
     entries: [
       {
-        eyebrow: "Director’s briefing · 01 / 04",
-        title: "Who we are.",
-        subtitle: "I’m Director Rowan Hale. I run the Chronicle Institute.",
-        body: [
-          {
-            text: "I’m Director Rowan Hale. I run the Chronicle Institute.",
-            reveal: {
-              type: "badge",
-              icon: "✦",
-              label: "The Institute",
-              sublabel: "Where Chroniclers work",
-            },
-          },
-          {
-            text: "We recover historical evidence, and we keep it somewhere it cannot be altered.",
-          },
-        ],
-        action: "Continue briefing",
-        secondary: "Return to title",
-      },
-      {
         // Canon §5: the explanation the player is given early is truthful and incomplete. Chronicle
         // admits the first expedition and that it caused the change. What it conceals — the
         // specifics of the incident and of how it was contained — is not on this screen and is not
         // hinted at. The Director is not lying here, which is what makes Units 5-6 land.
-        eyebrow: "Director’s briefing · 02 / 04",
-        title: "What we did.",
-        subtitle: "Chronicle’s first expedition changed something. It has not stopped.",
+        //
+        // Screens 01 and 02 were merged in Phase 90. Who Chronicle is and what Chronicle did are
+        // one thought — the Institute is *defined* by the expedition — and splitting them cost a
+        // whole screen to deliver eleven words of self-introduction. The badge reveal moves onto
+        // the drift line, where it lands on the idea worth marking rather than on the name.
+        eyebrow: "Director’s briefing · 01 / 02",
+        title: "Who we are, and what we did.",
+        subtitle: "I’m Director Rowan Hale. Chronicle’s first expedition changed something.",
         body: [
           {
-            text: "Chronicle’s first expedition changed something in the past. It is still moving forward — through the people it touched, what they decided, and the records that outlived them.",
+            text: "I’m Director Rowan Hale. I run the Chronicle Institute — we recover historical evidence, and we keep it somewhere it cannot be altered.",
             reveal: {
               type: "chips",
               items: [
@@ -165,42 +132,31 @@ export const CHRONICLE_OPENING_DEFAULTS = {
             },
           },
           {
-            text: "We call that continuing consequence temporal drift. Ours is the Original Drift, and it is the reason this Institute still sends people out.",
-          },
-        ],
-        action: "Continue briefing",
-        secondary: "Previous message",
-      },
-      {
-        // Canon §2's object-led rule, which the previous copy inverted. This is the only screen in
-        // the game that explains the Navigation Table, and without it the prop the player walks to
-        // every session is a dial with no stated mechanism.
-        eyebrow: "Director’s briefing · 03 / 04",
-        title: "How you’ll get there.",
-        subtitle: "You will not choose a year. You will choose something that survived.",
-        body: [
-          {
-            text: "You will not choose a year. You will choose something that survived.",
-          },
-          {
-            text: "An object keeps an imprint of what it was present for. Anchor glass makes that imprint readable, and the Navigation Table opens a passage through a strong one.",
+            text: "Our first expedition changed something in the past, and it has not stopped moving. We call that continuing consequence temporal drift. Ours is the Original Drift, and it is why this Institute still sends people out.",
             reveal: {
               type: "badge",
-              icon: "◈",
-              label: "Anchor glass",
-              sublabel: "Makes an imprint readable",
+              icon: "✦",
+              label: "The Original Drift",
+              sublabel: "Why Chroniclers work",
             },
           },
         ],
         action: "Continue briefing",
-        secondary: "Previous message",
+        secondary: "Return to title",
       },
       {
         // Canon §2's second consequence — observation is free — is what makes the job possible at
         // all, and the old copy never said it. And canon rule 5: the Codex is the one fixed point.
         // Never write it as unstable, corrupted or at risk; the premise collapses if the player
         // cannot trust it.
-        eyebrow: "Director’s briefing · 04 / 04",
+        //
+        // The screen between this and the one above explained the object-led rule and anchor glass.
+        // It is gone as of Phase 90, and deliberately: Voss teaches the Navigation Table by walking
+        // the player to it and pointing at it, minutes later, which is the same information
+        // delivered where the prop is. Taught here it was the *third* telling, after the tour's own
+        // caption. Canon §8 — introduce a term once, then stop explaining it — with the corollary
+        // that the one telling should be the one the player is standing in front of.
+        eyebrow: "Director’s briefing · 02 / 02",
         title: "What the work is.",
         subtitle: "Not to change history. To come back with evidence that holds up.",
         body: [

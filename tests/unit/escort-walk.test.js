@@ -17,10 +17,19 @@ import {
 const SPEED = 2.2;
 const GAP = 1.15;
 
+// The Director's post and the player standing in front of it.
+//
+// The follower sat 4.9 tiles back until the lead-in landed — HALLWAY_SPAWN's distance from the
+// post, i.e. the player still at the door. They cannot be: `interactWithHubTarget()` refuses
+// outside `targetReach`, so by the time this walk exists the player is within 1.1 tiles and
+// usually closer. The old fixture only looked reasonable because the follower used to teleport
+// onto the trail on its first engaged frame, which is the bug these tests now pin shut.
+const REACH = 0.6;
+
 function bodies(x = 10, y = 10.4) {
   return {
     leader: { x, y, facing: "down", walking: false },
-    follower: { x, y: y + 4.9, facing: "up", moving: false },
+    follower: { x, y: y + REACH, facing: "up", moving: false },
   };
 }
 
@@ -52,6 +61,66 @@ describe("escort walk", () => {
     expect(state.leader.y).toBeLessThan(10.4);
     expect(state.follower.y - state.leader.y).toBeCloseTo(GAP, 6);
     expect(state.follower.x).toBeCloseTo(state.leader.x, 6);
+  });
+
+  it("never moves the follower faster than its own speed, however far off the path it starts (regression)", () => {
+    // The defect this file exists to prevent from coming back. The trail used to be seeded from the
+    // *leader's* feet, so the follower's real position was never on it: the first frame the target
+    // went positive, the follower was assigned a point on the leader's path outright. In the
+    // Entrance Hall that snapped the player up to a tile sideways onto the Director's line, and the
+    // hub camera — a pure function of player position — cut with them.
+    //
+    // Stated as a speed bound rather than as "does not snap", because that is the property: no tick
+    // may move a body further than it could have walked in the time the tick covers.
+    const { leader, follower } = bodies();
+    // Well off the leader's line, and off the axis of travel, so a snap shows up on both axes.
+    follower.x = 12.4;
+    follower.y = 13.1;
+    const state = createEscortWalk({
+      waypoints: [{ x: 10, y: 2.6 }],
+      speed: SPEED,
+      gap: GAP,
+      leader,
+      follower,
+    });
+    const tick = 16;
+    const ceiling = (SPEED * tick) / 1000 + 1e-9;
+    let previous = { x: state.follower.x, y: state.follower.y };
+    for (let index = 0; index < 400; index += 1) {
+      stepEscort(state, tick);
+      const moved = Math.hypot(state.follower.x - previous.x, state.follower.y - previous.y);
+      expect(moved).toBeLessThanOrEqual(ceiling);
+      previous = { x: state.follower.x, y: state.follower.y };
+    }
+  });
+
+  it("walks a far-off follower onto the trail instead of dropping them onto it (regression)", () => {
+    const { leader, follower } = bodies();
+    follower.y = 15.3; // the Entrance Hall spawn, four tiles further back than reach allows
+    const state = createEscortWalk({
+      waypoints: [{ x: 10, y: 2.6 }],
+      speed: SPEED,
+      gap: GAP,
+      leader,
+      follower,
+    });
+    // One tick: they have set off toward the leader, and gone no further than one tick's worth.
+    stepEscort(state, 100);
+    expect(state.follower.moving).toBe(true);
+    expect(state.follower.y).toBeCloseTo(15.3 - (SPEED * 100) / 1000, 6);
+    // Starting further back than the gap is the one case where the leader finishes first and the
+    // follower is still closing — they walk at the same speed, so the deficit only comes in once he
+    // stops.
+    let sawLeaderDoneBeforeDone = false;
+    for (let index = 0; index < 400; index += 1) {
+      const result = stepEscort(state, 16);
+      if (result.leaderDone && !result.done) sawLeaderDoneBeforeDone = true;
+      if (result.done) break;
+    }
+    expect(sawLeaderDoneBeforeDone).toBe(true);
+    // And it ends, with the follower closed up a gap behind, rather than hanging.
+    expect(state.done).toBe(true);
+    expect(state.follower.y).toBeCloseTo(2.6 + GAP, 6);
   });
 
   it("leaves the follower standing until the leader is a gap ahead (edge case)", () => {
@@ -119,21 +188,37 @@ describe("escort walk", () => {
     expect(coarse.distance).toBeCloseTo(fine.distance, 9);
   });
 
-  it("reports leaderDone at the doors and done once the follower catches up (normal case)", () => {
+  // The follower finishes a gap behind the leader, not on top of them. It used to close that last
+  // stride, which was written for this walk — it ends in a doorway with the screen already going
+  // black, so two bodies on one point could not be seen. The Main Hall tour stops twice in a lit
+  // room, and there it read as the player standing inside the Director. `done` moved with it, or an
+  // escort that stops a gap short never reports finished and holds the scene open forever.
+  it("reports leaderDone at the doors and done once the follower closes up behind (normal case)", () => {
     const state = straightWalk();
-    // 7.8 tiles at 2.2 tiles/s is ~3.55s; the follower then has the gap left to cover.
-    let sawLeaderDoneBeforeDone = false;
+    // 7.8 tiles at 2.2 tiles/s is ~3.55s.
     let result = { leaderDone: false, done: false };
     for (let index = 0; index < 400; index += 1) {
       result = stepEscort(state, 16);
-      if (result.leaderDone && !result.done) sawLeaderDoneBeforeDone = true;
       if (result.done) break;
     }
     expect(result.leaderDone).toBe(true);
     expect(result.done).toBe(true);
-    expect(sawLeaderDoneBeforeDone).toBe(true);
     expect(state.leader.y).toBeCloseTo(2.6, 6);
-    expect(state.follower.y).toBeCloseTo(2.6, 6);
+    expect(state.follower.y).toBeCloseTo(2.6 + GAP, 6);
+  });
+
+  it("ends the frame the leader arrives, for a follower already walking in station (edge case)", () => {
+    // Both flags land together now, and that is the honest answer rather than a shortcut: a
+    // follower that has held its station the whole way is already at its final position when the
+    // leader stops, so there is nothing left to wait for. It used to lag by the gap it then closed.
+    // The far-off case below is where `leaderDone` still genuinely precedes `done`.
+    const state = straightWalk();
+    let result = { leaderDone: false, done: false };
+    for (let index = 0; index < 400; index += 1) {
+      result = stepEscort(state, 16);
+      if (result.leaderDone) break;
+    }
+    expect(result).toEqual({ leaderDone: true, done: true });
   });
 
   it("latches both flags rather than flickering once the walk is over (edge case)", () => {

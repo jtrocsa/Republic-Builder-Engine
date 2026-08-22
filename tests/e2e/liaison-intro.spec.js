@@ -10,20 +10,37 @@ import { test, expect } from "@playwright/test";
 
 import { seedProgress, loadSeededSave, reloadIntoSave } from "./helpers/progress-seed.js";
 
-/** One click short of the tour ending, which is the beat Scene A hands off from. */
-async function seedAtLastTourStep(page) {
+/**
+ * Into the Director's tour, which is the scene Scene A hands off from.
+ *
+ * `tutorial.step: "tour"` is what the Entrance Hall leaves behind, and main.js's boot rewind
+ * replays `director-tour` from the top when it finds a save in that state — so this lands on the
+ * Director speaking, and covers the rewind at the same time. It seeded `tour-trophy` before Phase
+ * 90, one click short of the end of a four-panel caption tour that no longer exists.
+ */
+async function seedAtTour(page) {
   await seedProgress(page, {
     currentScreen: "institute",
     currentHubRoom: "main",
-    tutorial: { step: "tour-trophy", completed: false, skipped: false },
+    tutorial: { step: "tour", completed: false, skipped: false },
     story: { liaisonTrust: 0, flags: {} },
   });
   await loadSeededSave(page);
   await expect(page.locator("#instituteMap")).toBeVisible();
 }
 
+/**
+ * Skips the tour, which is what hands off to Scene A.
+ *
+ * Skip and natural completion run the same teardown — §4's rule, and cutscene.test.js pins it — so
+ * this reaches the handoff without walking the Director round the room in real time. Waits on
+ * Voss's name rather than on the bar: the bar belongs to whichever scene is running, and Scene A
+ * opens on her walking, with the bar `is-silent` until she speaks.
+ */
 async function finishTour(page) {
-  await page.getByRole("button", { name: /Got it/ }).click();
+  await expect(page.locator("#hubSceneName")).toHaveText("Director Rowan Hale");
+  await page.getByRole("button", { name: "Skip scene" }).click();
+  await expect(page.locator("#hubSceneName")).toHaveText("Emery Voss");
 }
 
 const sceneBar = (page) => page.locator('[data-action="hub-scene-click"]');
@@ -53,7 +70,7 @@ async function reenterAfterReload(page) {
 
 test.describe("Scene A — Emery Voss's introduction", () => {
   test("hands off the tour's last beat and opens on Voss speaking", async ({ page }) => {
-    await seedAtLastTourStep(page);
+    await seedAtTour(page);
     await finishTour(page);
 
     await expect(sceneBar(page)).toBeVisible();
@@ -64,7 +81,7 @@ test.describe("Scene A — Emery Voss's introduction", () => {
   });
 
   test("owns the room while it runs — no movement, no interact prompt", async ({ page }) => {
-    await seedAtLastTourStep(page);
+    await seedAtTour(page);
     await finishTour(page);
     await expect(sceneBar(page)).toBeVisible();
 
@@ -78,7 +95,7 @@ test.describe("Scene A — Emery Voss's introduction", () => {
   });
 
   test("skip runs the same teardown as watching it through", async ({ page }) => {
-    await seedAtLastTourStep(page);
+    await seedAtTour(page);
     await finishTour(page);
     await expect(sceneBar(page)).toBeVisible();
 
@@ -102,7 +119,7 @@ test.describe("Scene A — Emery Voss's introduction", () => {
   });
 
   test("Escape skips it too", async ({ page }) => {
-    await seedAtLastTourStep(page);
+    await seedAtTour(page);
     await finishTour(page);
     await expect(sceneBar(page)).toBeVisible();
     await page.keyboard.press("Escape");
@@ -110,7 +127,7 @@ test.describe("Scene A — Emery Voss's introduction", () => {
   });
 
   test("advances a line at a time, and does not replay once seen", async ({ page }) => {
-    await seedAtLastTourStep(page);
+    await seedAtTour(page);
     await finishTour(page);
     await expect(sceneBar(page)).toBeVisible();
     const first = await sceneLine(page).textContent();
@@ -135,7 +152,7 @@ test.describe("Scene A — Emery Voss's introduction", () => {
     // The Entrance Hall's answer to this is to replay its scene from the top rather than resume
     // into a locked body; a scene that has already written its flag simply does not reopen. Either
     // is fine. What is not fine is a locked player with no scene on screen.
-    await seedAtLastTourStep(page);
+    await seedAtTour(page);
     await finishTour(page);
     await expect(sceneBar(page)).toBeVisible();
 

@@ -58,16 +58,18 @@ test.describe("Boot and onboarding", () => {
     const hallwayDialogue = page.locator(".hallway-dialogue");
     await expect(hallwayDialogue).toBeVisible();
 
-    // Four beats, then the last press sets the Director walking and the player following. Clicking
-    // the bar is the same path as pressing E (see the hallway-dialogue-click handler), so this
-    // drives it the way the other intro screens are driven above.
+    // Two beats — it was four until Phase 90 — then the last press sets the Director walking and
+    // the player following. Clicking the bar is the same path as pressing E (see the
+    // hallway-dialogue-click handler), so this drives it the way the other intro screens are driven
+    // above. The loop stops on its own when the bar goes `is-silent`, which is what the Main Hall's
+    // tour opens on: the Director walking, before he has said anything.
     for (let i = 0; i < 12; i += 1) {
       if (!(await hallwayDialogue.isVisible().catch(() => false))) break;
       await hallwayDialogue.click();
       await page.waitForTimeout(40);
     }
 
-    // The escort walk, then the doorway flicker, then the Main Hall with the tour waiting.
+    // The escort walk, then the doorway cut, then the Main Hall with the tour under way.
     await expect(page.locator(".institute-map--main-hall")).toBeVisible({ timeout: 15000 });
 
     const stored = await page.evaluate(
@@ -76,7 +78,7 @@ test.describe("Boot and onboarding", () => {
     );
     expect(stored.currentScreen).toBe("institute");
     expect(stored.currentHubRoom).toBe("main");
-    expect(stored.tutorial.step).toBe("tour-intro");
+    expect(stored.tutorial.step).toBe("tour");
     expect(stored.profile.name).toBe("Test Player");
   });
 

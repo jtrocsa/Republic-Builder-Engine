@@ -99,8 +99,16 @@ mentions Meridian**, and carries no visible insignia.
 Voss debuts in **Unit 1, strictly after the Entrance Hall escort**. Introducing her before the
 player has met the Director would flatten the contrast the character exists to create. Since Phase
 81G both scenes run on the same interpreter, so the ordering is a fact about the two triggers — the
-Director's is an interaction in the Entrance Hall, hers fires when the tutorial tour ends — rather
-than about two machines that had to be kept out of each other's way.
+Director's is an interaction in the Entrance Hall, hers is handed off by the Main Hall tour's own
+`onDone` — rather than about two machines that had to be kept out of each other's way.
+
+**She crosses the room before she says anything** (Phase 90, decision log `0078`). Scene A used to
+open with her standing on her post delivering three lines while the player was at the far end of the
+room, which read as shouting rather than as a liaison reaching you first. She walks to
+`LIAISON_GREET` — a stride east of where the tour leaves the player — and the dialogue bar stays
+hidden until she arrives, because a scene that opens on a walk would otherwise show an empty box
+with a Skip button in it. She also owns the Navigation Table now: the briefing and the tour both
+explained it before she did, so all three said the same thing and she said it last.
 
 ### Units 3–4 — inconsistencies
 
@@ -216,7 +224,10 @@ than a runtime tint. It also keeps the pre-reveal art untouched when the reveal 
 Placement caution when posting Voss in the Institute: hub staff are solid, stationed posts feed
 `stationedPosts()` into the nav grid as occupied cells, and two characters within interaction reach
 of each other are interchangeable to the nearest-interaction sort. Keep her clear of the Director,
-of the Archive Room approach lane (columns 11–12), and of the tutorial tour's walked path.
+of the Archive Room approach lane (columns 11–12), and of the Main Hall tour's walked path — which
+moved in Phase 90 and is now a real route: the Director's post to (4.5, 5.5) at the Preservation
+Case, east along row 5.5, then north up column 11.5 to the Archive Room door. Her post and her
+greet point are both clear of it.
 
 ## 7. Deferred
 

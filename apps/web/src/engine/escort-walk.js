@@ -37,18 +37,40 @@ import { facingFor } from "./npc-behaviour.js";
  * @param {object}   options.follower  mutated in place: {x, y, facing, moving}
  */
 export function createEscortWalk({ waypoints, speed, gap, leader, follower }) {
+  const route = waypoints || [];
+  // The lead-in: how far the follower starts from the leader, recorded as *negative* arc length so
+  // the trail begins where the follower actually is.
+  //
+  // The trail used to start at the leader's own feet with `followerDistance: 0`, which meant the
+  // follower's real position was never on it. The first frame `followerDistance` went positive,
+  // sampleTrail() hard-assigned them to the leader's starting cell and applyMotion() derived a
+  // facing from that jump. In the Entrance Hall the player opens the scene from anywhere inside the
+  // Director's 1.1-tile reach, so they teleported up to a tile sideways onto his line — and the hub
+  // camera, being a pure function of player position, cut with them. Two of the three authored
+  // scenes walk the player this way, so it read as "the game snaps me to whoever is talking".
+  //
+  // Seeding a crumb at -lead makes the whole walk one continuous path: the follower interpolates
+  // out of where they are standing, onto the leader's start, and away along the route. It only
+  // works together with the speed clamp in stepEscort() — a lead-in the follower is allowed to
+  // cross in one tick is the same teleport with more arithmetic.
+  //
+  // No route means no trail to join, so there is no lead-in either. That keeps the empty-waypoints
+  // case terminating on its first tick, which is what stops an unreachable `moveActor` locking the
+  // player in the room.
+  const lead = route.length ? Math.hypot(follower.x - leader.x, follower.y - leader.y) : 0;
   return {
-    waypoints: waypoints || [],
+    waypoints: route,
     index: 0,
     speed,
     gap,
     leader,
     follower,
-    // The leader's own starting point is the trail's first crumb, so a follower that has not set off
-    // yet still has something to sample rather than a special case.
-    trail: [{ x: leader.x, y: leader.y, s: 0 }],
+    trail: [
+      { x: follower.x, y: follower.y, s: -lead },
+      { x: leader.x, y: leader.y, s: 0 },
+    ],
     distance: 0,
-    followerDistance: 0,
+    followerDistance: -lead,
     leaderDone: false,
     done: false,
   };
@@ -89,29 +111,41 @@ export function stepEscort(state, dtMs) {
   }
   if (state.index >= state.waypoints.length) state.leaderDone = true;
 
-  // While the leader is walking the follower is pinned exactly `gap` behind along the path he took.
-  // A target below zero means he has not yet got far enough ahead to be worth following, so the
-  // follower holds — which is what it should look like: he sets off, you take a beat, you fall in.
+  // Where the follower would like to be: `gap` behind the leader, walking or stopped.
   //
-  // Once he stops, the follower keeps covering the rest of the trail at its own speed rather than
-  // freezing one stride short of where he ended up. That is what makes both of them go through the
-  // door instead of the player stopping dead in the doorway.
+  // It used to close the last `gap` once the leader arrived, so both bodies finished on the same
+  // point. That was written for the Entrance Hall, where the walk ends in a doorway with the screen
+  // already going black, and it was invisible there. The Main Hall tour stops twice in a lit room
+  // and it was not invisible at all: the player ended up standing *inside* the Director at every
+  // landmark. A follower is a follower at the end of the walk too.
+  //
+  // It is a target and not an assignment, because **the follower may never cover more ground in a
+  // tick than its own speed allows**. That clamp is the other half of the lead-in: a follower who
+  // begins off the leader's path is behind its target from the first frame, and without the clamp
+  // the next line would close that distance instantly however large it was. It also subsumes the
+  // old "hold until he is a gap ahead" branch — a target behind where the follower already stands
+  // moves nobody, which is what it should look like: he sets off, you take a beat, you fall in.
   const advanced = (state.speed * Math.max(0, dtMs)) / 1000;
-  state.followerDistance = state.leaderDone
-    ? Math.min(state.distance, state.followerDistance + advanced)
-    : Math.max(state.followerDistance, state.distance - state.gap);
-  if (state.followerDistance > 0) {
-    const point = sampleTrail(state.trail, state.followerDistance);
-    follower.x = point.x;
-    follower.y = point.y;
-    pruneTrail(state.trail, state.followerDistance);
-  }
+  const target = state.distance - state.gap;
+  state.followerDistance = Math.max(
+    state.followerDistance,
+    Math.min(target, state.followerDistance + advanced)
+  );
+  const point = sampleTrail(state.trail, state.followerDistance);
+  follower.x = point.x;
+  follower.y = point.y;
+  pruneTrail(state.trail, state.followerDistance);
 
   applyMotion(leader, beforeLeader, "walking");
   applyMotion(follower, beforeFollower, "moving");
   // Measured in distance along the trail, not `!follower.moving`: the follower is momentarily still
   // every time it starts, so a walk that ended on the first such frame would end before it began.
-  state.done = state.leaderDone && state.followerDistance >= state.distance - 1e-9;
+  //
+  // Against `distance - gap`, matching the target above — a walk whose follower has taken up its
+  // station behind the leader is finished. Against `distance` it would now never finish at all, and
+  // an escort that never reports `done` holds `moveActor` open forever and locks the player in the
+  // room. That is the failure the empty-waypoints case is also guarded against.
+  state.done = state.leaderDone && state.followerDistance >= state.distance - state.gap - 1e-9;
   return { leaderDone: state.leaderDone, done: state.done };
 }
 

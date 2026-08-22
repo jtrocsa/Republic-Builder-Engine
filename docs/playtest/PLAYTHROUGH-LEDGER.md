@@ -15,21 +15,21 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 
 ## Status
 
-| №                         | Part                                                             | Status      | Closed     | Open                                             |
-| ------------------------- | ---------------------------------------------------------------- | ----------- | ---------- | ------------------------------------------------ |
-| [0](./part-00-unblock.md) | Unblock and instrument                                           | **closed**  | 2026-08-03 | 1 S2 _(P0-3, awaiting an owner decision)_ · 1 S3 |
-| 1                         | Cold boot and landing                                            | not started |            |                                                  |
-| 2                         | The Director and identity                                        | not started |            |                                                  |
-| 3                         | The Entrance Hall                                                | not started |            |                                                  |
-| 4                         | Main Hall and the tutorial tour                                  | not started |            |                                                  |
-| 5                         | Archive Room and the Navigation Table                            | not started |            |                                                  |
-| 6                         | The field runtime _(two sittings: 6A world, 6B mission surface)_ | not started |            |                                                  |
-| 7                         | Mission Instructions and the activity board                      | not started |            |                                                  |
-| 8                         | The Field Notebook and the debrief                               | not started |            |                                                  |
-| 9                         | The record and the checks                                        | not started |            |                                                  |
-| 11                        | The Institute Archive                                            | not started |            |                                                  |
-| 12                        | Unit close and the next unit                                     | not started |            |                                                  |
-| 10                        | The ten non-field missions                                       | not started |            |                                                  |
+| №                              | Part                                                             | Status      | Closed     | Open                                             |
+| ------------------------------ | ---------------------------------------------------------------- | ----------- | ---------- | ------------------------------------------------ |
+| [0](./part-00-unblock.md)      | Unblock and instrument                                           | **closed**  | 2026-08-03 | 1 S2 _(P0-3, awaiting an owner decision)_ · 1 S3 |
+| [1](./part-01-04-the-intro.md) | Cold boot and landing                                            | **closed**  | 2026-08-22 | —                                                |
+| [2](./part-01-04-the-intro.md) | The Director and identity                                        | **closed**  | 2026-08-22 | 1 S2 _(the Director scene's art, → Phase 90B)_   |
+| [3](./part-01-04-the-intro.md) | The Entrance Hall                                                | **closed**  | 2026-08-22 | —                                                |
+| [4](./part-01-04-the-intro.md) | Main Hall and the tutorial tour                                  | **closed**  | 2026-08-22 | 1 S3 _(lit doorways, → Phase 90B)_               |
+| 5                              | Archive Room and the Navigation Table                            | not started |            |                                                  |
+| 6                              | The field runtime _(two sittings: 6A world, 6B mission surface)_ | not started |            |                                                  |
+| 7                              | Mission Instructions and the activity board                      | not started |            |                                                  |
+| 8                              | The Field Notebook and the debrief                               | not started |            |                                                  |
+| 9                              | The record and the checks                                        | not started |            |                                                  |
+| 11                             | The Institute Archive                                            | not started |            |                                                  |
+| 12                             | Unit close and the next unit                                     | not started |            |                                                  |
+| 10                             | The ten non-field missions                                       | not started |            |                                                  |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
 history — no sha column to go stale.
@@ -92,7 +92,11 @@ part file, 12-step script, ~120 lines for this ledger.
 `?warp=<name>` in dev only (`DEV_WARPS` in `main.js`, guarded by `import.meta.env.DEV` and verified
 absent from the production bundle). Adding one is a line in that table.
 
-`intro` · `hall` · `hub` · `table` · `field` · `mission`
+`intro` · `hall` · `hub` · `table` · `field` · `mission` · `railhead` · `port` · `reveal`
+
+This list was six for three phases after `DEV_WARPS` grew to nine. `intro` also had no test coverage
+at all until Parts 1–4 — the one warp no spec named, and the one every play script here opens on.
+`tests/e2e/intro-sequence.spec.js` covers it now.
 
 ---
 

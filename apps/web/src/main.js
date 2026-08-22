@@ -4370,40 +4370,33 @@ function activeHubNavGrid() {
   return progress.currentHubRoom === "hallway" ? HALLWAY_NAV_GRID : HUB_NAV_GRID;
 }
 
-// Post-hallway guided tour of the Main Hall (progress.tutorial.step === "tour-<id>" for one of
-// these ids, or "tour-intro" for the unhighlighted orientation beat before them). Movement is
-// locked for the whole tour — see the three isTutorialTourActive() call sites in the institute
-// keydown handler, runHubMovementLoop(), and interactWithHubTarget().
-const TUTORIAL_TOUR_STEPS = ["intro", "table", "archiveDoor", "trophy"];
-function isTutorialTourActive() {
-  return typeof progress.tutorial?.step === "string" && progress.tutorial.step.startsWith("tour-");
-}
 /**
  * Whether a scripted beat currently owns the hub, so the player's own input has to stand down.
  *
- * One concept, checked at the same three sites the tutorial tour's lock already used — the institute
- * keydown handler, runHubMovementLoop() and interactWithHubTarget(). Two independent locks checked
- * at overlapping subsets of three places is how a screen ends up controllable during half of one
- * cutscene, which is why this is a predicate and not a flag each scene sets for itself.
+ * One concept, checked at three sites — the institute keydown handler, runHubMovementLoop() and
+ * interactWithHubTarget(). Two independent locks checked at overlapping subsets of three places is
+ * how a screen ends up controllable during half of one cutscene, which is why this is a predicate
+ * and not a flag each scene sets for itself.
  *
- * It was three terms until Phase 81G, when the Entrance Hall's bespoke `hallwayScene.phase` folded
- * into the general runner and left two.
+ * It was three terms, then two. It is **one** as of Phase 90, when the Main Hall's guided tour
+ * stopped being a caption panel with the player pinned at the spawn and became `director-tour` in
+ * content/cutscenes.js — a walk, on the same runner as every other scene. `isTutorialTourActive()`
+ * and the `tour-<id>` step values it read are gone with it; `progress.tutorial.step` still records
+ * that the tour *happened*, which is what the saves and the dev warps key on.
+ *
+ * Keep the function even now that it forwards to one predicate: three call sites read it, and a
+ * second lock concept appearing beside it is the failure it exists to prevent.
  */
 function isHubInputLocked() {
-  return isTutorialTourActive() || isHubSceneActive();
-}
-function currentTourStepId() {
-  return isTutorialTourActive() ? progress.tutorial.step.slice("tour-".length) : null;
-}
-function isTourHighlighted(id) {
-  return isTutorialTourActive() && currentTourStepId() === id;
+  return isHubSceneActive();
 }
 // Shared by instituteMainRoomScreen()'s markup and updateHubProximityUi() so a hub target's
-// "is-near" gold pulse reflects real proximity OR (during the tour) being the currently
-// highlighted step — factored out so the two sites can't drift out of sync with each other.
+// "is-near" gold pulse reflects real proximity — factored out so the two sites can't drift out of
+// sync with each other. It used to carry an `|| isTourHighlighted(id)` term as well; a scene lights
+// its own objects through `highlightObject`, which paints `.is-scene-lit` in paintHubSceneFrame().
 function isHubTargetNear(id) {
   const targets = activeHubTargets();
-  return targetDistance(targets[id], id) <= targetReach(id) || isTourHighlighted(id);
+  return targetDistance(targets[id], id) <= targetReach(id);
 }
 
 // Just inside the foyer entrance in the south wall (the doors are stamped at cols 11-12, rows
@@ -4634,16 +4627,32 @@ function isHubNpcBlocked(id, x, y) {
 let lastHubNpcTickAt = 0;
 function updateInstituteNpcs(now = performance.now()) {
   if (progress.currentScreen !== "institute") return;
+  // A scripted scene owns every body in the room, and paintHubSceneFrame() already paints all of
+  // them each rAF — position, facing, walk class and sprite — so this 30Hz tick has nothing left to
+  // do and must stand down rather than paint over it.
+  //
+  // It used to run straight through a scene, and the two loops fought about thirty times a second.
+  // This one forces `walking = false` while input is locked and writes that to the class, while the
+  // scene writes `true`: the Director's legs stopped and started for the whole escort. Worse, the
+  // updateInstitutePlayer() at the end takes the default HUB_SPEED while the scene passes
+  // SCENE_WALK_SPEED, so the player's --sprite-cycle flipped between 0.301s and 0.5s, restarting a
+  // steps() animation on every flip. Together that was "their walking feels off".
+  //
+  // The clock is rolled forward before returning, or the first tick after a scene would hand
+  // stepBehaviour() the scene's whole duration as one elapsed and teleport everyone along their
+  // routes.
+  if (isHubSceneActive()) {
+    lastHubNpcTickAt = now;
+    return;
+  }
   const elapsed = lastHubNpcTickAt ? now - lastHubNpcTickAt : NPC_TICK_MS;
   lastHubNpcTickAt = now;
   const nodes = new Map(
     [...document.querySelectorAll("[data-hub-npc]")].map((node) => [node.dataset.hubNpc, node])
   );
   Object.entries(activeHubNpcRuntime()).forEach(([id, state]) => {
-    // Standing still while being spoken to, while walking the player through the tutorial tour, and
-    // for the whole of any scripted scene — nobody can wander off mid-sentence, and once a scene's
-    // escort starts, runHubSceneFrame() owns that body's position. Letting this tick also
-    // stepBehaviour() them during the walk would be two loops writing the same coordinates.
+    // Standing still while being spoken to — nobody wanders off mid-sentence. Scenes never reach
+    // this line any more; they are handled by the early return above.
     if (hubDialogueId === id || isHubInputLocked()) state.walking = false;
     else stepBehaviour(state, elapsed, (x, y) => isHubNpcBlocked(id, x, y));
 
@@ -4705,6 +4714,21 @@ if (progress.currentScreen === "intro-hallway") {
 if (progress.currentScreen === "institute" && progress.currentHubRoom === "hallway") {
   const [x, y, facing] = HALLWAY_SPAWN;
   instituteMovement = { x, y, facing, moving: false, step: false, queued: null };
+}
+// Same rule one room later, for the same reason. A scene is not save state, so a reload part-way
+// through the Main Hall tour comes back with the Director stranded wherever he had walked to, the
+// tutorial never marked complete, and — because Voss's introduction hands off the tour's last
+// command — Emery never introducing herself at all. Winding the player back to the arrival spawn
+// replays the tour from the top, which is what the Entrance Hall above already does and costs the
+// same nothing. The scene itself cannot start here: it renders, and the app has not booted yet.
+let replayInstituteTourOnBoot = false;
+if (
+  progress.currentScreen === "institute" &&
+  progress.currentHubRoom === "main" &&
+  progress.tutorial?.step === "tour"
+) {
+  safeInstituteSpawn();
+  replayInstituteTourOnBoot = true;
 }
 const VOLATILE_SCREENS = new Set(["source"]);
 const VALID_SCREENS = new Set([
@@ -9666,9 +9690,29 @@ const ESCORT_GAP = 1.15;
 function enterMainHallFromHallway() {
   if (progress.currentHubRoom !== "hallway") return render();
   safeInstituteSpawn();
-  progress.tutorial.step = "tour-intro";
+  progress.tutorial.step = "tour";
   enterMainHallFromBlack = true;
   save();
+  // No render() before this: startHubScene() does its own, and that has to be the one carrying the
+  // arrival fade, or the flag is spent on a frame the scene then replaces.
+  if (startHubScene("director-tour", { onDone: finishInstituteTour })) return;
+  render();
+}
+
+/**
+ * What the Main Hall tour does once its last command has run.
+ *
+ * Two halves the scene cannot express: marking the tutorial finished, which is save state, and
+ * handing off to Voss, which is a different scene. THE-FIELD-LIAISON.md §4 puts her debut strictly
+ * after the Director has finished — introducing her earlier flattens the contrast the character
+ * exists to create — so the handoff is here rather than on a trigger of her own.
+ */
+function finishInstituteTour() {
+  progress.tutorial = { step: "complete", completed: true, skipped: false };
+  save();
+  // startHubScene() renders, so this returns rather than falling through to a second render of the
+  // same frame.
+  if (!progress.story.flags.metLiaison && startHubScene("liaison-intro")) return;
   render();
 }
 
@@ -9752,10 +9796,34 @@ function hubSceneEffects() {
     snapActor(command) {
       const actor = sceneActor(command.actor);
       if (!actor) return;
+      const from = { x: actor.x, y: actor.y };
       actor.x = command.to.x;
       actor.y = command.to.y;
       actor.walking = false;
-      if (hubScene.followsPlayer) instituteMovement.moving = false;
+      // The follower has to come too, a gap behind, the way stepEscort() would have left them.
+      // Only the named actor moved here until Phase 90, so skipping a scene mid-escort stranded the
+      // player at whatever the *previous* command had left them beside — visible the moment a
+      // second scene used a follower, since skipping the Main Hall tour teleported the Director
+      // home and left the player standing at the Preservation Case.
+      //
+      // Backwards along the leader's own approach, so the pair face the way the walk would have
+      // arranged them. A zero-length leg has no direction to back off along, so nobody moves.
+      //
+      // Read off the command, not off `hubScene.followsPlayer`. Skip never runs `moveActor`, so
+      // that field holds whatever the last *watched* walk set and is stale by definition here — the
+      // Main Hall tour ends by sending the Director home alone, and a skip that trusted the stale
+      // flag walked the player back to his post with him.
+      const follows = command.follower === "player" && command.actor !== "player";
+      if (follows) {
+        const dx = command.to.x - from.x;
+        const dy = command.to.y - from.y;
+        const length = Math.hypot(dx, dy);
+        if (length > 1e-9) {
+          instituteMovement.x = command.to.x - (dx / length) * ESCORT_GAP;
+          instituteMovement.y = command.to.y - (dy / length) * ESCORT_GAP;
+        }
+      }
+      if (follows) instituteMovement.moving = false;
       hubScene.escort = null;
     },
     isMoveDone: () => !hubScene.escort || hubScene.escort.done,
@@ -9792,8 +9860,18 @@ function hubSceneEffects() {
       hubScene.highlight = null;
       hubScene.escort = null;
     },
-    fade() {
-      document.getElementById("sceneFade")?.classList.add("scene-fade--doorway");
+    fade(command) {
+      const node = document.getElementById("sceneFade");
+      if (!node) return;
+      // The interpreter holds the scene for `ms` and the animation has to run for the same span, or
+      // the room swaps out from under a screen that has not finished going black. The number used
+      // to be written three times — as a literal in the keyframe's shorthand, in the scene's
+      // command, and as cutscene.js's DEFAULT_FADE_MS — and the host read none of them. The scene
+      // owns it now; the CSS carries a fallback and nothing else.
+      if (Number.isFinite(command?.ms)) {
+        node.style.setProperty("--scene-fade-ms", `${command.ms}ms`);
+      }
+      node.classList.add("scene-fade--doorway");
     },
   };
 }
@@ -9872,6 +9950,15 @@ function paintHubSceneFrame() {
     .forEach((marker) =>
       marker.classList.toggle("is-scene-lit", marker.dataset.target === hubScene.highlight)
     );
+  // Before a scene's first `say` there is no speaker, and the bar would be an empty box with a Skip
+  // button in it. That used to be a frame or two; both onboarding scenes open on a walk now — the
+  // Director setting off for the Preservation Case, Voss crossing the room to the player — so it is
+  // seconds. Hidden rather than removed, so the box still holds its space and the Entrance Hall's
+  // in-flow bar cannot reflow the room out from under the camera when she starts talking.
+  //
+  // Keyed on the speaker and not on the line, so the bar stays up through a closing walk and fade,
+  // which is what hallway-onboarding.spec.js pins.
+  document.querySelector(".hallway-dialogue")?.classList.toggle("is-silent", !hubScene.speaker);
   // The continue indicator means "a press will do something", so it is derived here rather than
   // only being switched on by the typewriter. Left to the typewriter alone it stays lit through the
   // walk that follows the last line, inviting a press that the interpreter deliberately ignores —
@@ -10475,16 +10562,10 @@ function instituteHallwayScreen() {
   // speech directly under the status card and off the fold, without touching the map's grid column.
   return `${chrome()}<main class="hub-shell hub-shell--status-left"><div class="hub-column"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Entrance Hall</h1><p class="hub-subtitle">Where every recovered record comes in.</p><div class="hub-meta"><span>Chronicle Institute · Orientation · Your first day.</span></div></section>${sidePanel}${dialogue}</div><section class="institute-map institute-map--hallway" id="instituteMap" aria-label="Playable Chronicle Institute entrance hall"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="hallwayTiledCanvas" role="img" aria-label="Top-down stone entrance hall: record cabinets and pigeonhole racks down both long walls, an intake bench and a reading table in the middle, and double doors at the far end leading into the Institute's main hall"></canvas><canvas class="field-world-overlay" id="hallwayTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main><div class="scene-fade" id="sceneFade"></div>`;
 }
-// Caption panel for the post-hallway guided tour — reuses the existing .hub-dialogue panel
-// structure/styling (the same markup hubDialogueId's dialogue renders) rather than inventing new
-// UI, but with a "Next"/"Got it" advance button instead of a close button, since the tour has no
-// way to dismiss early.
-function tourCalloutMarkup() {
-  const stepId = currentTourStepId();
-  const content = CHRONICLE_OPENING_DEFAULTS.tour[stepId];
-  if (!content) return "";
-  return `<div class="hub-dialogue hub-dialogue--tour" role="dialog" aria-modal="true" aria-labelledby="tourCalloutTitle"><article><div class="hub-dialogue__portrait"><img src="${CHARACTER_SHEETS.director.portrait}" alt=""></div><div><p class="kicker">${esc(content.role)}</p><h2 id="tourCalloutTitle">${esc(content.name)}</h2><p>${esc(content.body)}</p><button class="btn btn-gold" data-action="tutorial-tour-next">${esc(content.cta)}</button></div></article></div>`;
-}
+// `tourCalloutMarkup()` lived here until Phase 90 — the guided tour's caption panel, a portrait and
+// a paragraph and a Next button rendered over a room the player was locked out of walking. The tour
+// is `director-tour` in content/cutscenes.js now, so it speaks through `hubSceneDialogueMarkup()`
+// like every other scene and there is nothing left to render here.
 function instituteMainRoomScreen() {
   const nearby = nearestHubTarget();
   const dialogue = hubDialogueId ? HUB_TARGETS[hubDialogueId] : null;
@@ -10512,7 +10593,7 @@ function instituteMainRoomScreen() {
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span>${revealNudge}</div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}${isTutorialTourActive() ? tourCalloutMarkup() : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit 1 · ${esc(resolvedUnitTitle(UNIT_01))}</span><span>${esc(status)}</span>${revealNudge}</div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open Unit 1 preservation case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -13914,23 +13995,9 @@ function handleOnboardingClick(target, action) {
 }
 
 function handleHubClick(target, action) {
-  if (action === "tutorial-tour-next") {
-    const idx = TUTORIAL_TOUR_STEPS.indexOf(currentTourStepId());
-    if (idx > -1 && idx < TUTORIAL_TOUR_STEPS.length - 1) {
-      progress.tutorial.step = `tour-${TUTORIAL_TOUR_STEPS[idx + 1]}`;
-    } else {
-      progress.tutorial = { step: "complete", completed: true, skipped: false };
-      save();
-      // Scene A hands straight off the tour's last beat. THE-FIELD-LIAISON.md §4 puts Voss's debut
-      // strictly after the Director has finished — introducing them earlier flattens the contrast
-      // the character exists to create. startHubScene() renders, so this returns rather than
-      // falling through to a second render of the same frame.
-      if (!progress.story.flags.metLiaison && startHubScene("liaison-intro")) return true;
-    }
-    save();
-    render();
-    return true;
-  }
+  // `tutorial-tour-next` was handled here — the caption panel's Next button, walking a four-entry
+  // step list and handing off to Scene A at the end. The tour is a scene now: it advances through
+  // `hub-scene-click` below like every other one, and the handoff to Voss is finishInstituteTour().
   if (action === "hub-scene-click") {
     advanceHubScene();
     return true;
@@ -15674,4 +15741,16 @@ if (app) {
   // to their own work rather than to an empty archive. A no-op on every boot after the first.
   backfillCodex();
   render();
+  // A reload part-way through the Main Hall tour replays it from the top — see the boot rewind
+  // beside HALLWAY_SPAWN's. After the first render, because startHubScene() paints into the room
+  // that render puts up. The state is re-checked rather than trusted: applyDevWarp() above resets
+  // progress wholesale, so the flag can outlive the save that set it.
+  if (
+    replayInstituteTourOnBoot &&
+    progress.currentScreen === "institute" &&
+    progress.currentHubRoom === "main" &&
+    progress.tutorial?.step === "tour"
+  ) {
+    startHubScene("director-tour", { onDone: finishInstituteTour });
+  }
 }

@@ -3199,10 +3199,15 @@ dd {
 .director-extra-content[hidden] {
   display: none;
 }
-/* Full-screen black, used at both ends of the Entrance Hall → Main Hall cut: the doorway flicker
-   below plays on it, and instituteMainRoomScreen() then renders it already-active for one frame and
-   drops it a frame later so the arrival reads as a fade-in rather than a hard cut — see the
-   enterMainHallFromBlack handling in render(). */
+/* Full-screen black, used at both ends of the Entrance Hall → Main Hall cut, which is **one**
+   transition in two halves: the doorway cut below takes the screen to black and holds it, the room
+   swaps underneath, and instituteMainRoomScreen() renders this already-active for one frame so
+   dropping `is-active` fades the Main Hall up rather than hard-cutting to it — see the
+   enterMainHallFromBlack handling in render().
+
+   Both halves were longer and the first one blinked, which is why one doorway used to read as two
+   blackouts. Keep the total tight: this fade plus DIRECTOR_ORIENTATION's `fade` ms is the whole
+   time the player spends looking at nothing. */
 .scene-fade {
   position: fixed;
   inset: 0;
@@ -3210,43 +3215,35 @@ dd {
   background: #000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 480ms ease;
+  transition: opacity 320ms ease;
 }
 .scene-fade.is-active {
   opacity: 1;
 }
-/* Walking through a door into a new area, the way the genre plays it: two hard cuts to black before
-   it holds, not a crossfade. `steps(1, end)` is what makes each stop a cut — the 480ms opacity
-   transition on the base rule is exactly what this must not do, hence the explicit `transition:
-   none`. `forwards` holds the final black frame, so the room swap lands underneath it. The 900ms
-   here is duplicated in DIRECTOR_ORIENTATION's closing `fade` command — Phase 81G moved the timing
-   into the scene, where it is a number the author can see, so keep the two in step. */
+/* Walking through a door into a new area, the way the genre plays it: one hard cut to black, held,
+   with the room swap landing underneath it. `steps(1, end)` is what makes the stop a cut — the
+   480ms opacity transition on the base rule is exactly what this must not do, hence the explicit
+   `transition: none`, and `forwards` is what holds the final frame.
+
+   It was three blacks with two clears between them, and that read as the screen blinking rather
+   than as a door. Worse, the arrival then faded up from black a second time on the other side, so
+   one doorway spent ~885ms dark across two overlays with a DOM swap in the middle. There is one
+   blackout now: this cut, the swap under it, and the fade-up that .scene-fade's own base transition
+   gives when `is-active` comes off.
+
+   The duration comes from the scene, not from here — `fade()` writes --scene-fade-ms from the
+   command's own `ms`, so DIRECTOR_ORIENTATION is the single place the number lives. The fallback
+   matches DEFAULT_FADE_MS in engine/cutscene.js. */
 .scene-fade--doorway {
   transition: none;
-  animation: doorway-flicker 900ms steps(1, end) forwards;
+  animation: doorway-flicker var(--scene-fade-ms, 900ms) steps(1, end) forwards;
 }
 @keyframes doorway-flicker {
   0%,
-  8% {
+  18% {
     opacity: 0;
   }
-  9%,
-  20% {
-    opacity: 1;
-  }
-  21%,
-  30% {
-    opacity: 0;
-  }
-  31%,
-  46% {
-    opacity: 1;
-  }
-  47%,
-  54% {
-    opacity: 0;
-  }
-  55%,
+  19%,
   100% {
     opacity: 1;
   }
@@ -3267,6 +3264,13 @@ dd {
    startIntroTypewriter()), but sits inside the room as a bar across the bottom of the page rather
    than inside a full-screen scrim: the Director is standing right there on the map, and darkening
    the room to talk to him would undo the reason the scene is in-world at all. */
+/* A scene that has not reached its first `say` yet — both onboarding scenes open on somebody
+   walking. `visibility` and not `display`, so the box keeps its space: the Entrance Hall's copy of
+   this bar sits in normal flow, and collapsing it would reflow the room and jog the camera the
+   moment the first line arrives. Toggled in paintHubSceneFrame(). */
+.hallway-dialogue.is-silent {
+  visibility: hidden;
+}
 .hallway-dialogue {
   position: relative;
   z-index: 40;
@@ -4434,13 +4438,21 @@ dd {
 }
 /* The scrolling world of a camera-driven hub room. Sized in px by the screen that renders it
    (grid columns x tile), translated by updateHubCamera(). Its parent clips via
-   .institute-map's overflow: hidden. */
+   .institute-map's overflow: hidden.
+
+   No transition on the transform, deliberately, and the field's world does not have one either.
+   updateHubCamera() already writes an exact position every frame from the player's own, so a tween
+   here does not smooth anything — it restarts on every write and leaves the room permanently
+   chasing the player and coasting after they stop. It was also what turned render()'s one-frame
+   camera reset into a visible slide: innerHTML gives back a world at translate(0,0) and the camera
+   is only restored on the next frame, which in the Entrance Hall is 281px, animated. Starting a
+   scripted scene calls render(), so the room lurched at the exact moment the Director began
+   speaking. `.hub-player` had the same tween removed for the same reason; the world was missed. */
 .hub-world {
   position: absolute;
   left: 0;
   top: 0;
   transform: translate(0, 0);
-  transition: transform 92ms linear;
 }
 /* Inside a camera room the player is a fixed pixel size, matching the field, instead of a
    percentage of a box that stretches. */
@@ -4791,33 +4803,13 @@ dd {
 .hub-dialogue .btn {
   margin-top: 16px;
 }
-/* Guided-tour variant of the shared .hub-dialogue panel (tourCalloutMarkup() in main.js) — the
-   regular NPC/trophy dialogue above keeps its dim+blur scrim and default text sizing untouched;
-   this modifier only applies while progress.tutorial.step is a tour-* step, where the whole point
-   is to see the highlighted target's gold pulse clearly behind the caption rather than through a
-   blurred scrim. */
-.hub-dialogue--tour {
-  background: transparent;
-  backdrop-filter: none;
-}
-.hub-dialogue--tour p:not(.kicker) {
-  font:
-    500 1.2rem/1.6 "DM Sans",
-    sans-serif;
-}
-.hub-dialogue--tour h2 {
-  font-size: 2rem;
-}
-/* The director sprite (natively 30x46 — an earlier revision of this comment said 48x64, which
-   was the pre-PixelLab art) is close enough in aspect ratio to the 82x112 portrait render that
-   object-fit: contain leaves almost no margin — the character's feet sit flush against the box
-   edge and read as clipped even though nothing is technically cropped. Rendering it smaller
-   inside the same box gives real breathing room. */
-.hub-dialogue--tour .hub-dialogue__portrait img {
-  width: auto;
-  height: calc(90px * 56 / 45);
-}
-/* .field-arrival-marker removed (Phase 45D dead-CSS sweep) — zero references anywhere in
+/* `.hub-dialogue--tour` removed in Phase 90 along with tourCalloutMarkup(). It was a transparent,
+   unblurred variant of this panel so the highlighted target's gold pulse stayed readable behind the
+   caption — a workaround for narrating an object from across the room. The tour walks the player to
+   the object now and speaks through `.hallway-dialogue`, the bar every other scene uses, so there
+   is nothing to see through.
+
+   .field-arrival-marker removed (Phase 45D dead-CSS sweep) — zero references anywhere in
    main.js; @keyframes hub-spark stays, still used elsewhere (global.css:3805). */
 .case-field .back-link {
   color: #f0cf7a;
