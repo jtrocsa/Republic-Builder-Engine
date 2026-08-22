@@ -10,6 +10,7 @@ import { UNIT_03, CASE_007_SOURCES, CASE_007_LANES } from "./content/unit-03-cam
 import { UNIT_04, CASE_010_SOURCES, CASE_010_LANES } from "./content/unit-04-campaign.js";
 import { UNIT_05, CASE_013_SOURCES, CASE_013_LANES } from "./content/unit-05-campaign.js";
 import { UNIT_06, CASE_016_SOURCES, CASE_016_LANES } from "./content/unit-06-campaign.js";
+import { UNIT_07, CASE_019_SOURCES, CASE_019_LANES } from "./content/unit-07-campaign.js";
 import { CED_THEME_LABEL } from "./content/ced-taxonomy.js";
 import { skillsForQuestSlots } from "./engine/ced-alignment.js";
 import {
@@ -112,6 +113,19 @@ import {
   UNIT_06_ARCHIVE_SAQ_QUESTS,
   UNIT_06_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-06-quests.js";
+// Unit 7's two missions are the only pair in the game to spend both slots on the two thick quest
+// types — see the header of content/quests/unit-07-quests.js for why the content chose them and
+// Unit 6 made it affordable.
+import {
+  UNIT_07_MCQ_QUESTS,
+  UNIT_07_SEQUENCING_QUESTS,
+  UNIT_07_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_07_SOURCE_ANALYSIS_QUESTS,
+  UNIT_07_ARCHIVE_EVIDENCE_QUESTS,
+  UNIT_07_ARCHIVE_SEQUENCING_QUESTS,
+  UNIT_07_ARCHIVE_SAQ_QUESTS,
+  UNIT_07_ARCHIVE_DBQ_QUESTS,
+} from "./content/quests/unit-07-quests.js";
 import { INSTITUTE_PLATE, plateForUnit } from "./content/chronotravel-plates.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 // The activity engines (Phase 68, decision log 0051). These four replaced the three
@@ -184,6 +198,7 @@ import richmondTmjRaw from "./content/maps/richmond-field.tmj?raw";
 import richmondCountingRoomTmjRaw from "./content/maps/richmond-counting-room.tmj?raw";
 import richmondHospitalWardTmjRaw from "./content/maps/richmond-hospital-ward.tmj?raw";
 import railheadTmjRaw from "./content/maps/railhead-field.tmj?raw";
+import immigrantPortTmjRaw from "./content/maps/immigrant-port-field.tmj?raw";
 import railheadLandOfficeTmjRaw from "./content/maps/railhead-land-office.tmj?raw";
 import railheadTelegraphOfficeTmjRaw from "./content/maps/railhead-telegraph-office.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
@@ -217,6 +232,10 @@ import {
   RAILHEAD_FIELD_BLOCKS,
   RAILHEAD_FIELD_ROADS,
 } from "./content/maps/railhead-field.blocks.js";
+import {
+  IMMIGRANT_PORT_FIELD_BLOCKS,
+  IMMIGRANT_PORT_FIELD_ROADS,
+} from "./content/maps/immigrant-port-field.blocks.js";
 // The two rooms that map opens into. No `*_ROADS` companion: a route is pathfound over road cells
 // discounted 4:1, and nothing in a twenty-tile room is far enough from anything for a road to mean
 // what it means outdoors.
@@ -848,6 +867,47 @@ function renderRailheadTiledMap() {
   renderTiledMapWithOverlay("railheadTiledCanvas", railheadTmj, resolveRailheadTilesetImage);
 }
 
+// Ellis Island, 17 April 1907 — Unit 7's wharf. Five sheets, and only two of them are new work for
+// the bundle: Canal Crossroads already carries the Dock pack's quay sheet and the City pack's
+// facades, so this map's cost is the Dock pack's railings and sheds plus the City pack's street
+// surfaces. Every glob is an exact file, never a `/**`, for the reason recorded on every resolver
+// above it: an unscoped one shipped 117 MB of unused art once already.
+const immigrantPortTmj = JSON.parse(immigrantPortTmjRaw);
+const resolveImmigrantPortTilesetImage = createTilesetImageResolver(
+  // The bay, the quay coping, the derrick, the bollards, the cargo and the wharf lamps.
+  import.meta.glob("./assets/tilesets/19th Centruy European Dock/tile-B-06.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The rail across the wharf, the plank decking both landing stages are laid in, the mooring posts.
+  import.meta.glob("./assets/tilesets/19th Centruy European Dock/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The baggage shed, the stores shed, the passengers' trunks and the life ring.
+  import.meta.glob("./assets/tilesets/19th Centruy European Dock/tile-B-02.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The Main Building: a pale stone entrance pavilion in a red-brick frontage, edge to edge.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Both made surfaces, the forecourt's lamps and benches, the tubs, and the line's own booth.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-05.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderImmigrantPortTiledMap() {
+  renderTiledMapWithOverlay(
+    "immigrantPortTiledCanvas",
+    immigrantPortTmj,
+    resolveImmigrantPortTilesetImage
+  );
+}
+
 // Cottonwood Junction's two rooms. One resolver serves both, as at Canal Crossroads and Richmond:
 // they name five sheets between them and every one is shared, so a resolver per room would only
 // duplicate globs.
@@ -955,6 +1015,7 @@ const SURFACE_TILESETS = {
   "unit-04": () => canalCrossroadsTmj.tilesets.map(resolveCanalCrossroadsTilesetImage),
   "unit-05": () => richmondTmj.tilesets.map(resolveRichmondTilesetImage),
   "unit-06": () => railheadTmj.tilesets.map(resolveRailheadTilesetImage),
+  "unit-07": () => immigrantPortTmj.tilesets.map(resolveImmigrantPortTilesetImage),
   "institute-hall": () => instituteHallTmj.tilesets.map(resolveInstituteHallTilesetImage),
 };
 
@@ -1185,6 +1246,15 @@ const CHARACTER_SHEETS = {
   // who were already here and only moved indoors, which is where a register and an operator work.
   "land-buyer-agent": characterSheet(`${FIELD}/npc-land-buyer-agent`, 9),
   "stock-commission-man": characterSheet(`${FIELD}/npc-stock-commission-man`, 9),
+  // Unit 7, the wharf side only. Seven of the fourteen imported in Phase 89B; the other seven work
+  // indoors and land with the doors they work behind.
+  "port-ships-purser": characterSheet(`${FIELD}/npc-port-ships-purser`, 9),
+  "port-steamship-agent": characterSheet(`${FIELD}/npc-port-steamship-agent`, 9),
+  "port-steerage-man": characterSheet(`${FIELD}/npc-port-steerage-man`, 9),
+  "port-steerage-woman": characterSheet(`${FIELD}/npc-port-steerage-woman`, 9),
+  "port-steerage-elder": characterSheet(`${FIELD}/npc-port-steerage-elder`, 9),
+  "port-aid-society-agent": characterSheet(`${FIELD}/npc-port-aid-society-agent`, 9),
+  "port-waiting-relative": characterSheet(`${FIELD}/npc-port-waiting-relative`, 9),
 };
 /**
  * The sheet for a character key, falling back to the Director rather than throwing on a typo.
@@ -3242,6 +3312,200 @@ export function isRailheadLand(x, y) {
   if (x < 7.0 || x > 53.5 || y < 4.0 || y > 32.0) return false;
   return !(x <= railheadCreekEastBank(y) && x >= railheadCreekWestBank(y));
 }
+// ---- Unit 7 · the immigrant station. Ellis Island, New York Harbor, 17 April 1907 ---------------
+//
+// Eight people out on the wharf, and the map's whole argument is which side of one iron rail each
+// of them is standing on. North of it is the government's ground and the people who are nobody's
+// business; south of it is where eleven thousand seven hundred and forty-seven people landed in a
+// single day and waited to be read back to themselves off a sheet filled in for them in Europe.
+//
+// **Nobody out here is a villain and nobody is lying.** The purser filled the manifest in honestly
+// from what a clerk in Naples understood; the line's shore agent inspects his passengers in Europe
+// because a rejection costs his company the return passage; the man at the rail is kept off the
+// wharf by a rule he agrees with. The finding is not that somebody did wrong. It is that the form
+// decides, and the form has thirty lines and no room.
+//
+// **The register rule from Unit 5 governs the four passengers absolutely.** Every one of them is
+// named, speaks in the first person, and says plainly what is being asked of them and what they
+// intend to do about it. The elderly man has his daughter's twelve letters ready and has had them
+// ready since Genoa; he is not somebody a form happens to, he is somebody who has worked out
+// exactly what evidence he will need and brought it. That is this map's one unforgivable failure
+// avoided: drawing the people being sorted as the passive half of the sorting.
+const UNIT7_FIELD_NPCS = [
+  {
+    // North-east of the spawn on the open wharf, off both its cardinals and out of the two paved
+    // lanes — a stationed body is furniture to the nav grid, and one standing in a lane re-plans
+    // every route that uses it.
+    id: "liaison",
+    x: 18.0,
+    y: 25.0,
+    group: "chronicle",
+    name: "Emery Voss",
+    label: "Emery Voss",
+    sprite: "liaison",
+    // No `revealedText`, and that is the rule rather than an omission: Unit 6's railhead is the top
+    // of the reveal ladder and the only map that carries one (tests/unit/field-liaison.test.js
+    // fails if a second grows one). THE-FIELD-LIAISON.md §4 puts Units 7-8 at "reluctant alliance",
+    // which is Scene E and a canon decision of its own — not something to fold into a unit build.
+    // What Unit 7 owes her is a post on the map and a line, exactly as the other six do.
+    text: "I have been on this wharf since the first barge and I have not caught anybody lying yet. That is what makes it hard. Every man in a uniform here can tell you exactly what he did and why, and every one of them will be right. What nobody in the building can tell you is what the form could not hold — and the form is the thing that decides. Ask people what they were asked. Then ask them what they would have said, if anybody had asked them something else.",
+  },
+  {
+    // Out on the barge landing, where he handed the sheet over. The first person the player sees,
+    // three tiles from the spawn, and the one who explains what the day is made of.
+    id: "port-ships-purser",
+    x: 14.0,
+    y: 29.5,
+    group: "ship",
+    name: "Aldo Mancuso",
+    label: "Steamship purser",
+    sprite: "port-ships-purser",
+    text: "Purser, and I have been filling that manifest in since Naples. Thirty lines to a sheet, twenty-nine questions to a line, and not one of those answers was ever given to an American — they were given to a clerk in an emigration office who wrote down what he understood. Now an inspector up there reads it back and watches whether the answer changes. As for the gentlemen who came off at quarantine: the boarding division inspected them aboard, in their own cabins, and they were ashore in Manhattan by eight this morning. Same ship. Same ocean. Different paper.",
+  },
+  {
+    // At his line's own booth by the ferry slip, walking between it and the water, because a shore
+    // agent's whole job is meeting boats.
+    id: "port-steamship-agent",
+    x: 41.0,
+    y: 22.0,
+    group: "ship",
+    name: "Wilhelm Traube",
+    label: "Steamship line's shore agent",
+    sprite: "port-steamship-agent",
+    text: "The line's man ashore, and before you ask: yes, we inspect them in Europe, and we are thorough about it, and it is not kindness. Any passenger this station rejects goes home in our steerage at our expense, and we are fined besides. So our surgeon at Hamburg turns back the trachoma and the favus before a ticket is sold, and our agents are instructed what to look for and what to tell people to say. It is all in the circular. Read it, and then tell me whether the sorting starts here or three thousand miles from here.",
+  },
+  {
+    // In the crowd below the gate, which is where a man who has already worked out the trap in the
+    // last question but one would be standing: near enough the front to be asked it soon.
+    id: "port-steerage-man",
+    x: 25.5,
+    y: 19.0,
+    group: "steerage",
+    name: "Márton Szabó",
+    label: "Steerage passenger",
+    sprite: "port-steerage-man",
+    text: "Fourteen days out of Fiume, eight of them where you could not stand upright. They asked us twenty-nine things on the other side and they will ask them again up there, and the one I keep turning over is the last but one: have you employment waiting. If I say yes, that is contract labour and they put me back on the boat. If I say no, I am likely to become a public charge and they put me back on the boat. My brother wrote and told me the answer. The answer is: I have a brother.",
+  },
+  {
+    // Restless rather than posted — a wander disc in the open ground between the baggage and the
+    // gate lane. She is waiting, and waiting is not standing still.
+    id: "port-steerage-woman",
+    x: 24.0,
+    y: 23.0,
+    group: "steerage",
+    name: "Rozalia Bern",
+    label: "Steerage passenger",
+    sprite: "port-steerage-woman",
+    text: "My name is on that sheet under my husband's, and under his name it says the same thing it says under mine, which is nothing. He is in Cleveland. He has been in Cleveland two years. The purser wrote me down as going to join my husband, and that is true, and it is also all the sheet has room for. It does not say I kept the shop while he was gone. It does not ask. I have decided not to mind about it. There is a great deal here to mind about and I am choosing.",
+  },
+  {
+    // Sat with the baggage west of the landing stage, which is where a man of sixty-eight who has
+    // been on his feet since the barge would be, and where his evidence is. Two and a half tiles
+    // clear of the derrick, whose rect he was standing inside at his first coordinates.
+    id: "port-steerage-elder",
+    x: 8.5,
+    y: 25.0,
+    group: "steerage",
+    name: "Jozef Halka",
+    label: "Steerage passenger",
+    sprite: "port-steerage-elder",
+    text: "Sixty-eight, and I know what that number is doing on the sheet. They will look at it, then they will look at me, and then they will ask who is going to keep me. My daughter is. She has kept me nine years by post. But the question is not whether anyone will keep me — it is whether the man at the desk believes it, and he has two minutes, and he has never met her. So I have her letters. Twelve of them, in order. That is my evidence and I have had it ready since Genoa.",
+  },
+  {
+    // The forecourt, north of the rail, because the societies were permitted on the government's
+    // side and stood there at the Commissioner's pleasure. Working, so she moves.
+    id: "port-aid-society-agent",
+    x: 34.0,
+    y: 10.0,
+    group: "society",
+    name: "Sadie Kirsch",
+    label: "Immigrant aid society agent",
+    sprite: "port-aid-society-agent",
+    text: "Hebrew Immigrant Aid Society, and there are people from four other societies out here beside me, and between the lot of us we meet perhaps a tenth of those coming off the barges. We stand on this side of the rail because the Commissioner permits it, and he may stop permitting it whenever he likes. What we do is small and it is not nothing: we translate, we telegraph the relative, we put up a bond when a woman is held for want of one. And we write down what happens. Somebody ought to be writing down what happens.",
+  },
+  {
+    // At the rail, on the north side, and this is the placement the whole map is built around. He
+    // stands one row clear of the ironwork rather than against it: the rail's upper row draws on
+    // the overlay layer, so a body posted there is hidden by the thing he is leaning on.
+    id: "port-waiting-relative",
+    x: 21.0,
+    y: 13.2,
+    group: "society",
+    name: "Ignacy Wozniak",
+    label: "Waiting at the rail",
+    sprite: "port-waiting-relative",
+    text: "I came over in ninety-nine and I have been a citizen since March, which is the only reason I am standing on this side of this railing. My cousin is somewhere in that crowd behind you. I can see her. I have been able to see her for two hours. They will not let me across and I do not blame them — let one across and you let four hundred across, and the whole thing stops. So I wait here and she waits there, and every so often she looks over and I hold up five fingers, which means nothing at all. It is only a thing to hold up.",
+  },
+];
+
+const UNIT7_FIELD_NPC_BEHAVIOURS = {
+  liaison: { kind: "station", at: { x: 18.0, y: 25.0 }, facing: "up" },
+  "port-ships-purser": { kind: "station", at: { x: 14.0, y: 29.5 }, facing: "up" },
+  // Booth to water and back, which is the whole of a shore agent's day and keeps him off the paved
+  // lane the admitted use to reach the ferry.
+  "port-steamship-agent": {
+    kind: "route",
+    stops: [
+      { x: 41.0, y: 22.0 },
+      { x: 38.0, y: 26.0 },
+    ],
+  },
+  "port-steerage-man": { kind: "station", at: { x: 25.5, y: 19.0 }, facing: "up" },
+  "port-steerage-woman": { kind: "wander", home: { x: 24.0, y: 23.0 }, radius: 1.1 },
+  "port-steerage-elder": { kind: "station", at: { x: 8.5, y: 25.0 }, facing: "right" },
+  "port-aid-society-agent": { kind: "wander", home: { x: 34.0, y: 10.0 }, radius: 1.4 },
+  "port-waiting-relative": { kind: "station", at: { x: 21.0, y: 13.2 }, facing: "down" },
+};
+
+// Two records out here, and five behind the two doors in the frontage — the highest interior share
+// of any map in the game, and the station stating its own shape: the wharf is where you wait and
+// the hall is where you are sorted. The other five land with the rooms they are held in.
+const UNIT7_FIELD_SOURCE_POINTS = {
+  "port-cabin-passenger-return": {
+    anchor: { npc: "port-ships-purser" },
+    label: "Boarding division return",
+    kind: "Source",
+  },
+  "port-steamship-line-circular": {
+    anchor: { npc: "port-steamship-agent" },
+    label: "Instructions to agents",
+    kind: "Source",
+  },
+};
+
+// The island's edge. scripts/generate-immigrant-port-tmj.js duplicates these two functions verbatim
+// to paint the same water the player collides with (decision log 0036). Do not deduplicate them:
+// main.js is a browser bundle entry, and the one thing that must never silently diverge is the
+// water the player collides with versus the water that got painted.
+//
+// Ellis Island is made ground behind a seawall, so the mask is a rectangle — and the only shape in
+// it is the two timber finger piers reaching south into the basin. Their columns sit on the quay
+// coping's own four-tile grid, which is what makes skipping two coping stamps leave exactly the two
+// openings the stages need.
+// The frontage runs the whole north edge and its wings are two rows deep, so the strip above their
+// roofline is ground with no collision on it and no way in. The mask is cut here rather than at the
+// map edge to close it: a 1266-cell pocket behind the building, which is what the wharf traversal
+// test reported the first time it ran and which nothing else would have caught.
+const FRONTAGE_ROW = 1.8;
+const PORT_QUAY_ROW = 28.0;
+const PORT_PIER_END = 33.0;
+const PORT_PIERS = [
+  { col1: 12, col2: 15 }, // the barge landing, where the player arrives
+  { col1: 36, col2: 39 }, // the ferry slip, and the way to Manhattan for the admitted
+];
+function onPortPier(x, y) {
+  if (y > PORT_PIER_END) return false;
+  return PORT_PIERS.some((pier) => x >= pier.col1 && x <= pier.col2 + 1);
+}
+export function isImmigrantPortLand(x, y) {
+  if (x < 4.0 || x > 51.5 || y < FRONTAGE_ROW) return false;
+  if (y > PORT_QUAY_ROW) return onPortPier(x, y);
+  return true;
+}
+function immigrantPortWorldMarkup() {
+  return `<canvas class="field-world-art" id="immigrantPortTiledCanvas" role="img" aria-label="The wharf of an immigration station on a made island in 1907: a long red-brick frontage with a pale stone entrance pavilion and clock tower running the whole north side, a paved forecourt of gas lamps, iron benches and bay trees in tubs, a wrought-iron rail across the middle of the wharf with a single gate in it, and below the rail a cobbled quay of baggage, sheds, a derrick and a steamship line's booth, ending at a seawall with two timber landing stages reaching out into open water"></canvas><canvas class="field-world-overlay" id="immigrantPortTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
 function railheadWorldMarkup() {
   return `<canvas class="field-world-art" id="railheadTiledCanvas" role="img" aria-label="A top-down Kansas railhead town in 1873: a single rail line running east to west across open prairie with a station and a covered platform on it, a street of unsigned false-front buildings on the north side including a land office and a telegraph office, a homestead claim of fenced wheat and sunflowers in the north-east, and on the south side a Kanza village of bark lodges and stone agency huts beside a creek, a hide shed, a graders' camp of wall tents, and empty cattle pens at a loading chute"></canvas><canvas class="field-world-overlay" id="railheadTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
@@ -3332,6 +3596,22 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT6_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: railheadWorldMarkup,
+  },
+  "unit-07": {
+    id: "unit-07",
+    // At the head of the barge landing, three tiles north of the purser, facing up the wharf. The
+    // opening frame is the whole of what this map asks: the water behind, the crowd and the baggage
+    // ahead, and the iron rail across the top of it with one gate in the middle of it.
+    spawn: { x: 14.0, y: 26.5 },
+    recall: { x: 15.5, y: 26.5 },
+    isLand: isImmigrantPortLand,
+    blocks: IMMIGRANT_PORT_FIELD_BLOCKS,
+    roads: IMMIGRANT_PORT_FIELD_ROADS,
+    npcs: UNIT7_FIELD_NPCS,
+    behaviours: UNIT7_FIELD_NPC_BEHAVIOURS,
+    sourcePoints: UNIT7_FIELD_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: immigrantPortWorldMarkup,
   },
 };
 /** The unit's outdoor map, whatever room the player is currently standing in. */
@@ -4584,6 +4864,7 @@ if (bootEntryParam === "join" || bootEntryParam === "teacher-login") {
 const WARP_TOUR_DONE = { tutorial: { step: "complete", completed: true, skipped: false } };
 const WARP_CASE_ONE = { activeCaseId: "case-001", selectedCaseId: "case-001" };
 const WARP_CASE_SIXTEEN = { activeCaseId: "case-016", selectedCaseId: "case-016" };
+const WARP_CASE_NINETEEN = { activeCaseId: "case-019", selectedCaseId: "case-019" };
 /**
  * Dev-only fast travel: `?warp=<name>` boots straight into a named save state.
  *
@@ -4607,6 +4888,10 @@ const DEV_WARPS = {
   // The newest map, which is the one most often being looked at. A named state per map is more
   // than this table wants; this one earns its line while Unit 6 is under construction.
   railhead: { currentScreen: "field", ...WARP_CASE_SIXTEEN, ...WARP_TOUR_DONE },
+  // Unit 7's wharf, which is the map currently being built and therefore the one most often being
+  // looked at. `railhead` is one line above for the same reason and has not been earning it since
+  // Phase 87; leave it until something else needs the room.
+  port: { currentScreen: "field", ...WARP_CASE_NINETEEN, ...WARP_TOUR_DONE },
   // Standing in the Main Hall with the railhead's three missions debriefed, which is the exact and
   // only state in which walking up to Emery Voss opens Scene D. Reaching it by hand costs the intro,
   // the escort, the tour, a Chronotravel and three full missions, so without this line the game's
@@ -4751,7 +5036,7 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06];
+const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06, UNIT_07];
 const UNIT_SOURCES = {
   "case-001": CASE_001_SOURCES,
   "case-004": CASE_004_SOURCES,
@@ -4759,6 +5044,7 @@ const UNIT_SOURCES = {
   "case-010": CASE_010_SOURCES,
   "case-013": CASE_013_SOURCES,
   "case-016": CASE_016_SOURCES,
+  "case-019": CASE_019_SOURCES,
 };
 const PRACTICE_CHECK_QUESTS = {
   "case-001": {
@@ -4797,6 +5083,12 @@ const PRACTICE_CHECK_QUESTS = {
     evidenceOrganizing: UNIT_06_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_06_SOURCE_ANALYSIS_QUESTS,
   },
+  "case-019": {
+    mcq: UNIT_07_MCQ_QUESTS,
+    sequencing: UNIT_07_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_07_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_07_SOURCE_ANALYSIS_QUESTS,
+  },
 };
 // Quest content for both kinds of authored challenge, resolved by
 // (questType, questId): a case's own `archiveChallenge` pointer — which
@@ -4813,12 +5105,14 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
     ...UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
     ...UNIT_05_ARCHIVE_EVIDENCE_QUESTS,
+    ...UNIT_07_ARCHIVE_EVIDENCE_QUESTS,
   ],
   sequencing: [
     ...UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
     ...UNIT_02_ARCHIVE_SEQUENCING_QUESTS,
     ...UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
     ...UNIT_05_ARCHIVE_SEQUENCING_QUESTS,
+    ...UNIT_07_ARCHIVE_SEQUENCING_QUESTS,
   ],
   mcq: [
     ...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
@@ -4832,12 +5126,14 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_04_ARCHIVE_SAQ_QUESTS,
     ...UNIT_05_ARCHIVE_SAQ_QUESTS,
     ...UNIT_06_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_07_ARCHIVE_SAQ_QUESTS,
   ],
   dbq: [
     ...UNIT_03_ARCHIVE_DBQ_QUESTS,
     ...UNIT_04_ARCHIVE_DBQ_QUESTS,
     ...UNIT_05_ARCHIVE_DBQ_QUESTS,
     ...UNIT_06_ARCHIVE_DBQ_QUESTS,
+    ...UNIT_07_ARCHIVE_DBQ_QUESTS,
   ],
   // Unit 4's case-012 is the first mission in the game whose quest is a hipp — see the header of
   // content/quests/unit-04-quests.js. Missions resolve through this same table, so the type needed
@@ -11606,6 +11902,12 @@ const FIELD_COPY = {
     progressHint:
       "Seven records: the Section 4 pay sheet, the survey field notes, Tariff No. 9, the agency roll and the Clarion in the office window are out on the map; the receiver's receipt is inside the land office and the day's telegrams are inside the telegraph office.",
   },
+  "unit-07": {
+    intro:
+      "You arrive at the head of a landing stage on a made island in the Upper Bay, on the busiest day this station ever had. Everything north of the iron rail across the wharf is the government's ground; everything south of it is where eleven thousand seven hundred and forty-seven people came off the barges today and waited to be read back to themselves off a sheet that was filled in for them in Europe. Two records are out here on the wharf: what a ship's purser carried across the ocean, and what the line that sold the ticket instructs its own agents to do.",
+    progressHint:
+      "Two records on the wharf: the boarding division's return, and the line's instructions to its agents at the continental ports.",
+  },
 };
 function fieldScreen() {
   const map = activeFieldMap();
@@ -12613,6 +12915,20 @@ const RECONSTRUCTION_LANES = {
         "A record whose own form cannot hold somebody it concerns — a name, a claim, or a party absent from a transaction made about them.",
     }[lane.id],
   })),
+  // Unit 7's three are the parts of one machine rather than three topics: what it measures, who is
+  // holding the lever, and what it costs to run. Every record on the wharf can be argued into at
+  // least two of them, which is what makes the sort a sourcing exercise rather than a filing one.
+  "case-019": CASE_019_LANES.map((lane) => ({
+    ...lane,
+    hint: {
+      "what-the-question-is-for":
+        "A record that decides in advance what an answer may be — a printed question, a column heading, an instruction about how to read one.",
+      "who-decides-and-on-what":
+        "A record where one official's judgement settles the matter, and which shows what that judgement was allowed to rest on.",
+      "what-the-sorting-costs":
+        "A record of what the sorting takes to run, or of what it takes from the people being sorted — in money, in days, or in a name.",
+    }[lane.id],
+  })),
 };
 function reconstructionScreen() {
   const caseId = activeFieldCaseId();
@@ -12845,6 +13161,7 @@ function render() {
       if (activeFieldMap().id === "unit-04") renderCanalCrossroadsTiledMap();
       if (activeFieldMap().id === "unit-05") renderRichmondTiledMap();
       if (activeFieldMap().id === "unit-06") renderRailheadTiledMap();
+      if (activeFieldMap().id === "unit-07") renderImmigrantPortTiledMap();
       if (activeFieldMap().id === "canal-print-shop") renderCanalPrintShopTiledMap();
       if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
       if (activeFieldMap().id === "richmond-counting-room") renderRichmondCountingRoomTiledMap();

@@ -223,18 +223,24 @@ export const PLANNED_MAPS = [
   },
 
   // ---------------------------------------------------------------------------- Period 7
-  {
-    id: "p7-immigrant-port",
-    period: 7,
-    status: "planned",
-    intent: "Arrival: an immigration reception hall and the wharf outside it.",
-    sheets: [
-      "19th Centruy European Dock/tile-B-06.png", // water, quay, decking
-      "19th Centruy European Dock/tile-B-02.png", // warehouses, piers
-      "19th Century European City/tile-B-04.png", // hall interior: benches, floor, walls
-      "WWI Fleet/tile-B-01.png", // steamship interior (riveted steel is correct here)
-    ],
-  },
+  // `p7-immigrant-port` was here and the wharf half of it has been BUILT, as
+  // immigrant-port-field — see that map's own palette file. Its sheet selection survived with three
+  // corrections worth recording, because all three were only decidable against the pixels:
+  //
+  //   * WWI Fleet/tile-B-01 is not used and should never have been listed. The entry named it for
+  //     "steamship interior (riveted steel is correct here)", which is true and beside the point:
+  //     the brief's two interiors are the inspection hall and a board of special inquiry room, and
+  //     neither is aboard a ship. No vessel is drawn on this map at all.
+  //   * The Dock pack's water and quay earn their place, but its *ground* does not: the gravel and
+  //     the sand are a beach, and its cobble at (14,0) is the one Canal Crossroads already refused
+  //     for the ground layer over a clear top pixel row. Both made surfaces are 19th Century
+  //     European City/tile-B-05 instead, which the entry did not name at all.
+  //   * tile-B-04 of the Dock pack is the map's most load-bearing sheet and was also unlisted: it
+  //     carries the only wrought-iron railing the library has, which is this map's whole
+  //     composition, and the plank decking both landing stages are laid in.
+  //
+  // 19th Century European City/tile-B-04 is still the right call for the hall interior and stays
+  // named here, unbuilt, until the two rooms ship.
   {
     id: "p7-tenement-street",
     period: 7,

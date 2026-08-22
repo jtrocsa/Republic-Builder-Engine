@@ -221,6 +221,13 @@ Records: a **ship's manifest page**; a **medical inspection card**; and a **boar
 transcript**. The interview asks what the official question fails to ask — the forms are the mission,
 and the people answering them are being described by a vocabulary they did not choose.
 
+**The wharf shipped in Phase 89C** (decision log `0076`), and the brief's "organised entirely around
+sorting people" is drawn as one iron rail across it with exactly one gate — deliberately the inverse
+of Cottonwood Junction's line, which is walkable on purpose. The two interiors and the three
+activities are still owed. Note for whoever builds them: **half this unit's cast works indoors**,
+which is the highest interior share in the program and the reason the wharf ships with two of seven
+records on it.
+
 ### Unit 8 — the suburban corridor. 1957. Slate B.
 
 Low density, new construction, and a story that is entirely in the paperwork. Interiors: a **model

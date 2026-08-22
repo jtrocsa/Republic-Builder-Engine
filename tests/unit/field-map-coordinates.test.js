@@ -135,6 +135,70 @@ function hubTraversal({ grid, blocks, spawn, footBox = hubFootBoxFor, margins = 
   };
 }
 
+/**
+ * The outdoor equivalent of hubTraversal(): flood-fill a field map from its spawn using the real
+ * foot box and the real land mask, and answer three questions about the result.
+ *
+ * Written for Richmond's bluff, which is the one map whose central claim is that two halves of a
+ * city are separated by a drop with exactly two ways down it. Extracted here when the wharf became
+ * the second such map — one iron rail across it with exactly one gate — because the interesting
+ * assertion in both cases is the same shape and it is not "is everything reachable". It is
+ * **seal the crossings and check the far side goes dark**, which is what distinguishes a real
+ * barrier from a decorative one: a plain reachability check passes on a map with no barrier at all.
+ *
+ * `step` is 0.2 rather than the hub's 0.1 because an outdoor map is 56x36 and the finer grid costs
+ * four times the cells for a resolution neither claim needs.
+ */
+function fieldTraversal(map, { step = 0.2 } = {}) {
+  const at = (i) => Number((i * step).toFixed(4));
+  const key = (i, j) => `${i},${j}`;
+  const cell = (x, y) => key(Math.round(x / step), Math.round(y / step));
+  const isOpen = (blocks) => (x, y) =>
+    footIsOnLand(map, x, y) && !blocks.some((b) => rectsOverlap(footBoxFor(x, y), b));
+
+  /** Reachable cells, optionally with extra rects sealing a crossing. */
+  function fill(extraBlocks = []) {
+    const open = isOpen([...map.blocks, ...extraBlocks]);
+    const start = [Math.round(map.spawn.x / step), Math.round(map.spawn.y / step)];
+    const reached = new Set();
+    if (!open(at(start[0]), at(start[1]))) return reached;
+    reached.add(key(...start));
+    const queue = [start];
+    while (queue.length) {
+      const [i, j] = queue.pop();
+      for (const [di, dj] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        if (reached.has(key(i + di, j + dj))) continue;
+        if (!open(at(i + di), at(j + dj))) continue;
+        reached.add(key(i + di, j + dj));
+        queue.push([i + di, j + dj]);
+      }
+    }
+    return reached;
+  }
+
+  return {
+    fill,
+    canStand: (reached, x, y) => reached.has(cell(x, y)),
+    /** Open ground the spawn cannot get to — a pocket, which is a defect whatever is standing in it. */
+    strandedIn(reached) {
+      const open = isOpen(map.blocks);
+      const stranded = [];
+      for (let i = 0; i <= Math.round(FIELD_GRID.columns / step); i += 1) {
+        for (let j = 0; j <= Math.round(FIELD_GRID.rows / step); j += 1) {
+          if (reached.has(key(i, j))) continue;
+          if (open(at(i), at(j))) stranded.push([at(i), at(j)]);
+        }
+      }
+      return stranded;
+    },
+  };
+}
+
 /** The bounding box of a pocket, so a failure says where to widen an aisle. */
 function pocketSummary(stranded) {
   if (!stranded.length) return "none";
@@ -152,6 +216,7 @@ const TMJ_BY_UNIT = {
   "unit-04": "canal-crossroads-field.tmj",
   "unit-05": "richmond-field.tmj",
   "unit-06": "railhead-field.tmj",
+  "unit-07": "immigrant-port-field.tmj",
 };
 
 // FIELD_COPY is not exported — it is a template-literal table deep inside a browser entry point —
@@ -559,37 +624,7 @@ describe("richmond bluff and crossings", () => {
     cellsPainted(tmj, richmondPalette.tiles.plankDeck).map(({ col, row }) => `${col},${row}`)
   );
 
-  const STEP = 0.2;
-  const at = (i) => Number((i * STEP).toFixed(4));
-  /** Flood fill from the spawn with the real foot box, optionally with extra rects sealing a gap. */
-  function reachableFrom(extraBlocks = []) {
-    const blocks = [...map.blocks, ...extraBlocks];
-    const open = (x, y) =>
-      footIsOnLand(map, x, y) && !blocks.some((b) => rectsOverlap(footBoxFor(x, y), b));
-    const key = (i, j) => `${i},${j}`;
-    const start = [Math.round(map.spawn.x / STEP), Math.round(map.spawn.y / STEP)];
-    const reached = new Set();
-    if (!open(at(start[0]), at(start[1]))) return reached;
-    reached.add(key(...start));
-    const queue = [start];
-    while (queue.length) {
-      const [i, j] = queue.pop();
-      for (const [di, dj] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        if (reached.has(key(i + di, j + dj))) continue;
-        if (!open(at(i + di), at(j + dj))) continue;
-        reached.add(key(i + di, j + dj));
-        queue.push([i + di, j + dj]);
-      }
-    }
-    return reached;
-  }
-  const canStand = (reached, x, y) =>
-    reached.has(`${Math.round(x / STEP)},${Math.round(y / STEP)}`);
+  const { fill: reachableFrom, canStand, strandedIn } = fieldTraversal(map);
 
   // A point in each half, well clear of the wall, that a walk has to be able to arrive at.
   const IN_THE_BOTTOM = [
@@ -609,15 +644,7 @@ describe("richmond bluff and crossings", () => {
   it("seals no open ground off from the spawn (edge case)", () => {
     // The bluff makes this map far easier to strand somebody on than the others: a run of solid wall
     // with two gaps in it is one furniture move away from a run of solid wall with one.
-    const reached = reachableFrom();
-    const stranded = [];
-    for (let i = 0; i <= Math.round(FIELD_GRID.columns / STEP); i += 1) {
-      for (let j = 0; j <= Math.round(FIELD_GRID.rows / STEP); j += 1) {
-        if (!footIsOnLand(map, at(i), at(j))) continue;
-        if (map.blocks.some((b) => rectsOverlap(footBoxFor(at(i), at(j)), b))) continue;
-        if (!reached.has(`${i},${j}`)) stranded.push([at(i), at(j)]);
-      }
-    }
+    const stranded = strandedIn(reachableFrom());
     expect(pocketSummary(stranded)).toBe("none");
   });
 
@@ -685,6 +712,78 @@ describe("richmond bluff and crossings", () => {
     }
     expect(walked.length, "no walkable span of Mayo's Bridge").toBeGreaterThan(12);
     expect(Math.max(...walked)).toBeGreaterThan(33.0);
+  });
+});
+
+// --- the wharf's rail and its one gate ---------------------------------------------------------------
+// The second map whose central design claim is a *negative* one, and the same reasoning as Richmond's
+// bluff above: every assertion in the describe.each block is satisfied by a wharf with no rail on it
+// at all, so the thing that makes this map what it is would be the one thing nothing checked.
+//
+// The claim has two halves and both have to hold. The rail must run wall to wall — a second gap in it
+// is one prop move away and would quietly turn the map's argument into decoration — and the one gap
+// must be usable, because a rail with no gate strands the player on the wharf with the doors, the
+// forecourt, the aid-society agent and the man at the rail all unreachable.
+//
+// Testing it by sealing the gate and re-running the fill is what distinguishes the two. A plain
+// reachability check passes on a map with no rail; this one fails on it.
+describe("the wharf's rail and its one gate", () => {
+  const map = FIELD_MAPS["unit-07"];
+  const { fill: reachableFrom, canStand, strandedIn } = fieldTraversal(map);
+
+  // Three points north of the rail that a walk has to be able to arrive at, and one south of it that
+  // proves the fill started where it was supposed to.
+  const IN_THE_FORECOURT = [
+    ["the pavilion doorstep", 26.0, 5.0],
+    ["the inquiry wing doorstep", 38.0, 5.0],
+    ["the west end of the forecourt", 7.0, 10.0],
+  ];
+
+  it("lets the player walk from the landing stage into the forecourt (normal case)", () => {
+    const reached = reachableFrom();
+    expect(canStand(reached, 14.0, 24.0), "the wharf itself is not walkable").toBe(true);
+    const unreachable = IN_THE_FORECOURT.filter(([, x, y]) => !canStand(reached, x, y)).map(
+      ([name]) => name
+    );
+    expect(unreachable).toEqual([]);
+  });
+
+  it("has exactly one way through, and it is the gate (edge case)", () => {
+    // Seal cols 26-27 across the rail's own rows. If any second gap existed anywhere along the
+    // frontage the forecourt would still be reachable, and this would pass on a map whose whole
+    // composition had quietly stopped meaning anything.
+    const sealed = reachableFrom([{ x1: 25.5, y1: 14.0, x2: 28.5, y2: 16.5, kind: "sealed gate" }]);
+    expect(canStand(sealed, 14.0, 24.0), "the fill did not start on the wharf").toBe(true);
+    const stillReachable = IN_THE_FORECOURT.filter(([, x, y]) => canStand(sealed, x, y)).map(
+      ([name]) => name
+    );
+    expect(stillReachable).toEqual([]);
+  });
+
+  it("seals no open ground off from the landing stage (edge case)", () => {
+    // A rail across the whole map is one prop away from a rail across the whole map with a pocket
+    // behind it — the same hazard Richmond's bluff carries, and the reason both get this check.
+    const stranded = strandedIn(reachableFrom());
+    expect(stranded.length, `stranded: ${pocketSummary(stranded)}`).toBe(0);
+  });
+
+  it("puts both landing stages under the player's feet (normal case)", () => {
+    // The stages are ground-layer decking painted over water, which no other map does, and the mask
+    // that opens them is hand-written beside the generator's copy. If the two drift, the boards get
+    // painted somewhere the player cannot go — or worse, the mask opens over open bay.
+    const reached = reachableFrom();
+    for (const [name, x] of [
+      ["the barge landing", 14.0],
+      ["the ferry slip", 38.0],
+    ]) {
+      const walked = [];
+      for (let y = 28.4; y <= 32.6; y += 0.2) {
+        if (canStand(reached, x, y)) walked.push(y);
+      }
+      expect(walked.length, `no walkable span of ${name}`).toBeGreaterThan(12);
+    }
+    // And nothing either side of them: the bay between the two stages is water, not a third quay.
+    expect(canStand(reached, 25.0, 30.0)).toBe(false);
   });
 });
 

@@ -257,6 +257,21 @@ test fails if a planned map claims a gap that is not registered there.
 | **Range cattle**                          | The library has no cattle sprite of any kind. `Wild West` draws a corral as a finished enclosure and the one animal on its sheets is a horse inside a stable frontage. So `railhead-field`s stock pens are empty in the shipping season, which is a real loss on a map about the industry a land sale was for. Not partial — absent. |
 | **Antebellum American commercial street** | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged.                                                    |
 
+**The Second Empire substitution, as used a second time on `immigrant-port-field`, where it is not a
+substitution at all.** The Ellis Island Main Building is red brick with limestone trim and a taller
+entrance block, which is exactly what `19th Century European City/tile-B-01`'s red-brick terraces and
+pale ashlar civic pavilion make when they are laid to a common base row. The gap that bites Period 4
+does not bite 1907: the sheet is drawn for roughly this decade. What it cannot give is the four domed
+corner towers, so the pavilion has one clock tower instead — flagged here, and stated in the map's own
+palette header rather than left for a reader to notice.
+
+**Fence and railing art is face-on only, in every pack.** Established on `immigrant-port-field`, whose
+first plan was a railed queue running north to the station doors and was not buildable: the art
+language of these packs is a low top-down view in which vertical surfaces are drawn as elevations, so
+every fence, railing, hoarding and balustrade in 250 sheets faces south. A north–south run does not
+exist and cannot be faked by rotation. Not a gap — a property of the whole library, and one to check a
+composition against before drawing it rather than after.
+
 **The Second Empire substitution, as used on `canal-crossroads-field`.** That map does not solve the
 gap above; it manages it. The masonry sheet dresses the six buildings a boomtown would genuinely have
 built in brick — the free bank, the printing office, the Market Street block, the immigrant terraces —

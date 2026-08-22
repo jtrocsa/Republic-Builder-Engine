@@ -625,6 +625,25 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("field-railhead-telegraph-office"));
   });
 
+  // Unit 7's wharf, and the one thing this baseline is actually watching is the iron rail: it is
+  // stamped `base`, so its plinth is on `structures` and its ironwork on the overlay, and a
+  // solidity change that quietly moved either would look like nothing in the collision tests and
+  // like a fence lying flat on the quay here. The two landing stages are the other reason — they
+  // are ground-layer decking painted over water, which is a treatment no other map uses.
+  test("field: the immigrant station's wharf (Unit 7)", async ({ page }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-019",
+      unlocked: ["case-001", "case-019"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "immigrantPortTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-immigrant-port"));
+  });
+
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({
     page,
   }) => {

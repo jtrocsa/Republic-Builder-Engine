@@ -70,13 +70,16 @@ Ginés
 Gowrie
 Grimké
 Guanahaní
+Halka
 HIPP's
 HVAC
 Haudenosaunee
 Hernán
+Ignacy
 IHDR
 Ironmaker
 Iztapalapan
+Jozef
 Kahegah
 Kansa
 Kanza
@@ -93,6 +96,7 @@ Lindqvist
 Lucayan
 López
 Malolos
+Mancuso
 MULT
 Mansarded
 Mapbox
@@ -108,6 +112,7 @@ Midori
 Motolinía
 Motolinía's
 Mousedown
+Márton
 NPCS
 Nahua
 Nast
@@ -146,6 +151,7 @@ Riis
 Ringmann
 Riverbend
 Riverbend's
+Rozalia
 Rubios
 SNCC
 SPRITESHEET
@@ -161,6 +167,7 @@ Shockoe
 Skanawati
 Stokely
 Supabase's
+Szabó
 Sánchez
 TANF
 Taíno
@@ -171,6 +178,7 @@ Tilemap
 Tilemaps
 Topo
 Toribio
+Traube
 Treehouse
 Tsenacommacah
 Unrau
