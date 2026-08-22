@@ -144,6 +144,17 @@ to the reader through `sourceActivityRoute()`, exactly as Unit 6's did between P
 the three records they land on: the manifest page, the medical inspection card and the board minute,
 in that order. That is the last thing Unit 7 is owed and the next phase.
 
+> **Correction (Phase 89E).** The sentence above is wrong and this paragraph is one of the four
+> places that carried the error. **Slate A is `interview` · `assembly` · `discrepancy`**;
+> `interview` · `assembly` · `trace` is slate **C**, which is Cottonwood Junction's — the unit
+> immediately before this one, and therefore the one slate §2's "adjacency holds throughout" rules
+> out. The claim originated in `unit-07-campaign.js` in Phase 89 (`076b387`) and was copied here
+> without being checked against the table. Phase 89E built a TRACE against it before catching the
+> error, rebuilt the third mission as the DISCREPANCY, and added
+> `tests/unit/mission-slates.test.js` so the tables are executable rather than quotable. The three
+> records are unaffected — the manifest page, the medical inspection card and the board minute are
+> correct, and so is their order. See decision log `0081` §5.
+
 No Meridian beat, unchanged from Phase 89C: `THE-FIELD-LIAISON.md` §4 puts Units 7–8 at "reluctant
 alliance", which is Scene E and a canon decision of its own rather than something to fold into a unit
 build.

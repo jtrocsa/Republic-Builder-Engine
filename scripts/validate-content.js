@@ -662,11 +662,13 @@ function main() {
     )
   );
 
-  // Unit 7 has no UNIT_07_ACTIVITIES block, and that is not an omission: all seven of its sources
-  // carry `activityRoute: null` until the activities are authored, which is the state Units 3-5
-  // shipped in until Phase 81F and Unit 6 until Phase 87. checkActivityRoutes() only demands an
-  // activity for a route that names an engine, so adding the block before the content exists would
-  // fail on an empty map.
+  // Unit 7 gained its UNIT_07_ACTIVITIES block in Phase 89E. Three of its seven sources now route
+  // to an engine — slate A, interview/assembly/trace, on the manifest page, the medical inspection
+  // card and the board minute — and the other four keep `activityRoute: null` and open in the
+  // reader, which is what every non-mission record on the other six maps does.
+  // checkActivityRoutes() demands an activity only for a route that names an engine, and fails in
+  // both directions: a route with nothing behind it, and an activity keyed to a source that is not
+  // in this unit.
   results.push(runSchema("unit-07-campaign.js: UNIT_07", UnitSchema, content.unit07.unit));
   results.push(
     runSchema("unit-07-campaign.js: CASE_019_LANES", CaseLanesSchema, content.unit07.lanes)
@@ -676,6 +678,13 @@ function main() {
       "unit-07-campaign.js: CASE_019_SOURCES",
       buildSourcesSchema({ reconstructionIds: content.unit07.lanes.map((lane) => lane.id) }),
       content.unit07.sources
+    )
+  );
+  results.push(
+    runSchema(
+      "unit-07-activities.js: UNIT_07_ACTIVITIES",
+      ActivityMapSchema,
+      content.unit07.activities
     )
   );
   results.push(

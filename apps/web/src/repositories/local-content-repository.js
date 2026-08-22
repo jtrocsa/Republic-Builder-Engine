@@ -28,6 +28,7 @@ import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js"
 import { UNIT_04_ACTIVITIES } from "../content/activities/unit-04-activities.js";
 import { UNIT_05_ACTIVITIES } from "../content/activities/unit-05-activities.js";
 import { UNIT_06_ACTIVITIES } from "../content/activities/unit-06-activities.js";
+import { UNIT_07_ACTIVITIES } from "../content/activities/unit-07-activities.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -150,17 +151,18 @@ export function loadChronicleContent() {
       archiveSaqQuests: unit06Quests.UNIT_06_ARCHIVE_SAQ_QUESTS,
       archiveDbqQuests: unit06Quests.UNIT_06_ARCHIVE_DBQ_QUESTS,
     },
-    // Unit 7 is registered here for validation and is deliberately NOT wired into main.js's UNITS
-    // yet: its map is unbuilt, so a Chronotravel to case-019 has nowhere to land and
-    // activeFieldMap() would silently fall back to Unit 1's Caribbean. It carries no `activities`
-    // key for the same reason Unit 6 carried none between Phase 85 and Phase 87 — every one of its
-    // seven sources has `activityRoute: null`, and checkActivityRoutes() only demands an activity
-    // for a route that names an engine. Its two missions are an evidence-organizing and a
-    // sequencing, which is Unit 5's pair rather than Unit 6's.
+    // Unit 7 reached parity with Units 1-6 in Phase 89E: its content landed in Phase 89, its cast
+    // in Phase 89B, its wharf in Phase 89C, its two interiors in Phase 89D and its three activities
+    // here. It sat between Phase 89 and Phase 89C registered for validation and deliberately absent
+    // from main.js's UNITS, because activeFieldMap() falls back to Unit 1's Caribbean for a unit it
+    // has no map for; and it carried no `activities` key until now for the reason Unit 6 carried
+    // none between Phases 85 and 87. Its two missions are an evidence-organizing and a sequencing,
+    // which is Unit 5's pair rather than Unit 6's.
     unit07: {
       unit: unit07Campaign.UNIT_07,
       sources: unit07Campaign.CASE_019_SOURCES,
       lanes: unit07Campaign.CASE_019_LANES,
+      activities: UNIT_07_ACTIVITIES,
       mcqQuests: unit07Quests.UNIT_07_MCQ_QUESTS,
       evidenceOrganizingQuests: unit07Quests.UNIT_07_EVIDENCE_ORGANIZING_QUESTS,
       sequencingQuests: unit07Quests.UNIT_07_SEQUENCING_QUESTS,

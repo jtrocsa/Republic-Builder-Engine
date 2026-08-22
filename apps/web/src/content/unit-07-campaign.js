@@ -57,13 +57,20 @@
 // live in content/primary-source-library/unit-07-source-library.js and feed the missions and the
 // Archive Challenges below.
 //
-// **Every `activityRoute` here is `null`, and that is a stage rather than a decision.** Units 3, 4
-// and 5 shipped this way from Phase 68 until Phase 81F, and Unit 6 from Phase 85 until Phase 87.
-// `THE-MAP-PROGRAM.md` §2 gives this map **slate A — `interview` · `assembly` · `trace`** — and §5
-// names the three records it lands on: the manifest page, the medical inspection card and the
-// board of special inquiry minute, which are the first, third and fourth entries below. A route
-// may only name an engine once an activity is authored for that record, because
-// `validate:content` cross-checks the two and fails if a route has nothing behind it.
+// **Three of the seven routes name an engine as of Phase 89E, and the other four degrade to the
+// reader on purpose.** `THE-MAP-PROGRAM.md` §2 gives this map **slate A — `interview` · `assembly`
+// · `discrepancy`**. This comment said `trace` from Phase 89 until Phase 89E, which is slate C's
+// line off the same table and is Cottonwood Junction's slate next door — the one thing §2's
+// "adjacency holds throughout" forbids. Three later documents copied it before anybody checked
+// against the table; see decision log `0081` §5. §5 names the three records the slate lands on: the manifest page, the medical inspection
+// card and the board of special inquiry minute, which are the first, third and fourth entries
+// below. Those three now carry their engine and their content lives in
+// `content/activities/unit-07-activities.js`. The remaining four — the circular, the boarding
+// division's return, the line's instructions to its agents and the commissioner's daily statement —
+// stay `null` and open in `sourceReader()` through `sourceActivityRoute()`, exactly as the
+// non-mission records on the other six maps do. A route may only name an engine once an activity is
+// authored for that record, because `validate:content` cross-checks the two and fails if a route has
+// nothing behind it.
 //
 // ## The date is 17 April 1907, and it is load-bearing on four records
 //
@@ -202,7 +209,7 @@ export const CASE_019_SOURCES = [
     record:
       "One ruled sheet of thirty lines, and the sheet an inspector reads back to you at the desk",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "interview",
     excerpt:
       "LIST OR MANIFEST OF ALIEN PASSENGERS FOR THE UNITED STATES IMMIGRATION OFFICER AT PORT OF ARRIVAL. Required by the regulations of the Secretary of Commerce and Labor, under act of Congress approved March 3, 1903, to be delivered to the United States immigration officer by the commanding officer of any vessel having such passengers on board upon arrival at a port in the United States. — COLUMN HEADINGS. 1 No. on list. 2 Name in full, family and given. 3 Age. 4 Sex. 5 Married or single. 6 Calling or occupation. 7 Able to read; able to write. 8 Nationality: country of which citizen or subject. 9 Race or people. 10 Last residence. 11 Name and complete address of nearest relative or friend in country whence alien came. 12 Final destination. 13 Whether having a ticket to such final destination. 14 By whom was passage paid. 15 Whether in possession of $50, and if less, how much. 16 Whether ever before in the United States, and if so, when and where. 17 Whether going to join a relative or friend, and if so, what relative or friend, and his name and complete address. 18 Ever in prison, or almshouse, or institution for the care and treatment of the insane, or supported by charity. 19 Whether a polygamist. 20 Whether an anarchist. 21 Whether coming by reason of any offer, solicitation, promise, or agreement, express or implied, to labor in the United States. 22 Condition of health, mental and physical. 23 Deformed or crippled; nature, length of time, and cause. 24 Height. 25 Complexion. 26 Colour of hair and eyes. 27 Marks of identification. 28 Place of birth: country. 29 Place of birth: city or town. — LINE 11. Age 34. F. Married. Wife. Reads, yes; writes, no. Nationality, RUSSIA. Race or people, HEBREW. Last residence, Kiev. Final destination, New York. Ticket to destination, no. Passage paid by husband. In possession of $50? No — $11. Going to join relative: husband, Orchard street. Health, good. Height 5 ft. 1 in. Complexion fair. — LINE 12. Age 9. F. Single. Daughter. Reads, no. Nationality, RUSSIA. Race or people, HEBREW. — LINE 13. Age 26. M. Single. Labourer. Reads, yes; writes, yes. Nationality, AUSTRIA. Race or people, SOUTH ITALIAN. Last residence, Trieste. Passage paid by self. $18. Whether coming by reason of any offer or promise to labor: NO.",
     prompt:
@@ -244,7 +251,7 @@ export const CASE_019_SOURCES = [
     record:
       "The card a passenger carries up the stairs, and the letters written on a coat in chalk",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "assembly",
     excerpt:
       "LINE INSPECTION — STATION KEY, POSTED. Officers will take station at the head of the stairs from the baggage room and will observe each alien during the ascent. The climb is itself the examination for the heart, the lungs and the gait; aliens are not to be halted upon the stairs. — MARKS. Chalk upon the right shoulder of the outer garment, as follows. B, back. C, conjunctivitis. CT, trachoma. E, eyes. F, face. Ft, feet. G, goitre. H, heart. K, hernia. L, lameness. N, neck. P, physical and lungs. Pg, pregnancy. S, senility. Sc, scalp. X, suspected mental defect; X within a circle, definite signs of mental disease. SI, to be held for special inquiry. — Marked aliens will be turned aside to the second examination in the rooms adjoining and will not proceed to the registry desks until released. — CLASSES. Class A, a loathsome or a dangerous contagious disease: certification is mandatory and the alien is excluded by operation of law; the officer certifies the condition and exercises no discretion as to the result. Class B, a mental or physical condition of such a nature as may affect the ability of the alien to earn a living: the certificate is referred to a board of special inquiry, which determines the case. — Officers are reminded that the eyelid is to be everted in every case where the eye is marked, and that the instrument is to be cleansed between aliens.",
     prompt:
@@ -269,7 +276,7 @@ export const CASE_019_SOURCES = [
     // Canal Crossroads' time book, Richmond's requisition and Cottonwood Junction's receipt — and
     // it decides which mission can be last.
     requiresSourceId: "port-ship-manifest-page",
-    activityRoute: null,
+    activityRoute: "discrepancy",
     excerpt:
       "BOARD OF SPECIAL INQUIRY NO. 2. — Present: three inspectors, and the interpreter. The hearing is held separate and apart from the public. Alien held as likely to become a public charge. — Q. You are the person entered upon line 11 of manifest sheet 14? — A. Yes. — Q. The manifest says you have eleven dollars. Is that all the money you have? — A. Yes. — Q. Who is going to support you? — A. My husband. He is here three years. He works. — Q. Has he sent you anything? — A. He sent the ticket. — Q. Have you a promise of employment? — A. I can sew. I sewed at home. — INSPECTOR: Let it be noted that the alien states she is able to work. The manifest, column 21, is answered NO as to any offer or promise of employment. If she has an offer she is excluded under the contract labour provision; if she has none, and eleven dollars, she is likely to become a public charge. — Q. Do you have an offer of work in America? — A. I did not say an offer. I said I can sew. — The certificate of the medical officer is called for: none. — The board deliberates. Decision, two to one: EXCLUDED, likely to become a public charge; and the alien is informed of her right of appeal to the Secretary of Commerce and Labor. — Later, same day. The husband appearing at the bar of the board and producing a bank book and a statement from his employer, the board on its own motion reopens and reverses. ADMITTED. Total time of both hearings, twenty-two minutes.",
     prompt:

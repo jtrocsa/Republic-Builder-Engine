@@ -149,13 +149,14 @@ saying so in its own first sentence. The canonical documents live in `content/pr
 — **already written for all four units, 159 cited records** — and feed the missions and Archive
 Challenges rather than the map.
 
-**Units 3–5's activities shipped in Phase 81F and Unit 6's in Phase 87** — twelve missions across
-four maps, running the slates above, and every authored field map in the game now has three. Four
-interviews exist and none of them asks the same thing, which is the rule that actually binds:
-Riverbend asks how one arrangement looks from eight positions inside it, Philadelphia asks what a
-public position is made of, Richmond asks what testimony costs when the government is writing it
-down, and Cottonwood Junction asks what entitles a person to be standing here and on whose paper.
-The right-hand column of §2's table is the half to author against.
+**Units 3–5's activities shipped in Phase 81F, Unit 6's in Phase 87 and Unit 7's in Phase 89E** —
+fifteen missions across five maps, running the slates above, and every authored field map in the
+game has three. Five interviews exist and none of them asks the same thing, which is the rule that
+actually binds: Riverbend asks how one arrangement looks from eight positions inside it,
+Philadelphia asks what a public position is made of, Richmond asks what testimony costs when the
+government is writing it down, Cottonwood Junction asks what entitles a person to be standing here
+and on whose paper, and Ellis Island asks what the official question fails to ask. The right-hand
+column of §2's table is the half to author against.
 
 **Unit 6 is also where an interview first names people standing indoors.** Two of its eight speakers
 are in the land office, which is where the record the mission opens from is anchored — so the door
@@ -229,13 +230,34 @@ takes that rail indoors, doubles it, and puts the two gates at opposite ends, so
 switchback a player walks rather than a space they cross. The hearing room does the opposite and is
 mostly floor.
 
-Only the three activities are still owed. Two notes for whoever authors them. **Half this unit's cast
-works indoors** — the highest interior share in the program — so two of the three givers are in the
-inspection hall and the third is behind the second door; `fieldNpcById()` resolves across every
-surface of a map, so that is legal for `briefing.speaker` as well as for the anchors. And **the
-TRACE's record is already ordered last by the content**: the board minute carries
-`requiresSourceId: "port-ship-manifest-page"`, the only cross-surface lock in the game, so it cannot
-open until the manifest the INTERVIEW is authored on has been secured.
+**The three activities shipped in Phase 89E** (decision log `0081`), and Unit 7 is complete. Its
+interview is the fifth, and the first that could not be built the usual way: the other four are put
+to people the record is thin about, and the move each teaches is find who is missing. This form has
+twenty-nine columns and a field for the colour of your eyes, so the eight people are there to supply
+what it gets wrong while filling every column. The mission is called Column Thirty, and there are
+twenty-nine.
+
+Three things about the build worth carrying to Units 8 and 9. **It is the first interview with a
+Field Notebook cap** — eight accounts gathered, three kept, and a closer whose correct option names
+two of the eight — so the right answer filed on the wrong three reads as unsupported, a state no
+interview could reach before. **Half this unit's cast works indoors**, the highest share in the
+program, and one speaker is in the _second_ room, which is as far as `fieldNpcById()`'s resolution
+across `fieldSurfaces()` has been asked to reach. And **the DISCREPANCY was ordered last by the
+content rather than by the authoring**: the board minute carries `requiresSourceId:
+"port-ship-manifest-page"`, the only cross-surface lock in the game, so `arcClose` is authored on
+the medical key and on the minute and on neither the manifest nor anything else — and on this map
+that gate does a second job, because an audit's evidence column is minted from the interview's
+logged answers and without the gate it could open empty.
+
+**One warning for Units 8 and 9, and it cost a rebuild.** Unit 7 was authored against a prose
+summary of the table above rather than the table. `unit-07-campaign.js` shipped in Phase 89 saying
+"slate A — `interview` · `assembly` · `trace`", which is **slate C's** line; §5's own Unit 7 block
+and `ARCHITECTURE-QUICKREF.md` §6 both copied it, and Phase 89E built the trace before checking.
+The tell was the rule this section states two paragraphs above: Cottonwood Junction is slate C, so a
+slate-C Unit 7 repeats its neighbour's three, which "adjacency holds throughout" forbids outright.
+**Read the slate off the table. Nothing in the test suite checks it** — `validate:content` cross-
+checks a route against its activity's `kind` and has no opinion about which three engines a unit
+should be running.
 
 ### Unit 8 — the suburban corridor. 1957. Slate B.
 

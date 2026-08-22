@@ -409,6 +409,15 @@ question set to eight and lets the answers stratify by legal status. Same engine
 question, and the two missions do not feel alike. **The question axis is what actually carries this
 rule** — the engine axis is only its cheap half.
 
+**It is not a licence for an identical slate, and Phase 89E is why that now needs saying.** Unit 7
+was built on slate C — Cottonwood Junction next door — against a wrong sentence in its own campaign
+header, and the draft ADR justified the repeat by appealing to this paragraph. That reading is
+backwards. What the question axis licenses is a _shared engine_ between neighbours; the whole slate
+repeating is what the table's own "adjacency holds throughout" forbids outright, and no question,
+however distinct, buys it. The third mission was rebuilt as the DISCREPANCY slate A calls for. Since
+Phase 89E, `tests/unit/mission-slates.test.js` parses `THE-MAP-PROGRAM.md` §2's two tables and fails
+on both halves of that mistake — see decision log `0081` §5.
+
 **Rule 3 was "every unit ships at least one Group A entry."** `interview` is the only Group A engine,
 so the rule forced it into all nine units and left exactly three legal slates — which defeats rule 1's
 whole purpose and makes the "variety rule" a uniformity rule. Relaxing it to a condition rather than
