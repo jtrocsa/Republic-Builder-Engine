@@ -1,0 +1,47 @@
+# The gate between a commit and production.
+#
+# Pushing to main auto-deploys to Vercel. Until this workflow existed, nothing ran in between — the
+# only check was somebody remembering the verification ladder in CLAUDE.md. Seven of the 120 commits
+# before it were pure "Prettier gets the last word" / "Lint:" cleanup after the fact.
+#
+# What runs here is `npm run check` (format:check, lint, spell, test, validate:content) and a real
+# production build.
+#
+# What deliberately does NOT run here is `npm run test:e2e`. The 55 visual baselines are committed as
+# *-chromium-win32.png and .gitignore excludes the darwin set as "unreviewed by definition"; a Linux
+# runner would find no baseline of its own for any screenshot and either fail or quietly write 55 new
+# ones nobody has looked at. Run the e2e suite locally on Windows, which is what the ladder says.
+#
+# `npm run typecheck` is also absent on purpose: jsconfig's checkJs baseline is a known set of false
+# positives from untyped embeds, so it is a tool to read, not a gate to pass.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch makes an in-flight run obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # --ignore-scripts skips the `prepare` hook install, which is meaningless on a CI checkout.
+      - run: npm ci --ignore-scripts
+
+      - run: npm run check
+
+      - run: npm run build

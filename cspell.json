@@ -27,6 +27,13 @@
     "**/*.tmj",
     "**/*.png",
     "apps/web/src/assets/**",
-    ".cspell/**"
+    ".cspell/**",
+    "reports/**",
+    "art-source/**",
+    ".playwright-mcp/**",
+    "**/*.webp",
+    "**/*.jpg",
+    "**/*.svg",
+    "docs/design/mockups/**"
   ]
 }

@@ -52,13 +52,13 @@ Runs `scripts/validate-content.js` under plain `node` (not Vite/Vitest). The scr
 4. Prints a per-group `ok`/`FAIL` line, then a flat list of errors (each with the content group, the record's `id` where derivable, the Zod field path, and the schema's message) if anything failed.
 5. Exits `0` on success, `1` on any failure. Never writes to a content file.
 
-Current result against real content: **all 17 groups pass, 0 errors.** No content corrections were needed — every existing case, source, MCQ, and cross-reference in `unit-01-campaign.js`/`unit-02-campaign.js` was already internally consistent.
+Current result against real content: **all groups pass, 0 errors** (`npm run docs:stats` reports the current group count; it was 17 when this was written and covered two units, and the validator now covers all seven registered units plus the nine-unit primary source library). No content corrections were needed — every existing case, source, MCQ, and cross-reference in `unit-01-campaign.js`/`unit-02-campaign.js` was already internally consistent.
 
 ## Cross-reference checks
 
 Beyond what an individual array's own schema can see:
 
-- **Global case-id uniqueness across both units.** `main.js`'s `caseById()`/`unitForCase()` search across `UNITS = [UNIT_01, UNIT_02]`, not within one unit — so a case id repeated between `UNIT_01.cases` and `UNIT_02.cases` would silently make one of them unreachable. Checked via `checkUniqueGlobalIds()`.
+- **Global case-id uniqueness across both units.** `main.js`'s `caseById()`/`unitForCase()` search across every registered unit in `UNITS`, not within one unit — so a case id repeated between `UNIT_01.cases` and `UNIT_02.cases` would silently make one of them unreachable. Checked via `checkUniqueGlobalIds()`.
 - **Global source-id uniqueness across both cases' source arrays.** `main.js`'s `sourceById()` searches `CASE_001_SOURCES` and `CASE_004_SOURCES` together (`main.js:1112-1114`) — same reasoning, same helper.
 - **Empire connections → empire evidence ids**, **triangle cargo → triangle leg ids**, **region evidence → region ids**, and **case-004 sources → case-004 lane ids** are all checked, but via schema factories (see above) rather than a separate script-level pass, since each only needs to see one sibling array.
 

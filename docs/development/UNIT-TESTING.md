@@ -9,7 +9,7 @@ Vitest and Zod are the only two dependencies the architecture review (`docs/arch
 - It reuses the Vite pipeline already configured for this project (`vite.config.js`), so it transforms `apps/web/src/main.js`'s ESM syntax, its `new URL(..., import.meta.url)` asset references, and its `import "./styles/global.css"` side-effect import the same way the real app does — no separate transform/mock config to maintain.
 - It has a built-in jsdom integration, which this repo needs: `main.js` is browser-only code that reads `document`/`window`/`localStorage` at module scope.
 
-Playwright remains deliberately deferred (per the review) — this phase is unit tests for pure/near-pure logic, not end-to-end browser automation.
+**Playwright is no longer deferred.** It was, when this document was written; Phase 29 committed a real `npm run test:e2e` suite and it is now the default way to verify a player-visible interaction (see CLAUDE.md's verification ladder). This document covers the unit layer only: pure/near-pure logic, not browser automation.
 
 ## How to run tests
 
@@ -24,7 +24,7 @@ Test files import `describe`/`it`/`expect`/`beforeEach` explicitly from `"vitest
 
 ## What's covered, and why
 
-All tests live under `tests/unit/`. 179 tests across 15 files (as of Phase 9, 2026-07-11) — deliberately targeted at pure logic rather than comprehensive DOM coverage; see "What remains untested" below.
+All tests live under `tests/unit/`. Run `npm run docs:stats` for the current file and test counts — they are not written out here, because the figure that used to be (179 tests across 15 files, Phase 9) sat unrevised while the suite grew by an order of magnitude. Coverage is deliberately targeted at pure logic rather than comprehensive DOM coverage; see "What remains untested" below.
 
 ### `tests/unit/chronicle-progress-store.test.js`
 

@@ -10,7 +10,7 @@ You are a read-only reviewer. You never edit files — you report findings for a
 ## What you check, in order
 
 1. **Scope creep against the deferred-systems list.** Read `docs/architecture/ARCHITECTURE-QUICKREF.md` §8 and `docs/architecture/POST-MINIMAL-ARCHITECTURE-REASSESSMENT.md` §9 before reviewing anything else. Flag any unapproved appearance of:
-   - Phaser, inkjs (deferred tools — real candidates, not currently adopted). **Playwright is not deferred** — Phase 29 shipped a real, committed `npm run test:e2e` suite (`tests/e2e/*.spec.js`); don't flag legitimate e2e test work. Tiled is likewise no longer fully deferred for the three real live maps that already use it (`ARCHITECTURE-QUICKREF.md` §8) — flag only a *bigger* Tiled-authoring pipeline or desktop-editor workflow, not `.tmj` usage itself.
+   - Phaser, inkjs (deferred tools — real candidates, not currently adopted). **Playwright is not deferred** — Phase 29 shipped a real, committed `npm run test:e2e` suite (`tests/e2e/*.spec.js`); don't flag legitimate e2e test work. Tiled is likewise no longer fully deferred for the three real live maps that already use it (`ARCHITECTURE-QUICKREF.md` §8) — flag only a _bigger_ Tiled-authoring pipeline or desktop-editor workflow, not `.tmj` usage itself.
    - Subject-pack extraction (`packs/<subject>/`)
    - `PlatformCore` (Identity/Classroom/Enrollment)
    - `WorldComposition` (Blueprints/AI-generation/Publishing)

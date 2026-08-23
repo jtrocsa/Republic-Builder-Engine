@@ -1,7 +1,7 @@
 # Design mockups
 
 Interactive look-and-feel explorations that are **deliberately not wired into the game**. They exist
-to lock a visual style and a set of rules *before* the work is built in `main.js`, so integration is
+to lock a visual style and a set of rules _before_ the work is built in `main.js`, so integration is
 a matter of following a settled spec instead of designing in production code.
 
 Nothing here is imported by `apps/web/src/main.js`. These are standalone HTML pages reviewed as
@@ -9,10 +9,10 @@ Nothing here is imported by `apps/web/src/main.js`. These are standalone HTML pa
 
 ## What's here
 
-| Folder / file             | What it explores                                                              |
-| ------------------------- | ---------------------------------------------------------------------------- |
-| `location-transitions/`   | The "arrival" screen on a warp / entering a new building (Syncing loader). See its `DESIGN.md`. |
-| `codex-handover.html`     | The Director-hands-you-the-Codex cutscene beat — self-paced dialogue, animated Codex. |
+| Folder / file           | What it explores                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| `location-transitions/` | The "arrival" screen on a warp / entering a new building (Syncing loader). See its `DESIGN.md`. |
+| `codex-handover.html`   | The Director-hands-you-the-Codex cutscene beat — self-paced dialogue, animated Codex.           |
 
 ## Shared rules for any mockup added here
 
@@ -32,7 +32,7 @@ Nothing here is imported by `apps/web/src/main.js`. These are standalone HTML pa
 ## Verification caveat (read before "it looks static")
 
 The in-app preview browser **suspends `requestAnimationFrame` and SMIL when backgrounded**, so you
-often *cannot screenshot canvas or SVG-filter motion* — the still looks frozen even when the live
+often _cannot screenshot canvas or SVG-filter motion_ — the still looks frozen even when the live
 page moves. Verify motion by reading the animated values directly (`svg.setCurrentTime(t)` then the
 element's `animVal`) or by pumping the canvas draw function, and confirm the final result by
-**reloading the published artifact**. CSS keyframe motion *is* visible in stills.
+**reloading the published artifact**. CSS keyframe motion _is_ visible in stills.

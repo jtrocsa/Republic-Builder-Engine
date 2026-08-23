@@ -163,7 +163,10 @@ export async function runPilotOptimization({
     const buffer = await buildCandidateBuffer(sourceBuffer, candidate);
     const stats = await statBuffer(buffer);
     const sha256 = createSha256(buffer);
-    const { bytesSaved, percentReduction } = computeReduction(sourceStats.sizeBytes, stats.sizeBytes);
+    const { bytesSaved, percentReduction } = computeReduction(
+      sourceStats.sizeBytes,
+      stats.sizeBytes
+    );
 
     const candidateFile = path.join(candidatesDir, `${candidate.id}.jpg`);
     writeFileSync(candidateFile, buffer);
@@ -180,7 +183,9 @@ export async function runPilotOptimization({
 
   const recommended = candidateResults.find((c) => c.id === RECOMMENDED_CANDIDATE_ID);
   if (!recommended) {
-    throw new Error(`optimize-waldseemuller: recommended candidate "${RECOMMENDED_CANDIDATE_ID}" not found`);
+    throw new Error(
+      `optimize-waldseemuller: recommended candidate "${RECOMMENDED_CANDIDATE_ID}" not found`
+    );
   }
 
   const productionOutputFile = path.join(outputDir, OUTPUT_FILENAME);
@@ -223,9 +228,7 @@ export function renderPilotReportMarkdown(result) {
   lines.push("");
   lines.push("## Scope");
   lines.push("");
-  lines.push(
-    `- Source (read-only, never modified): \`${toRepoRel(sourceFile)}\``
-  );
+  lines.push(`- Source (read-only, never modified): \`${toRepoRel(sourceFile)}\``);
   lines.push(
     `- Recommended output (written by this pilot, not yet wired into production): \`${toRepoRel(
       productionOutputFile
@@ -251,9 +254,7 @@ export function renderPilotReportMarkdown(result) {
   lines.push(
     `- Reduction: ${recommended.percentReduction.toFixed(1)}% (${formatBytes(recommended.bytesSaved)} saved, ${recommended.bytesSaved} bytes)`
   );
-  lines.push(
-    `- Sharp settings: ${describeCandidateSettings(recommended)}`
-  );
+  lines.push(`- Sharp settings: ${describeCandidateSettings(recommended)}`);
   lines.push("");
   lines.push("## All candidates generated (for comparison — none deleted)");
   lines.push("");
@@ -315,7 +316,7 @@ export function renderPilotReportMarkdown(result) {
   lines.push("## Rollback steps");
   lines.push("");
   lines.push(
-    "- The production import in `main.js` (`const waldseemuller = new URL(\"./assets/documents/" +
+    '- The production import in `main.js` (`const waldseemuller = new URL("./assets/documents/' +
       'source-waldseemuller-1507.jpg", import.meta.url)`, `main.js:353`) was **not changed** by ' +
       "this pilot — there is nothing to roll back at the production-import level."
   );
@@ -371,7 +372,9 @@ async function main() {
   writeTextReport(DEFAULT_REPORT_FILE, report);
 
   console.log("Waldseemüller optimization pilot complete.");
-  console.log(`  Source: ${result.sourceStats.sizeHuman} (${result.sourceStats.width}x${result.sourceStats.height})`);
+  console.log(
+    `  Source: ${result.sourceStats.sizeHuman} (${result.sourceStats.width}x${result.sourceStats.height})`
+  );
   console.log(
     `  Recommended (${result.recommended.id}): ${result.recommended.sizeHuman} ` +
       `(${result.recommended.percentReduction.toFixed(1)}% smaller)`

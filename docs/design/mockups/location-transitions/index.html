@@ -25,265 +25,749 @@
   }
   @media (prefers-color-scheme: light) {
     :root {
-      --page-bg: #ece1c6; --page-bg-2: #f4ecd6; --panel: #fbf6e7;
-      --line: rgba(30, 52, 62, 0.14); --text: #24333b; --muted: #5d6d70; --chip-idle: #f0e7ce;
+      --page-bg: #ece1c6;
+      --page-bg-2: #f4ecd6;
+      --panel: #fbf6e7;
+      --line: rgba(30, 52, 62, 0.14);
+      --text: #24333b;
+      --muted: #5d6d70;
+      --chip-idle: #f0e7ce;
     }
   }
   :root[data-theme="dark"] {
-    --page-bg: #06171f; --page-bg-2: #0a222e; --panel: rgba(var(--navy-rgb), 0.55);
-    --line: rgba(var(--gold-rgb), 0.16); --text: #e7eef0; --muted: #93a6ab; --chip-idle: rgba(var(--navy-rgb), 0.5);
+    --page-bg: #06171f;
+    --page-bg-2: #0a222e;
+    --panel: rgba(var(--navy-rgb), 0.55);
+    --line: rgba(var(--gold-rgb), 0.16);
+    --text: #e7eef0;
+    --muted: #93a6ab;
+    --chip-idle: rgba(var(--navy-rgb), 0.5);
   }
   :root[data-theme="light"] {
-    --page-bg: #ece1c6; --page-bg-2: #f4ecd6; --panel: #fbf6e7;
-    --line: rgba(30, 52, 62, 0.14); --text: #24333b; --muted: #5d6d70; --chip-idle: #f0e7ce;
+    --page-bg: #ece1c6;
+    --page-bg-2: #f4ecd6;
+    --panel: #fbf6e7;
+    --line: rgba(30, 52, 62, 0.14);
+    --text: #24333b;
+    --muted: #5d6d70;
+    --chip-idle: #f0e7ce;
   }
 
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; font-family: var(--font-ui); color: var(--text); line-height: 1.6; min-height: 100vh;
-    background: radial-gradient(1100px 600px at 50% -8%, var(--page-bg-2), transparent 70%), var(--page-bg);
+  * {
+    box-sizing: border-box;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 40px) 64px; }
+  body {
+    margin: 0;
+    font-family: var(--font-ui);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    background:
+      radial-gradient(1100px 600px at 50% -8%, var(--page-bg-2), transparent 70%), var(--page-bg);
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 40px) 64px;
+  }
 
   .eyebrow {
-    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.34em;
-    font-size: 0.72rem; color: var(--gold); margin: 0 0 10px;
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.34em;
+    font-size: 0.72rem;
+    color: var(--gold);
+    margin: 0 0 10px;
   }
   h1 {
-    font-family: var(--font-display); font-weight: 600; font-size: clamp(1.9rem, 4.4vw, 3rem);
-    line-height: 1.05; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 10px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 4.4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 10px;
   }
-  h1 em { color: var(--gold-soft); font-style: normal; }
-  .lede { max-width: 64ch; color: var(--muted); font-size: 1rem; margin: 0; }
+  h1 em {
+    color: var(--gold-soft);
+    font-style: normal;
+  }
+  .lede {
+    max-width: 64ch;
+    color: var(--muted);
+    font-size: 1rem;
+    margin: 0;
+  }
   .tag {
-    display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 0.72rem;
-    color: var(--gold-soft); background: rgba(var(--gold-rgb), 0.12); border: 1px solid var(--line);
-    padding: 1px 6px; border-radius: 5px;
+    display: inline-block;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.72rem;
+    color: var(--gold-soft);
+    background: rgba(var(--gold-rgb), 0.12);
+    border: 1px solid var(--line);
+    padding: 1px 6px;
+    border-radius: 5px;
   }
 
   /* ---- tabs ---- */
-  .tabs { display: flex; gap: 8px; margin: 24px 0 14px; flex-wrap: wrap; }
-  .tab {
-    font-family: var(--font-label); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase;
-    padding: 10px 16px; border-radius: 9px 9px 0 0; cursor: pointer; color: var(--text);
-    border: 1px solid var(--line); border-bottom: none; background: var(--chip-idle);
-    transition: background 0.2s, color 0.2s, transform 0.12s;
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin: 24px 0 14px;
+    flex-wrap: wrap;
   }
-  .tab:hover { transform: translateY(-1px); }
-  .tab[aria-selected="true"] { background: rgba(var(--gold-rgb), 0.18); border-color: var(--gold); color: var(--gold-soft); }
-  .tab small { display: block; font-family: var(--font-ui); text-transform: none; letter-spacing: 0; font-size: 0.66rem; color: var(--muted); margin-top: 2px; }
+  .tab {
+    font-family: var(--font-label);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    border-radius: 9px 9px 0 0;
+    cursor: pointer;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    background: var(--chip-idle);
+    transition:
+      background 0.2s,
+      color 0.2s,
+      transform 0.12s;
+  }
+  .tab:hover {
+    transform: translateY(-1px);
+  }
+  .tab[aria-selected="true"] {
+    background: rgba(var(--gold-rgb), 0.18);
+    border-color: var(--gold);
+    color: var(--gold-soft);
+  }
+  .tab small {
+    display: block;
+    font-family: var(--font-ui);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.66rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
 
   /* ---- the transition screen ---- */
   .screen-frame {
-    max-width: 960px; margin: 0 auto;
-    border: 1px solid rgba(var(--gold-rgb), 0.34); border-radius: 14px; padding: 9px;
+    max-width: 960px;
+    margin: 0 auto;
+    border: 1px solid rgba(var(--gold-rgb), 0.34);
+    border-radius: 14px;
+    padding: 9px;
     background: linear-gradient(180deg, rgba(var(--gold-rgb), 0.06), rgba(var(--navy-rgb), 0.2));
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.42);
   }
   .screen {
-    position: relative; aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border-radius: 8px;
-    background: #041019; isolation: isolate;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #041019;
+    isolation: isolate;
   }
-  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity 0.6s ease; }
-  .scene.active { opacity: 1; }
-  .scene svg { display: none; } /* SVG stand-ins retired in favour of the painterly backdrops */
-  .scene-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scene {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .scene.active {
+    opacity: 1;
+  }
+  .scene svg {
+    display: none;
+  } /* SVG stand-ins retired in favour of the painterly backdrops */
+  .scene-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
 
   /* ===== living motion (image-agnostic — carries over to a painterly raster) ===== */
-  .scene { animation: breathe 30s ease-in-out infinite alternate; transform-origin: 58% 62%; will-change: transform; }
-  @keyframes breathe { from { transform: scale(1.006); } to { transform: scale(1.05); } }
+  .scene {
+    animation: breathe 30s ease-in-out infinite alternate;
+    transform-origin: 58% 62%;
+    will-change: transform;
+  }
+  @keyframes breathe {
+    from {
+      transform: scale(1.006);
+    }
+    to {
+      transform: scale(1.05);
+    }
+  }
 
   .rays {
-    position: absolute; inset: -12%; z-index: 3; pointer-events: none; mix-blend-mode: screen; opacity: 0.75;
-    background: linear-gradient(112deg, transparent 28%, rgba(255,240,205,0.18) 45%, transparent 55%, transparent 70%, rgba(255,238,200,0.12) 81%, transparent 92%);
+    position: absolute;
+    inset: -12%;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.75;
+    background: linear-gradient(
+      112deg,
+      transparent 28%,
+      rgba(255, 240, 205, 0.18) 45%,
+      transparent 55%,
+      transparent 70%,
+      rgba(255, 238, 200, 0.12) 81%,
+      transparent 92%
+    );
     animation: rayDrift 17s ease-in-out infinite alternate;
   }
-  @keyframes rayDrift { from { transform: translate(-3%, -1%); } to { transform: translate(3%, 1%); } }
+  @keyframes rayDrift {
+    from {
+      transform: translate(-3%, -1%);
+    }
+    to {
+      transform: translate(3%, 1%);
+    }
+  }
 
-  #spray { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+  #spray {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
 
   /* gentle fade of the scene edges into the surrounding navy (sits low, under the light) */
   .vignette {
-    position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: radial-gradient(140% 112% at 52% 46%, transparent 55%, rgba(3, 13, 20, 0.4) 84%, rgba(3, 13, 20, 0.82) 100%);
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(
+      140% 112% at 52% 46%,
+      transparent 55%,
+      rgba(3, 13, 20, 0.4) 84%,
+      rgba(3, 13, 20, 0.82) 100%
+    );
   }
 
   /* scene-scoped life — sits ABOVE the scrim so light/water read, toggled per scene */
-  .cb-fx, .ar-flicker, .ar-beams { display: none; }
-  .cb-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
-  .screen[data-scene="caribbean"] .cb-fx { display: block; }
+  .cb-fx,
+  .ar-flicker,
+  .ar-beams {
+    display: none;
+  }
+  .cb-fx {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .screen[data-scene="caribbean"] .cb-fx {
+    display: block;
+  }
   .screen[data-scene="archive"] .ar-flicker,
-  .screen[data-scene="archive"] .ar-beams { display: block; }
+  .screen[data-scene="archive"] .ar-beams {
+    display: block;
+  }
 
   /* riverbend — no contextual motion; the painting carries the card on its own. */
 
   /* archive — warm glow at the windows + soft volumetric beams (the earlier, quieter treatment kept) */
   .ar-flicker {
-    position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: screen; opacity: 0.5;
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.5;
     background:
       radial-gradient(250px 230px at 26% 11%, rgba(255, 238, 185, 0.28), transparent 66%),
       radial-gradient(160px 210px at 72% 42%, rgba(255, 232, 170, 0.22), transparent 68%),
       radial-gradient(130px 180px at 9% 46%, rgba(255, 232, 170, 0.16), transparent 70%);
     animation: flick 6s ease-in-out infinite;
   }
-  @keyframes flick { 0%, 100% { opacity: 0.5; } 44% { opacity: 0.74; } 56% { opacity: 0.4; } 72% { opacity: 0.62; } }
+  @keyframes flick {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    44% {
+      opacity: 0.74;
+    }
+    56% {
+      opacity: 0.4;
+    }
+    72% {
+      opacity: 0.62;
+    }
+  }
 
-  .ar-beams { position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
+  .ar-beams {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
   .beam {
-    position: absolute; transform-origin: top center; filter: blur(7px);
-    background: linear-gradient(to bottom, rgba(255, 240, 195, 0.5), rgba(255, 236, 180, 0.13) 55%, transparent 86%);
+    position: absolute;
+    transform-origin: top center;
+    filter: blur(7px);
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 240, 195, 0.5),
+      rgba(255, 236, 180, 0.13) 55%,
+      transparent 86%
+    );
     animation: beamPulse 7s ease-in-out infinite;
   }
-  .beam.b1 { top: 1%; left: 22%; width: 10%; height: 70%; transform: rotate(19deg); }
-  .beam.b2 { top: 37%; left: 68%; width: 7%; height: 44%; transform: rotate(-9deg); animation-duration: 8.5s; animation-delay: -2s; }
-  .beam.b3 { top: 40%; left: 5%; width: 5%; height: 34%; transform: rotate(26deg); animation-duration: 6s; animation-delay: -3.5s; }
-  @keyframes beamPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.64; } }
+  .beam.b1 {
+    top: 1%;
+    left: 22%;
+    width: 10%;
+    height: 70%;
+    transform: rotate(19deg);
+  }
+  .beam.b2 {
+    top: 37%;
+    left: 68%;
+    width: 7%;
+    height: 44%;
+    transform: rotate(-9deg);
+    animation-duration: 8.5s;
+    animation-delay: -2s;
+  }
+  .beam.b3 {
+    top: 40%;
+    left: 5%;
+    width: 5%;
+    height: 34%;
+    transform: rotate(26deg);
+    animation-duration: 6s;
+    animation-delay: -3.5s;
+  }
+  @keyframes beamPulse {
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.64;
+    }
+  }
 
   /* caribbean — a few patches of the painted water ripple (feTurbulence + feDisplacementMap on the
      image pixels, masked to soft spots on the rocks and surf). Motion is SMIL inside the SVG. */
 
   /* calm: user toggle or reduced-motion — one switch stills everything (SMIL paused in JS) */
-  .calm .scene, .calm .rays, .calm .ar-flicker, .calm .beam, .calm .ring-ticks { animation: none !important; }
+  .calm .scene,
+  .calm .rays,
+  .calm .ar-flicker,
+  .calm .beam,
+  .calm .ring-ticks {
+    animation: none !important;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .scene, .rays, .ar-flicker, .beam { animation: none !important; }
+    .scene,
+    .rays,
+    .ar-flicker,
+    .beam {
+      animation: none !important;
+    }
   }
 
   /* warm legibility scrim */
   .scrim {
-    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
     background:
-      linear-gradient(90deg, rgba(3, 12, 18, 0.92) 0%, rgba(3, 12, 18, 0.66) 26%, rgba(3, 12, 18, 0.2) 50%, transparent 66%),
+      linear-gradient(
+        90deg,
+        rgba(3, 12, 18, 0.92) 0%,
+        rgba(3, 12, 18, 0.66) 26%,
+        rgba(3, 12, 18, 0.2) 50%,
+        transparent 66%
+      ),
       linear-gradient(180deg, rgba(3, 12, 18, 0.55) 0%, transparent 24%),
       linear-gradient(0deg, rgba(3, 12, 18, 0.66) 0%, transparent 30%),
       radial-gradient(120% 95% at 50% 44%, transparent 56%, rgba(2, 9, 14, 0.5) 100%);
   }
 
   /* geometric frame ticks */
-  .ticks { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-  .ticks .edge { position: absolute; inset: 14px; border: 1px solid rgba(var(--gold-rgb), 0.22); border-radius: 4px; }
-  .ticks i { position: absolute; width: 16px; height: 16px; border: 1.5px solid rgba(var(--gold-rgb), 0.72); }
-  .ticks i.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
-  .ticks i.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
-  .ticks i.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
-  .ticks i.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+  .ticks {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .ticks .edge {
+    position: absolute;
+    inset: 14px;
+    border: 1px solid rgba(var(--gold-rgb), 0.22);
+    border-radius: 4px;
+  }
+  .ticks i {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid rgba(var(--gold-rgb), 0.72);
+  }
+  .ticks i.tl {
+    top: 10px;
+    left: 10px;
+    border-right: none;
+    border-bottom: none;
+  }
+  .ticks i.tr {
+    top: 10px;
+    right: 10px;
+    border-left: none;
+    border-bottom: none;
+  }
+  .ticks i.bl {
+    bottom: 10px;
+    left: 10px;
+    border-right: none;
+    border-top: none;
+  }
+  .ticks i.br {
+    bottom: 10px;
+    right: 10px;
+    border-left: none;
+    border-top: none;
+  }
 
   /* content overlay */
   .overlay {
-    position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column;
-    justify-content: flex-start; padding: clamp(20px, 3.5vw, 44px);
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: clamp(20px, 3.5vw, 44px);
   }
-  .ov-top { max-width: 60%; }
+  .ov-top {
+    max-width: 60%;
+  }
   .ov-eyebrow {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.28em;
-    font-size: clamp(0.6rem, 1vw, 0.72rem); color: var(--gold-soft); margin: 0 0 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: clamp(0.6rem, 1vw, 0.72rem);
+    color: var(--gold-soft);
+    margin: 0 0 6px;
   }
   .ov-eyebrow::before {
-    content: ""; width: 20px; height: 1px; background: rgba(var(--gold-rgb), 0.7);
+    content: "";
+    width: 20px;
+    height: 1px;
+    background: rgba(var(--gold-rgb), 0.7);
   }
-  .ov-kicker { font-size: clamp(0.72rem, 1.1vw, 0.85rem); color: var(--ink); opacity: 0.8; margin: 0 0 8px; letter-spacing: 0.02em; }
+  .ov-kicker {
+    font-size: clamp(0.72rem, 1.1vw, 0.85rem);
+    color: var(--ink);
+    opacity: 0.8;
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+  }
   .ov-title {
-    font-family: var(--font-display); font-weight: 600; color: #fff5df;
-    font-size: clamp(1.6rem, 4.6vw, 3.4rem); line-height: 1; letter-spacing: -0.02em;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.6); margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: #fff5df;
+    font-size: clamp(1.6rem, 4.6vw, 3.4rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.6);
+    margin: 0;
   }
   .ov-meta {
-    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.16em;
-    font-size: clamp(0.66rem, 1.1vw, 0.82rem); color: var(--gold); margin: 12px 0 0;
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: clamp(0.66rem, 1.1vw, 0.82rem);
+    color: var(--gold);
+    margin: 12px 0 0;
   }
-  .ov-goal { max-width: 46ch; color: #e7e0cf; font-size: clamp(0.8rem, 1.3vw, 0.98rem); margin: 12px 0 0; text-shadow: 0 2px 10px rgba(0,0,0,0.6); }
+  .ov-goal {
+    max-width: 46ch;
+    color: #e7e0cf;
+    font-size: clamp(0.8rem, 1.3vw, 0.98rem);
+    margin: 12px 0 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  }
   .ov-q {
-    max-width: 44ch; color: #ece4d2; font-style: italic; font-family: var(--font-display);
-    font-size: clamp(0.78rem, 1.25vw, 0.95rem); margin: 8px 0 0; opacity: 0.95;
+    max-width: 44ch;
+    color: #ece4d2;
+    font-style: italic;
+    font-family: var(--font-display);
+    font-size: clamp(0.78rem, 1.25vw, 0.95rem);
+    margin: 8px 0 0;
+    opacity: 0.95;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   }
 
   /* pinned to the frame's bottom edge, independent of how tall the text above is —
      this is the fix for the loader being pushed off-frame on the Atlantic card */
   .ov-bottom {
-    position: absolute; z-index: 7; pointer-events: none;
-    left: clamp(20px, 3.5vw, 44px); right: clamp(20px, 3.2vw, 40px);
+    position: absolute;
+    z-index: 7;
+    pointer-events: none;
+    left: clamp(20px, 3.5vw, 44px);
+    right: clamp(20px, 3.2vw, 40px);
     bottom: clamp(18px, 3vw, 40px);
-    display: flex; align-items: flex-end; justify-content: flex-end; gap: 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 20px;
   }
   /* the enter prompt now lives BELOW the window, so it never fights the art or the title */
-  .enter-bar { max-width: 960px; margin: 12px auto 0; min-height: 42px; display: flex; justify-content: center; }
-  .enter-prompt {
-    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(0.7rem, 1.1vw, 0.84rem); color: var(--gold-soft);
-    padding: 10px 20px; border: 1px solid rgba(var(--gold-rgb), 0.5); border-radius: 999px;
-    background: rgba(var(--navy-rgb), 0.5); opacity: 0; transform: translateY(-4px);
-    transition: opacity 0.4s ease, transform 0.4s ease;
+  .enter-bar {
+    max-width: 960px;
+    margin: 12px auto 0;
+    min-height: 42px;
+    display: flex;
+    justify-content: center;
   }
-  .enter-prompt.show { opacity: 1; transform: translateY(0); }
-  .enter-prompt::after { content: " →"; }
+  .enter-prompt {
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: clamp(0.7rem, 1.1vw, 0.84rem);
+    color: var(--gold-soft);
+    padding: 10px 20px;
+    border: 1px solid rgba(var(--gold-rgb), 0.5);
+    border-radius: 999px;
+    background: rgba(var(--navy-rgb), 0.5);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 0.4s ease,
+      transform 0.4s ease;
+  }
+  .enter-prompt.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .enter-prompt::after {
+    content: " →";
+  }
 
   /* ---- circular syncing loader ---- */
-  .loader { position: relative; width: clamp(96px, 12.5vw, 148px); aspect-ratio: 1; flex: 0 0 auto; }
+  .loader {
+    position: relative;
+    width: clamp(96px, 12.5vw, 148px);
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+  }
   /* dark backing so the loader stays legible over any painting behind it */
   .loader::before {
-    content: ""; position: absolute; inset: -18%; border-radius: 50%; z-index: 0;
-    background: radial-gradient(circle, rgba(3, 12, 18, 0.72) 42%, rgba(3, 12, 18, 0.34) 62%, transparent 76%);
+    content: "";
+    position: absolute;
+    inset: -18%;
+    border-radius: 50%;
+    z-index: 0;
+    background: radial-gradient(
+      circle,
+      rgba(3, 12, 18, 0.72) 42%,
+      rgba(3, 12, 18, 0.34) 62%,
+      transparent 76%
+    );
   }
-  .loader svg { position: relative; z-index: 1; width: 100%; height: 100%; display: block; }
-  .ring-track { fill: none; stroke: rgba(var(--gold-rgb), 0.16); stroke-width: 5; }
+  .loader svg {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .ring-track {
+    fill: none;
+    stroke: rgba(var(--gold-rgb), 0.16);
+    stroke-width: 5;
+  }
   .ring-fill {
-    fill: none; stroke: url(#loadgrad); stroke-width: 6; stroke-linecap: round;
-    transform: rotate(-90deg); transform-origin: 90px 90px;
+    fill: none;
+    stroke: url(#loadgrad);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 90px 90px;
     filter: drop-shadow(0 0 6px rgba(var(--gold-rgb), 0.5));
   }
   .ring-ticks {
-    fill: none; stroke: rgba(var(--gold-rgb), 0.5); stroke-width: 2; stroke-dasharray: 2 9;
-    transform-origin: 90px 90px; animation: spin 9s linear infinite;
+    fill: none;
+    stroke: rgba(var(--gold-rgb), 0.5);
+    stroke-width: 2;
+    stroke-dasharray: 2 9;
+    transform-origin: 90px 90px;
+    animation: spin 9s linear infinite;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   .ring-label {
-    position: absolute; inset: 14%; z-index: 2; display: grid; place-content: center; text-align: center; gap: 3px;
+    position: absolute;
+    inset: 14%;
+    z-index: 2;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    gap: 3px;
   }
   .ring-pct {
-    font-family: var(--font-display); font-variant-numeric: tabular-nums; font-weight: 600;
-    font-size: clamp(1.2rem, 2.4vw, 1.9rem); color: #fff5df; line-height: 1;
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+    color: #fff5df;
+    line-height: 1;
   }
   /* the "Synced" word state — smaller than the % number so it fits on one line, teal */
-  .ring-pct.word { font-size: clamp(0.86rem, 1.6vw, 1.18rem); letter-spacing: 0.04em; color: var(--teal); }
-  .ring-sync {
-    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.14em;
-    font-size: clamp(0.46rem, 0.82vw, 0.56rem); color: var(--gold-soft);
-    white-space: normal; line-height: 1.18; max-width: 8.5ch;
+  .ring-pct.word {
+    font-size: clamp(0.86rem, 1.6vw, 1.18rem);
+    letter-spacing: 0.04em;
+    color: var(--teal);
   }
-  .ring-sync:empty { display: none; }
-  .ring-sync.done { color: var(--teal); }
+  .ring-sync {
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: clamp(0.46rem, 0.82vw, 0.56rem);
+    color: var(--gold-soft);
+    white-space: normal;
+    line-height: 1.18;
+    max-width: 8.5ch;
+  }
+  .ring-sync:empty {
+    display: none;
+  }
+  .ring-sync.done {
+    color: var(--teal);
+  }
 
   /* ---- controls ---- */
-  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 6px; }
-  button {
-    font-family: var(--font-label); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 10px 16px; border-radius: 9px; cursor: pointer; color: var(--text);
-    border: 1px solid rgba(var(--gold-rgb), 0.45); background: var(--chip-idle);
-    transition: transform 0.12s, background 0.2s, border-color 0.2s;
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin: 16px 0 6px;
   }
-  button:hover { transform: translateY(-1px); border-color: rgba(var(--gold-rgb), 0.8); }
-  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-  button.primary { background: var(--gold); color: #19303a; border-color: var(--gold); font-weight: 700; }
-  button[aria-pressed="true"] { background: rgba(var(--gold-rgb), 0.2); border-color: var(--gold); color: var(--gold-soft); }
-  .spacer { flex: 1; }
-  .hint { font-family: var(--font-ui); font-size: 0.8rem; color: var(--muted); }
+  button {
+    font-family: var(--font-label);
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    border-radius: 9px;
+    cursor: pointer;
+    color: var(--text);
+    border: 1px solid rgba(var(--gold-rgb), 0.45);
+    background: var(--chip-idle);
+    transition:
+      transform 0.12s,
+      background 0.2s,
+      border-color 0.2s;
+  }
+  button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(var(--gold-rgb), 0.8);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+  button.primary {
+    background: var(--gold);
+    color: #19303a;
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+  button[aria-pressed="true"] {
+    background: rgba(var(--gold-rgb), 0.2);
+    border-color: var(--gold);
+    color: var(--gold-soft);
+  }
+  .spacer {
+    flex: 1;
+  }
+  .hint {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
 
   /* ---- notes ---- */
-  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 30px; }
-  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 16px 18px; }
-  .card h3 {
-    font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.12em;
-    font-size: 0.74rem; color: var(--gold); margin: 0 0 8px;
+  .notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 30px;
   }
-  .card p { margin: 0 0 8px; font-size: 0.88rem; }
-  .card ul { margin: 0; padding-left: 18px; }
-  .card li { font-size: 0.86rem; margin-bottom: 5px; }
-  .card li b { color: var(--gold-soft); font-weight: 600; }
-  footer { margin-top: 30px; font-size: 0.8rem; color: var(--muted); }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 16px 18px;
+  }
+  .card h3 {
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.74rem;
+    color: var(--gold);
+    margin: 0 0 8px;
+  }
+  .card p {
+    margin: 0 0 8px;
+    font-size: 0.88rem;
+  }
+  .card ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .card li {
+    font-size: 0.86rem;
+    margin-bottom: 5px;
+  }
+  .card li b {
+    color: var(--gold-soft);
+    font-weight: 600;
+  }
+  footer {
+    margin-top: 30px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
 
-  @media (prefers-reduced-motion: reduce) { .ring-ticks { animation: none; } }
-  @media (max-width: 620px) { .ov-top { max-width: 100%; } .ov-bottom { flex-direction: column; align-items: flex-start; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ring-ticks {
+      animation: none;
+    }
+  }
+  @media (max-width: 620px) {
+    .ov-top {
+      max-width: 100%;
+    }
+    .ov-bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
 </style>
 
 <div class="wrap">
@@ -291,10 +775,11 @@
     <p class="eyebrow">Chronicle Institute · Location transition — mockup</p>
     <h1>Arriving somewhere should <em>feel</em> like arriving.</h1>
     <p class="lede">
-      A warm, on-brand screen that plays on a <b>warp</b> or when <b>entering a new building</b> (not
-      room-to-room): a stylized image of where you're going, light geometric framing, and a circular
-      <b>“Syncing”</b> loader that fills. The scenes here are hand-drawn SVG <em>stand-ins</em> for the
-      final art — a PixelLab illustration or a stylized render of the real map. Switch destinations below.
+      A warm, on-brand screen that plays on a <b>warp</b> or when
+      <b>entering a new building</b> (not room-to-room): a stylized image of where you're going,
+      light geometric framing, and a circular <b>“Syncing”</b> loader that fills. The scenes here
+      are hand-drawn SVG <em>stand-ins</em> for the final art — a PixelLab illustration or a
+      stylized render of the real map. Switch destinations below.
     </p>
   </header>
 
@@ -315,95 +800,207 @@
 
   <div class="screen-frame">
     <div class="screen" id="screen" tabindex="0" aria-label="Location transition screen">
-
       <!-- ===== SCENE: THE ARCHIVE (interior) ===== -->
       <div class="scene active" id="scene-archive">
         <img class="scene-img" id="img-archive" alt="The Institute Archive interior" />
-        <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Stylised Institute Archive interior">
+        <svg
+          viewBox="0 0 1600 900"
+          preserveAspectRatio="xMidYMid slice"
+          role="img"
+          aria-label="Stylised Institute Archive interior"
+        >
           <defs>
             <linearGradient id="arWall" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0a2634"/><stop offset="0.55" stop-color="#071d29"/><stop offset="1" stop-color="#04121a"/>
+              <stop offset="0" stop-color="#0a2634" />
+              <stop offset="0.55" stop-color="#071d29" />
+              <stop offset="1" stop-color="#04121a" />
             </linearGradient>
             <linearGradient id="arFloor" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0c2a34"/><stop offset="1" stop-color="#061820"/>
+              <stop offset="0" stop-color="#0c2a34" />
+              <stop offset="1" stop-color="#061820" />
             </linearGradient>
             <radialGradient id="arWin" cx="0.5" cy="0.35" r="0.7">
-              <stop offset="0" stop-color="#ffe9ad"/><stop offset="0.45" stop-color="#e9b65a"/><stop offset="1" stop-color="#7a5a24" stop-opacity="0"/>
+              <stop offset="0" stop-color="#ffe9ad" />
+              <stop offset="0.45" stop-color="#e9b65a" />
+              <stop offset="1" stop-color="#7a5a24" stop-opacity="0" />
             </radialGradient>
             <radialGradient id="arTable" cx="0.5" cy="0.5" r="0.6">
-              <stop offset="0" stop-color="#bff4f0"/><stop offset="0.5" stop-color="#4bc4c9" stop-opacity="0.7"/><stop offset="1" stop-color="#136d78" stop-opacity="0"/>
+              <stop offset="0" stop-color="#bff4f0" />
+              <stop offset="0.5" stop-color="#4bc4c9" stop-opacity="0.7" />
+              <stop offset="1" stop-color="#136d78" stop-opacity="0" />
             </radialGradient>
             <radialGradient id="arLamp" cx="0.5" cy="0.5" r="0.5">
-              <stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/>
+              <stop offset="0" stop-color="#ffd98a" />
+              <stop offset="1" stop-color="#ffd98a" stop-opacity="0" />
             </radialGradient>
           </defs>
 
-          <rect width="1600" height="620" fill="url(#arWall)"/>
-          <rect y="600" width="1600" height="300" fill="url(#arFloor)"/>
+          <rect width="1600" height="620" fill="url(#arWall)" />
+          <rect y="600" width="1600" height="300" fill="url(#arFloor)" />
 
           <!-- arched windows with warm light -->
           <g>
-            <ellipse cx="300" cy="270" rx="150" ry="215" fill="url(#arWin)" opacity="0.62"/>
-            <ellipse cx="1300" cy="270" rx="150" ry="215" fill="url(#arWin)" opacity="0.62"/>
-            <path d="M200 470 v-230 a100 100 0 0 1 200 0 v230 z" fill="#0a2230" stroke="#e9b65a" stroke-opacity="0.5" stroke-width="4"/>
-            <path d="M1200 470 v-230 a100 100 0 0 1 200 0 v230 z" fill="#0a2230" stroke="#e9b65a" stroke-opacity="0.5" stroke-width="4"/>
-            <line x1="300" y1="150" x2="300" y2="470" stroke="#e9b65a" stroke-opacity="0.35" stroke-width="3"/>
-            <line x1="1300" y1="150" x2="1300" y2="470" stroke="#e9b65a" stroke-opacity="0.35" stroke-width="3"/>
-            <line x1="220" y1="330" x2="380" y2="330" stroke="#e9b65a" stroke-opacity="0.35" stroke-width="3"/>
-            <line x1="1220" y1="330" x2="1380" y2="330" stroke="#e9b65a" stroke-opacity="0.35" stroke-width="3"/>
+            <ellipse cx="300" cy="270" rx="150" ry="215" fill="url(#arWin)" opacity="0.62" />
+            <ellipse cx="1300" cy="270" rx="150" ry="215" fill="url(#arWin)" opacity="0.62" />
+            <path
+              d="M200 470 v-230 a100 100 0 0 1 200 0 v230 z"
+              fill="#0a2230"
+              stroke="#e9b65a"
+              stroke-opacity="0.5"
+              stroke-width="4"
+            />
+            <path
+              d="M1200 470 v-230 a100 100 0 0 1 200 0 v230 z"
+              fill="#0a2230"
+              stroke="#e9b65a"
+              stroke-opacity="0.5"
+              stroke-width="4"
+            />
+            <line
+              x1="300"
+              y1="150"
+              x2="300"
+              y2="470"
+              stroke="#e9b65a"
+              stroke-opacity="0.35"
+              stroke-width="3"
+            />
+            <line
+              x1="1300"
+              y1="150"
+              x2="1300"
+              y2="470"
+              stroke="#e9b65a"
+              stroke-opacity="0.35"
+              stroke-width="3"
+            />
+            <line
+              x1="220"
+              y1="330"
+              x2="380"
+              y2="330"
+              stroke="#e9b65a"
+              stroke-opacity="0.35"
+              stroke-width="3"
+            />
+            <line
+              x1="1220"
+              y1="330"
+              x2="1380"
+              y2="330"
+              stroke="#e9b65a"
+              stroke-opacity="0.35"
+              stroke-width="3"
+            />
           </g>
 
           <!-- ceiling arches -->
           <g stroke="#0e2c39" stroke-width="10" fill="none" opacity="0.8">
-            <path d="M0 120 Q800 -40 1600 120"/>
-            <path d="M0 70 Q800 -90 1600 70"/>
+            <path d="M0 120 Q800 -40 1600 120" />
+            <path d="M0 70 Q800 -90 1600 70" />
           </g>
 
           <!-- bookshelves receding on both sides -->
           <g fill="#0a2531" stroke="#0f3441" stroke-width="2">
-            <rect x="40" y="430" width="150" height="200"/>
-            <rect x="1410" y="430" width="150" height="200"/>
+            <rect x="40" y="430" width="150" height="200" />
+            <rect x="1410" y="430" width="150" height="200" />
           </g>
           <g fill="#e9d5a3" opacity="0.5">
-            <rect x="52" y="446" width="8" height="52"/><rect x="66" y="446" width="10" height="52"/><rect x="82" y="450" width="7" height="48"/><rect x="96" y="444" width="11" height="54"/><rect x="114" y="448" width="8" height="50"/><rect x="130" y="446" width="9" height="52"/><rect x="146" y="450" width="7" height="48"/><rect x="160" y="444" width="10" height="54"/>
-            <rect x="52" y="512" width="9" height="50"/><rect x="68" y="510" width="7" height="52"/><rect x="82" y="514" width="10" height="48"/><rect x="100" y="510" width="8" height="52"/><rect x="116" y="512" width="9" height="50"/><rect x="132" y="510" width="7" height="52"/><rect x="148" y="514" width="10" height="48"/>
-            <rect x="1422" y="446" width="8" height="52"/><rect x="1436" y="446" width="10" height="52"/><rect x="1452" y="450" width="7" height="48"/><rect x="1466" y="444" width="11" height="54"/><rect x="1484" y="448" width="8" height="50"/><rect x="1500" y="446" width="9" height="52"/><rect x="1516" y="450" width="7" height="48"/><rect x="1530" y="444" width="10" height="54"/>
-            <rect x="1422" y="512" width="9" height="50"/><rect x="1438" y="510" width="7" height="52"/><rect x="1452" y="514" width="10" height="48"/><rect x="1470" y="510" width="8" height="52"/><rect x="1486" y="512" width="9" height="50"/><rect x="1502" y="510" width="7" height="52"/><rect x="1518" y="514" width="10" height="48"/>
+            <rect x="52" y="446" width="8" height="52" />
+            <rect x="66" y="446" width="10" height="52" />
+            <rect x="82" y="450" width="7" height="48" />
+            <rect x="96" y="444" width="11" height="54" />
+            <rect x="114" y="448" width="8" height="50" />
+            <rect x="130" y="446" width="9" height="52" />
+            <rect x="146" y="450" width="7" height="48" />
+            <rect x="160" y="444" width="10" height="54" />
+            <rect x="52" y="512" width="9" height="50" />
+            <rect x="68" y="510" width="7" height="52" />
+            <rect x="82" y="514" width="10" height="48" />
+            <rect x="100" y="510" width="8" height="52" />
+            <rect x="116" y="512" width="9" height="50" />
+            <rect x="132" y="510" width="7" height="52" />
+            <rect x="148" y="514" width="10" height="48" />
+            <rect x="1422" y="446" width="8" height="52" />
+            <rect x="1436" y="446" width="10" height="52" />
+            <rect x="1452" y="450" width="7" height="48" />
+            <rect x="1466" y="444" width="11" height="54" />
+            <rect x="1484" y="448" width="8" height="50" />
+            <rect x="1500" y="446" width="9" height="52" />
+            <rect x="1516" y="450" width="7" height="48" />
+            <rect x="1530" y="444" width="10" height="54" />
+            <rect x="1422" y="512" width="9" height="50" />
+            <rect x="1438" y="510" width="7" height="52" />
+            <rect x="1452" y="514" width="10" height="48" />
+            <rect x="1470" y="510" width="8" height="52" />
+            <rect x="1486" y="512" width="9" height="50" />
+            <rect x="1502" y="510" width="7" height="52" />
+            <rect x="1518" y="514" width="10" height="48" />
           </g>
 
           <!-- hanging lamps -->
           <g>
-            <ellipse cx="560" cy="300" rx="70" ry="70" fill="url(#arLamp)"/>
-            <ellipse cx="1040" cy="300" rx="70" ry="70" fill="url(#arLamp)"/>
-            <line x1="560" y1="80" x2="560" y2="250" stroke="#20455168" stroke-width="3"/>
-            <line x1="1040" y1="80" x2="1040" y2="250" stroke="#20455168" stroke-width="3"/>
-            <circle cx="560" cy="262" r="12" fill="#ffcf7a"/>
-            <circle cx="1040" cy="262" r="12" fill="#ffcf7a"/>
+            <ellipse cx="560" cy="300" rx="70" ry="70" fill="url(#arLamp)" />
+            <ellipse cx="1040" cy="300" rx="70" ry="70" fill="url(#arLamp)" />
+            <line x1="560" y1="80" x2="560" y2="250" stroke="#20455168" stroke-width="3" />
+            <line x1="1040" y1="80" x2="1040" y2="250" stroke="#20455168" stroke-width="3" />
+            <circle cx="560" cy="262" r="12" fill="#ffcf7a" />
+            <circle cx="1040" cy="262" r="12" fill="#ffcf7a" />
           </g>
 
           <!-- floor light pools -->
-          <ellipse cx="300" cy="700" rx="260" ry="60" fill="#e9b65a" opacity="0.10"/>
-          <ellipse cx="1300" cy="700" rx="260" ry="60" fill="#e9b65a" opacity="0.10"/>
+          <ellipse cx="300" cy="700" rx="260" ry="60" fill="#e9b65a" opacity="0.10" />
+          <ellipse cx="1300" cy="700" rx="260" ry="60" fill="#e9b65a" opacity="0.10" />
 
           <!-- Navigation Table (focal) -->
-          <ellipse cx="800" cy="720" rx="330" ry="120" fill="url(#arTable)"/>
+          <ellipse cx="800" cy="720" rx="330" ry="120" fill="url(#arTable)" />
           <g>
-            <path d="M600 690 h400 l40 60 h-480 z" fill="#0c2c37" stroke="#2a6b73" stroke-width="3"/>
-            <ellipse cx="800" cy="688" rx="200" ry="52" fill="#0e3a44" stroke="#5fd0d5" stroke-width="3"/>
-            <ellipse cx="800" cy="688" rx="150" ry="38" fill="#0a2c34"/>
+            <path
+              d="M600 690 h400 l40 60 h-480 z"
+              fill="#0c2c37"
+              stroke="#2a6b73"
+              stroke-width="3"
+            />
+            <ellipse
+              cx="800"
+              cy="688"
+              rx="200"
+              ry="52"
+              fill="#0e3a44"
+              stroke="#5fd0d5"
+              stroke-width="3"
+            />
+            <ellipse cx="800" cy="688" rx="150" ry="38" fill="#0a2c34" />
             <!-- glowing map lines on the table -->
-            <path d="M700 688 q60 -22 120 -4 t100 8" fill="none" stroke="#8ef0ea" stroke-width="2.5" opacity="0.85"/>
-            <path d="M690 700 q80 14 150 2 t130 -10" fill="none" stroke="#f0d488" stroke-width="2" opacity="0.7"/>
-            <circle cx="770" cy="686" r="5" fill="#ffe9ad"/>
-            <circle cx="856" cy="694" r="4" fill="#8ef0ea"/>
+            <path
+              d="M700 688 q60 -22 120 -4 t100 8"
+              fill="none"
+              stroke="#8ef0ea"
+              stroke-width="2.5"
+              opacity="0.85"
+            />
+            <path
+              d="M690 700 q80 14 150 2 t130 -10"
+              fill="none"
+              stroke="#f0d488"
+              stroke-width="2"
+              opacity="0.7"
+            />
+            <circle cx="770" cy="686" r="5" fill="#ffe9ad" />
+            <circle cx="856" cy="694" r="4" fill="#8ef0ea" />
             <!-- table legs -->
-            <rect x="640" y="748" width="12" height="70" fill="#0a2530"/>
-            <rect x="948" y="748" width="12" height="70" fill="#0a2530"/>
+            <rect x="640" y="748" width="12" height="70" fill="#0a2530" />
+            <rect x="948" y="748" width="12" height="70" fill="#0a2530" />
           </g>
 
           <!-- dust motes -->
           <g fill="#f0d488">
-            <circle cx="470" cy="360" r="2.5" opacity="0.5"/><circle cx="640" cy="450" r="2" opacity="0.4"/><circle cx="1120" cy="400" r="2.5" opacity="0.5"/><circle cx="900" cy="330" r="2" opacity="0.35"/><circle cx="1180" cy="520" r="2" opacity="0.4"/><circle cx="420" cy="520" r="2" opacity="0.4"/>
+            <circle cx="470" cy="360" r="2.5" opacity="0.5" />
+            <circle cx="640" cy="450" r="2" opacity="0.4" />
+            <circle cx="1120" cy="400" r="2.5" opacity="0.5" />
+            <circle cx="900" cy="330" r="2" opacity="0.35" />
+            <circle cx="1180" cy="520" r="2" opacity="0.4" />
+            <circle cx="420" cy="520" r="2" opacity="0.4" />
           </g>
         </svg>
       </div>
@@ -411,128 +1008,230 @@
       <!-- ===== SCENE: CARIBBEAN 1493 (exterior) ===== -->
       <div class="scene" id="scene-caribbean">
         <img class="scene-img" id="img-caribbean" alt="Caribbean shore, 1493" />
-        <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Stylised Caribbean shore, 1493">
+        <svg
+          viewBox="0 0 1600 900"
+          preserveAspectRatio="xMidYMid slice"
+          role="img"
+          aria-label="Stylised Caribbean shore, 1493"
+        >
           <defs>
             <linearGradient id="cbSky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0a3040"/><stop offset="0.4" stop-color="#1a5f68"/><stop offset="0.72" stop-color="#7fae94"/><stop offset="0.9" stop-color="#eec072"/><stop offset="1" stop-color="#f6d98f"/>
+              <stop offset="0" stop-color="#0a3040" />
+              <stop offset="0.4" stop-color="#1a5f68" />
+              <stop offset="0.72" stop-color="#7fae94" />
+              <stop offset="0.9" stop-color="#eec072" />
+              <stop offset="1" stop-color="#f6d98f" />
             </linearGradient>
             <radialGradient id="cbSun" cx="0.62" cy="0.86" r="0.5">
-              <stop offset="0" stop-color="#fff2c8"/><stop offset="0.4" stop-color="#f4d07a" stop-opacity="0.8"/><stop offset="1" stop-color="#f4d07a" stop-opacity="0"/>
+              <stop offset="0" stop-color="#fff2c8" />
+              <stop offset="0.4" stop-color="#f4d07a" stop-opacity="0.8" />
+              <stop offset="1" stop-color="#f4d07a" stop-opacity="0" />
             </radialGradient>
             <linearGradient id="cbSea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#4c9f92"/><stop offset="0.25" stop-color="#1e6d70"/><stop offset="1" stop-color="#062832"/>
+              <stop offset="0" stop-color="#4c9f92" />
+              <stop offset="0.25" stop-color="#1e6d70" />
+              <stop offset="1" stop-color="#062832" />
             </linearGradient>
             <linearGradient id="cbSunpath" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#ffe9ad" stop-opacity="0.7"/><stop offset="1" stop-color="#ffe9ad" stop-opacity="0"/>
+              <stop offset="0" stop-color="#ffe9ad" stop-opacity="0.7" />
+              <stop offset="1" stop-color="#ffe9ad" stop-opacity="0" />
             </linearGradient>
           </defs>
 
-          <rect width="1600" height="520" fill="url(#cbSky)"/>
-          <ellipse cx="1000" cy="470" rx="620" ry="300" fill="url(#cbSun)"/>
-          <circle cx="1000" cy="486" r="46" fill="#fff4d2" opacity="0.9"/>
+          <rect width="1600" height="520" fill="url(#cbSky)" />
+          <ellipse cx="1000" cy="470" rx="620" ry="300" fill="url(#cbSun)" />
+          <circle cx="1000" cy="486" r="46" fill="#fff4d2" opacity="0.9" />
 
           <!-- distant island -->
-          <path d="M0 508 q120 -60 300 -34 q90 12 150 30 z" fill="#123f43" opacity="0.8"/>
-          <path d="M1180 512 q120 -40 300 -18 q70 8 120 22 v20 h-540 z" fill="#123f43" opacity="0.7"/>
+          <path d="M0 508 q120 -60 300 -34 q90 12 150 30 z" fill="#123f43" opacity="0.8" />
+          <path
+            d="M1180 512 q120 -40 300 -18 q70 8 120 22 v20 h-540 z"
+            fill="#123f43"
+            opacity="0.7"
+          />
 
           <!-- sea -->
-          <rect y="510" width="1600" height="390" fill="url(#cbSea)"/>
-          <polygon points="880,510 1120,510 1080,720 920,720" fill="url(#cbSunpath)"/>
+          <rect y="510" width="1600" height="390" fill="url(#cbSea)" />
+          <polygon points="880,510 1120,510 1080,720 920,720" fill="url(#cbSunpath)" />
           <!-- glints -->
           <g class="cb-glints" stroke="#cdeee0" stroke-width="2" opacity="0.4">
-            <line x1="300" y1="560" x2="420" y2="560"/><line x1="600" y1="600" x2="720" y2="600"/><line x1="1180" y1="580" x2="1320" y2="580"/><line x1="240" y1="650" x2="360" y2="650"/><line x1="820" y1="660" x2="900" y2="660"/><line x1="1080" y1="700" x2="1220" y2="700"/>
+            <line x1="300" y1="560" x2="420" y2="560" />
+            <line x1="600" y1="600" x2="720" y2="600" />
+            <line x1="1180" y1="580" x2="1320" y2="580" />
+            <line x1="240" y1="650" x2="360" y2="650" />
+            <line x1="820" y1="660" x2="900" y2="660" />
+            <line x1="1080" y1="700" x2="1220" y2="700" />
           </g>
 
           <!-- caravel silhouette -->
           <g transform="translate(1040 470)" fill="#062029">
             <!-- reflection -->
-            <path d="M-150 66 q150 40 300 0 l-24 40 q-126 26 -252 0 z" fill="#0a3038" opacity="0.5"/>
+            <path
+              d="M-150 66 q150 40 300 0 l-24 40 q-126 26 -252 0 z"
+              fill="#0a3038"
+              opacity="0.5"
+            />
             <!-- hull -->
-            <path d="M-150 40 q150 46 300 0 l-40 44 q-110 30 -220 0 z" stroke="#2a6b6f" stroke-width="2"/>
+            <path
+              d="M-150 40 q150 46 300 0 l-40 44 q-110 30 -220 0 z"
+              stroke="#2a6b6f"
+              stroke-width="2"
+            />
             <!-- masts -->
-            <rect x="-92" y="-150" width="6" height="196"/><rect x="-3" y="-186" width="7" height="232"/><rect x="86" y="-140" width="6" height="186"/>
+            <rect x="-92" y="-150" width="6" height="196" />
+            <rect x="-3" y="-186" width="7" height="232" />
+            <rect x="86" y="-140" width="6" height="186" />
             <!-- sails -->
-            <path d="M-118 -132 q34 22 66 0 v70 q-32 20 -66 0 z" fill="#0c2f38" stroke="#e9b65a" stroke-opacity="0.4" stroke-width="2"/>
-            <path d="M-40 -168 q42 26 84 0 v96 q-42 24 -84 0 z" fill="#103741" stroke="#e9b65a" stroke-opacity="0.45" stroke-width="2"/>
-            <path d="M60 -122 q32 20 62 0 v64 q-30 18 -62 0 z" fill="#0c2f38" stroke="#e9b65a" stroke-opacity="0.4" stroke-width="2"/>
+            <path
+              d="M-118 -132 q34 22 66 0 v70 q-32 20 -66 0 z"
+              fill="#0c2f38"
+              stroke="#e9b65a"
+              stroke-opacity="0.4"
+              stroke-width="2"
+            />
+            <path
+              d="M-40 -168 q42 26 84 0 v96 q-42 24 -84 0 z"
+              fill="#103741"
+              stroke="#e9b65a"
+              stroke-opacity="0.45"
+              stroke-width="2"
+            />
+            <path
+              d="M60 -122 q32 20 62 0 v64 q-30 18 -62 0 z"
+              fill="#0c2f38"
+              stroke="#e9b65a"
+              stroke-opacity="0.4"
+              stroke-width="2"
+            />
             <!-- flag -->
-            <path d="M1 -186 l30 10 l-30 10 z" fill="#e1b65d"/>
+            <path d="M1 -186 l30 10 l-30 10 z" fill="#e1b65d" />
           </g>
 
           <!-- birds -->
           <g stroke="#0a2a30" stroke-width="3" fill="none" opacity="0.7">
-            <path d="M360 220 q14 -12 28 0 q14 -12 28 0"/><path d="M470 180 q10 -9 20 0 q10 -9 20 0"/><path d="M300 260 q9 -8 18 0 q9 -8 18 0"/>
+            <path d="M360 220 q14 -12 28 0 q14 -12 28 0" />
+            <path d="M470 180 q10 -9 20 0 q10 -9 20 0" />
+            <path d="M300 260 q9 -8 18 0 q9 -8 18 0" />
           </g>
 
           <!-- foreground shore + rocks -->
-          <path d="M0 900 v-150 q260 -70 560 -30 q-180 90 -560 180 z" fill="#08222b"/>
-          <ellipse cx="240" cy="812" rx="120" ry="24" fill="#0b2c34"/>
-          <ellipse cx="470" cy="852" rx="90" ry="18" fill="#0b2c34"/>
+          <path d="M0 900 v-150 q260 -70 560 -30 q-180 90 -560 180 z" fill="#08222b" />
+          <ellipse cx="240" cy="812" rx="120" ry="24" fill="#0b2c34" />
+          <ellipse cx="470" cy="852" rx="90" ry="18" fill="#0b2c34" />
 
           <!-- palm tree leaning from left -->
           <g stroke="#07202a" stroke-width="16" fill="none" stroke-linecap="round">
-            <path d="M60 900 q40 -260 150 -360"/>
+            <path d="M60 900 q40 -260 150 -360" />
           </g>
           <g fill="#0a2a2f">
-            <path d="M210 540 q-120 -34 -190 6 q120 -6 190 40 z"/>
-            <path d="M210 540 q-70 -110 -170 -120 q90 44 150 150 z"/>
-            <path d="M210 540 q60 -104 176 -104 q-96 34 -150 140 z"/>
-            <path d="M210 540 q120 -30 200 20 q-120 -8 -190 44 z"/>
-            <path d="M210 540 q28 -120 -6 -220 q64 96 60 224 z"/>
+            <path d="M210 540 q-120 -34 -190 6 q120 -6 190 40 z" />
+            <path d="M210 540 q-70 -110 -170 -120 q90 44 150 150 z" />
+            <path d="M210 540 q60 -104 176 -104 q-96 34 -150 140 z" />
+            <path d="M210 540 q120 -30 200 20 q-120 -8 -190 44 z" />
+            <path d="M210 540 q28 -120 -6 -220 q64 96 60 224 z" />
           </g>
         </svg>
       </div>
 
       <!-- ===== SCENE: RIVERBEND SETTLEMENT (exterior) ===== -->
       <div class="scene" id="scene-riverbend">
-        <img class="scene-img" id="img-riverbend" alt="The Riverbend tobacco settlement on the James River, 1619" />
+        <img
+          class="scene-img"
+          id="img-riverbend"
+          alt="The Riverbend tobacco settlement on the James River, 1619"
+        />
       </div>
 
       <!-- ===== SCENE: THE COMMON CAUSE — Revolutionary-era Philadelphia (exterior) ===== -->
       <div class="scene" id="scene-commonCause">
-        <img class="scene-img" id="img-commonCause" alt="A Revolutionary-era Philadelphia market square: Independence Hall's clock tower, a cobblestone street of wagons and townspeople, and tall ships at the harbor beyond" />
+        <img
+          class="scene-img"
+          id="img-commonCause"
+          alt="A Revolutionary-era Philadelphia market square: Independence Hall's clock tower, a cobblestone street of wagons and townspeople, and tall ships at the harbor beyond"
+        />
       </div>
 
       <div class="vignette"></div>
       <div class="scrim"></div>
       <!-- CARIBBEAN: the painted water ripples (image pixels warped by turbulence, masked to the bay) -->
-      <svg class="cb-fx" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <svg
+        class="cb-fx"
+        viewBox="0 0 1600 900"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
         <defs>
-          <filter id="cbWater" x="-4%" y="-6%" width="108%" height="118%" color-interpolation-filters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.009 0.026" numOctaves="2" seed="6" result="n">
-              <animate attributeName="baseFrequency" dur="17s"
-                       values="0.009 0.024; 0.012 0.030; 0.009 0.024" repeatCount="indefinite"/>
+          <filter
+            id="cbWater"
+            x="-4%"
+            y="-6%"
+            width="108%"
+            height="118%"
+            color-interpolation-filters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.009 0.026"
+              numOctaves="2"
+              seed="6"
+              result="n"
+            >
+              <animate
+                attributeName="baseFrequency"
+                dur="17s"
+                values="0.009 0.024; 0.012 0.030; 0.009 0.024"
+                repeatCount="indefinite"
+              />
             </feTurbulence>
-            <feDisplacementMap in="SourceGraphic" in2="n" xChannelSelector="R" yChannelSelector="G" scale="9">
-              <animate attributeName="scale" dur="10s" values="6; 12; 6" repeatCount="indefinite"/>
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              scale="9"
+            >
+              <animate attributeName="scale" dur="10s" values="6; 12; 6" repeatCount="indefinite" />
             </feDisplacementMap>
           </filter>
           <radialGradient id="cbSoft" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stop-color="#fff"/>
-            <stop offset="0.5" stop-color="#fff"/>
-            <stop offset="1" stop-color="#000"/>
+            <stop offset="0" stop-color="#fff" />
+            <stop offset="0.5" stop-color="#fff" />
+            <stop offset="1" stop-color="#000" />
           </radialGradient>
           <!-- ripple only a few soft spots — the rocks + two stretches of surf + a patch of open bay,
                all feathered so there's no seam, and nowhere near the docks or the beach line -->
           <mask id="cbMask">
-            <ellipse cx="540" cy="678" rx="162" ry="66" fill="url(#cbSoft)"/>
-            <ellipse cx="372" cy="748" rx="140" ry="58" fill="url(#cbSoft)"/>
-            <ellipse cx="676" cy="632" rx="146" ry="54" fill="url(#cbSoft)"/>
-            <ellipse cx="308" cy="592" rx="140" ry="50" fill="url(#cbSoft)"/>
+            <ellipse cx="540" cy="678" rx="162" ry="66" fill="url(#cbSoft)" />
+            <ellipse cx="372" cy="748" rx="140" ry="58" fill="url(#cbSoft)" />
+            <ellipse cx="676" cy="632" rx="146" ry="54" fill="url(#cbSoft)" />
+            <ellipse cx="308" cy="592" rx="140" ry="50" fill="url(#cbSoft)" />
           </mask>
         </defs>
-        <image id="cb-water-img" x="0" y="0" width="1600" height="900" preserveAspectRatio="none"
-               filter="url(#cbWater)" mask="url(#cbMask)"/>
+        <image
+          id="cb-water-img"
+          x="0"
+          y="0"
+          width="1600"
+          height="900"
+          preserveAspectRatio="none"
+          filter="url(#cbWater)"
+          mask="url(#cbMask)"
+        />
       </svg>
 
       <!-- ARCHIVE: warm window glow + soft volumetric beams (CSS layers) -->
       <div class="ar-flicker"></div>
-      <div class="ar-beams"><span class="beam b1"></span><span class="beam b2"></span><span class="beam b3"></span></div>
+      <div class="ar-beams">
+        <span class="beam b1"></span><span class="beam b2"></span><span class="beam b3"></span>
+      </div>
 
       <!-- RIVERBEND: no contextual motion — the painting stands on its own (breathe + scrim only). -->
 
       <canvas id="spray"></canvas>
-      <div class="ticks"><span class="edge"></span><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+      <div class="ticks">
+        <span class="edge"></span><i class="tl"></i><i class="tr"></i><i class="bl"></i
+        ><i class="br"></i>
+      </div>
 
       <!-- content overlay -->
       <div class="overlay">
@@ -550,12 +1249,13 @@
             <svg viewBox="0 0 180 180">
               <defs>
                 <linearGradient id="loadgrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#f0d488"/><stop offset="1" stop-color="#7ee6ec"/>
+                  <stop offset="0" stop-color="#f0d488" />
+                  <stop offset="1" stop-color="#7ee6ec" />
                 </linearGradient>
               </defs>
-              <circle class="ring-ticks" cx="90" cy="90" r="82"/>
-              <circle class="ring-track" cx="90" cy="90" r="70"/>
-              <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="70"/>
+              <circle class="ring-ticks" cx="90" cy="90" r="82" />
+              <circle class="ring-track" cx="90" cy="90" r="70" />
+              <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="70" />
             </svg>
             <div class="ring-label">
               <span class="ring-pct" id="ringPct">0%</span>
@@ -588,16 +1288,30 @@
     <div class="card">
       <h3>What's on screen</h3>
       <ul>
-        <li>A <b>stylized illustration</b> of the destination — a real depicted place, not just geometry.</li>
-        <li>A circular <b>“Syncing”</b> loader that fills — the record catching up to where you are.</li>
-        <li><b>Subtle motion</b> — the scene gently breathes, light drifts, the water shimmers, window-light flickers. It fades softly into the navy rather than sitting as a hard photo.</li>
-        <li>Light <b>geometric framing</b> (corner ticks, a rotating tick-ring) layered over the art.</li>
+        <li>
+          A <b>stylized illustration</b> of the destination — a real depicted place, not just
+          geometry.
+        </li>
+        <li>
+          A circular <b>“Syncing”</b> loader that fills — the record catching up to where you are.
+        </li>
+        <li>
+          <b>Subtle motion</b> — the scene gently breathes, light drifts, the water shimmers,
+          window-light flickers. It fades softly into the navy rather than sitting as a hard photo.
+        </li>
+        <li>
+          Light <b>geometric framing</b> (corner ticks, a rotating tick-ring) layered over the art.
+        </li>
         <li>For a case: its <b>name, date, and goal</b> — the Atlantic Crossroads card, kept.</li>
       </ul>
     </div>
     <div class="card">
       <h3>Where the art comes from</h3>
-      <p>These SVG scenes are <b>stand-ins</b>. A painterly image (like the reference paintings) drops straight into this same frame — the fade and motion layers sit on top of whatever the backdrop is. Options, cheapest first:</p>
+      <p>
+        These SVG scenes are <b>stand-ins</b>. A painterly image (like the reference paintings)
+        drops straight into this same frame — the fade and motion layers sit on top of whatever the
+        backdrop is. Options, cheapest first:
+      </p>
       <ul>
         <li>A <b>painterly key illustration</b> per location — the reference-art look.</li>
         <li>A stylized <b>render of the real map</b> (you already have the tiles).</li>
@@ -606,45 +1320,69 @@
     </div>
   </div>
 
-  <footer>Real copy from <span class="tag">unit-01-campaign.js</span> (case-001). Palette &amp; type from <span class="tag">global.css</span>. Nothing here is wired into the game.</footer>
+  <footer>
+    Real copy from <span class="tag">unit-01-campaign.js</span> (case-001). Palette &amp; type from
+    <span class="tag">global.css</span>. Nothing here is wired into the game.
+  </footer>
 </div>
 
 <script>
   "use strict";
   /* painterly backdrops, optimized + inlined */
-  const ARCHIVE_IMG = './art/archive.jpg';
-  const CARIBBEAN_IMG = './art/caribbean.jpg';
-  const RIVERBEND_IMG = './art/riverbend.jpg';
-  const COMMONCAUSE_IMG = './art/common-cause.jpg';
+  const ARCHIVE_IMG = "./art/archive.jpg";
+  const CARIBBEAN_IMG = "./art/caribbean.jpg";
+  const RIVERBEND_IMG = "./art/riverbend.jpg";
+  const COMMONCAUSE_IMG = "./art/common-cause.jpg";
 
   const DEST = {
     archive: {
-      eyebrow: "Entering", kicker: "The Chronicle Institute", title: "The Institute Archive",
-      meta: "Present day · Navigation Table", goal: null, q: null,
-      sync: "Syncing archive", enter: "Press E to enter", scene: "archive",
+      eyebrow: "Entering",
+      kicker: "The Chronicle Institute",
+      title: "The Institute Archive",
+      meta: "Present day · Navigation Table",
+      goal: null,
+      q: null,
+      sync: "Syncing archive",
+      enter: "Press E to enter",
+      scene: "archive",
     },
     // One body statement per warp card: the central question carries the stakes; the "what you'll
     // do" goal is dropped (the in-world Mission Tracker briefs the tasks). goal stays in the schema,
     // null here, so a card can still show an orienting line where a question would be too abstract.
     caribbean: {
-      eyebrow: "Chronotravel", kicker: "Case 1.01 · The Atlantic Crossroads", title: "The Atlantic Crossroads",
-      meta: "Caribbean · 1493", goal: null,
+      eyebrow: "Chronotravel",
+      kicker: "Case 1.01 · The Atlantic Crossroads",
+      title: "The Atlantic Crossroads",
+      meta: "Caribbean · 1493",
+      goal: null,
       q: "How did early contact begin to reshape societies on both sides of the Atlantic?",
-      sync: "Syncing record", enter: "Follow the evidence", scene: "caribbean",
+      sync: "Syncing record",
+      enter: "Follow the evidence",
+      scene: "caribbean",
     },
     // Real content from unit-02-campaign.js, case-004 (Case 2.01).
     riverbend: {
-      eyebrow: "Chronotravel", kicker: "Case 2.01 · Colonial Crossroads", title: "The Riverbend Settlement",
-      meta: "Chesapeake tidewater · 1619", goal: null,
+      eyebrow: "Chronotravel",
+      kicker: "Case 2.01 · Colonial Crossroads",
+      title: "The Riverbend Settlement",
+      meta: "Chesapeake tidewater · 1619",
+      goal: null,
       q: "What do a land charter, a servant's letter, and a wharf ledger reveal about who did this settlement's work and who held its power?",
-      sync: "Syncing record", enter: "Follow the evidence", scene: "riverbend",
+      sync: "Syncing record",
+      enter: "Follow the evidence",
+      scene: "riverbend",
     },
     // Real content from unit-03-campaign.js, case-007 (Case 3.01).
     commonCause: {
-      eyebrow: "Chronotravel", kicker: "Case 3.01 · Revolution and Founding", title: "The Common Cause",
-      meta: "Philadelphia, Pennsylvania · 1763–1783", goal: null,
+      eyebrow: "Chronotravel",
+      kicker: "Case 3.01 · Revolution and Founding",
+      title: "The Common Cause",
+      meta: "Philadelphia, Pennsylvania · 1763–1783",
+      goal: null,
       q: "What did a frontier war, a farmer's protest, a King's offer of freedom, and rival appeals to liberty reveal about who could claim the Revolution's promise — and who was left still claiming it?",
-      sync: "Syncing record", enter: "Follow the evidence", scene: "commonCause",
+      sync: "Syncing record",
+      enter: "Follow the evidence",
+      scene: "commonCause",
     },
   };
 
@@ -662,42 +1400,65 @@
   };
   setSvgImage("cb-water-img", CARIBBEAN_IMG);
   const cbFxSvg = document.querySelector(".cb-fx");
-  const ring = $("ringFill"), pctEl = $("ringPct"), syncEl = $("ringSync");
-  const R = 70, C = 2 * Math.PI * R;
+  const ring = $("ringFill"),
+    pctEl = $("ringPct"),
+    syncEl = $("ringSync");
+  const R = 70,
+    C = 2 * Math.PI * R;
   ring.style.strokeDasharray = C;
   ring.style.strokeDashoffset = C;
 
-  let reduced = false, raf = null, current = "archive";
+  let reduced = false,
+    raf = null,
+    current = "archive";
 
   function setDest(key) {
-    const d = DEST[key]; current = key;
-    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.dest === key)));
-    document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("active", s.id === "scene-" + d.scene));
+    const d = DEST[key];
+    current = key;
+    document
+      .querySelectorAll(".tab")
+      .forEach((t) => t.setAttribute("aria-selected", String(t.dataset.dest === key)));
+    document
+      .querySelectorAll(".scene")
+      .forEach((s) => s.classList.toggle("active", s.id === "scene-" + d.scene));
     screenEl.dataset.scene = d.scene;
     if (!reduced) reseedFor(d.scene);
     $("ovEyebrow").textContent = d.eyebrow;
     $("ovKicker").textContent = d.kicker;
     $("ovTitle").textContent = d.title;
     $("ovMeta").textContent = d.meta;
-    const g = $("ovGoal"); g.hidden = !d.goal; g.textContent = d.goal || "";
-    const q = $("ovQ"); q.hidden = !d.q; q.textContent = d.q || "";
+    const g = $("ovGoal");
+    g.hidden = !d.goal;
+    g.textContent = d.goal || "";
+    const q = $("ovQ");
+    q.hidden = !d.q;
+    q.textContent = d.q || "";
     $("enterPrompt").textContent = d.enter;
     runSync(d);
   }
 
-  function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+  function easeInOut(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
 
   function runSync(d) {
     if (raf) cancelAnimationFrame(raf);
     $("enterPrompt").classList.remove("show");
-    pctEl.classList.remove("word");                       // back to the big % readout
-    syncEl.textContent = d.sync; syncEl.classList.remove("done");
+    pctEl.classList.remove("word"); // back to the big % readout
+    syncEl.textContent = d.sync;
+    syncEl.classList.remove("done");
     $("status").textContent = d.sync + "…";
 
-    if (reduced) { paint(1); done(); return; }
-    const dur = 2400, t0 = performance.now();
+    if (reduced) {
+      paint(1);
+      done();
+      return;
+    }
+    const dur = 2400,
+      t0 = performance.now();
     (function step(now) {
-      const p = Math.min(1, (now - t0) / dur), e = easeInOut(p);
+      const p = Math.min(1, (now - t0) / dur),
+        e = easeInOut(p);
       paint(e);
       if (p < 1) raf = requestAnimationFrame(step);
       else done();
@@ -709,95 +1470,180 @@
   }
   function done() {
     // no checkmark — the circle just reads "Synced"
-    pctEl.textContent = "Synced"; pctEl.classList.add("word");
-    syncEl.textContent = ""; syncEl.classList.add("done");
+    pctEl.textContent = "Synced";
+    pctEl.classList.add("word");
+    syncEl.textContent = "";
+    syncEl.classList.add("done");
     $("enterPrompt").classList.add("show");
     $("status").textContent = "Synced — ready to enter.";
   }
 
   // ---- living motion on the canvas: dust in the archive's window light,
   //      sea-haze + twinkling water glints on the Caribbean ----
-  const screenEl = $("screen"), spray = $("spray"), sctx = spray.getContext("2d");
-  let SW = 0, SH = 0, parts = [], glints = [], praf = null, sceneKind = "archive";
-  function sizeSpray() { const r = screenEl.getBoundingClientRect(); SW = spray.width = r.width; SH = spray.height = r.height; }
+  const screenEl = $("screen"),
+    spray = $("spray"),
+    sctx = spray.getContext("2d");
+  let SW = 0,
+    SH = 0,
+    parts = [],
+    glints = [],
+    praf = null,
+    sceneKind = "archive";
+  function sizeSpray() {
+    const r = screenEl.getBoundingClientRect();
+    SW = spray.width = r.width;
+    SH = spray.height = r.height;
+  }
   const rand = (a, b) => a + Math.random() * (b - a);
 
   // dust lives ONLY inside the light shafts (aligned with the beam CSS), drifts slow + floaty
   const ARCHIVE_ZONES = [
-    { x0: 0.19, x1: 0.40, y0: 0.10, y1: 0.64, vx: 5 },   // left beam (b1)
-    { x0: 0.62, x1: 0.77, y0: 0.40, y1: 0.74, vx: -3 },  // right beam (b2)
+    { x0: 0.19, x1: 0.4, y0: 0.1, y1: 0.64, vx: 5 }, // left beam (b1)
+    { x0: 0.62, x1: 0.77, y0: 0.4, y1: 0.74, vx: -3 }, // right beam (b2)
   ];
-  const BAY = { x0: 0.16, x1: 0.62, y0: 0.66, y1: 0.80 };   // caribbean: sparkle on the surf, below the text
+  const BAY = { x0: 0.16, x1: 0.62, y0: 0.66, y1: 0.8 }; // caribbean: sparkle on the surf, below the text
   let glintZone = BAY; // caribbean is the only scene with specular glints; riverbend moves by pixel-distortion
   function makeDust() {
     const z = ARCHIVE_ZONES[Math.random() < 0.62 ? 0 : 1];
     return {
-      z, x: rand(z.x0, z.x1) * SW, y: rand(z.y0, z.y1) * SH, r: rand(0.8, 2.2),
-      vy: rand(3, 8), vx: z.vx, sway: rand(6, 16), base: rand(0.35, 0.75),
-      tw: Math.random() * 6.28, sp: rand(0.35, 0.9),
+      z,
+      x: rand(z.x0, z.x1) * SW,
+      y: rand(z.y0, z.y1) * SH,
+      r: rand(0.8, 2.2),
+      vy: rand(3, 8),
+      vx: z.vx,
+      sway: rand(6, 16),
+      base: rand(0.35, 0.75),
+      tw: Math.random() * 6.28,
+      sp: rand(0.35, 0.9),
     };
   }
   function makeGlint() {
     const z = glintZone;
-    return { x: rand(z.x0, z.x1) * SW, y: rand(z.y0, z.y1) * SH, len: rand(6, 26), tw: Math.random() * 6.28, sp: rand(0.9, 1.7), drift: rand(-9, 9) };
+    return {
+      x: rand(z.x0, z.x1) * SW,
+      y: rand(z.y0, z.y1) * SH,
+      len: rand(6, 26),
+      tw: Math.random() * 6.28,
+      sp: rand(0.9, 1.7),
+      drift: rand(-9, 9),
+    };
   }
   function seedParts() {
-    if (sceneKind === "archive") { parts = Array.from({ length: 16 }, makeDust); glints = []; return; }
-    if (sceneKind === "caribbean") { glintZone = BAY; parts = []; glints = Array.from({ length: 20 }, makeGlint); return; }
+    if (sceneKind === "archive") {
+      parts = Array.from({ length: 16 }, makeDust);
+      glints = [];
+      return;
+    }
+    if (sceneKind === "caribbean") {
+      glintZone = BAY;
+      parts = [];
+      glints = Array.from({ length: 20 }, makeGlint);
+      return;
+    }
     // every other scene (riverbend, commonCause, …) is a still painting — no overlaid particles
-    parts = []; glints = [];
+    parts = [];
+    glints = [];
   }
 
   let plast = performance.now();
   function drawSpray(now) {
-    const dt = Math.min(0.05, (now - plast) / 1000); plast = now;
+    const dt = Math.min(0.05, (now - plast) / 1000);
+    plast = now;
     sctx.clearRect(0, 0, SW, SH);
     // archive: sparse dust drifting slowly inside the light shafts, fading in and out
-    sctx.fillStyle = "#ffe7ac"; sctx.shadowColor = "#ffe7ac"; sctx.shadowBlur = 6;
+    sctx.fillStyle = "#ffe7ac";
+    sctx.shadowColor = "#ffe7ac";
+    sctx.shadowBlur = 6;
     for (const p of parts) {
       p.tw += p.sp * dt;
       p.y += p.vy * dt;
       p.x += (p.vx + p.sway * Math.sin(p.tw * 1.2)) * dt;
-      if (p.y > p.z.y1 * SH + 8) { Object.assign(p, makeDust()); p.y = p.z.y0 * SH - 6; }
+      if (p.y > p.z.y1 * SH + 8) {
+        Object.assign(p, makeDust());
+        p.y = p.z.y0 * SH - 6;
+      }
       sctx.globalAlpha = Math.max(0, p.base * (0.5 + 0.5 * Math.sin(p.tw)));
-      sctx.beginPath(); sctx.arc(p.x, p.y, p.r, 0, 7); sctx.fill();
+      sctx.beginPath();
+      sctx.arc(p.x, p.y, p.r, 0, 7);
+      sctx.fill();
     }
     // caribbean: twinkling specular dashes riding the bay surface
-    sctx.lineCap = "round"; sctx.strokeStyle = "#eafcff"; sctx.shadowColor = "#bfefff"; sctx.lineWidth = 1.7;
+    sctx.lineCap = "round";
+    sctx.strokeStyle = "#eafcff";
+    sctx.shadowColor = "#bfefff";
+    sctx.lineWidth = 1.7;
     for (const g of glints) {
-      g.tw += g.sp * dt; g.x += g.drift * dt;
-      if (g.x > glintZone.x1 * SW) g.x = glintZone.x0 * SW; else if (g.x < glintZone.x0 * SW) g.x = glintZone.x1 * SW;
-      const s = Math.sin(g.tw); if (s <= 0) continue;
+      g.tw += g.sp * dt;
+      g.x += g.drift * dt;
+      if (g.x > glintZone.x1 * SW) g.x = glintZone.x0 * SW;
+      else if (g.x < glintZone.x0 * SW) g.x = glintZone.x1 * SW;
+      const s = Math.sin(g.tw);
+      if (s <= 0) continue;
       sctx.globalAlpha = s * s * 0.65;
-      sctx.beginPath(); sctx.moveTo(g.x, g.y); sctx.lineTo(g.x + g.len, g.y); sctx.stroke();
+      sctx.beginPath();
+      sctx.moveTo(g.x, g.y);
+      sctx.lineTo(g.x + g.len, g.y);
+      sctx.stroke();
     }
     sctx.globalAlpha = 1;
     praf = requestAnimationFrame(drawSpray);
   }
-  function startParts() { if (praf) return; sizeSpray(); if (!parts.length) seedParts(); plast = performance.now(); praf = requestAnimationFrame(drawSpray); }
-  function stopParts() { if (praf) cancelAnimationFrame(praf); praf = null; sctx.clearRect(0, 0, SW, SH); }
-  function reseedFor(kind) { sceneKind = kind; sizeSpray(); seedParts(); }
+  function startParts() {
+    if (praf) return;
+    sizeSpray();
+    if (!parts.length) seedParts();
+    plast = performance.now();
+    praf = requestAnimationFrame(drawSpray);
+  }
+  function stopParts() {
+    if (praf) cancelAnimationFrame(praf);
+    praf = null;
+    sctx.clearRect(0, 0, SW, SH);
+  }
+  function reseedFor(kind) {
+    sceneKind = kind;
+    sizeSpray();
+    seedParts();
+  }
   // reseed whenever the canvas gains/changes real dimensions — fixes particles baked at width 0
   // during the initial synchronous seed (before first layout), and rescales them on resize
-  new ResizeObserver(() => { const prev = SW; sizeSpray(); if (SW > 0 && prev !== SW && !reduced) seedParts(); }).observe(screenEl);
+  new ResizeObserver(() => {
+    const prev = SW;
+    sizeSpray();
+    if (SW > 0 && prev !== SW && !reduced) seedParts();
+  }).observe(screenEl);
 
   function applyCalm() {
     screenEl.classList.toggle("calm", reduced);
     // CSS animation:none can't stop SMIL — pause the caribbean water-ripple SVG timeline directly
-    if (cbFxSvg) { try { reduced ? cbFxSvg.pauseAnimations() : cbFxSvg.unpauseAnimations(); } catch (e) {} }
-    if (reduced) stopParts(); else { reseedFor(current); startParts(); }
+    if (cbFxSvg) {
+      try {
+        reduced ? cbFxSvg.pauseAnimations() : cbFxSvg.unpauseAnimations();
+      } catch (e) {}
+    }
+    if (reduced) stopParts();
+    else {
+      reseedFor(current);
+      startParts();
+    }
   }
 
-  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => setDest(t.dataset.dest)));
+  document
+    .querySelectorAll(".tab")
+    .forEach((t) => t.addEventListener("click", () => setDest(t.dataset.dest)));
   $("replay").addEventListener("click", () => setDest(current));
   $("reduce").addEventListener("click", (e) => {
-    reduced = !reduced; e.currentTarget.setAttribute("aria-pressed", String(reduced));
-    applyCalm(); setDest(current);
+    reduced = !reduced;
+    e.currentTarget.setAttribute("aria-pressed", String(reduced));
+    applyCalm();
+    setDest(current);
   });
 
   // honour the OS setting on first load
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    reduced = true; $("reduce").setAttribute("aria-pressed", "true");
+    reduced = true;
+    $("reduce").setAttribute("aria-pressed", "true");
   }
   applyCalm();
   setDest("archive");

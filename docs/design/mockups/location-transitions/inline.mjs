@@ -23,7 +23,9 @@ const MIME = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "i
 let html = await readFile(srcPath, "utf8");
 
 // every distinct ./art/<file> the page references (works for any map added later)
-const files = [...new Set([...html.matchAll(/\.\/art\/([\w.-]+\.(?:jpe?g|png|webp))/gi)].map((m) => m[1]))];
+const files = [
+  ...new Set([...html.matchAll(/\.\/art\/([\w.-]+\.(?:jpe?g|png|webp))/gi)].map((m) => m[1])),
+];
 if (files.length === 0) {
   console.error("No ./art/ references found in index.html — nothing to inline.");
   process.exit(1);

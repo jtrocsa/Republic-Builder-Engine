@@ -236,6 +236,59 @@ describe("every field map briefs the player about itself", () => {
   });
 });
 
+// The same failure mode, in the tables that live outside main.js. Every one of these is a per-unit
+// list somebody has to remember to extend, and every one of them fails silently: a missing entry
+// means a map is skipped or falls back to a default, never that something errors.
+//
+// Three had already drifted when this was written, all found by an audit rather than by a run:
+// UNIT_MAP_VIEW stopped at unit-05, so the Navigation Table framed Kansas and New York Harbor on a
+// map centred on the mid-Atlantic; build-field-guide.js's four tables stopped at the same place, so
+// `npm run docs:field-guide` documented five of seven maps; and field-liaison.test.js's own
+// LIAISON_MAPS omitted unit-07, so the map Voss had most recently been posted to was the one map
+// nothing checked. None of the three failed anything.
+//
+// These read source text rather than importing, for the same reason the FIELD_COPY check above
+// does: they are plain object literals in a browser entry point and a build script, not exports.
+describe("every field map is registered in the tables outside main.js", () => {
+  const NAV_VIEWS = readFileSync(
+    path.join(REPO_ROOT, "apps/web/src/content/maps/navigation-table-views.js"),
+    "utf8"
+  );
+  const FIELD_GUIDE = readFileSync(path.join(REPO_ROOT, "scripts/build-field-guide.js"), "utf8");
+
+  const section = (source, startsWith) => {
+    const start = source.indexOf(startsWith);
+    if (start === -1) throw new Error(`could not find ${startsWith}`);
+    return source.slice(start, source.indexOf("};", start));
+  };
+
+  it.each(Object.keys(FIELD_MAPS))("%s has a UNIT_MAP_VIEW entry", (unitId) => {
+    expect(
+      section(NAV_VIEWS, "const UNIT_MAP_VIEW").includes(`"${unitId}"`),
+      `${unitId} has no UNIT_MAP_VIEW entry, so the Navigation Table falls back to the default ` +
+        `view and frames this unit's map on the wrong part of the world`
+    ).toBe(true);
+  });
+
+  it.each(Object.keys(FIELD_MAPS))("%s is covered by the Field Guide", (unitId) => {
+    expect(
+      section(FIELD_GUIDE, "const UNIT_IDS").includes(`"${unitId}"`),
+      `${unitId} is missing from build-field-guide.js's UNIT_IDS, so npm run docs:field-guide ` +
+        `silently omits this unit`
+    ).toBe(true);
+    expect(
+      section(FIELD_GUIDE, "const OUTDOOR_TMJ").includes(`"${unitId}"`),
+      `${unitId} is missing from build-field-guide.js's OUTDOOR_TMJ`
+    ).toBe(true);
+    for (const group of ["npcs", "behaviours", "sourcePoints"]) {
+      expect(
+        section(FIELD_GUIDE, `  ${group}: {`).includes(`"${unitId}"`),
+        `${unitId} is missing from build-field-guide.js's MAIN_JS_LITERALS.${group}`
+      ).toBe(true);
+    }
+  });
+});
+
 function loadTmj(file) {
   return JSON.parse(readFileSync(path.join(REPO_ROOT, "apps/web/src/content/maps", file), "utf8"));
 }

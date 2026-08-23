@@ -478,3 +478,8 @@ yehakins
 yuca
 ﻿# Chronicle project dictionary - cSpell
 Blondheim
+ACMR
+emailable
+plpgsql
+SMIL
+webp

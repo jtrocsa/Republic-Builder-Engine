@@ -82,7 +82,11 @@ describe("the reveal ladder below Unit 6", () => {
   // happen to (docs/design/THE-MAP-PROGRAM.md §4). Unit 6 is on this list too as of Phase 88: the
   // reveal lands in that unit, but it lands in the Institute, and her *ambient* line on the
   // railhead is still the puzzled one that sets it up.
-  const LIAISON_MAPS = ["unit-01", "unit-02", "unit-03", "unit-04", "unit-05", "unit-06"];
+  // Derived from FIELD_MAPS, not written out. This was a hand-maintained literal that stopped at
+  // unit-06 while Voss was already posted on unit-07's wharf — so the map she had just been added
+  // to was the one map nothing checked. A seventh entry would have fixed today and re-armed the
+  // same trap for Unit 8; reading the registry cannot fall behind it.
+  const LIAISON_MAPS = Object.keys(FIELD_MAPS);
 
   // Every line Voss has before the reveal: three at the Institute, one per authored field map.
   const shippedLines = () => [

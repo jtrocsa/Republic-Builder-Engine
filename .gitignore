@@ -15,6 +15,17 @@ apps/web/src/assets/generated/
 # only, never the token.
 .claude/settings.local.json
 
+# Purchased tileset packs that nothing uses: not in an import.meta.glob, not in a .tmj's tilesets[],
+# not a `from:` in derived-objects.manifest.js, and not named by content/tilesets/maps/planned-maps.js.
+# Eight of them were sitting in apps/web/src/assets/tilesets/ at 108 MB and were parked here by the
+# Phase 90 workflow audit rather than deleted. Git history keeps every one; restore a pack with
+# `git checkout <commit> -- "apps/web/src/assets/tilesets/<pack>"`.
+#
+# Two consumers make a pack load-bearing even though nothing globs it, and both were nearly missed:
+# a `from:` source for a derived sheet (or `npm run assets:pack-objects` can no longer rebuild what
+# the maps draw), and planned-maps.js's forward slate, which tests/unit/tile-palettes.test.js asserts
+# actually exists on disk. Check both before parking anything else here.
+
 # Painted Chronotravel plate sources: ~2.5 MB 1672x941 PNGs, one per destination. The committed
 # artefact is apps/web/src/assets/plates/*.webp, built from these by `npm run assets:build-plates`.
 # They stay out of git for their size, and out of apps/web/src/assets/ so nothing can reference the

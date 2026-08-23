@@ -14,7 +14,7 @@ enter" prompt.
 
 Diegetically it is the record catching up to where the Chronicler is: consistent with Chronicle's
 frame (Chronotravel to a setting, then preserving/transmitting the record). Keep that reading — the
-loader is *the record syncing*, never a generic "Loading…".
+loader is _the record syncing_, never a generic "Loading…".
 
 **Fires on:**
 
@@ -25,7 +25,7 @@ loader is *the record syncing*, never a generic "Loading…".
 
 - **Room-to-room inside one building.** Field interiors are deliberately seamless (they swap on
   `progress.currentFieldRoom` with no screen change); a transition screen there would break that.
-  The boundary is *building → building* or *world → world*, not *room → room*.
+  The boundary is _building → building_ or _world → world_, not _room → room_.
 
 ## 2. Layer anatomy
 
@@ -33,15 +33,15 @@ All layers are children of `.screen`, stacked by `z-index`. Motion that represen
 must sit above the darkening layers** or the scrim/vignette crushes it — this was the single biggest
 bug in the mockup's history.
 
-| Layer                       | z | Role                                                                    |
-| --------------------------- | - | ----------------------------------------------------------------------- |
-| `.scene-img`                | 0 | The painting. Slow `breathe` (Ken-Burns) drift.                         |
-| `.vignette`                 | 1 | Edges fade into navy so the frame isn't a hard photo.                   |
-| `.scrim`                    | 2 | Directional darkening for text legibility (heavier on the text side).   |
-| **scene-fx** (`.cb-fx`, `.ar-flicker`, `.ar-beams`) | 3 | **Contextual motion — above the scrim.** Toggled per scene. |
-| `#spray` (canvas)           | 4 | Particles: dust motes, surf sparkle.                                    |
-| `.ticks`                    | 5 | Geometric frame — corner ticks, a slow rotating tick-ring.              |
-| `.overlay` / `.ov-bottom`   | 6–7 | Text (eyebrow, title, meta, goal, question) + loader + enter prompt.  |
+| Layer                                               | z   | Role                                                                  |
+| --------------------------------------------------- | --- | --------------------------------------------------------------------- |
+| `.scene-img`                                        | 0   | The painting. Slow `breathe` (Ken-Burns) drift.                       |
+| `.vignette`                                         | 1   | Edges fade into navy so the frame isn't a hard photo.                 |
+| `.scrim`                                            | 2   | Directional darkening for text legibility (heavier on the text side). |
+| **scene-fx** (`.cb-fx`, `.ar-flicker`, `.ar-beams`) | 3   | **Contextual motion — above the scrim.** Toggled per scene.           |
+| `#spray` (canvas)                                   | 4   | Particles: dust motes, surf sparkle.                                  |
+| `.ticks`                                            | 5   | Geometric frame — corner ticks, a slow rotating tick-ring.            |
+| `.overlay` / `.ov-bottom`                           | 6–7 | Text (eyebrow, title, meta, goal, question) + loader + enter prompt.  |
 
 Scene layers are shown per destination via `.screen[data-scene="<id>"] .<layer> { display: block }`.
 
@@ -49,21 +49,21 @@ Scene layers are shown per destination via `.screen[data-scene="<id>"] .<layer> 
 
 Each destination is one object. This is the whole content surface:
 
-| Field     | Meaning                                                             |
-| --------- | ------------------------------------------------------------------ |
-| `eyebrow` | Tiny top label — `Entering` (building) or `Chronotravel` (warp).   |
-| `kicker`  | Line above the title — the org, or `Case 1.01 · …`.                |
-| `title`   | The destination name (the hero line).                              |
-| `meta`    | Place · date — `Caribbean · 1493`, `Present day · Navigation Table`. |
+| Field     | Meaning                                                                              |
+| --------- | ------------------------------------------------------------------------------------ |
+| `eyebrow` | Tiny top label — `Entering` (building) or `Chronotravel` (warp).                     |
+| `kicker`  | Line above the title — the org, or `Case 1.01 · …`.                                  |
+| `title`   | The destination name (the hero line).                                                |
+| `meta`    | Place · date — `Caribbean · 1493`, `Present day · Navigation Table`.                 |
 | `goal`    | Orienting "what you'll do" line. Normally `null` — see the one-statement rule below. |
-| `q`       | The central question — the single body statement on a warp card, or `null`.        |
-| `sync`    | Loader label — `Syncing archive`, `Syncing record`.                |
-| `enter`   | Prompt — `Press E to enter`, `Follow the evidence`.                |
-| `scene`   | The scene id (drives the art `<img>` and the `data-scene` toggles). |
+| `q`       | The central question — the single body statement on a warp card, or `null`.          |
+| `sync`    | Loader label — `Syncing archive`, `Syncing record`.                                  |
+| `enter`   | Prompt — `Press E to enter`, `Follow the evidence`.                                  |
+| `scene`   | The scene id (drives the art `<img>` and the `data-scene` toggles).                  |
 
 **One body statement per card.** A warp card shows exactly one line under the title/meta: the central
 question (`q`). The earlier task-briefing `goal` paragraph was dropped — stacking a "what you'll do"
-goal *and* the question was too much text, and the two said the same thing (each case's goal already
+goal _and_ the question was too much text, and the two said the same thing (each case's goal already
 ends on the same stakes the question asks). The in-world Mission Tracker briefs the actual tasks, so
 the arrival screen doesn't. `goal` stays in the schema (rendered above `q` when set) for a future card
 where a concrete orienting line beats an abstract question, but the shipped warp cards leave it `null`.
@@ -81,7 +81,7 @@ In the game these come from real content, not literals — see §7.
 ## 5. Contextual motion — the core rule
 
 > Effects must be **native to each specific painting**, not a generic layer dropped on top. Pick the
-> one or two things that would actually move in *that* place and animate *those*.
+> one or two things that would actually move in _that_ place and animate _those_.
 
 Generic floating particles on everything, or a lit rectangle laid over water, both read as fake. The
 two shipped treatments are the reference patterns:
@@ -105,11 +105,11 @@ be fully moving"), keep it above the scrim, and give it a reduced-motion off swi
 
 ## 6. Motion techniques (and their gotchas)
 
-| Technique                                   | Use for                        | Gotcha                                                                 |
-| ------------------------------------------- | ------------------------------ | --------------------------------------------------------------------- |
-| CSS keyframes (`breathe`, drift, flicker)   | glows, breathing, slow drift   | Visible in stills. Simplest; reach for this first.                     |
-| SVG `feTurbulence` + `feDisplacementMap` (SMIL) | making *painted* water/heat/flags actually move | Warps real pixels. Pause for reduced motion via `svg.pauseAnimations()` — CSS `animation:none` can't stop SMIL. |
-| Canvas particles (rAF)                      | dust, sparkle, embers          | Confine to zones or it looks like weather. rAF is suspended in the preview pane (verify by pumping the draw fn). |
+| Technique                                       | Use for                                         | Gotcha                                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| CSS keyframes (`breathe`, drift, flicker)       | glows, breathing, slow drift                    | Visible in stills. Simplest; reach for this first.                                                               |
+| SVG `feTurbulence` + `feDisplacementMap` (SMIL) | making _painted_ water/heat/flags actually move | Warps real pixels. Pause for reduced motion via `svg.pauseAnimations()` — CSS `animation:none` can't stop SMIL.  |
+| Canvas particles (rAF)                          | dust, sparkle, embers                           | Confine to zones or it looks like weather. rAF is suspended in the preview pane (verify by pumping the draw fn). |
 
 ## 7. Integration path into the game
 

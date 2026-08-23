@@ -104,8 +104,8 @@ cattle, valued twice.
 
 **Holt was generated twice and the reason is Meridian again.** The first roll came back a dark
 blue-green frock coat and matching hat: 44% inside the teal hue band by pixel count on the south
-rotation, 68% on the east — against a brief that had already said *absolutely no teal, turquoise or
-cyan.* That is the third time in three phases this frame's reserved accent has had to be defended
+rotation, 68% on the east — against a brief that had already said _absolutely no teal, turquoise or
+cyan._ That is the third time in three phases this frame's reserved accent has had to be defended
 (Phase 82 in a brief, Phase 85 in the art, this one in the art again), and the first time it happened
 against a brief that named the colour. **Saying it in the negative is evidently not enough.** The
 second brief named the coat's colour positively, twice, and banned green as well; it came back at

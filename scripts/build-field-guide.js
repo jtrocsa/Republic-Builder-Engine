@@ -40,9 +40,15 @@ const MAPS_DIR = path.join(SRC, "content/maps");
 const SNAPSHOT_DIR = path.join(REPO_ROOT, "tests/e2e/visual-regression.spec.js-snapshots");
 const OUT_DIR = path.join(REPO_ROOT, "reports/field-guide");
 const OUT_FILE = path.join(OUT_DIR, "chronicle-field-guide.html");
-const BUDGET_BYTES = 3.5 * 1024 * 1024;
+// The guide is one self-contained HTML file with every surface screenshot inlined as base64, so
+// the budget is what keeps it openable and emailable. It was 3.5 MB when the guide covered five
+// units; it covers seven now — the tables above had silently stopped at unit-05 and were extended
+// in the Phase 90 workflow audit — and two more maps plus their four interiors do not fit in the
+// old number. Raise it deliberately when a unit ships, or start downscaling the inlined images;
+// do not raise it to make a failing build pass without looking at what grew.
+const BUDGET_BYTES = 5 * 1024 * 1024;
 
-const UNIT_IDS = ["unit-01", "unit-02", "unit-03", "unit-04", "unit-05"];
+const UNIT_IDS = ["unit-01", "unit-02", "unit-03", "unit-04", "unit-05", "unit-06", "unit-07"];
 const imports = (rel) => import(pathToFileURL(path.join(SRC, rel)).href);
 
 // ── tier 2: literal extraction from main.js ────────────────────────────────────────────────────
@@ -211,10 +217,16 @@ const MAIN_JS_LITERALS = {
     "unit-03": "UNIT3_FIELD_NPCS",
     "unit-04": "UNIT4_FIELD_NPCS",
     "unit-05": "UNIT5_FIELD_NPCS",
+    "unit-06": "UNIT6_FIELD_NPCS",
+    "unit-07": "UNIT7_FIELD_NPCS",
     "canal-print-shop": "UNIT4_PRINT_SHOP_NPCS",
     "canal-boarding-house": "UNIT4_BOARDING_HOUSE_NPCS",
     "richmond-counting-room": "UNIT5_COUNTING_ROOM_NPCS",
     "richmond-hospital-ward": "UNIT5_HOSPITAL_WARD_NPCS",
+    "railhead-land-office": "UNIT6_LAND_OFFICE_NPCS",
+    "railhead-telegraph-office": "UNIT6_TELEGRAPH_OFFICE_NPCS",
+    "immigrant-port-inspection-hall": "UNIT7_INSPECTION_HALL_NPCS",
+    "immigrant-port-inquiry-room": "UNIT7_INQUIRY_ROOM_NPCS",
   },
   behaviours: {
     "unit-01": "FIELD_NPC_BEHAVIOURS",
@@ -222,10 +234,16 @@ const MAIN_JS_LITERALS = {
     "unit-03": "UNIT3_FIELD_NPC_BEHAVIOURS",
     "unit-04": "UNIT4_FIELD_NPC_BEHAVIOURS",
     "unit-05": "UNIT5_FIELD_NPC_BEHAVIOURS",
+    "unit-06": "UNIT6_FIELD_NPC_BEHAVIOURS",
+    "unit-07": "UNIT7_FIELD_NPC_BEHAVIOURS",
     "canal-print-shop": "UNIT4_PRINT_SHOP_BEHAVIOURS",
     "canal-boarding-house": "UNIT4_BOARDING_HOUSE_BEHAVIOURS",
     "richmond-counting-room": "UNIT5_COUNTING_ROOM_BEHAVIOURS",
     "richmond-hospital-ward": "UNIT5_HOSPITAL_WARD_BEHAVIOURS",
+    "railhead-land-office": "UNIT6_LAND_OFFICE_BEHAVIOURS",
+    "railhead-telegraph-office": "UNIT6_TELEGRAPH_OFFICE_BEHAVIOURS",
+    "immigrant-port-inspection-hall": "UNIT7_INSPECTION_HALL_BEHAVIOURS",
+    "immigrant-port-inquiry-room": "UNIT7_INQUIRY_ROOM_BEHAVIOURS",
   },
   sourcePoints: {
     "unit-01": "FIELD_SOURCE_POINTS",
@@ -233,10 +251,16 @@ const MAIN_JS_LITERALS = {
     "unit-03": "UNIT3_FIELD_SOURCE_POINTS",
     "unit-04": "UNIT4_FIELD_SOURCE_POINTS",
     "unit-05": "UNIT5_FIELD_SOURCE_POINTS",
+    "unit-06": "UNIT6_FIELD_SOURCE_POINTS",
+    "unit-07": "UNIT7_FIELD_SOURCE_POINTS",
     "canal-print-shop": "UNIT4_PRINT_SHOP_SOURCE_POINTS",
     "canal-boarding-house": "UNIT4_BOARDING_HOUSE_SOURCE_POINTS",
     "richmond-counting-room": "UNIT5_COUNTING_ROOM_SOURCE_POINTS",
     "richmond-hospital-ward": "UNIT5_HOSPITAL_WARD_SOURCE_POINTS",
+    "railhead-land-office": "UNIT6_LAND_OFFICE_SOURCE_POINTS",
+    "railhead-telegraph-office": "UNIT6_TELEGRAPH_OFFICE_SOURCE_POINTS",
+    "immigrant-port-inspection-hall": "UNIT7_INSPECTION_HALL_SOURCE_POINTS",
+    "immigrant-port-inquiry-room": "UNIT7_INQUIRY_ROOM_SOURCE_POINTS",
   },
   hubTargets: {
     hallway: "HALLWAY_TARGETS",
@@ -326,6 +350,8 @@ const OUTDOOR_TMJ = {
   "unit-03": "common-cause-field",
   "unit-04": "canal-crossroads-field",
   "unit-05": "richmond-field",
+  "unit-06": "railhead-field",
+  "unit-07": "immigrant-port-field",
 };
 
 /** Human names for the surfaces, since a .tmj id is not a place. */
@@ -339,6 +365,12 @@ const SURFACE_NAMES = {
   "canal-boarding-house": "Canal-side boardinghouse",
   "richmond-counting-room": "Franklin Street counting room",
   "richmond-hospital-ward": "A Chimborazo ward",
+  "railhead-field": "Cottonwood Junction",
+  "railhead-land-office": "US district land office",
+  "railhead-telegraph-office": "Western Union office",
+  "immigrant-port-field": "The wharf at Ellis Island",
+  "immigrant-port-inspection-hall": "The inspection hall",
+  "immigrant-port-inquiry-room": "Board of special inquiry room",
 };
 
 /**

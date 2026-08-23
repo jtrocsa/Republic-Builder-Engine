@@ -6,12 +6,12 @@ design spec and the plan for folding it into `main.js` live in [`DESIGN.md`](./D
 
 ## Files
 
-| File          | Role                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------- |
-| `index.html`  | The mockup. Editable — art is referenced as `./art/<file>`, not inlined.               |
-| `art/`        | Scene paintings, optimized (~1600px wide, JPEG q≈82). One per destination.             |
-| `inline.mjs`  | Build a self-contained copy for publishing (inlines `art/` as data URIs).              |
-| `DESIGN.md`   | When it fires, the layer anatomy, the contextual-motion rule, and the integration path. |
+| File         | Role                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `index.html` | The mockup. Editable — art is referenced as `./art/<file>`, not inlined.                |
+| `art/`       | Scene paintings, optimized (~1600px wide, JPEG q≈82). One per destination.              |
+| `inline.mjs` | Build a self-contained copy for publishing (inlines `art/` as data URIs).               |
+| `DESIGN.md`  | When it fires, the layer anatomy, the contextual-motion rule, and the integration path. |
 
 ## Edit & preview
 
@@ -41,8 +41,8 @@ regenerates from `index.html` + `art/` any time.
 3. **Config** — add a `DEST.<map>` block (eyebrow, kicker, title, meta, goal, q, sync, enter, scene)
    and wire its image: `const <MAP>_IMG = './art/<map>.jpg';` → `$("img-<map>").src = <MAP>_IMG;`.
 4. **Tab** — add a `<button class="tab" data-dest="<map>">` so it's switchable in the mockup.
-5. **Contextual motion** — the important one. Give the scene *its own* motion native to that
+5. **Contextual motion** — the important one. Give the scene _its own_ motion native to that
    painting (see `DESIGN.md` §"Contextual motion"). Do **not** reuse the archive's dust or the
-   Caribbean's water blindly — pick the one or two things that would actually move in *that* place.
+   Caribbean's water blindly — pick the one or two things that would actually move in _that_ place.
 
 `inline.mjs` picks up any new `./art/<file>` automatically; no build config to touch.

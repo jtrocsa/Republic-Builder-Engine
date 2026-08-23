@@ -2,4 +2,16 @@ dist
 node_modules
 vendor
 *.min.js
-/assets
+
+# Generated art and purchased tileset packs. The old entry here was `/assets`, which anchored to
+# the repo root and matched nothing — the asset tree lives under apps/web/src/assets/.
+apps/web/src/assets
+art-source
+
+# Machine-local working output. `reports/` is the same trap eslint.config.js already had to patch:
+# stray files there are not source and must not be able to fail the format gate.
+reports
+test-results
+playwright-report
+coverage
+.playwright-mcp
