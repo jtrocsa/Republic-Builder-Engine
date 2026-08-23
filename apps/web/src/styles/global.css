@@ -4430,7 +4430,14 @@ dd {
    (grid columns x tile), translated by updateHubCamera(). Its parent clips via
    .institute-map's overflow: hidden.
 
-   No transition on the transform, deliberately, and the field's world does not have one either.
+   No transition on the transform, deliberately. The field's world resolves to the same thing but
+   does not say so: `.caribbean-world` declares this property four times down this file — 92ms
+   linear at its base rule, then 58ms linear !important ("make the bubble feel like it comes from
+   the speaker"), then none !important twice — so the computed value is `none` purely because the
+   last `!important` wins. Measured, not read: transition-property computes to `none` and a walking
+   camera shows zero lag against its own inline target. An earlier revision of this comment claimed
+   the field simply had no tween, which is true of the outcome and false of three of the four
+   declarations. Consolidating them is Part 6B's finding 10 and has not been done.
    updateHubCamera() already writes an exact position every frame from the player's own, so a tween
    here does not smooth anything — it restarts on every write and leaves the room permanently
    chasing the player and coasting after they stop. It was also what turned render()'s one-frame
@@ -11233,4 +11240,21 @@ details[open] > summary.manage-content-unit-toggle::before {
     animation: none;
     opacity: 0.9;
   }
+}
+
+/* The recall beacon's in-reach state (Spine Review Part 6B).
+   The beacon gained a proximity gate here — it used to act from anywhere on the map, the only world
+   marker that did — and a gate the player cannot see reads as a dead button, so it says when it is
+   live. Deliberately a strengthening of the pulse it already has rather than a reveal: `.field-door`
+   and `.source-signal` hide their labels until `.is-near`, but this label is drawn at all times on
+   purpose (see the .field-door header — recall is the one way off the map and is meant to be the
+   loud one). Two field baselines move, unit-06 and unit-07, whose spawns sit 1.50 tiles from their
+   own beacon and so open already in reach. */
+.recall-beacon.is-near img {
+  filter: drop-shadow(0 0 22px rgba(112, 235, 248, 0.9));
+}
+.recall-beacon.is-near span {
+  border-color: rgba(140, 240, 252, 0.9);
+  background: rgba(10, 52, 68, 0.94);
+  color: #f2ffff;
 }

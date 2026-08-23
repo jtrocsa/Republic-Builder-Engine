@@ -334,6 +334,13 @@ function territoryGap(a, b) {
 // top of each other", which is what makes one of them reliably the nearer once you have walked up.
 const MIN_TERRITORY_GAP = 1.5;
 
+// The two interaction reaches nearestFieldInteraction() actually applies: 1.55 for an
+// object-anchored record, 1.45 for a person or a door. Mirrored here rather than imported because
+// they are inline literals in that function, and a test that reads them from it could not fail if
+// one of them changed.
+const SOURCE_REACH = 1.55;
+const NPC_REACH = 1.45;
+
 function crowdedPairs(behaviours, grid) {
   const entries = Object.entries(behaviours).map(([id, behaviour]) => [
     id,
@@ -484,6 +491,49 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
 
   it("keeps any two NPCs' ground apart, so the wrong one cannot answer (edge case)", () => {
     expect(crowdedPairs(map.behaviours, fieldNavGridFor(map))).toEqual([]);
+  });
+
+  // The same rule with a piece of furniture on one side of it — Spine Review Part 6B, closing the
+  // gap Part 5 opened and Part 6A routed onward. Part 5 asserted this for the Main Hall only and
+  // said so deliberately: sweeping seven field maps for it was its own job, and this is that job.
+  //
+  // nearestFieldInteraction() sorts people, records and doors into one nearest-wins list, so a body
+  // whose ground reaches inside an object's reach is interchangeable with that object exactly the
+  // way two NPCs standing together are interchangeable with each other. Philadelphia had one: the
+  // town crier's circuit came 1.39 tiles from the Assembly hall notice board, inside the 1.55 a
+  // player needs to read the Henry broadside off it, so mid-stride the board opened the crier. His
+  // *stops* were 1.98 away — which is why this measures territoryOf()'s walked path, the same
+  // correction the burgess forced on the NPC-versus-NPC check above.
+  //
+  // The bar is each target's own reach, not a flat number, and not the 2.5 the Main Hall uses:
+  // 2.5 is right for a room whose one approach is a doorway, and wrong for a market square where
+  // a notice board is meant to have people walking past it. "Never inside the reach" is the
+  // weakest bar that still guarantees the object is reachable from somewhere.
+  //
+  // The recall beacon is deliberately absent. It is gated on the click path (Part 6B, finding 3)
+  // but stays out of nearestFieldInteraction(), so nothing about it is decided by this sort —
+  // which is just as well, since three maps park a body inside its reach.
+  it("keeps every NPC's ground out of an interactable's reach (edge case)", () => {
+    const grid = fieldNavGridFor(map);
+    const targets = [
+      ...placedPoints().map(([id, point]) => [`record ${id}`, point, SOURCE_REACH]),
+      ...Object.entries(map.interiors || {}).map(([id, room]) => [
+        `door ${id}`,
+        room.door,
+        NPC_REACH,
+      ]),
+    ];
+    const contended = [];
+    for (const [npcId, behaviour] of Object.entries(map.behaviours)) {
+      const territory = territoryOf(behaviour, grid);
+      for (const [label, point, reach] of targets) {
+        const gap = territoryGap(territory, { points: [point], radius: 0 });
+        if (gap < reach) {
+          contended.push(`${npcId} comes ${gap.toFixed(2)} within ${label}'s ${reach} reach`);
+        }
+      }
+    }
+    expect(contended).toEqual([]);
   });
 
   it("anchors every NPC's behaviour at the coordinates the NPC declares (edge case)", () => {

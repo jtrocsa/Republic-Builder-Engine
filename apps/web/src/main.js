@@ -2202,12 +2202,20 @@ const UNIT3_FIELD_NPC_BEHAVIOURS = {
   "john-dickinson": { kind: "station", at: { x: 16.0, y: 10.5 }, facing: "down" },
   // Across the market square, which is cobbled wall to wall — a crier carries the news to where
   // people are, and every cell of his route is road.
+  //
+  // The circuit runs along y=13.5 rather than crossing up to 12.5, which is Part 6B's finding 4.
+  // The Assembly hall notice board is at (25.0, 11.2) and carries the Henry broadside; the old
+  // west leg brought the crier's *walked path* within 1.39 tiles of it, inside the 1.55 reach a
+  // player needs to read it — so on the wrong stride of his patrol, walking to the broadside
+  // opened the crier instead. His stops were a comfortable 1.98 away and said nothing about it.
+  // This is the burgess-and-minister failure exactly (Phase 62), and the reason the sweep that
+  // caught it measures the path rather than the stops.
   "town-crier": {
     kind: "route",
     stops: [
       { x: 29.0, y: 13.5 },
-      { x: 22.5, y: 12.5 },
-      { x: 34.5, y: 12.5 },
+      { x: 22.5, y: 13.5 },
+      { x: 34.5, y: 13.5 },
     ],
   },
   // "Muster on the green Tuesday next" — a recruiter stands at the muster point.
@@ -11400,6 +11408,32 @@ function updateFieldPlayer() {
   }
   updateFieldProximityUi();
 }
+/**
+ * Walking away ends the conversation — all of it, not just the half that lives in `progress`.
+ *
+ * The movement loop used to clear `activeFieldNpc` and stop there, which left the bubble that state
+ * had drawn sitting on screen: visible, still carrying its "Examine …" button, anchored over a
+ * speaker the player had left behind, until some unrelated action happened to re-render. It never
+ * reached the store either, so a reload put the player back mid-sentence. Every other way out of a
+ * conversation — the ×, a click away, `E` again — goes through render(); this one went nowhere.
+ *
+ * **A direct DOM patch rather than a render**, and that is the whole reason this is a function and
+ * not three lines in the loop. render() rebuilds the screen and repaints the map canvases, which is
+ * far too much to spend on the frame a player starts walking, and the first version of this fix
+ * measurably slowed walks and made four unrelated e2e specs flaky under parallel load. Patching the
+ * one node is the convention this file already uses for per-frame work (updateFieldNpcs,
+ * updateFieldProximityUi); the render path stays for the deliberate exits.
+ *
+ * `is-talking` comes off with it: the class is written by fieldNpcButton() at render time, so
+ * nothing else would take it off until the next one.
+ */
+function closeFieldDialogueOnMove() {
+  const speakerId = progress.activeFieldNpc;
+  progress.activeFieldNpc = null;
+  document.querySelector(".field-speech-bubble")?.remove();
+  document.querySelector(`[data-npc="${speakerId}"]`)?.classList.remove("is-talking");
+  save();
+}
 function updateFieldProximityUi() {
   const map = activeFieldMap();
   map.npcs.forEach((npc) => {
@@ -11416,6 +11450,11 @@ function updateFieldProximityUi() {
     // something that does, and re-writing an unchanged style is free.
     node.style.cssText = sourcePointStyle(source.id);
   });
+  // The beacon reads its own reach for the first time in Part 6B. Queried unconditionally rather
+  // than inside the outdoor branch below: recallBeacon() renders nothing indoors, so the node is
+  // simply absent there and the toggle is a no-op.
+  const beacon = document.querySelector(".recall-beacon");
+  if (beacon) beacon.classList.toggle("is-near", isNearRecallBeacon());
   // Doorsteps get the same proximity treatment as people and records — the label stays hidden until
   // the player is within the reach that would actually let them walk through.
   if (isInsideFieldInterior()) {
@@ -11493,7 +11532,7 @@ function runFieldMovementLoop(now) {
       moved = true;
     }
   }
-  if (moved && progress.activeFieldNpc) progress.activeFieldNpc = null;
+  if (moved && progress.activeFieldNpc) closeFieldDialogueOnMove();
   fieldMovement.moving = moved;
   if (moved) fieldMovement.step = !fieldMovement.step;
   updateFieldPlayer();
@@ -11659,6 +11698,27 @@ function isNearFieldNpc(npc) {
   const state = fieldNpcState(npc);
   return fieldDistanceTo(state.x, state.y) <= 1.45;
 }
+/**
+ * The recall beacon's reach — the object reach, because the beacon is an object.
+ *
+ * It had none at all until Part 6B: the beacon was a world marker that acted from anywhere on the
+ * map, which made it the one thing out there that a click could reach across a continent while the
+ * record two tiles from it answered "move closer". Part 6A routed that here.
+ *
+ * Deliberately **not** added to nearestFieldInteraction(), so `E` still does not offer it, and that
+ * half is a measurement rather than an oversight. Three of the seven maps walk a body inside this
+ * reach of their own beacon — Riverbend's wharf clerk to 0.92 tiles, Canal Crossroads' mule driver
+ * to 0.10, Richmond's stationed Voss at 1.68 — so putting the beacon into the nearest-wins sort
+ * would cost those three maps an NPC, to reach a control that is already one Tab away on the chrome
+ * back link. A fourth competitor in that sort is exactly the doorstep-NPC hazard, and here it is
+ * avoidable. Those are walked-path distances, which is the only kind worth quoting: the same three
+ * measured against their *stops* alone read 1.12, 0.54 and 1.68, and the first two are wrong.
+ */
+function isNearRecallBeacon() {
+  if (isInsideFieldInterior()) return false;
+  const recall = activeFieldOutdoorMap().recall;
+  return fieldDistanceTo(recall.x, recall.y) <= 1.55;
+}
 function isNearFieldSource(sourceId) {
   if (!activeFieldMap().sourcePoints[sourceId]) return false;
   const { x, y } = sourcePointPosition(sourceId);
@@ -11807,6 +11867,30 @@ function refuseLockedRecord(sourceId) {
   return true;
 }
 /**
+ * Open or close a conversation — the third pair of `E`-and-click state changes in this runtime, and
+ * the third to be written once rather than twice.
+ *
+ * `handleFieldClick`'s "field-talk" branch and the keydown handler's `npc` branch carried
+ * character-for-character copies of these four lines. They had not drifted yet, which is the only
+ * difference between this and Part 6A's finding 4 — the same duplication one revision earlier. Both
+ * callers still gate proximity their own way and must keep doing so: `E` is gated by
+ * nearestFieldInteraction(), a click by isNearFieldNpc(), because a marker can be clicked from
+ * anywhere on the map.
+ *
+ * Clearing the notice is Part 6B's finding 2. fieldTooFarNotice() writes the field's only status
+ * line and nothing ever took it back: a click that missed the canoe worker left "Move closer to
+ * interact with Taíno canoe worker." on screen through the walk to the elder, through opening her
+ * dialogue, and through every record read after it. The line answers one attempt, so it dies on the
+ * next attempt that lands.
+ */
+function toggleFieldDialogue(npcId) {
+  progress.activeFieldNpc = progress.activeFieldNpc === npcId ? null : npcId;
+  if (progress.activeFieldNpc) playSfx("dialogue");
+  progress.fieldNotice = "";
+  save();
+  render();
+}
+/**
  * The two ways into a record, each written once.
  *
  * A record can be opened from its world marker, from the person carrying it, or with `E` — and
@@ -11821,6 +11905,7 @@ function refuseLockedRecord(sourceId) {
 function openFieldRecord(sourceId, origin = "field") {
   openSourceId = sourceId;
   progress.activeFieldNpc = null;
+  progress.fieldNotice = "";
   sourceOrigin = origin;
   progress.currentScreen = "source";
   save();
@@ -11829,6 +11914,7 @@ function openFieldRecord(sourceId, origin = "field") {
 function beginFieldRecord(sourceId) {
   openSourceId = sourceId;
   progress.activeFieldNpc = null;
+  progress.fieldNotice = "";
   sourceOrigin = "field";
   ensureSourceActivity(sourceId);
   // Persisted alongside the module-local id so a reload inside an activity resumes in the right
@@ -12244,7 +12330,7 @@ function recallBeacon() {
   if (isInsideFieldInterior()) return "";
   const recall = activeFieldOutdoorMap().recall;
   const grid = activeFieldGrid();
-  return `<button class="recall-beacon" style="left:${(recall.x * grid.tile).toFixed(1)}px;top:${(recall.y * grid.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
+  return `<button class="recall-beacon ${isNearRecallBeacon() ? "is-near" : ""}" style="left:${(recall.x * grid.tile).toFixed(1)}px;top:${(recall.y * grid.tile).toFixed(1)}px" data-action="field-recall" aria-label="Recall to Archive"><img src="${recallBeaconBlue}" alt=""><span>Recall to Archive</span></button>`;
 }
 /**
  * The doorstep markers on the outdoor map, and the threshold marker inside a room.
@@ -12257,7 +12343,7 @@ function fieldDoorMarkers() {
   const grid = activeFieldGrid();
   if (isInsideFieldInterior()) {
     const room = activeFieldMap();
-    return `<button class="field-door field-door--exit" style="left:${(room.exit.x * grid.tile).toFixed(1)}px;top:${(room.exit.y * grid.tile).toFixed(1)}px" data-action="field-exit-interior" aria-label="Step back outside"><i aria-hidden="true">↩</i><span>Step outside</span></button>`;
+    return `<button class="field-door field-door--exit" style="left:${(room.exit.x * grid.tile).toFixed(1)}px;top:${(room.exit.y * grid.tile).toFixed(1)}px" data-action="field-exit-interior" aria-label="Step outside"><i aria-hidden="true">↩</i><span>Step outside</span></button>`;
   }
   return fieldInteriors()
     .map(
@@ -12881,7 +12967,7 @@ function practiceCheckScreen() {
     })
     .join("");
 
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseTitle(activeCase))} interaction · test features</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseTitle(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseName(activeCase))} · practice</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseTitle(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 /**
@@ -14189,10 +14275,7 @@ function handleFieldClick(target, action) {
         fieldTooFarNotice(npc.name);
         return true;
       }
-      progress.activeFieldNpc = progress.activeFieldNpc === npc.id ? null : npc.id;
-      if (progress.activeFieldNpc) playSfx("dialogue");
-      save();
-      render();
+      toggleFieldDialogue(npc.id);
     }
     return true;
   }
@@ -14231,6 +14314,14 @@ function handleFieldClick(target, action) {
     return true;
   }
   if (action === "field-recall") {
+    // Scoped to the beacon, never to the bare action: the chrome back link carries "field-recall"
+    // too and has no position in the world to be near, so gating the action itself would strand a
+    // player who walked into a corner. This is the same discrimination the beacon's visual spec
+    // makes, and the reason CLAUDE.md records it as `.recall-beacon` rather than the action name.
+    if (target.closest(".recall-beacon") && !isNearRecallBeacon()) {
+      fieldTooFarNotice("the recall beacon");
+      return true;
+    }
     // The safety net that used to hang on "home": a teacher previewing a map mission can leave via
     // the field's own recall control as well as the preview banner, and either has to end the
     // ephemeral session rather than stranding it active on the real institute screen. It moved
@@ -15693,11 +15784,7 @@ function handleWindowKeydown(event) {
       if (nearby) {
         event.preventDefault();
         if (nearby.type === "npc") {
-          const npc = activeFieldMap().npcs.find((item) => item.id === nearby.id);
-          progress.activeFieldNpc = progress.activeFieldNpc === npc.id ? null : npc.id;
-          if (progress.activeFieldNpc) playSfx("dialogue");
-          save();
-          render();
+          toggleFieldDialogue(nearby.id);
         }
         if (nearby.type === "door") enterFieldInterior(nearby.id);
         if (nearby.type === "exit") exitFieldInterior();

@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, holdKey, walkToHubTarget } from "./helpers/progress-seed.js";
+import {
+  walkTo,
+  seedProgress,
+  loadSeededSave,
+  holdKey,
+  walkToHubTarget,
+} from "./helpers/progress-seed.js";
 
 // Scenario 2: Main Hall movement + INSTITUTE_HALL_BLOCKS collision.
 //
@@ -135,6 +141,13 @@ test.describe("Main Hall movement", () => {
     });
     await loadSeededSave(page);
 
+    // Walk to the beacon before using it. Until Spine Review Part 6B this test clicked it from the
+    // spawn, 6.3 tiles away, and the beacon obliged — it was the one world marker in the game with
+    // no proximity gate, which is what 6B fixed. That reach is field-dialogue-lifecycle.spec.js's
+    // subject; what *this* test is about is where the player is put down afterwards, so it just
+    // walks there. walkTo() steers until the game's own `.is-near` appears, which the beacon
+    // reports now.
+    expect(await walkTo(page, ".recall-beacon", "caseFieldPlayer")).toBe(true);
     // dispatchEvent, not click(): the beacon lives inside the translated world div, so a real click
     // makes Playwright scroll it into view — and the field camera being a pure function of player
     // position, never of a scrolled element, is a standing invariant several past regressions came
