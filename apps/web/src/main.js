@@ -4810,10 +4810,13 @@ if (
 // Spine Review Part 9 one variable answered both: opening a record from the Codex overwrote
 // `sourceOrigin` with "codex", so the Codex forgot it had been opened from the Institute and its
 // own "← Return" sent the player out to the field — a screen they had not asked for, on whichever
-// case happened to be active. Neither is persisted, for the same reason `openSourceId` is not:
-// they die with the page, and sourceReader() already carries the recovery path for that.
+// case happened to be active.
+//
+// The reader's own origin is not persisted, for the same reason `openSourceId` is not: it dies
+// with the page, and sourceReader() carries a recovery path for that. The Codex's *is*
+// (`progress.codexOrigin`), because that screen has no such path — a refresh on it reset the
+// module-local and walked the player out of the Institute again, which is Part 9's finding 7.
 let sourceOrigin = "field";
-let codexOrigin = "field";
 let openSourceId = null;
 // The reader's own refusal line, and the bar it enforces. Both live here rather than inside
 // sourceReader() because the handler writes the first and the renderer reads it.
@@ -10555,13 +10558,13 @@ function instituteMainRoomScreen() {
     !isHubSceneActive() && isRevealEarned(MERIDIAN_REVEAL_TRIGGER.target)
       ? "<span>Emery Voss is waiting for you in the north aisle.</span>"
       : "";
-  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Active researcher · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${archived}</b> / ${caseCount} cases archived</span><span><b>${evidence}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Badge case</b><span>Walk to the Preservation Case on its plinth in the west alcove to view every unit's badges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidence}</b></button><button class="text-button" data-action="reset">Reset all progress</button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
+  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Institute status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Active researcher · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${archived}</b> / ${caseCount} cases archived</span><span><b>${evidence}</b> evidence records secured</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidence}</b></button><button class="text-button" data-action="reset">Reset all progress</button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
   // Same `.hub-world` + camera structure as archiveRoomScreen(): everything that lives in world
   // space goes inside the translated div, and the interact prompt stays outside it so it can't be
   // scrolled off screen. Two canvases, because the hall's greenery is stamped `base` and its
   // foliage draws from the map's overlay layer, above the player.
   const worldStyle = `width:${HUB_GRID.columns * HUB_GRID.tile}px;height:${HUB_GRID.rows * HUB_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><p class="hub-subtitle">A living home base for every investigation.</p><p>Walk through the Institute with arrow keys or WASD. Speak with the Director and researchers, inspect preserved records, then approach the Navigation Table to open the map.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span>${revealNudge}</div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open the Preservation Case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Present day · Chronicle Institute</p><h1>Institute Archive</h1><div class="hub-meta"><span>${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span>${revealNudge}</div>${sidePanel}</section>${hubSceneDialogueMarkup()}<section class="institute-map institute-map--main-hall" id="instituteMap" aria-label="Playable Chronicle Institute interior"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="instituteHallTiledCanvas" role="img" aria-label="Top-down wood-panelled Institute hall: a Preservation Case plinth and founding stela in the west alcove, record shelving along the north wall, two transcription tables in the middle, and a compass-rose Navigation Table on the east dais"></canvas><canvas class="field-world-overlay" id="instituteHallTiledCanvasOverlay" aria-hidden="true"></canvas>${instituteNpc("director", "Director Hale")}${instituteNpc("amani", "Dr. Soto")}${instituteNpc("julian", "Prof. Park")}${instituteNpc("liaison", "Emery Voss")}${hubObjectMarker("trophy", "Preservation Case", "Open the Preservation Case")}${hubObjectMarker("table", "Navigation Table", "Open Chronicle Navigation Table")}${hubObjectMarker("archiveDoor", "Archive Room", "Enter the Archive Room")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section>${dialogue ? (hubDialogueId === "trophy" ? unitOneBadgeCaseMarkup() : `<div class="hub-dialogue" role="dialog" aria-modal="true" aria-labelledby="hubDialogueTitle"><article><button class="hub-dialogue__close" data-action="hub-dialogue-close" aria-label="Close dialogue">×</button><div class="hub-dialogue__portrait"><img src="${sheetFor(hubDialogueId).portrait}" alt=""></div><div>${dialogue.role ? `<p class="kicker">${esc(dialogue.role)}</p>` : ""}<h2 id="hubDialogueTitle">${esc(dialogue.name)}</h2><p>${esc(dialogue.dialogue())}</p>${hubDialogueId === "director" ? '<p class="hub-dialogue__quote">“History does not need another hero. It needs someone willing to follow the evidence.”</p>' : ""}${hubDialogueId === "julian" ? '<button class="btn btn-gold" data-action="hub-open-table">Open Navigation Table →</button>' : ""}</div></article></div>`) : ""}</main>${authorPanel()}${enterMainHallFromBlack ? '<div class="scene-fade is-active" id="sceneFade"></div>' : ""}`;
 }
 
 // How much of a unit's written work is on file. Counts a challenge whose *retired* predecessor was
@@ -10607,9 +10610,9 @@ function archiveRoomScreen() {
   // whole purpose is filing written work could not tell you how much of it you had filed — and its
   // left column was four lines against the Main Hall's fifteen, so walking between the two rooms
   // changed the page height enough to toggle the scrollbar and slide the centred layout sideways.
-  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Archive status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Archive desk · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${filed}</b> / ${total} Archive Challenges filed</span><span><b>${evidenceSecured}</b> evidence records secured</span></div><div class="archive-badges archive-badges--compact"><b>Written work</b><span>Approach the Archive Terminal at the north end of the room to compose this unit's Archive Challenges.</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidenceSecured}</b></button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
+  const sidePanel = `<aside class="hub-sidepanel hub-sidepanel--left"><p class="kicker">Archive status</p><h2>${esc(progress.profile.name || "Chronicler")}</h2><p class="role">Archive desk · Unit ${unitNumber}</p><div class="hub-progress"><span><b>${filed}</b> / ${total} Archive Challenges filed</span><span><b>${evidenceSecured}</b> evidence records secured</span></div><div class="hub-actions"><button class="btn btn-outline" data-action="codex" data-origin="hub">Open Codex <b>${evidenceSecured}</b></button></div><p class="hub-controls">Move: Arrow keys / WASD<br>Interact: E or click when close</p></aside>`;
   const worldStyle = `width:${ARCHIVE_ROOM_GRID.columns * ARCHIVE_ROOM_GRID.tile}px;height:${ARCHIVE_ROOM_GRID.rows * ARCHIVE_ROOM_GRID.tile}px`;
-  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute</p><h1>Archive Room</h1><p class="hub-subtitle">Where recovered records are organized, restored, and preserved.</p><p>Approach the Archive Terminal to review Archive Challenges for the active unit. Walk back through the doorway to return to the Main Hall.</p><div class="hub-meta"><span>Unit ${unitNumber} · ${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Main Hall", "Return to the Main Hall")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
+  return `${chrome()}<main class="hub-shell hub-shell--status-left"><section class="hub-intro"><p class="kicker">Chronicle Institute</p><h1>Archive Room</h1><div class="hub-meta"><span>${esc(resolvedUnitTitle(unit))}</span><span>${esc(status)}</span></div>${sidePanel}</section><section class="institute-map institute-map--archive-room" id="archiveRoomMap" aria-label="Playable Chronicle Institute Archive Room"><div class="hub-world" id="hubWorld" style="${worldStyle}"><canvas class="field-world-art" id="archiveRoomTiledCanvas" role="img" aria-label="Top-down wood-panelled archive room: record shelving and pigeonhole racks along the north wall, a lit hearth in the west nook, two long reading tables, and the Archive Terminal writing desk at the east end"></canvas><canvas class="field-world-overlay" id="archiveRoomTiledCanvasOverlay" aria-hidden="true"></canvas>${hubObjectMarker("terminal", "Archive Terminal", "Open Archive Terminal")}${hubObjectMarker("exitDoor", "Main Hall", "Return to the Main Hall")}<div class="hub-player" id="institutePlayer" data-facing="${instituteMovement.facing}" style="${institutePositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), instituteMovement.facing, { id: "institutePlayerSprite", walking: instituteMovement.moving, speed: HUB_SPEED })}</div></div><div class="hub-interact-prompt" id="hubInteractPrompt" ${nearby ? "" : "hidden"}>${nearby ? `Press E · ${esc(nearby[1].name)}` : ""}</div></section></main>${authorPanel()}`;
 }
 
 // Shared render/grade/completion-tracking core for one Archive Challenge
@@ -10820,12 +10823,25 @@ function xyToPercent(xy, viewport) {
 // are wide enough that two markers far enough apart to be distinct dots — Caribbean and Hispaniola,
 // ~75 units — can still have overlapping labels. Markers are walked left to right and each one takes
 // the slot below its dot unless a label already sits there, in which case it goes above.
-function declutterMarkerPositions(cases, bounds, viewport) {
+/**
+ * Where each case's marker sits, and which side of it its label hangs on.
+ *
+ * `places` is the view's own atlas labels (MAP_VIEWS[…].labels), and it is the half this used to
+ * ignore — Spine Review Part 5's finding 9, routed to Part 11. Markers were decluttered against
+ * each other and against nothing else, so "Empire's Formations" printed across CARIBBEAN SEA and
+ * Ellis Island's pill sat on NORTH AMERICA. A marker label has two sides and no other freedom, so
+ * this cannot resolve every case; what it can do is stop choosing the colliding one.
+ */
+function declutterMarkerPositions(cases, bounds, viewport, places = []) {
   const CLUSTER_RADIUS = 30;
   const SPREAD_RADIUS = 20;
   // Roughly a label pill's own footprint in NAV_TABLE_VIEWPORT units.
   const LABEL_GAP_X = 140;
   const LABEL_GAP_Y = 80;
+  // Marker centre to label centre, and how close a one-line place label may sit to it.
+  const LABEL_OFFSET_Y = 46;
+  const PLACE_GAP_Y = 55;
+  const placePoints = places.map((place) => projectPoint([place.lon, place.lat], bounds, viewport));
   const projected = cases.map((c) => ({
     id: c.id,
     ...projectPoint([c.mapPosition.lon, c.mapPosition.lat], bounds, viewport),
@@ -10853,14 +10869,28 @@ function declutterMarkerPositions(cases, bounds, viewport) {
     });
   }
   const below = [];
+  const onPlaceLabel = (xy, side) => {
+    const labelY = xy.y + (side === "below" ? LABEL_OFFSET_Y : -LABEL_OFFSET_Y);
+    return placePoints.some(
+      (place) => Math.abs(place.x - xy.x) < LABEL_GAP_X && Math.abs(place.y - labelY) < PLACE_GAP_Y
+    );
+  };
+  // Each side scores its own collisions and the cheaper one wins. Ties go to `below`, which is the
+  // side every marker defaults to — and a tie is the case that matters here: the marker rule alone
+  // used to push Ellis Island's label up onto NORTH AMERICA to avoid a neighbour it was 134 units
+  // from, which the 140-unit gap is deliberately conservative about because the Caribbean's markers
+  // sit half that far apart. Where one side is clear and the other is not, this is what it was.
+  const clashes = (xy, side) =>
+    (side === "below" &&
+    below.some((q) => Math.abs(q.x - xy.x) < LABEL_GAP_X && Math.abs(q.y - xy.y) < LABEL_GAP_Y)
+      ? 1
+      : 0) + (onPlaceLabel(xy, side) ? 1 : 0);
   [...positions.entries()]
     .sort(([, a], [, b]) => a.x - b.x)
     .forEach(([id, xy]) => {
-      const taken = below.some(
-        (q) => Math.abs(q.x - xy.x) < LABEL_GAP_X && Math.abs(q.y - xy.y) < LABEL_GAP_Y
-      );
-      positions.set(id, { ...xy, labelSide: taken ? "above" : "below" });
-      if (!taken) below.push(xy);
+      const side = clashes(xy, "below") <= clashes(xy, "above") ? "below" : "above";
+      positions.set(id, { ...xy, labelSide: side });
+      if (side === "below") below.push(xy);
     });
   return positions;
 }
@@ -10999,7 +11029,12 @@ function archiveScreen() {
   // out via caseMarker()'s own state check); Phase 48C adds a per-classroom
   // opt-out on top of that default via resolvedNavTableVisible().
   const visibleCases = selectedUnit.cases.filter((c) => resolvedNavTableVisible(c));
-  const markerPositions = declutterMarkerPositions(visibleCases, view.bounds, viewport);
+  const markerPositions = declutterMarkerPositions(
+    visibleCases,
+    view.bounds,
+    viewport,
+    view.labels
+  );
   const threadXY =
     markerPositions.get(selected.id) ||
     projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
@@ -12867,6 +12902,12 @@ function fileToCodex(activity, state, sourceId, outcome = null) {
     ].filter(Boolean),
     tags: activity.codexFiling.tags,
     seeAlso: activity.codexFiling.seeAlso,
+    // Both were debrief-only until Part 11, and both are written straight through from the
+    // activity rather than snapshotted from state — they are facts about the mission, not about
+    // what this player did. An existing save picks them up on its next boot, because
+    // backfillCodex() rebuilds every entry and this function keeps only `filedAt`.
+    anomaly: activity.anomaly,
+    historicalRecord: activity.historicalRecord,
     filedAt: progress.codex?.[activity.id]?.filedAt || new Date().toISOString(),
   });
   if (!entry) return false;
@@ -13241,6 +13282,13 @@ function codexScreen() {
     })
     .join("");
 
+  // Ten of the twenty-one cases are non-map missions and declare no `sources` at all, so on those
+  // this section was a heading and a note over an empty grid — reachable from either hub room's
+  // side panel any time one of them is the active case.
+  const satchelSection =
+    satchel ||
+    `<p class="codex-empty">${sourcesForCase(codexCaseId).length ? "Nothing secured on this case yet." : "This case has no field records — it is worked from the Archive, out of what you have already filed."}</p>`;
+
   const entries = codexEntries(progress.codex);
   const stats = codexStats(entries);
   const tally = entries.length
@@ -13277,7 +13325,7 @@ function codexScreen() {
           : "The Archive cross-references your filed records against each other. There is nothing to compare yet."
       }</p>`;
 
-  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>The Codex</h1><p>What you can defend. Records you file stay here — across every case, for the whole course.</p>${tally}</section><section class="codex-section"><h2>This case</h2><p class="codex-section__note">Sources you secured in the field. Your initial reading stays attached to each one.</p><div class="codex-grid">${satchel}</div></section><section class="codex-section"><h2>Filed records</h2><p class="codex-section__note">Missions you closed with a conclusion your evidence could carry.</p>${filed}</section><section class="codex-section"><h2>Cross-references</h2><p class="codex-section__note">Where two of your filed records turn out to be about the same question.</p>${crossRefs}</section></main>`;
+  return `${chrome()}<main class="shell codex-shell"><section class="codex-head"><button class="back-link" data-action="return-codex">← Return</button><p class="kicker">Chronicle Codex</p><h1>The Codex</h1><p>What you can defend. Records you file stay here — across every case, for the whole course.</p>${tally}</section><section class="codex-section"><h2>This case</h2><p class="codex-section__note">Sources you secured in the field. Your initial reading stays attached to each one.</p><div class="codex-grid">${satchelSection}</div></section><section class="codex-section"><h2>Filed records</h2><p class="codex-section__note">Missions you closed with a conclusion your evidence could carry.</p>${filed}</section><section class="codex-section"><h2>Cross-references</h2><p class="codex-section__note">Where two of your filed records turn out to be about the same question.</p>${crossRefs}</section></main>`;
 }
 
 /** One filed record, as it reads in the Archive. */
@@ -13305,7 +13353,26 @@ function codexRecordMarkup(entry, entries) {
   const seeAlso = related.length
     ? `<p class="codex-record__see-also"><b>See also</b> ${related.map((other) => esc(other.title)).join(" · ")}</p>`
     : "";
-  return `<article class="codex-record">${eyebrow ? `<p class="codex-record__eyebrow">${ACTIVITY_ENGINE_ICONS[entry.kind] || ""}<span>${esc(eyebrow)}</span></p>` : ""}<h4 class="codex-record__title">${esc(entry.title)}</h4>${entry.missionQuestion ? `<p class="codex-record__question">${esc(entry.missionQuestion)}</p>` : ""}<p class="codex-record__summary">${esc(entry.summary)}</p>${entry.conclusion ? `<p class="codex-record__conclusion"><b>You filed</b> ${esc(entry.conclusion)}</p>` : ""}${evidence}${open}${tags}${seeAlso}</article>`;
+  // Six missions flag something on the record that should not be there, and every one of them is
+  // ruled the way the altered entry in the Riverbend wharf book was ruled. That is a thread, and
+  // until Part 11 a player met each link once on a debrief they could not return to.
+  const anomaly = entry.anomaly?.noticed
+    ? `<div class="codex-record__anomaly"><h4>Flagged for the Institute</h4><p class="codex-record__noticed">${esc(entry.anomaly.noticed)}</p>${entry.anomaly.note ? `<p>${esc(entry.anomaly.note)}</p>` : ""}</div>`
+    : "";
+  // Collapsed, because it is reference rather than reading: three bands of several lines each on
+  // every one of twenty-one records would bury the archive it is filed in. Native <details>, the
+  // same disclosure the Manage Content tabs already use — no state, no script.
+  const bands = entry.historicalRecord
+    ? HISTORICAL_RECORD_BANDS.map(([key, label]) => {
+        const lines = entry.historicalRecord[key];
+        if (!Array.isArray(lines) || !lines.length) return "";
+        return `<dt class="is-${key}">${esc(label)}</dt><dd><ul>${lines.map((line) => `<li>${esc(line)}</li>`).join("")}</ul></dd>`;
+      }).join("")
+    : "";
+  const record = bands
+    ? `<details class="codex-record__record"><summary>The historical record</summary><p class="codex-record__record-note">Chronicle takes real liberties. Here is which is which.</p><dl>${bands}</dl></details>`
+    : "";
+  return `<article class="codex-record">${eyebrow ? `<p class="codex-record__eyebrow">${ACTIVITY_ENGINE_ICONS[entry.kind] || ""}<span>${esc(eyebrow)}</span></p>` : ""}<h4 class="codex-record__title">${esc(entry.title)}</h4>${entry.missionQuestion ? `<p class="codex-record__question">${esc(entry.missionQuestion)}</p>` : ""}<p class="codex-record__summary">${esc(entry.summary)}</p>${entry.conclusion ? `<p class="codex-record__conclusion"><b>You filed</b> ${esc(entry.conclusion)}</p>` : ""}${evidence}${open}${anomaly}${tags}${seeAlso}${record}</article>`;
 }
 
 // Aggregates progress.skillMastery (one upserted entry per graded quest
@@ -13334,7 +13401,7 @@ function masteryScreen() {
       return `<div class="mastery-row" data-mastery-category="${esc(category)}"><div class="mastery-row-head"><b>${esc(category)}</b><span>${attempted ? `${correct}/${attempted} correct` : "Not yet practiced"}</span></div><div class="mastery-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(category)} mastery"><div class="mastery-bar-fill" style="width:${pct}%"></div></div></div>`;
     })
     .join("");
-  return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy"><button class="back-link" data-action="home">← Return to Institute</button><p class="kicker">Institute Archive · Chronicler record</p><h1>Skill Mastery Record</h1><p>Every graded record you restore is tagged to the historical-thinking skill it exercises — Archive Challenges and Sourcing Practice Check items both count. This tracks how you're doing at each skill, not just which cases are complete.</p></section><section class="activity-board mastery-board">${totalAttempted ? rows : '<p class="bank-empty">No graded records yet. Complete an Archive Challenge or a Sourcing Practice Check to start building your skill mastery record.</p>'}</section></main>`;
+  return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy"><button class="back-link" data-action="home">← Return to Institute</button><p class="kicker">Institute Archive · Chronicler record</p><h1>Skill Mastery Record</h1><p>Every graded record you restore is tagged to the historical-thinking skill it exercises — Archive Challenges and Practice Check items both count. This tracks how you're doing at each skill, not just which cases are complete.</p></section><section class="activity-board mastery-board">${totalAttempted ? rows : '<p class="bank-empty">No graded records yet. Complete an Archive Challenge or a Practice Check to start building your skill mastery record.</p>'}</section></main>`;
 }
 
 // Phase 49C ("The Archive Rotation") item bank: every mcq/sequencing/hipp
@@ -13391,7 +13458,13 @@ function archiveRotationScreen() {
   const header = `<button class="back-link" data-action="home">← Return to Institute</button><p class="kicker">Institute Archive · Chronicler record</p><h1>The Archive Rotation</h1>`;
 
   if (!total) {
-    return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy">${header}<p>A short daily review pulled from records you've already secured. Explore a field mission's Sourcing Practice Check first to build up today's rotation.</p></section><section class="activity-board mastery-board"><p class="bank-empty">Nothing to review yet.</p></section></main>`;
+    // Reached when everything in the pool is scheduled for a later day, not when the pool is
+    // empty — `unlocked` always contains case-001, whose Practice Check items are in the pool from
+    // a cold boot. The old copy said the rotation was "pulled from records you've already secured"
+    // and told a player to go and do a Practice Check, which is wrong twice: it draws on every
+    // unlocked case's items whether or not you have seen them, and doing more practice is exactly
+    // what does not produce a rotation today.
+    return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy">${header}<p>A short daily review drawn from the practice items of every case you have open. Everything due has been reviewed — unlock another case, or come back tomorrow.</p>${streakLine}</section><section class="activity-board mastery-board"><p class="bank-empty">Nothing due today.</p></section></main>`;
   }
   if (rotation.position >= total) {
     return `${chrome()}<main class="shell mastery-shell"><section class="activity-copy">${header}<p>Today's rotation is complete — come back tomorrow for a new set.</p>${streakLine}</section><section class="activity-board mastery-board"><p class="bank-empty">${total}/${total} reviewed today.</p></section></main>`;
@@ -14541,18 +14614,22 @@ function handleSourceReaderClick(target, action) {
   }
   if (action === "codex") {
     progress.activeFieldNpc = null;
-    // The Codex's own origin, kept apart from the reader's — see the two declarations. Three
-    // buttons carry it: both hub side panels ("hub"), the field's Evidence Channel ("field"), and
-    // a field-opened reader ("source").
-    codexOrigin = target.dataset.origin || "field";
+    // The Codex's own origin, kept apart from the reader's — see sourceOrigin's declaration.
+    // Three buttons carry it: both hub side panels ("hub"), the field's Evidence Channel
+    // ("field"), and a field-opened reader ("source").
+    progress.codexOrigin = target.dataset.origin || "field";
     progress.currentScreen = "codex";
     save();
     render();
     return true;
   }
   if (action === "return-codex") {
+    // "source" only resolves back to the reader while `openSourceId` is still set — it is
+    // module-local, so a reload between opening the Codex and pressing Return leaves nothing to
+    // return to, and the Institute is the one screen that is always valid.
+    const origin = progress.codexOrigin;
     progress.currentScreen =
-      codexOrigin === "source" ? "source" : codexOrigin === "hub" ? "institute" : "field";
+      origin === "source" && openSourceId ? "source" : origin === "field" ? "field" : "institute";
     save();
     render();
     return true;

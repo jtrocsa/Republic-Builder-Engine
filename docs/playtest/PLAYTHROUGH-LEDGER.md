@@ -28,8 +28,8 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed**  | 2026-08-23 | —                                                |
 | [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed**  | 2026-08-23 | —                                                |
 | [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed**  | 2026-08-23 | —                                                |
-| 11                                                   | The Institute Archive                       | not started |            | 2 S3 from 5 · 1 from 8 · 1 from 9 _(P9-7)_       |
-| 12                                                   | Unit close and the next unit                | not started |            | the case-close chain, routed from 9              |
+| [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed**  | 2026-08-23 | —                                                |
+| 12                                                   | Unit close and the next unit                | not started |            | the case-close chain (from 9) · `arcClose` (11)  |
 | 10                                                   | The ten non-field missions                  | not started |            |                                                  |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
@@ -67,7 +67,8 @@ it as its own commit out of band rather than waiting.
 Severity decides scheduling. Category decides who fixes it and how it is checked. They are
 deliberately orthogonal, which is what keeps both short enough to apply consistently.
 
-**S1 · stops play** — fix before the part closes; may pre-empt the walk order.
+**S1 · stops play** — fix before the part closes; may pre-empt the walk order. One so far: Part
+11's P11-1, three cases with no reachable marker on the Navigation Table.
 **S2 · degrades play** — fix in this part's commit.
 **S3 · noted** — deferred, **and must name a destination.**
 

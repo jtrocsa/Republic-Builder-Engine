@@ -2142,11 +2142,13 @@ dd {
   color: var(--gold);
 }
 .codex-record__evidence,
-.codex-record__open {
+.codex-record__open,
+.codex-record__anomaly {
   margin-top: 12px;
 }
 .codex-record__evidence h4,
-.codex-record__open h4 {
+.codex-record__open h4,
+.codex-record__anomaly h4 {
   margin: 0 0 5px;
   font-size: 0.68rem;
   letter-spacing: 0.09em;
@@ -2173,6 +2175,42 @@ dd {
   letter-spacing: 0.04em;
   color: var(--gold-soft);
   opacity: 0.8;
+}
+/* The flagged anomaly, and the liberties note — both debrief-only until Spine Review Part 11
+   (decision log 0087). The anomaly keeps the debrief's warning colour, because six of them are one
+   running thread and the point is that they look alike wherever they are read. */
+.codex-record__anomaly h4 {
+  color: var(--c-warning);
+}
+.codex-record__anomaly p {
+  margin: 6px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--c-text-secondary);
+}
+.codex-record__noticed {
+  font-size: 0.84rem;
+}
+/* Collapsed by default: reference, not reading. Twenty-one records each carrying three bands would
+   bury the archive they are filed in. */
+.codex-record__record {
+  margin-top: 12px;
+}
+.codex-record__record > summary {
+  cursor: pointer;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.codex-record__record > summary:hover {
+  color: var(--gold);
+}
+.codex-record__record-note {
+  margin-top: 8px;
+}
+.codex-record__record dd li {
+  font-size: 0.84rem;
 }
 .codex-record__tags {
   display: flex;
@@ -4360,15 +4398,19 @@ dd {
   position: sticky;
   top: 84px;
 }
+/* Sized for the column it is actually in. At 5.7rem-capable this was 119px of a 291px status
+   column, and the panel underneath it started 593px down a 720px viewport — nothing in it visible
+   on arrival, the Codex button and the controls legend both below the fold. Same trade Part 5 made
+   on the Navigation Table's own heading; Spine Review Part 11. */
 .hub-intro h1 {
   max-width: 8ch;
-  margin: 6px 0 14px;
+  margin: 6px 0 12px;
   color: #fae9bb;
   font:
-    700 clamp(3.2rem, 5vw, 5.7rem)/0.93 "Spectral",
+    700 clamp(2.2rem, 3.2vw, 3.6rem)/0.95 "Spectral",
     Georgia,
     serif;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.05em;
 }
 .hub-intro p:not(.kicker) {
   max-width: 34ch;
@@ -6328,7 +6370,8 @@ dd {
   color: var(--gold-soft);
   opacity: 0.8;
 }
-.mission-debrief__record-note {
+.mission-debrief__record-note,
+.codex-record__record-note {
   margin: 0;
   font-size: 0.84rem;
   font-style: italic;
@@ -6379,7 +6422,8 @@ dd {
   line-height: 1.65;
   color: var(--c-text-secondary);
 }
-.mission-debrief__noticed {
+.mission-debrief__noticed,
+.codex-record__noticed {
   padding: 11px 14px;
   border: 1px dashed rgba(240, 207, 122, 0.45);
   border-radius: var(--c-radius-sm);
@@ -6388,7 +6432,8 @@ dd {
   font-family: "Spectral", serif;
   font-style: italic;
 }
-.mission-debrief__record dl {
+.mission-debrief__record dl,
+.codex-record__record dl {
   display: grid;
   gap: 4px;
   margin: 4px 0 0;
@@ -6396,32 +6441,39 @@ dd {
 /* One band per category, colour-coded so the three are told apart at a glance rather than read as
    one list: documented is the game's success green, Chronicle fiction its gold, still-debated its
    amber. Reconstruction sits between the first two on purpose. */
-.mission-debrief__record dt {
+.mission-debrief__record dt,
+.codex-record__record dt {
   margin-top: 8px;
   font-size: 0.74rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--c-text-secondary);
 }
-.mission-debrief__record dt.is-documented {
+.mission-debrief__record dt.is-documented,
+.codex-record__record dt.is-documented {
   color: var(--c-success);
 }
-.mission-debrief__record dt.is-fiction {
+.mission-debrief__record dt.is-fiction,
+.codex-record__record dt.is-fiction {
   color: var(--gold);
 }
-.mission-debrief__record dt.is-debated {
+.mission-debrief__record dt.is-debated,
+.codex-record__record dt.is-debated {
   color: var(--c-warning);
 }
-.mission-debrief__record dd {
+.mission-debrief__record dd,
+.codex-record__record dd {
   margin: 0;
 }
-.mission-debrief__record dd ul {
+.mission-debrief__record dd ul,
+.codex-record__record dd ul {
   display: grid;
   gap: 5px;
   margin: 0;
   padding-left: 20px;
 }
-.mission-debrief__record dd li {
+.mission-debrief__record dd li,
+.codex-record__record dd li {
   font-size: 0.88rem;
   line-height: 1.6;
   color: var(--c-text-secondary);

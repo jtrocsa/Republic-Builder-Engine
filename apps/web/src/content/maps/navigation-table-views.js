@@ -4,6 +4,15 @@
 // ocean/sea/continent labels to render for that framing. Adding a new unit only
 // requires picking (or reusing) a view here and adding an entry to UNIT_MAP_VIEW —
 // it does not require new map art.
+//
+// **A unit with no UNIT_MAP_VIEW entry does not fail; it falls back to DEFAULT_MAP_VIEW, and a case
+// whose coordinates fall outside that box is clipped out of existence.** `.atlas-table` is
+// `overflow: hidden`, and a marker click is the only way to select a case — `unlockNext()` unlocks
+// the next case without selecting it — so a marker outside the box is a case that cannot be
+// started. Units 6 and 7 shipped in that state: four of their six markers projected outside
+// `atlantic-wide`, and San Francisco, Manila and the Kansas railhead were unreachable from the only
+// screen that launches a case. Spine Review Part 11, decision log 0087.
+// `tests/unit/navigation-table-views.test.js` is what notices now.
 
 export const MAP_VIEWS = {
   "atlantic-wide": {
@@ -20,6 +29,31 @@ export const MAP_VIEWS = {
     bounds: { west: -90, east: -60, north: 48, south: 25 },
     labels: [{ text: "ATLANTIC OCEAN", lon: -68, lat: 32 }],
   },
+  // Coast to coast. Unit 6's three cases are a Kansas railhead (96.5W), Chicago (87.6W) and San
+  // Francisco (122.4W) — a unit about a continent being written onto paper, which is not a framing
+  // the eastern `north-america` box can hold.
+  "north-america-wide": {
+    bounds: { west: -134, east: -58, north: 55, south: 13 },
+    labels: [
+      { text: "PACIFIC OCEAN", lon: -126, lat: 28 },
+      { text: "GULF OF MEXICO", lon: -92, lat: 24 },
+      { text: "ATLANTIC OCEAN", lon: -68, lat: 33 },
+    ],
+  },
+  // The whole board. Unit 7's cases are Ellis Island, Manila and San Francisco, and no box that
+  // does not cross the antimeridian holds all three — `projectPoint()` is a plain linear map with
+  // no wrap, deliberately. That the unit needs a world map is the unit's own argument rather than a
+  // technical concession: the terms of belonging were being set on three shores at once.
+  world: {
+    bounds: { west: -180, east: 180, north: 78, south: -56 },
+    labels: [
+      { text: "PACIFIC OCEAN", lon: -140, lat: 5 },
+      { text: "NORTH AMERICA", lon: -103, lat: 60 },
+      { text: "ATLANTIC OCEAN", lon: -35, lat: 8 },
+      { text: "EUROPE", lon: 20, lat: 52 },
+      { text: "ASIA", lon: 100, lat: 45 },
+    ],
+  },
 };
 
 export const UNIT_MAP_VIEW = {
@@ -35,6 +69,8 @@ export const UNIT_MAP_VIEW = {
   // Confederacy at large, pinned at Charleston (32.8N, 79.9W). All three sit inside the same box,
   // so this unit adds no view of its own either.
   "unit-05": "north-america",
+  "unit-06": "north-america-wide",
+  "unit-07": "world",
 };
 
 export const DEFAULT_MAP_VIEW = "atlantic-wide";

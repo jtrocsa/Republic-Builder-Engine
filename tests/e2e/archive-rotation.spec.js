@@ -103,6 +103,10 @@ test.describe("The Archive Rotation", () => {
     });
     await loadSeededSave(page);
 
-    await expect(page.locator(".mastery-board")).toContainText("Nothing to review yet");
+    // Renamed in Spine Review Part 11. The old copy called this "Nothing to review yet" and told
+    // the player to go and do a Practice Check first, which is wrong in both of the states that
+    // reach it: the pool is every unlocked case's items whether or not they have been seen, and
+    // when everything is scheduled for a later day more practice is exactly what does not help.
+    await expect(page.locator(".mastery-board")).toContainText("Nothing due today.");
   });
 });

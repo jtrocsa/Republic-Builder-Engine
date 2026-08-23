@@ -36,8 +36,19 @@ const ENTRY_FIELDS = [
   "openQuestions",
   "tags",
   "seeAlso",
+  // What the mission flagged and could not resolve, and which parts of it are real. Both were
+  // written for the debrief and read only there — a screen gated on a one-way `debriefed` flag, so
+  // a student saw each of them once and could never get back. Spine Review Part 8's finding 5,
+  // fixed in Part 11 (decision log 0087). `anomaly` is a running thread across six units and is the
+  // one a player most wants to re-read; `historicalRecord` is the game's honesty statement about
+  // its own fiction, and all twenty-one missions carry one.
+  "anomaly",
+  "historicalRecord",
   "filedAt",
 ];
+
+// The two structured fields, kept as objects rather than flattened to strings.
+const OBJECT_FIELDS = new Set(["anomaly", "historicalRecord"]);
 
 const asList = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
 
@@ -64,6 +75,10 @@ export function buildCodexEntry(descriptor = {}) {
     )
       entry[field] = asList(value);
     else if (field === "supported") entry[field] = !!value;
+    // Stored as-is or dropped. A `String(value)` here would file "[object Object]" against every
+    // record in the archive, which is exactly what the catch-all below would have done.
+    else if (OBJECT_FIELDS.has(field))
+      entry[field] = value && typeof value === "object" ? value : null;
     else entry[field] = value == null ? "" : String(value);
   });
   return entry;

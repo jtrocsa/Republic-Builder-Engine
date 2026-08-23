@@ -32,7 +32,10 @@ test.describe("Part 5 · the Archive Room and the Navigation Table", () => {
     // The number that could not be true. Four completed cases against a denominator of three.
     await expect(panel).not.toContainText("4 / 3");
 
-    await expect(page.locator(".hub-meta")).toContainText("Unit 6 · A Continent on Paper");
+    // The meta bar carries the unit's *name*; the panel's own role line above carries its number.
+    // It used to print both, which is where Part 11 took the duplicate from — the number is one
+    // element up and the unit title is the half that says what you are working on.
+    await expect(page.locator(".hub-meta")).toContainText("A Continent on Paper");
   });
 
   // P5-3. Both labels render at once, about eighty pixels apart on the same two tiles.

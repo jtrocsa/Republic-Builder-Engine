@@ -36,6 +36,13 @@ export const DEFAULT_PROGRESS = {
   // absent on pre-Phase-71 saves, which is why it is read as falsy rather than merged in here.
   sourceActivities: {},
   activeActivitySourceId: null,
+  // Where the Codex screen's "← Return" goes back to: "hub", "field", or "source". Persisted for
+  // the same reason `activeActivitySourceId` above is — main.js holds it in a module-local that
+  // dies on reload, and the Codex, unlike the source reader, has no recovery path to fall into. A
+  // refresh on the Codex therefore used to leave the Institute for the field, which is Spine
+  // Review Part 9's finding 7, fixed in Part 11 (decision log 0087). A scalar, so the shallow
+  // spread in readProgress() carries it and it needs no merge line of its own.
+  codexOrigin: "field",
   // The Codex: one entry per mission filed with a conclusion its evidence could carry, keyed by
   // activity id and kept permanently. Unlike everything above it, this is not scoped to a case — it
   // is the only save state that survives leaving one, which is the whole point of it. Entries are
