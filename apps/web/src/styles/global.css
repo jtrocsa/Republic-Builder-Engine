@@ -6243,7 +6243,8 @@ dd {
 }
 /* The inquiry question, on the way in and on the way out. Gold-edged because it is the one line a
    student should be able to repeat back — "make the task obvious" is this element's whole job. */
-.mission-brief__question {
+.mission-brief__question,
+.activity-copy__question {
   margin: 0;
   padding: 12px 16px;
   border-left: 3px solid var(--c-border-gold);
@@ -6271,6 +6272,7 @@ dd {
 
 /* --- the Debrief: the same two-column shell as the hand-off, at the other end of the mission --- */
 .mission-debrief__filed,
+.mission-debrief__kept,
 .mission-debrief__found,
 .mission-debrief__open,
 .mission-debrief__arc,
@@ -6282,6 +6284,7 @@ dd {
   border-top: 1px solid var(--line);
 }
 .mission-debrief__filed h2,
+.mission-debrief__kept h2,
 .mission-debrief__found h2,
 .mission-debrief__open h2,
 .mission-debrief__arc h2,
@@ -6295,6 +6298,7 @@ dd {
 }
 .mission-debrief__filed p,
 .mission-debrief__found p,
+.mission-debrief__kept li,
 .mission-debrief__open li {
   margin: 0;
   font-size: 0.94rem;
@@ -6307,11 +6311,22 @@ dd {
   font-style: italic;
   color: var(--c-text) !important;
 }
+.mission-debrief__kept ul,
 .mission-debrief__open ul {
   display: grid;
   gap: 7px;
   margin: 0;
   padding-left: 20px;
+}
+/* Matches the Codex's own "What you kept" block, which is where this list goes next. */
+.mission-debrief__kept cite {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  opacity: 0.8;
 }
 .mission-debrief__record-note {
   margin: 0;
@@ -6687,6 +6702,7 @@ dd {
 }
 .evidence-notebook__prompt,
 .evidence-notebook__empty,
+.evidence-notebook__settled,
 .evidence-notebook__full {
   margin: 0;
   font-size: 0.9rem;
@@ -6696,6 +6712,12 @@ dd {
 .evidence-notebook__empty {
   font-style: italic;
   opacity: 0.75;
+}
+.evidence-notebook__settled {
+  padding: 9px 12px;
+  border-left: 3px solid var(--c-success);
+  border-radius: 0 var(--c-radius-sm) var(--c-radius-sm) 0;
+  background: rgba(var(--c-gold-rgb), 0.06);
 }
 .evidence-notebook__full {
   padding: 9px 12px;

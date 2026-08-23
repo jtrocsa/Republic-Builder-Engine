@@ -278,6 +278,16 @@ export function boardOpen(activity, board, state = defaultAssemblyState()) {
  * @param {{ type: string, board?: string, slot?: string, fragment?: string, option?: string }} action
  */
 export function actAssembly(activity, state = defaultAssemblyState(), action = { type: "" }) {
+  // A filed record is a finished record, and no verb on this board takes it back.
+  //
+  // Phase 90F stopped the closer accepting a second conclusion (decision log 0084). It was one door
+  // of five: `lift` un-solves a board and `release` un-supports a conclusion, and either makes
+  // isAssemblyComplete() false again on a record fileToCodex() has already written and deliberately
+  // never unfiles — the board reading unfinished while the Archive reads filed.
+  //
+  // Above the notebook delegation on purpose, since `release` is handled in there.
+  if (isAssemblyComplete(activity, state)) return state;
+
   // Before the board lookup: a Field Notebook verb carries no board, and the guard below would
   // wave it through into a chain of `if`s that all miss it.
   const notebook = actNotebook(activity, state, action, assemblyFindings(activity, state));
@@ -353,10 +363,8 @@ export function actAssembly(activity, state = defaultAssemblyState(), action = {
   }
 
   if (action.type === "file") {
-    // A filed record does not get re-filed. renderCloser() disables these options for exactly this
-    // state, so a player cannot reach here by clicking; this is the state layer saying the same
-    // thing, and it is what makes "the Codex never unfiles" true rather than merely intended.
-    if (isAssemblyComplete(activity, state)) return state;
+    // Guarded here rather than only in the UI: the closer's disabled attribute is a hint, not a
+    // lock, and a filed-too-early record would read as complete. (Re-filing is refused at the top.)
     if (!activity.boards.every((item) => boardStatus(item, state).solved)) return state;
     const option = activity.closer.options.find((item) => item.id === action.option);
     return option ? { ...state, filed: option.id } : state;
@@ -397,6 +405,9 @@ function gridOf(board) {
 export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {}) {
   const images = ctx.images || {};
   const solved = activity.boards.every((board) => boardStatus(board, state).solved);
+  // Filed and finished. The reducer refuses every verb in this state, so the controls below say so
+  // rather than looking live and doing nothing — the complaint Phase 90F made about the closer.
+  const settled = isAssemblyComplete(activity, state);
 
   const boards = activity.boards
     .map((board) => {
@@ -409,7 +420,7 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
       // default never reaches runtime here. A label board is nothing but its
       // labels, so it always shows them; an image board opts in.
       const showLabels = board.kind === "label" || board.showFragmentLabels === true;
-      const lock = open ? "" : " disabled";
+      const lock = open && !settled ? "" : " disabled";
 
       const slots = board.slots
         .map((slot) => {
@@ -492,7 +503,7 @@ export function renderAssembly(activity, state = defaultAssemblyState(), ctx = {
   const findings = assemblyFindings(activity, state);
   return `<section class="activity-board activity-board--assembly">
   ${boards}
-  ${renderNotebook(activity, state, findings)}
+  ${renderNotebook(activity, state, findings, { settled })}
   ${renderCloser(activity.closer, state.filed, {
     locked: !solved,
     lockedNote:

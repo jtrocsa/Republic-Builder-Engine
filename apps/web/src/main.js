@@ -12060,8 +12060,14 @@ function fieldTrackerMissionBlock(tracked) {
   if (!tracked) return "";
   const { source, activity, state, complete: done } = tracked;
   const summary = activitySummary(activity.kind, activity, state);
+  // A filed mission whose debrief has not been cleared opens on the debrief, not on the board — that
+  // is activityScreen()'s third state and it is correct. What was wrong is this panel promising the
+  // Field Notebook and delivering something else; a player reaches the state by leaving the debrief
+  // through its back-link, which is an ordinary way to get back to the map. Say what is behind the
+  // button. (Spine Review P8-4.)
+  const waiting = done && !!activity.debrief && !progress.sourceActivities?.[source.id]?.debriefed;
   const line = done
-    ? `<p class="field-tracker__progress is-done">✓ Filed — your Field Notebook is still here</p>`
+    ? `<p class="field-tracker__progress is-done">${waiting ? "✓ Filed — the debrief is waiting" : "✓ Filed — your Field Notebook is still here"}</p>`
     : summary
       ? `<p class="field-tracker__progress"><span>${esc(summary.label)}</span><b>${summary.done}/${summary.total}</b></p>`
       : "";
@@ -12069,7 +12075,7 @@ function fieldTrackerMissionBlock(tracked) {
   // count — so it gets its row and its button and nothing in between, which is the honest answer
   // rather than a gap to fill.
   const bar = summary ? fieldTrackerBar(done ? summary.total : summary.done, summary.total) : "";
-  return `<div class="field-tracker__mission">${line}${bar}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">Open the Field Notebook →</button></div>`;
+  return `<div class="field-tracker__mission">${line}${bar}<button class="field-tracker__open" data-action="open-activity-notebook" data-source="${esc(source.id)}">${waiting ? "Open the debrief →" : "Open the Field Notebook →"}</button></div>`;
 }
 
 /**
@@ -12521,7 +12527,16 @@ function activityScreen(kind) {
     : "";
   // The board and the footer share the shell's right-hand column, so they are wrapped rather than
   // being two more children of a two-column grid.
-  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p>${esc(activity.intro)}</p>${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
+  // The mission's question, on the screen the player has open for the whole mission.
+  //
+  // It printed on Mission Instructions and again on the Debrief and nowhere in between — the way in
+  // and the way out, and nothing while the work is being done. Same defect `howItWorks` had before
+  // Phase 71 and the same fix: a moment first, then a reference that stays in the copy column.
+  // (Spine Review P7-7 → P8-3.)
+  const question = activity.missionQuestion
+    ? `<p class="activity-copy__question">${esc(activity.missionQuestion)}</p>`
+    : "";
+  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p>${esc(activity.intro)}</p>${question}${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
 }
 
 /**
@@ -12601,6 +12616,24 @@ function missionDebriefScreen(kind, source, activity, entry) {
     ? `<section class="mission-debrief__filed"><h2>What you filed</h2><p class="mission-debrief__conclusion">${esc(filed.text)}</p><p>${esc(filed.why)}</p></section>`
     : "";
 
+  // And what it rests on — but only where the player actually chose.
+  //
+  // A capacity turns the Field Notebook from a review panel into a decision, and until now the
+  // screen that concludes the mission never mentioned the decision again. The five missions that
+  // declare one make a real three-of-N choice, and one of them gates its correct conclusion on two
+  // named entries; the other sixteen keep everything, where there is nothing to reflect back and a
+  // seven-item list would be padding. Same wording as the Codex's own block, which is where this
+  // list goes next — one concept, one name.
+  const outcome = activity.notebook ? activityOutcome(kind, activity, entry.state) : null;
+  const kept = outcome?.evidence?.length
+    ? `<section class="mission-debrief__kept"><h2>What you kept</h2><ul>${outcome.evidence
+        .map(
+          (finding) =>
+            `<li>${esc(finding.text)}${finding.from ? `<cite>${esc(finding.from)}</cite>` : ""}</li>`
+        )
+        .join("")}</ul></section>`
+    : "";
+
   const unresolved = [
     activity.debrief.remains,
     ...(Array.isArray(activity.openQuestions) ? activity.openQuestions : []),
@@ -12634,7 +12667,7 @@ function missionDebriefScreen(kind, source, activity, entry) {
 
   const onward = `<button class="btn btn-gold mission-brief__begin" data-action="mission-debriefed" data-source="${esc(source.id)}">Open ${esc(source.title)} →</button>`;
 
-  return `${chrome()}<main class="shell mission-brief mission-debrief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${onward}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${activityKicker(kind)}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${conclusion}<section class="mission-debrief__found"><h2>What the evidence supports</h2><p>${esc(activity.debrief.established)}</p></section><section class="mission-debrief__open"><h2>What it cannot settle</h2><ul>${unresolved
+  return `${chrome()}<main class="shell mission-brief mission-debrief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${onward}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${activityKicker(kind)}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${conclusion}${kept}<section class="mission-debrief__found"><h2>What the evidence supports</h2><p>${esc(activity.debrief.established)}</p></section><section class="mission-debrief__open"><h2>What it cannot settle</h2><ul>${unresolved
     .map((line) => `<li>${esc(line)}</li>`)
     .join("")}</ul></section>${arc}${record}${anomaly}</section></main>`;
 }

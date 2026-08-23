@@ -174,6 +174,21 @@ describe("actTrace / traceLogged / isTraceComplete", () => {
     // Identity, not merely equality: the host re-renders only when a reducer returns a new object.
     expect(actTrace(activity(), filed, { type: "file", option: "whole" })).toBe(filed);
   });
+
+  // P8-1. Closing the closer left the ledger open, and re-logging one leg wrong un-does a filed
+  // chain — isTraceComplete() goes false on a record the Codex never unfiles.
+  it("refuses every board verb once the record is filed (regression case)", () => {
+    const a = activity();
+    const filed = actTrace(a, logged(), { type: "file", option: "partial" });
+    expect(isTraceComplete(a, filed)).toBe(true);
+
+    // The verb lands while the record is open, so the refusal below is a refusal.
+    const reLogged = actTrace(a, logged(), { type: "log", leg: "leg-1", effect: "cannot" });
+    expect(reLogged.ledger["leg-1"]).toBe("cannot");
+
+    expect(actTrace(a, filed, { type: "log", leg: "leg-1", effect: "cannot" })).toBe(filed);
+    expect(isTraceComplete(a, filed)).toBe(true);
+  });
 });
 
 // The second axis (Phase 76). A trace that declares `supportLevels` asks every leg twice: what

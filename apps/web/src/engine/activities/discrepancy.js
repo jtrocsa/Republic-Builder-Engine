@@ -220,6 +220,16 @@ export function discrepancySettled(activity, state = defaultDiscrepancyState()) 
  * @param {{ type: string, claim?: string, verdict?: string, gap?: string, option?: string }} action
  */
 export function actDiscrepancy(activity, state = defaultDiscrepancyState(), action = { type: "" }) {
+  // A filed record is a finished record, and no verb on this board takes it back.
+  //
+  // Phase 90F stopped the closer accepting a second conclusion (decision log 0084). It was one door
+  // of five: changing a verdict un-settles the record and `release` un-supports the conclusion, and
+  // either makes isDiscrepancyComplete() false again on something fileToCodex() has already written
+  // and deliberately never unfiles.
+  //
+  // Above the notebook delegation on purpose, since `release` is handled in there.
+  if (isDiscrepancyComplete(activity, state)) return state;
+
   const notebook = actNotebook(activity, state, action, discrepancyFindings(activity, state));
   if (notebook !== state) return notebook;
 
@@ -243,10 +253,8 @@ export function actDiscrepancy(activity, state = defaultDiscrepancyState(), acti
   }
 
   if (action.type === "file") {
-    // A filed record does not get re-filed. renderCloser() disables these options for exactly this
-    // state, so a player cannot reach here by clicking; this is the state layer saying the same
-    // thing, and it is what makes "the Codex never unfiles" true rather than merely intended.
-    if (isDiscrepancyComplete(activity, state)) return state;
+    // Guarded here rather than only in the UI: the closer's disabled attribute is a hint, not a
+    // lock, and a filed-too-early record would read as complete. (Re-filing is refused at the top.)
     if (!discrepancySettled(activity, state)) return state;
     const option = activity.closer.options.find((item) => item.id === action.option);
     return option ? { ...state, filed: option.id } : state;
@@ -263,6 +271,10 @@ export function actDiscrepancy(activity, state = defaultDiscrepancyState(), acti
 export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), ctx = {}) {
   const holds = new Set(ctx.holds || []);
   const settled = discrepancySettled(activity, state);
+  // Filed and finished, which is a different thing from `settled` above: that one asks whether the
+  // record is answered, this one whether it is closed. The reducer refuses every verb in this state,
+  // so the controls below say so rather than looking live and doing nothing.
+  const filed = isDiscrepancyComplete(activity, state);
 
   const available = activity.observed.filter((item) => !item.requires || holds.has(item.requires));
   const observations = activity.observed
@@ -281,7 +293,7 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
         .map((verdict) => {
           const chosen = status.chosenVerdict === verdict.id;
           const tone = chosen ? (status.verdictRight ? " is-correct" : " is-wrong") : "";
-          return `<button type="button" class="activity-verdict${tone}" data-activity-action="verdict" data-claim="${escapeHtml(claim.id)}" data-verdict="${escapeHtml(verdict.id)}" aria-pressed="${chosen ? "true" : "false"}">${escapeHtml(verdict.label)}</button>`;
+          return `<button type="button" class="activity-verdict${tone}" data-activity-action="verdict" data-claim="${escapeHtml(claim.id)}" data-verdict="${escapeHtml(verdict.id)}" aria-pressed="${chosen ? "true" : "false"}"${filed ? " disabled" : ""}>${escapeHtml(verdict.label)}</button>`;
         })
         .join("");
 
@@ -292,7 +304,7 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
         .map((kind) => {
           const chosen = status.chosenGap === kind.id;
           const tone = chosen ? (status.gapRight ? " is-correct" : " is-wrong") : "";
-          return `<button type="button" class="activity-gap-kind${tone}" data-activity-action="gap" data-claim="${escapeHtml(claim.id)}" data-gap="${escapeHtml(kind.id)}" aria-pressed="${chosen ? "true" : "false"}">${escapeHtml(kind.label)}</button>`;
+          return `<button type="button" class="activity-gap-kind${tone}" data-activity-action="gap" data-claim="${escapeHtml(claim.id)}" data-gap="${escapeHtml(kind.id)}" aria-pressed="${chosen ? "true" : "false"}"${filed ? " disabled" : ""}>${escapeHtml(kind.label)}</button>`;
         })
         .join("")}</div>
     </div>`
@@ -332,7 +344,7 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
       <ul class="activity-observations">${observations}</ul>
     </aside>
   </div>
-  ${renderNotebook(activity, state, discrepancyFindings(activity, state))}
+  ${renderNotebook(activity, state, discrepancyFindings(activity, state), { settled: filed })}
   ${renderCloser(activity.closer, state.filed, {
     locked: !settled,
     lockedNote: activity.lockedNote || "Settle every line of the record before you file.",

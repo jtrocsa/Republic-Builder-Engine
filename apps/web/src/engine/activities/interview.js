@@ -271,6 +271,22 @@ export function interviewSummary(activity, state = defaultInterviewState()) {
  * @param {{ type: string, speaker?: string, question?: string, option?: string }} action
  */
 export function actInterview(activity, state = defaultInterviewState(), action = { type: "" }) {
+  // A filed record is a finished record, and `release` is the verb here that takes it back: dropping
+  // an entry the filed conclusion names un-supports it, and isInterviewComplete() goes false again
+  // on a record fileToCodex() has already written and deliberately never unfiles. Phase 90F closed
+  // the closer against the same state (decision log 0084); this is the rest of that door.
+  //
+  // `ask` and `log` are exempt, and the exemption is the interesting half. They are the only verbs
+  // in this folder that happen somewhere other than the activity screen — out on the map, in the
+  // field dialogue bubble, where the question chips are drawn live whatever the mission's state. A
+  // blanket freeze would leave four questions sitting on every stranger doing nothing, which is a
+  // worse bug than the one this closes. Neither can un-complete anything: both only ever add, and
+  // coverage counts `logged`.
+  //
+  // Above the notebook delegation on purpose, since `release` is handled in there.
+  if (action.type !== "ask" && action.type !== "log" && isInterviewComplete(activity, state))
+    return state;
+
   // The Field Notebook's two verbs first. It returns the same state reference for anything it does
   // not own, so this falls straight through for `ask`/`log`/`file`.
   const notebook = actNotebook(activity, state, action, interviewFindings(activity, state));
@@ -303,13 +319,9 @@ export function actInterview(activity, state = defaultInterviewState(), action =
   }
 
   if (action.type === "file") {
-    // A filed record does not get re-filed. renderCloser() disables these options for exactly this
-    // state, so a player cannot reach here by clicking; this is the state layer saying the same
-    // thing, and it is what makes "the Codex never unfiles" true rather than merely intended.
-    if (isInterviewComplete(activity, state)) return state;
     // Guarded here rather than only in the UI: the closer's disabled attribute
     // is a hint, not a lock, and a filed-too-early record would read as
-    // complete.
+    // complete. (Re-filing is refused at the top.)
     if (!interviewCoverage(activity, state).met) return state;
     const option = activity.closer.options.find((item) => item.id === action.option);
     // Filing an unsupported conclusion is deliberately allowed — the closer answers with what the
@@ -503,6 +515,10 @@ function notebookTable(activity, state, speakers) {
  */
 export function renderInterview(activity, state = defaultInterviewState()) {
   const coverage = interviewCoverage(activity, state);
+  // Filed and finished. The reducer refuses `release` in this state, so the notebook below says so
+  // rather than offering a control that does nothing. `ask` and `log` stay live and stay out on the
+  // map, which is why nothing on this screen has to know about them.
+  const filed = isInterviewComplete(activity, state);
   const goals = interviewGoals(activity, state)
     .map(
       (goal) => `<p><span>${escapeHtml(goal.label)}</span><b>${goal.done}</b> of ${goal.total}</p>`
@@ -549,7 +565,7 @@ export function renderInterview(activity, state = defaultInterviewState()) {
   <div class="activity-progress">${goals}</div>
   ${where}
   ${panels}
-  ${renderNotebook(activity, state, findings)}
+  ${renderNotebook(activity, state, findings, { settled: filed })}
   ${renderCloser(activity.closer, state.filed, {
     locked: !coverage.met,
     // The default is deliberately placeless. The literal that used to sit here read "Every person

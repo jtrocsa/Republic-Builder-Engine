@@ -141,6 +141,29 @@ describe("the notebook panel", () => {
     const authored = { notebook: { capacity: 2, emptyNote: "Nobody has told you anything yet." } };
     expect(renderNotebook(authored, {}, [])).toContain("Nobody has told you anything yet.");
   });
+
+  // P8-1. Release was the fifth door into an un-filed record, and the one this panel owns.
+  it("goes read-only once the record is filed, and says so (regression case)", () => {
+    const state = { notebook: { kept: ["f1"] } };
+    const markup = renderNotebook(capped(2), state, FINDINGS, { settled: true });
+    expect(markup).toContain("This record is filed.");
+    expect(markup).toMatch(/data-activity-action="release" data-finding="f1"[^>]*disabled/);
+    expect(markup).toMatch(/data-activity-action="keep" data-finding="f2"[^>]*disabled/);
+    expect(markup).toContain('class="evidence-notebook is-settled"');
+  });
+
+  it("says the record is filed instead of the capacity note, when both would apply", () => {
+    const full = { notebook: { kept: ["f1", "f2"] } };
+    expect(renderNotebook(capped(2), full, FINDINGS, { settled: true })).not.toContain("is full");
+    expect(renderNotebook(capped(2), full, FINDINGS)).toContain("is full");
+  });
+
+  it("defaults to live, so every pre-Phase-90G call site renders unchanged", () => {
+    const state = { notebook: { kept: ["f1"] } };
+    expect(renderNotebook(capped(2), state, FINDINGS)).toBe(
+      renderNotebook(capped(2), state, FINDINGS, { settled: false })
+    );
+  });
 });
 
 describe("a conclusion measured against its evidence", () => {
@@ -315,5 +338,34 @@ describe("an engine wired to the notebook", () => {
     state = actInterview(activity(), state, { type: "release", finding: "sailor:gold" });
     state = actInterview(activity(), state, { type: "keep", finding: "elder:grows" });
     expect(isInterviewComplete(activity(), state)).toBe(true);
+  });
+
+  // P8-1, and the one the Spine Review found first: releasing what a filed conclusion names
+  // un-supports it, so `isComplete` goes false on a record fileToCodex() has already written and
+  // deliberately never unfiles. The board would then read unfinished and the Archive filed.
+  it("refuses to release the evidence a filed conclusion rests on (regression case)", () => {
+    const a = activity();
+    let state = actInterview(a, gathered(), { type: "keep", finding: "elder:grows" });
+    state = actInterview(a, state, { type: "file", option: "asked" });
+    expect(isInterviewComplete(a, state)).toBe(true);
+
+    expect(actInterview(a, state, { type: "release", finding: "elder:grows" })).toBe(state);
+    expect(isInterviewComplete(a, state)).toBe(true);
+  });
+
+  // The exemption, and it is the reason this engine's guard is not the blanket one the other three
+  // got. `ask`/`log` are drawn out on the map in the field dialogue bubble, live whatever the
+  // mission's state; freezing them would leave four dead question chips on every stranger. Neither
+  // can un-complete anything — both only ever add, and coverage counts `logged`.
+  it("keeps asking and logging live out on the map after the record is filed", () => {
+    const a = activity();
+    let state = actInterview(a, gathered(), { type: "keep", finding: "elder:grows" });
+    state = actInterview(a, state, { type: "file", option: "asked" });
+    expect(isInterviewComplete(a, state)).toBe(true);
+
+    const asked = actInterview(a, state, { type: "ask", speaker: "elder", question: "gold" });
+    expect(asked).not.toBe(state);
+    expect(asked.asked.elder).toContain("gold");
+    expect(isInterviewComplete(a, asked)).toBe(true);
   });
 });

@@ -26,9 +26,9 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | [6A](./part-06-the-field-runtime.md)                 | The field runtime — the world               | **closed**  | 2026-08-22 | —                                                |
 | [6B](./part-06-the-field-runtime.md)                 | The field runtime — the mission surface     | **closed**  | 2026-08-23 | —                                                |
 | [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed**  | 2026-08-23 | —                                                |
-| 8                                                    | The Field Notebook and the debrief          | not started |            | 1 S3 inbound from 7 _(P7-7)_                     |
+| [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed**  | 2026-08-23 | —                                                |
 | 9                                                    | The record and the checks                   | not started |            | 2 S3 inbound from 6B _(P6B-8, P6B-9)_            |
-| 11                                                   | The Institute Archive                       | not started |            | 2 S3 inbound from Part 5 _(P5-9, P5-10)_         |
+| 11                                                   | The Institute Archive                       | not started |            | 2 S3 from Part 5 · 1 S3 from 8 _(P8-5)_          |
 | 12                                                   | Unit close and the next unit                | not started |            |                                                  |
 | 10                                                   | The ten non-field missions                  | not started |            |                                                  |
 

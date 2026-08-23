@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   AssemblyActivitySchema,
   actAssembly,
+  assemblyFindings,
   assemblyOutcome,
   boardOpen,
   boardStatus,
@@ -362,6 +363,33 @@ describe("boardStatus / isAssemblyComplete / assemblyOutcome", () => {
     expect(isAssemblyComplete(activity(), filed)).toBe(true);
     // Identity, not merely equality: the host re-renders only when a reducer returns a new object.
     expect(actAssembly(activity(), filed, { type: "file", option: "daily" })).toBe(filed);
+  });
+
+  // P8-1. Closing the closer left `lift` open, and lifting one fragment out of a filed
+  // reconstruction un-solves its board — isAssemblyComplete() goes false on a record the Codex has
+  // already written and deliberately never unfiles.
+  it("refuses every board verb once the record is filed (regression case)", () => {
+    const a = activity();
+    const filed = actAssembly(a, solved(), { type: "file", option: "knowledge" });
+    expect(isAssemblyComplete(a, filed)).toBe(true);
+
+    // The verb lands while the record is open, so the refusals below are refusals.
+    const lifted = actAssembly(a, solved(), {
+      type: "lift",
+      board: "sheet",
+      slot: "left",
+      fragment: "west",
+    });
+    expect(lifted).not.toBe(solved());
+
+    for (const action of [
+      { type: "lift", board: "sheet", slot: "left", fragment: "west" },
+      { type: "select", board: "sheet", fragment: "west" },
+      { type: "release", finding: assemblyFindings(a, filed)[0]?.id },
+    ]) {
+      expect(actAssembly(a, filed, action)).toBe(filed);
+    }
+    expect(isAssemblyComplete(a, filed)).toBe(true);
   });
 });
 

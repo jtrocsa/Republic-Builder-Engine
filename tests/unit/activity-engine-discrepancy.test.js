@@ -221,6 +221,30 @@ describe("isDiscrepancyComplete / discrepancyOutcome", () => {
     // Identity, not merely equality: the host re-renders only when a reducer returns a new object.
     expect(actDiscrepancy(activity(), filed, { type: "file", option: "mistake" })).toBe(filed);
   });
+
+  // P8-1. Closing the closer left the verdict buttons open, and one flipped verdict un-settles a
+  // filed audit — isDiscrepancyComplete() goes false on a record the Codex never unfiles.
+  it("refuses every board verb once the record is filed (regression case)", () => {
+    const a = activity();
+    const filed = actDiscrepancy(a, settled(), { type: "file", option: "purpose" });
+    expect(isDiscrepancyComplete(a, filed)).toBe(true);
+
+    // The verb lands while the record is open, so the refusals below are refusals.
+    const flipped = actDiscrepancy(a, settled(), {
+      type: "verdict",
+      claim: "harbours",
+      verdict: "contradicted",
+    });
+    expect(flipped.verdicts.harbours).toBe("contradicted");
+
+    for (const action of [
+      { type: "verdict", claim: "harbours", verdict: "contradicted" },
+      { type: "gap", claim: "empty", gap: "mistake" },
+    ]) {
+      expect(actDiscrepancy(a, filed, action)).toBe(filed);
+    }
+    expect(isDiscrepancyComplete(a, filed)).toBe(true);
+  });
 });
 
 describe("renderDiscrepancy — the observation column", () => {

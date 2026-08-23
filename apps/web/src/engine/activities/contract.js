@@ -403,11 +403,17 @@ export function actNotebook(activity, state, action = { type: "" }, findings = [
  * shared with the practice check, Archive Challenges and non-map missions, and styling through it
  * re-lays every quest list in the game.
  *
+ * `settled` is the engine's own `isComplete()`, passed rather than derived: unlike the closer below,
+ * this panel has no `locked` to negate, and a notebook that guessed from `correct && supported`
+ * alone would lock a legacy save whose board came apart before the guard existed — refusing the
+ * releases that are the only way back out of it.
+ *
  * @param {{ notebook?: { capacity: number, prompt?: string, emptyNote?: string } }} activity
  * @param {object} [state]
  * @param {{ id: string, text: string, from?: string }[]} [findings]
+ * @param {{ settled?: boolean }} [options]
  */
-export function renderNotebook(activity, state, findings = []) {
+export function renderNotebook(activity, state, findings = [], { settled = false } = {}) {
   const selectable = !!activity.notebook;
   const kept = notebookKept(activity, state, findings);
   const held = new Set(kept.map((finding) => finding.id));
@@ -426,8 +432,8 @@ export function renderNotebook(activity, state, findings = []) {
       const control = !selectable
         ? ""
         : isKept
-          ? `<button type="button" class="evidence-notebook__release" data-activity-action="release" data-finding="${escapeHtml(finding.id)}">Release</button>`
-          : `<button type="button" class="evidence-notebook__keep" data-activity-action="keep" data-finding="${escapeHtml(finding.id)}"${full ? " disabled" : ""}>Add to Field Notebook</button>`;
+          ? `<button type="button" class="evidence-notebook__release" data-activity-action="release" data-finding="${escapeHtml(finding.id)}"${settled ? " disabled" : ""}>Release</button>`
+          : `<button type="button" class="evidence-notebook__keep" data-activity-action="keep" data-finding="${escapeHtml(finding.id)}"${full || settled ? " disabled" : ""}>Add to Field Notebook</button>`;
       return `<li class="evidence-notebook__entry${selectable && isKept ? " is-kept" : ""}">
       <p>${escapeHtml(finding.text)}</p>
       ${finding.from ? `<cite>${escapeHtml(finding.from)}</cite>` : ""}
@@ -444,15 +450,21 @@ export function renderNotebook(activity, state, findings = []) {
 
   // Said only when it binds. A capacity note printed from the start reads as a warning about a
   // limit the player has not met and cannot yet picture.
-  const fullNote = full
-    ? `<p class="evidence-notebook__full">Your Field Notebook is full. Release an entry to make room — and be able to say why the new one is stronger.</p>`
-    : "";
+  //
+  // A settled record says the other thing instead, and it needs saying: a disabled "Release" with
+  // nothing beside it is a control that looks broken. The closer above can stay silent because its
+  // filed option is still sitting there in green; this list has no such tell.
+  const note = settled
+    ? `<p class="evidence-notebook__settled">This record is filed. What you kept is what it was filed on.</p>`
+    : full
+      ? `<p class="evidence-notebook__full">Your Field Notebook is full. Release an entry to make room — and be able to say why the new one is stronger.</p>`
+      : "";
 
-  return `<section class="evidence-notebook">
+  return `<section class="evidence-notebook${settled ? " is-settled" : ""}">
   <h3>Field Notebook ${count}</h3>
   ${activity.notebook?.prompt ? `<p class="evidence-notebook__prompt">${escapeHtml(activity.notebook.prompt)}</p>` : ""}
   ${body}
-  ${fullNote}
+  ${note}
 </section>`;
 }
 

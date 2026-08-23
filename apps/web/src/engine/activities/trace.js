@@ -229,6 +229,16 @@ export function traceLogged(activity, state = defaultTraceState()) {
  * @param {{ type: string, leg?: string, effect?: string, support?: string, option?: string }} action
  */
 export function actTrace(activity, state = defaultTraceState(), action = { type: "" }) {
+  // A filed record is a finished record, and no verb on this board takes it back.
+  //
+  // Phase 90F stopped the closer accepting a second conclusion (decision log 0084). It was one door
+  // of five: re-logging a leg wrong un-does the ledger, changing its `support` does the same, and
+  // `release` un-supports the conclusion — each makes isTraceComplete() false again on a record
+  // fileToCodex() has already written and deliberately never unfiles.
+  //
+  // Above the notebook delegation on purpose, since `release` is handled in there.
+  if (isTraceComplete(activity, state)) return state;
+
   const notebook = actNotebook(activity, state, action, traceFindings(activity, state));
   if (notebook !== state) return notebook;
 
@@ -248,10 +258,8 @@ export function actTrace(activity, state = defaultTraceState(), action = { type:
     return { ...state, support: { ...state.support, [leg.id]: level.id } };
   }
   if (action.type === "file") {
-    // A filed record does not get re-filed. renderCloser() disables these options for exactly this
-    // state, so a player cannot reach here by clicking; this is the state layer saying the same
-    // thing, and it is what makes "the Codex never unfiles" true rather than merely intended.
-    if (isTraceComplete(activity, state)) return state;
+    // Guarded here rather than only in the UI: the closer's disabled attribute is a hint, not a
+    // lock, and a filed-too-early record would read as complete. (Re-filing is refused at the top.)
     if (!traceLogged(activity, state)) return state;
     const option = activity.closer.options.find((item) => item.id === action.option);
     return option ? { ...state, filed: option.id } : state;
@@ -266,6 +274,10 @@ export function actTrace(activity, state = defaultTraceState(), action = { type:
 export function renderTrace(activity, state = defaultTraceState()) {
   const nodeLabel = (id) => activity.nodes.find((node) => node.id === id)?.label || id;
   const logged = traceLogged(activity, state);
+  // Filed and finished, which is a different thing from `logged` above: that one asks whether every
+  // leg is accounted for, this one whether the record is closed. The reducer refuses every verb in
+  // this state, so the controls below say so rather than looking live and doing nothing.
+  const filed = isTraceComplete(activity, state);
 
   const legs = activity.legs
     .map((leg, index) => {
@@ -274,7 +286,7 @@ export function renderTrace(activity, state = defaultTraceState()) {
         .map((effect) => {
           const chosen = status.chosen === effect.id;
           const tone = chosen ? (status.effectRight ? " is-correct" : " is-wrong") : "";
-          return `<button type="button" class="activity-effect${tone}" data-activity-action="log" data-leg="${escapeHtml(leg.id)}" data-effect="${escapeHtml(effect.id)}" aria-pressed="${chosen ? "true" : "false"}">${escapeHtml(effect.label)}</button>`;
+          return `<button type="button" class="activity-effect${tone}" data-activity-action="log" data-leg="${escapeHtml(leg.id)}" data-effect="${escapeHtml(effect.id)}" aria-pressed="${chosen ? "true" : "false"}"${filed ? " disabled" : ""}>${escapeHtml(effect.label)}</button>`;
         })
         .join("");
       // The second question, and it only appears once the first is right. Two reasons: asking how
@@ -288,7 +300,7 @@ export function renderTrace(activity, state = defaultTraceState()) {
         .map((level) => {
           const chosen = status.supportChosen === level.id;
           const tone = chosen ? (status.supportRight ? " is-correct" : " is-wrong") : "";
-          return `<button type="button" class="activity-support${tone}" data-activity-action="support" data-leg="${escapeHtml(leg.id)}" data-support="${escapeHtml(level.id)}" aria-pressed="${chosen ? "true" : "false"}">${escapeHtml(level.label)}</button>`;
+          return `<button type="button" class="activity-support${tone}" data-activity-action="support" data-leg="${escapeHtml(leg.id)}" data-support="${escapeHtml(level.id)}" aria-pressed="${chosen ? "true" : "false"}"${filed ? " disabled" : ""}>${escapeHtml(level.label)}</button>`;
         })
         .join("")}
     </div>`
@@ -317,7 +329,7 @@ export function renderTrace(activity, state = defaultTraceState()) {
     ${activity.subject.note ? `<p class="activity-note">${escapeHtml(activity.subject.note)}</p>` : ""}
   </div>
   <ol class="activity-legs">${legs}</ol>
-  ${renderNotebook(activity, state, traceFindings(activity, state))}
+  ${renderNotebook(activity, state, traceFindings(activity, state), { settled: filed })}
   ${renderCloser(activity.closer, state.filed, {
     locked: !logged,
     lockedNote:
