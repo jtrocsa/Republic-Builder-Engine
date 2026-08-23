@@ -27,9 +27,9 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | [6B](./part-06-the-field-runtime.md)                 | The field runtime — the mission surface     | **closed**  | 2026-08-23 | —                                                |
 | [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed**  | 2026-08-23 | —                                                |
 | [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed**  | 2026-08-23 | —                                                |
-| 9                                                    | The record and the checks                   | not started |            | 2 S3 inbound from 6B _(P6B-8, P6B-9)_            |
-| 11                                                   | The Institute Archive                       | not started |            | 2 S3 from Part 5 · 1 S3 from 8 _(P8-5)_          |
-| 12                                                   | Unit close and the next unit                | not started |            |                                                  |
+| [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed**  | 2026-08-23 | —                                                |
+| 11                                                   | The Institute Archive                       | not started |            | 2 S3 from 5 · 1 from 8 · 1 from 9 _(P9-7)_       |
+| 12                                                   | Unit close and the next unit                | not started |            | the case-close chain, routed from 9              |
 | 10                                                   | The ten non-field missions                  | not started |            |                                                  |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the

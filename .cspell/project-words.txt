@@ -470,6 +470,7 @@ wordmark
 wordmark's
 workadventure
 workstreams
+worktree
 yehakin
 yehakins
 yuca

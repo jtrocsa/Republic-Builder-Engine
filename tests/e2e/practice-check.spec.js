@@ -20,10 +20,10 @@ test.describe("Practice Check (all 4 quest types)", () => {
 
     await expect(page.locator(".quest-practice-summary")).toContainText("0/6");
 
-    // --- MCQ --- practiceCheckScreen()'s overall count treats every mcq item as "complete"
-    // once answered (not once correct — see main.js's mcqCards map, `if (answered) overallComplete
-    // += 1`), so all 3 of case-001's mcq questions need an answer to reach 6/6 overall, even
-    // though each card's own data-quest-status still distinguishes correct from incorrect.
+    // --- MCQ --- the overall count is `isQuestComplete()` across all four sections, so all 3 of
+    // case-001's mcq questions have to be answered *correctly* to contribute. It counted an
+    // answered-but-wrong mcq or sequencing item as complete until Spine Review Part 9, which is
+    // what this comment used to have to explain — see record-and-checks.spec.js.
     const mcqAnswers = {
       "case-001-mcq-taino-sourcing": "1",
       "case-001-mcq-columbus-audience": "0",

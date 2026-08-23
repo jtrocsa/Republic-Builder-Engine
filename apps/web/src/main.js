@@ -4806,8 +4806,19 @@ if (
   progress.currentScreen = progress.activeCaseId ? "field" : "institute";
   saveProgress(progress);
 }
+// Where the *reader* goes back to, and where the *Codex* goes back to. Two questions, and until
+// Spine Review Part 9 one variable answered both: opening a record from the Codex overwrote
+// `sourceOrigin` with "codex", so the Codex forgot it had been opened from the Institute and its
+// own "← Return" sent the player out to the field — a screen they had not asked for, on whichever
+// case happened to be active. Neither is persisted, for the same reason `openSourceId` is not:
+// they die with the page, and sourceReader() already carries the recovery path for that.
 let sourceOrigin = "field";
+let codexOrigin = "field";
 let openSourceId = null;
+// The reader's own refusal line, and the bar it enforces. Both live here rather than inside
+// sourceReader() because the handler writes the first and the renderer reads it.
+const READING_MIN_LENGTH = 15;
+let readerNotice = "";
 let authorMode = false;
 let authorPanelOpen = false;
 
@@ -11906,6 +11917,7 @@ function openFieldRecord(sourceId, origin = "field") {
   openSourceId = sourceId;
   progress.activeFieldNpc = null;
   progress.fieldNotice = "";
+  readerNotice = "";
   sourceOrigin = origin;
   progress.currentScreen = "source";
   save();
@@ -12374,50 +12386,41 @@ function riverbendWorldMarkup() {
 // OWN canvas ids even if it draws a .tmj another surface also draws: renderTiledMapWithOverlay()
 // guards on `dataset.rendered`, so a shared id makes one surface's painted canvas count as proof the
 // other was painted too, and the second room renders as an empty frame.
-// Each map's briefing copy. There used to be a `defaultNotice` here too — a standing sentence printed
-// into #fieldNotice on arrival, which restated the `intro` right below it and then sat there for the
-// rest of the case. The notice is a status line, so it now says nothing until the game does.
+// Each map's briefing copy — one field, and the third attempt at that. There used to be a
+// `defaultNotice` here, a standing sentence printed into #fieldNotice on arrival that restated the
+// `intro` right below it and then sat there for the rest of the case; the notice is a status line,
+// so it now says nothing until the game does. There used to be a `progressHint` too, which named
+// the same records the `intro` already names and never changed as they were secured; the Evidence
+// Channel states its own gate now (see `reconstructionGate`). Both were static copy standing where
+// live state belonged, which is the thing to be suspicious of if a third field is proposed here.
 const FIELD_COPY = {
   "unit-01": {
     intro:
       "You are the only Chronicler in the field. Start in the village, gather observations, then follow the shoreline toward the Spanish camp and map fragments as the record opens.",
-    progressHint:
-      "Complete the village investigation, Columbus source encounter, and map reconstruction.",
   },
   "unit-02": {
     intro:
       "You arrive at a young river settlement. Speak with its people, then secure the charter, the servant's letter, and the wharf accounts before the record destabilizes.",
-    progressHint: "Secure the charter, the servant's letter, and the wharf accounts.",
   },
   "unit-03": {
     intro:
       "You arrive on a Philadelphia gathering ground threaded with news from the frontier, the press, the assembly, and the wharf. Walk the square, speak with its people, then gather all seven records before the record destabilizes.",
-    progressHint:
-      "Secure the frontier speech, the farmer's letters, the liberty speech, the elegy, the proclamation, the petition, and the private letter.",
   },
   "unit-04": {
     intro:
       "You arrive on the towpath of a canal town that did not exist twenty years ago. Walk the line and speak with the people the canal brought here. Three records are out in the town — a boat's toll receipt, a workshop's time book, and the notices on the Reform Square board — and two more are behind doors: the printing office on Market Street, and the boardinghouse in the quarter below the towpath.",
-    progressHint:
-      "Five records: the toll receipt, the workshop time book, the reform notices, the printer's order book, and the boardinghouse register.",
   },
   "unit-05": {
     intro:
       "You arrive on Franklin Street, in a capital under siege conditions and swollen to three times the people it was built for. The government quarter is uphill; the ironworks, the warehouse district and the dock are down the bluff behind you. Four records are out in the city — a War Department requisition, the market's price board, the Tredegar payroll, and a labourer's pass at the dock — and two more are behind doors: the commission house on Franklin Street, and a Chimborazo ward on the hill.",
-    progressHint:
-      "Six records: the impressment requisition, the price and ration notices, the Tredegar payroll, the labourer's pass, the commission house day book, and the ward register.",
   },
   "unit-06": {
     intro:
       "You arrive on the street apron between the depot and the covered platform, in a town two years old that exists because a company decided it should. Everything north of the rails is paper — a United States land office, a telegraph office, a town-site office — and everything south of them is what the paper is for. Seven records: five out in the open, two behind doors on Front Street, and one of the five is not in the town at all. It is across the line, in a village whose people leave on Wednesday.",
-    progressHint:
-      "Seven records: the Section 4 pay sheet, the survey field notes, Tariff No. 9, the agency roll and the Clarion in the office window are out on the map; the receiver's receipt is inside the land office and the day's telegrams are inside the telegraph office.",
   },
   "unit-07": {
     intro:
       "You arrive at the head of a landing stage on a made island in the Upper Bay, on the busiest day this station ever had. Everything north of the iron rail across the wharf is the government's ground; everything south of it is where eleven thousand seven hundred and forty-seven people came off the barges today and waited to be read back to themselves off a sheet filled in for them in Europe. Seven records: two are out here, four are on the registry floor through the main doors, and the last is in the board of special inquiry room twelve bays east — which cannot be read until you hold the manifest it is a hearing about.",
-    progressHint:
-      "Seven records: the boarding division's return and the line's instructions to its agents are out on the wharf; the manifest sheet, the circular on column nine, the medical inspection card and the daily statement are inside the reception hall; the minute of a hearing is in the inquiry room.",
   },
 };
 function fieldScreen() {
@@ -12430,6 +12433,13 @@ function fieldScreen() {
   // in the Chesapeake was told to follow the Caribbean shoreline.
   const copy = FIELD_COPY[activeFieldOutdoorMap().id] || FIELD_COPY["unit-01"];
   const allSecured = sources.length > 0 && countEvidence(caseId) === sources.length;
+  // What stands between this panel and its gold button — Spine Review Part 9, routed from 6B.
+  // This line used to be a static `progressHint` per map, which re-listed the same records the
+  // briefing paragraph two panels up had already enumerated and then never changed as they were
+  // secured. It is not a second progress bar either: the Mission Tracker carries the count and the
+  // rows. The panel's own job is to say why the Reconstruction Table is not here yet.
+  const remaining = Math.max(0, sources.length - countEvidence(caseId));
+  const reconstructionGate = `<p class="channel-progress">${remaining} ${remaining === 1 ? "record" : "records"} still to secure. The Reconstruction Table opens when the last one is in.</p>`;
   const fieldNotice = progress.fieldNotice;
   // Most cases already carry the date inside `location` ("Caribbean · 1493", "Philadelphia,
   // Pennsylvania · 1763–1783"), and appending `date` unconditionally printed it twice on every one
@@ -12439,7 +12449,7 @@ function fieldScreen() {
   const kicker = activeCase.location.includes(activeCase.date)
     ? activeCase.location
     : `${activeCase.location} · ${activeCase.date}`;
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : `<p class="channel-progress">${esc(copy.progressHint)}</p>`}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
 }
 
 // Human-facing name for each engine, used in the activity screen's eyebrow. The engine keys
@@ -12901,6 +12911,19 @@ function backfillCodex() {
   if (changed) save();
 }
 
+/**
+ * Four sections of retryable practice, and one count over all of them.
+ *
+ * "Complete" used to mean two different things under one label — Spine Review Part 9, routed here
+ * from 6B. MCQ and sequencing counted an item complete once it was *answered*, evidence-organizing
+ * and HIPP once it was *correct*, so three wrong multiple-choice answers read as "3/6 practice
+ * items complete" while a wrong HIPP read as 0. It is `isQuestComplete()` for all four now, which
+ * is the same predicate every card's own `data-quest-status` already uses.
+ *
+ * The second count went with it: a lone `N/M answered` sat under the multiple-choice section only,
+ * wearing `.activity-feedback` — the class every card's own feedback line uses — so it read as a
+ * verdict on the last question rather than a tally of the section. One screen, one count.
+ */
 function practiceCheckScreen() {
   let overallTotal = 0;
   let overallComplete = 0;
@@ -12910,9 +12933,6 @@ function practiceCheckScreen() {
   const questSet = PRACTICE_CHECK_QUESTS[caseId];
 
   const mcqQuests = questSet.mcq.map((quest) => resolveQuestSlot("mcq", quest));
-  const answeredCount = mcqQuests.filter(
-    (quest) => progress.questResponses[quest.id]?.selected !== undefined
-  ).length;
   const mcqCards = mcqQuests
     .map((quest) => {
       const state = progress.questResponses[quest.id] || {};
@@ -12921,7 +12941,7 @@ function practiceCheckScreen() {
       const answered = questAnsweredAny("mcq", state);
       const correct = isQuestComplete("mcq", result);
       overallTotal += 1;
-      if (answered) overallComplete += 1;
+      if (correct) overallComplete += 1;
       const status = !answered ? "unanswered" : correct ? "correct" : "incorrect";
       const feedback = answered
         ? `<p class="activity-feedback ${correct ? "success" : "error"}" role="status" aria-live="polite">${
@@ -12941,7 +12961,7 @@ function practiceCheckScreen() {
       const answered = questAnsweredAny("sequencing", state);
       const correct = isQuestComplete("sequencing", result);
       overallTotal += 1;
-      if (answered) overallComplete += 1;
+      if (correct) overallComplete += 1;
       const status = !answered ? "unanswered" : correct ? "correct" : "incorrect";
       const feedback = answered
         ? `<p class="activity-feedback ${correct ? "success" : "error"}" role="status" aria-live="polite">${
@@ -13000,7 +13020,7 @@ function practiceCheckScreen() {
     })
     .join("");
 
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseName(activeCase))} · practice</p><h1>Sourcing Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseTitle(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<p class="activity-feedback">${answeredCount}/${mcqQuests.length} answered</p><h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseName(activeCase))} · practice</p><h1>Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseTitle(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 /**
@@ -13153,25 +13173,49 @@ function sourceReader() {
       : "";
   // Same `.quest-practice-item[data-quest-status]` wrapper the Investigation Challenge and
   // Practice Check use, so these need no styling of their own.
+  //
+  // Three states, not one. Every card used to print `questHint()`, which for mcq — the only reader
+  // quest type there is — is a constant string that ignores the result entirely. So a *correct*
+  // answer got a green box reading "Choose the option that best explains why, not just the option
+  // that names the correct answer": no confirmation, and the authored `explanation` — the paragraph
+  // that says where the name America came from, or what it means that half the sheet is thirteen
+  // centuries older than the other half — unreachable anywhere in the game.
+  //
+  // The explanation shows on a correct answer only, which is where this deliberately parts company
+  // with the Practice Check's identical cards. There, an explanation under a wrong answer is the
+  // point: it is practice, it is retryable, nothing is behind it. Here the set is the gate on
+  // Institute Context, so printing the reasoning under a wrong answer hands over the answer.
   const promptSection = readerQuests.length
     ? `<section class="reader-questions quest-practice-board"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p>${readerQuests
         .map((quest) => {
           const state = progress.questResponses[quest.id] || {};
           const result = gradeQuest(source.readerQuestType, quest, state);
           const complete = isQuestComplete(source.readerQuestType, result);
-          const status = !questAnsweredAny(source.readerQuestType, state)
-            ? "unanswered"
-            : complete
-              ? "correct"
-              : "in-progress";
-          return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(source.readerQuestType, quest, state)}<p class="activity-feedback${complete ? " success" : ""}" role="status" aria-live="polite">${esc(questHint(source.readerQuestType, result))}</p></div>`;
+          const answered = questAnsweredAny(source.readerQuestType, state);
+          const status = !answered ? "unanswered" : complete ? "correct" : "in-progress";
+          const note = complete
+            ? `Correct. ${quest.explanation || ""}`.trim()
+            : answered
+              ? `Not quite. ${questHint(source.readerQuestType, result)}`
+              : questHint(source.readerQuestType, result);
+          return `<div class="quest-practice-item" data-quest-status="${status}">${renderQuest(source.readerQuestType, quest, state)}<p class="activity-feedback${complete ? " success" : answered ? " error" : ""}" role="status" aria-live="polite">${esc(note)}</p></div>`;
         })
         .join("")}</section>`
-    : `<section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label><button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>`;
+    : `<section class="reader-prompt"><h2>Chronicler prompt</h2><p>${esc(source.prompt)}</p><label class="response-label">Your initial reading<textarea id="sourceResponse" placeholder="Write your evidence-based interpretation before opening Institute Context…">${esc(response)}</textarea></label>${readerNotice ? `<p class="activity-feedback error" role="status" aria-live="polite">${esc(readerNotice)}</p>` : ""}<button class="btn btn-gold" data-action="submit-source" data-source="${source.id}">Submit initial reading →</button></section>`;
+  // "both questions" was a literal describing content. Two records carry reader questions and both
+  // happen to ask two; a third asking three would have been told to answer both of its three.
   const sealedNote = readerQuests.length
-    ? "Answer both questions correctly first. The context note will then fill in what the record itself cannot tell you."
-    : "Submit a source-based interpretation first. The context note will then help you compare your thinking with the record.";
-  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button><button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button></div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1>${promptSection}${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>${esc(sealedNote)}</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Filed in the Codex ✓" : "File in the Codex →"}</button></section></main>`;
+    ? `Answer ${readerQuests.length === 2 ? "both" : `all ${readerQuests.length}`} questions correctly first. The context note will then fill in what the record itself cannot tell you.`
+    : "Submit a source-based interpretation of at least a sentence first. The context note will then help you compare your thinking with the record.";
+  // A record opened from the Codex already has "← Back to Codex" on its left; the Codex button
+  // beside it goes to the same screen, which is Part 6A's finding 3 in a smaller room — two
+  // controls, one destination. It is also the one press that could lose the Codex's own origin,
+  // since it is the only "codex" action reachable from inside a Codex-opened record.
+  const codexButton =
+    sourceOrigin === "codex"
+      ? ""
+      : `<button class="codex-button" data-action="codex" data-origin="source">Codex <b>${countEvidence(activeFieldCaseId())}</b></button>`;
+  return `${chrome()}<main class="reader-shell"><section class="reader-art">${sourceVisual(source)}</section><section class="reader-copy"><div class="reader-nav"><button class="back-link" data-action="return-source">← Back to ${sourceOrigin === "codex" ? "Codex" : "field"}</button>${codexButton}</div><p class="kicker">${esc(source.type)}</p><h1>${esc(source.title)}</h1>${promptSection}${revealed ? `<section class="reader-context"><h2>Institute Context</h2><p>${esc(source.feedback)}</p></section>` : `<section class="context-locked"><span>✦</span><div><b>Institute Context sealed</b><p>${esc(sealedNote)}</p></div></section>`}${evaluatorSection}<p class="citation">${esc(source.citation)}</p><a class="source-link" href="${esc(source.externalUrl)}" target="_blank" rel="noreferrer">View original archive record ↗</a><button class="btn ${secured ? "btn-complete" : "btn-outline"}" data-action="secure-source" data-source="${source.id}" ${!revealed ? "disabled" : ""}>${secured ? "Filed in the Codex ✓" : "File in the Codex →"}</button></section></main>`;
 }
 
 /**
@@ -14497,7 +14541,10 @@ function handleSourceReaderClick(target, action) {
   }
   if (action === "codex") {
     progress.activeFieldNpc = null;
-    sourceOrigin = target.dataset.origin || "field";
+    // The Codex's own origin, kept apart from the reader's — see the two declarations. Three
+    // buttons carry it: both hub side panels ("hub"), the field's Evidence Channel ("field"), and
+    // a field-opened reader ("source").
+    codexOrigin = target.dataset.origin || "field";
     progress.currentScreen = "codex";
     save();
     render();
@@ -14505,7 +14552,7 @@ function handleSourceReaderClick(target, action) {
   }
   if (action === "return-codex") {
     progress.currentScreen =
-      sourceOrigin === "source" ? "source" : sourceOrigin === "hub" ? "institute" : "field";
+      codexOrigin === "source" ? "source" : codexOrigin === "hub" ? "institute" : "field";
     save();
     render();
     return true;
@@ -14559,10 +14606,16 @@ function handleSourceReaderClick(target, action) {
   if (action === "submit-source") {
     const source = sourceById(target.dataset.source);
     const value = document.getElementById("sourceResponse")?.value.trim() || "";
-    if (value.length < 15) {
-      alert("Write a brief evidence-based interpretation before opening Institute Context.");
+    if (value.length < READING_MIN_LENGTH) {
+      // Was the only `alert()` in the game — a system modal on a screen with its own cursor, its
+      // own palette and its own feedback line two elements up. The refusal now lands where every
+      // other refusal in the reader does.
+      readerNotice =
+        "Write at least a sentence of evidence-based interpretation before opening Institute Context.";
+      render();
       return true;
     }
+    readerNotice = "";
     progress.responses[source.id] = value;
     if (!progress.revealedContexts.includes(source.id)) progress.revealedContexts.push(source.id);
     save();
@@ -14577,11 +14630,15 @@ function handleSourceReaderClick(target, action) {
     const list = progress.caseEvidence[caseId] || [];
     if (!list.includes(id)) list.push(id);
     progress.caseEvidence[caseId] = list;
-    if (id === "taino-context")
+    // Back where the record was opened from, not always the map. A record opened from the Codex —
+    // which is how a player re-reads one from the Institute — used to file and then drop the player
+    // out into the field. The field notice goes with it: it is the map's status line, so writing it
+    // on the way to any other screen leaves a stale instruction waiting on the next visit.
+    const backToField = sourceOrigin !== "codex";
+    if (backToField && id === "taino-context")
       progress.fieldNotice =
         "Village record secured. The shoreline records are now readable: follow the coast toward the Spanish camp and map fragments.";
-    sourceOrigin = "field";
-    progress.currentScreen = "field";
+    progress.currentScreen = backToField ? "field" : "codex";
     save();
     render();
     return true;
