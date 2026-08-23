@@ -15,7 +15,5 @@
       "Bash(grep *)"
     ]
   },
-  "deniedMcpServers": [
-    { "serverName": "playwright" }
-  ]
+  "deniedMcpServers": [{ "serverName": "playwright" }]
 }
