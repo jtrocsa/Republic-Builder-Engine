@@ -243,6 +243,10 @@ export function actDiscrepancy(activity, state = defaultDiscrepancyState(), acti
   }
 
   if (action.type === "file") {
+    // A filed record does not get re-filed. renderCloser() disables these options for exactly this
+    // state, so a player cannot reach here by clicking; this is the state layer saying the same
+    // thing, and it is what makes "the Codex never unfiles" true rather than merely intended.
+    if (isDiscrepancyComplete(activity, state)) return state;
     if (!discrepancySettled(activity, state)) return state;
     const option = activity.closer.options.find((item) => item.id === action.option);
     return option ? { ...state, filed: option.id } : state;

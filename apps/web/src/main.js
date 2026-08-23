@@ -12505,7 +12505,7 @@ function activityScreen(kind) {
   // same reason as the briefing: they belong in the copy column, which no engine has a view
   // of. Both are optional, and an activity that omits them renders exactly as before.
   const howItWorks = activity.howItWorks
-    ? `<section class="activity-howto"><h2>How this works</h2><ol>${activity.howItWorks.steps
+    ? `<section class="activity-howto"><h2>Mission Instructions</h2><ol>${activity.howItWorks.steps
         .map((step) => `<li>${esc(step)}</li>`)
         .join(
           ""

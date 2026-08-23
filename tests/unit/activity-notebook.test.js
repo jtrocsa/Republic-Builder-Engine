@@ -193,6 +193,37 @@ describe("a conclusion measured against its evidence", () => {
     expect(markup).not.toContain("activity-why is-correct");
   });
 
+  // Spine Review Part 7. `file` overwrites `state.filed` unconditionally once a board is settled,
+  // so a player who reopened a finished mission from the Mission Tracker could un-finish it in one
+  // click — while the Codex, which deliberately never unfiles, kept the entry. renderCloser() works
+  // this out with no help from the host: every engine's isComplete() is <board settled> && correct
+  // && supported, and `locked` is that first term negated.
+  it("closes the closer once the filed conclusion is correct and supported", () => {
+    const markup = renderCloser(closer, "purpose", { kept: [{ id: "f1" }, { id: "f3" }] });
+    expect(markup).toContain("is-settled");
+    // Every option, including the one that was filed — this is a record, not a re-run.
+    expect(markup.match(/class="activity-option[^"]*"[^>]*disabled/g)).toHaveLength(2);
+    // And it still reads as the conclusion that was filed.
+    expect(markup).toContain("activity-option is-correct");
+  });
+
+  it("stays live for a wrong conclusion and for an unsupported one", () => {
+    // Both are states the player is meant to be able to change, so neither closes.
+    const wrong = renderCloser(closer, "island", { kept: [] });
+    expect(wrong).not.toContain("is-settled");
+    expect(wrong).not.toContain("disabled");
+    const unsupported = renderCloser(closer, "purpose", { kept: [{ id: "f2" }] });
+    expect(unsupported).not.toContain("is-settled");
+    expect(unsupported).not.toContain("disabled");
+  });
+
+  it("leaves a locked closer locked rather than settled (edge case)", () => {
+    // `locked` means the board below is unfinished, so nothing has been filed and nothing can be.
+    const markup = renderCloser(closer, null, { locked: true, lockedNote: "Not yet." });
+    expect(markup).toContain("is-locked");
+    expect(markup).not.toContain("is-settled");
+  });
+
   it("falls back to a placeless note when content authored none (edge case)", () => {
     const bare = {
       prompt: "P",

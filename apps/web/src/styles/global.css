@@ -6602,6 +6602,11 @@ dd {
   opacity: 0.62;
   border-color: var(--c-border-subtle);
 }
+/* .activity-closer.is-settled has no rule here, and that is the design rather than an omission.
+   A settled closer is a mission the player finished; dimming it the way a locked one is dimmed
+   would read as "unavailable" for the one state that is an achievement. The filed conclusion keeps
+   its green .is-correct, the options go disabled, and the footer below says "Record stabilized".
+   The class exists so the state is addressable from a test and from any future treatment. */
 .activity-closer__prompt {
   margin: 0;
   font-size: 0.98rem;

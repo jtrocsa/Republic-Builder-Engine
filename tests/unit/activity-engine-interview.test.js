@@ -345,6 +345,22 @@ describe("isInterviewComplete / interviewOutcome", () => {
     expect(isInterviewComplete(activity(), right)).toBe(true);
   });
 
+  // Spine Review Part 7. A filed record does not get re-filed. `file` used to overwrite
+  // `state.filed` unconditionally once the board was settled, so reopening a finished mission from
+  // the Mission Tracker and clicking a wrong option un-finished it — while the Codex, which
+  // deliberately never unfiles, kept the entry it had already written.
+  it("refuses a second conclusion once the record is filed (regression case)", () => {
+    const board = fullyLogged();
+    // The wrong option lands while the record is open, which is what makes the refusal below a
+    // refusal rather than an unknown id being dropped on the floor.
+    expect(actInterview(activity(), board, { type: "file", option: "there" }).filed).toBe("there");
+
+    const filed = actInterview(activity(), board, { type: "file", option: "asked" });
+    expect(isInterviewComplete(activity(), filed)).toBe(true);
+    // Identity, not merely equality: the host re-renders only when a reducer returns a new object.
+    expect(actInterview(activity(), filed, { type: "file", option: "there" })).toBe(filed);
+  });
+
   it("reports only the logged useful answers, plus one skill outcome (normal case)", () => {
     let state = fullyLogged();
     // A third question put and kept, but it has no authored answer.

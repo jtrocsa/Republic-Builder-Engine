@@ -303,6 +303,10 @@ export function actInterview(activity, state = defaultInterviewState(), action =
   }
 
   if (action.type === "file") {
+    // A filed record does not get re-filed. renderCloser() disables these options for exactly this
+    // state, so a player cannot reach here by clicking; this is the state layer saying the same
+    // thing, and it is what makes "the Codex never unfiles" true rather than merely intended.
+    if (isInterviewComplete(activity, state)) return state;
     // Guarded here rather than only in the UI: the closer's disabled attribute
     // is a hint, not a lock, and a filed-too-early record would read as
     // complete.
@@ -523,8 +527,27 @@ export function renderInterview(activity, state = defaultInterviewState()) {
     : notebookTable(activity, state, activity.speakers);
 
   const findings = interviewFindings(activity, state);
+  // The one board in the game with nothing on it to press.
+  //
+  // INTERVIEW does its asking out in the world, through renderInline in the field dialogue bubble;
+  // this screen is the notebook that fills up as a result. So a first visit is a blank grid, an
+  // empty Field Notebook and a locked closer — zero enabled controls — and nothing on it said where
+  // the work was. The steps in the copy column say "any question to any person" and, on five of the
+  // seven missions, never say where the people are.
+  //
+  // Placeless on purpose, and that is why it belongs here rather than in seven content files: this
+  // engine knows its questions are put to people out in the field. It does not know what field.
+  // Gone the moment anyone has been asked anything, which is when the grid starts speaking for
+  // itself.
+  const unasked = !activity.speakers.some((speaker) =>
+    interviewHasAsked(activity, state, speaker.id)
+  );
+  const where = unasked
+    ? `<p class="activity-note activity-board__where">Nobody has been asked anything yet. The questions are put to people out in the field — walk up to someone and choose one. What they tell you collects here.</p>`
+    : "";
   return `<section class="activity-board activity-board--interview">
   <div class="activity-progress">${goals}</div>
+  ${where}
   ${panels}
   ${renderNotebook(activity, state, findings)}
   ${renderCloser(activity.closer, state.filed, {

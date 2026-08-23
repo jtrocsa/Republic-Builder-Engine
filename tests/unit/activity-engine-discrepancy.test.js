@@ -203,6 +203,24 @@ describe("isDiscrepancyComplete / discrepancyOutcome", () => {
     expect(isDiscrepancyComplete(activity(), right)).toBe(true);
     expect(discrepancyOutcome(activity(), right).findings).toHaveLength(2);
   });
+
+  // Spine Review Part 7. A filed record does not get re-filed. `file` used to overwrite
+  // `state.filed` unconditionally once the board was settled, so reopening a finished mission from
+  // the Mission Tracker and clicking a wrong option un-finished it — while the Codex, which
+  // deliberately never unfiles, kept the entry it had already written.
+  it("refuses a second conclusion once the record is filed (regression case)", () => {
+    const board = settled();
+    // The wrong option lands while the record is open, which is what makes the refusal below a
+    // refusal rather than an unknown id being dropped on the floor.
+    expect(actDiscrepancy(activity(), board, { type: "file", option: "mistake" }).filed).toBe(
+      "mistake"
+    );
+
+    const filed = actDiscrepancy(activity(), board, { type: "file", option: "purpose" });
+    expect(isDiscrepancyComplete(activity(), filed)).toBe(true);
+    // Identity, not merely equality: the host re-renders only when a reducer returns a new object.
+    expect(actDiscrepancy(activity(), filed, { type: "file", option: "mistake" })).toBe(filed);
+  });
 });
 
 describe("renderDiscrepancy — the observation column", () => {

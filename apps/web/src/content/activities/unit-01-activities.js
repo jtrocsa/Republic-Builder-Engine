@@ -263,7 +263,7 @@ const QUESTION_NOBODY_ASKED = {
   // One account from each of the seven. A single number, and a goal a player can
   // see the end of — see this file's header, and 0052 for why the old pair of
   // numbers was the first thing the playtest tripped over.
-  requires: { useful: 7, label: "Islanders' accounts secured" },
+  requires: { useful: 7, label: "Accounts secured" },
   // The island sentence, now that it is content rather than a fact living inside the engine.
   lockedNote:
     "Every person on this island is holding one thing worth writing down. Find the rest before you file.",

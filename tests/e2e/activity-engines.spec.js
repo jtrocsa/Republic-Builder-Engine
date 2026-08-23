@@ -211,9 +211,10 @@ test.describe("INTERVIEW, out on the map", () => {
     // Two of the seven accounts logged. One number, not two — the whole point of making
     // `requires` one dimension — and since Phase 71 that number is one string rather than a `<b>`
     // with " of 7" beside it, which space-between was pushing to the far side of the panel.
-    await expect(page.locator(".field-tracker__progress")).toContainText(
-      "Islanders' accounts secured"
-    );
+    // The label is the activity's own `requires.label`, so it is shared with the board's counter —
+    // which is why Part 7 narrowing it to "Accounts secured" (it counted three Spaniards too) lands
+    // here as well as there. One string, two surfaces, and they are meant to match.
+    await expect(page.locator(".field-tracker__progress")).toContainText("Accounts secured");
     await expect(page.locator(".field-tracker__progress b")).toHaveText("2/7");
     // And the same fraction as a bar, which is what the owner asked the gappy count be replaced by.
     const bar = page.locator(".field-tracker__bar");

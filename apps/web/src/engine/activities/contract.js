@@ -523,6 +523,20 @@ export function closerResult(closer, filedId, kept = []) {
  */
 export function renderCloser(closer, filedId, { locked = false, lockedNote = "", kept = [] } = {}) {
   const { option, correct, supported } = closerResult(closer, filedId, kept);
+  // A mission that is over stops taking conclusions.
+  //
+  // Every engine's isComplete() is <its own board settled> && result.correct && result.supported,
+  // and `locked` is that first term negated — so these three terms say "this record is filed"
+  // without the host passing anything down, and without this folder learning what filing means.
+  //
+  // It was live. The `file` action overwrites `state.filed` unconditionally once a board is
+  // settled, so a player who reopened a finished mission from the Mission Tracker could click a
+  // wrong option and un-finish it in one press — while the Codex, which deliberately never unfiles,
+  // kept the entry it had already written. The board said wrong and the archive said filed.
+  //
+  // Only this exact state closes. A wrong conclusion and a correct-but-unsupported one both stay
+  // live, because both are things the player is still meant to be able to change.
+  const settled = !locked && correct && supported;
   const options = closer.options
     .map((item) => {
       const chosen = item.id === filedId;
@@ -535,7 +549,7 @@ export function renderCloser(closer, filedId, { locked = false, lockedNote = "",
             : " is-unsupported"
           : " is-wrong"
         : "";
-      return `<button type="button" class="activity-option${state}" data-activity-action="file" data-option="${escapeHtml(item.id)}" aria-pressed="${chosen ? "true" : "false"}"${locked ? " disabled" : ""}>${escapeHtml(item.text)}</button>`;
+      return `<button type="button" class="activity-option${state}" data-activity-action="file" data-option="${escapeHtml(item.id)}" aria-pressed="${chosen ? "true" : "false"}"${locked || settled ? " disabled" : ""}>${escapeHtml(item.text)}</button>`;
     })
     .join("");
   const verdict = option
@@ -548,7 +562,7 @@ export function renderCloser(closer, filedId, { locked = false, lockedNote = "",
     : locked && lockedNote
       ? `<p class="activity-why is-locked">${escapeHtml(lockedNote)}</p>`
       : "";
-  return `<section class="activity-closer${locked ? " is-locked" : ""}">
+  return `<section class="activity-closer${locked ? " is-locked" : ""}${settled ? " is-settled" : ""}">
   <h3>File the record</h3>
   <p class="activity-closer__prompt">${escapeHtml(closer.prompt)}</p>
   <div class="activity-closer__options">${options}</div>
