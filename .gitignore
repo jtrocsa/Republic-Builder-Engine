@@ -20,3 +20,8 @@ apps/web/src/assets/generated/
 # They stay out of git for their size, and out of apps/web/src/assets/ so nothing can reference the
 # 2.5 MB copy by accident.
 art-source/
+
+# Playwright visual baselines are captured on Windows and committed as *-chromium-win32.png.
+# A run on macOS auto-creates a parallel *-chromium-darwin.png set; those are unreviewed
+# by definition, and CLAUDE.md's ladder requires reviewing a baseline before accepting it.
+tests/e2e/*-snapshots/*-chromium-darwin.png
