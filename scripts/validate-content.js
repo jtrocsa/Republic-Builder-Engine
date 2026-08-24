@@ -6,7 +6,10 @@
  *
  * Run: npm run validate:content
  */
-import { loadChronicleContent } from "../apps/web/src/repositories/local-content-repository.js";
+import {
+  loadChronicleContent,
+  chronicleContentOrigins,
+} from "../apps/web/src/repositories/local-content-repository.js";
 import { BrandSchema, UnitSchema } from "../apps/web/src/content/schemas/unit.schema.js";
 import {
   buildSourceSchema,
@@ -102,646 +105,134 @@ function checkActivityRoutes(content) {
   return errors;
 }
 
+/**
+ * Which schema validates which content key.
+ *
+ * This table replaces ninety-eight hand-written `runSchema(...)` calls, one per unit per content
+ * array. That shape had the failure mode every hand-maintained per-unit list has: a quest array
+ * left off the list was simply never validated, and nothing said so. Here the loop walks whatever
+ * `loadChronicleContent()` actually returns, and a key with no schema is a hard error — so the
+ * mistake that used to be silent is now the loudest thing in the run.
+ *
+ * `sources` is absent on purpose: its schema depends on the unit's own lanes, so it is built per
+ * unit in `schemaForKey()` below.
+ */
+const SINGLE_SCHEMAS = {
+  unit: UnitSchema,
+  brand: BrandSchema,
+  review: ReviewSchema,
+  lanes: CaseLanesSchema,
+  activities: ActivityMapSchema,
+};
+
+/**
+ * Which of `QUEST_TYPES`' keys each quest array belongs to. The key names say it themselves —
+ * `archiveSaqQuests` is an saq, `investigationMcqQuests` is an mcq — which is what makes the
+ * mapping worth writing down once instead of ninety-eight times.
+ *
+ * `archiveStrongestEvidenceQuests` is the one name that misleads: it is a multiple-choice quest
+ * about which evidence is strongest, not an evidence-organizing one.
+ */
+const QUEST_KEY_TYPES = {
+  mcqQuests: "mcq",
+  readerMcqQuests: "mcq",
+  investigationMcqQuests: "mcq",
+  archiveMcqQuests: "mcq",
+  archiveStrongestEvidenceQuests: "mcq",
+  sequencingQuests: "sequencing",
+  investigationSequencingQuests: "sequencing",
+  archiveSequencingQuests: "sequencing",
+  evidenceOrganizingQuests: "evidence-organizing",
+  investigationEvidenceQuests: "evidence-organizing",
+  archiveEvidenceQuests: "evidence-organizing",
+  sourceAnalysisQuests: "hipp",
+  investigationQuests: "hipp",
+  archiveSourceAnalysisQuests: "hipp",
+  archiveSaqQuests: "saq",
+  archiveDbqQuests: "dbq",
+};
+
+/**
+ * The one quest key whose name does not say its type. `archiveChallengeQuests` predates the
+ * per-type naming the other fifty-nine arrays use, and the three units carrying it do not agree
+ * on what is in it. Renaming those exports to `UNIT_0N_ARCHIVE_SEQUENCING_QUESTS` and
+ * `UNIT_0N_ARCHIVE_EVIDENCE_QUESTS` would delete this table — but it would also rename live
+ * content that main.js resolves by array, so it is a content change, not a tooling one.
+ */
+const QUEST_KEY_TYPES_BY_UNIT = {
+  unit01: { archiveChallengeQuests: "sequencing" },
+  unit02: { archiveChallengeQuests: "evidence-organizing" },
+  unit03: { archiveChallengeQuests: "evidence-organizing" },
+};
+
+function questTypeForKey(unitKey, key) {
+  return QUEST_KEY_TYPES_BY_UNIT[unitKey]?.[key] ?? QUEST_KEY_TYPES[key] ?? null;
+}
+
 function main() {
   const content = loadChronicleContent();
+  const origins = chronicleContentOrigins();
   const results = [];
 
-  results.push(runSchema("unit-01-campaign.js: BRAND", BrandSchema, content.unit01.brand));
-  results.push(runSchema("unit-01-campaign.js: UNIT_01", UnitSchema, content.unit01.unit));
-  results.push(
-    runSchema(
-      "unit-01-campaign.js: CASE_001_SOURCES",
-      buildSourcesSchema({}),
-      content.unit01.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-activities.js: UNIT_01_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit01.activities
-    )
-  );
-  results.push(runSchema("unit-01-campaign.js: REVIEW", ReviewSchema, content.unit01.review));
-  results.push(
-    runSchema("unit-01-quests.js: UNIT_01_MCQ_QUESTS", McqQuestListSchema, content.unit01.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit01.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit01.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit01.sourceAnalysisQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_INVESTIGATION_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit01.investigationMcqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_INVESTIGATION_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit01.investigationSequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_READER_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit01.readerMcqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_ARCHIVE_CHALLENGE_QUESTS",
-      SequencingQuestListSchema,
-      content.unit01.archiveChallengeQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_ARCHIVE_EVIDENCE_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit01.archiveEvidenceQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-01-quests.js: UNIT_01_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit01.archiveSaqQuests
-    )
-  );
+  // Teacher Mode's curated swap pool — each entry wraps a full official-shape source/quest object
+  // plus a `replacesXId` pointer, validated against the exact same schemas as the official content
+  // it is meant to replace (see apps/web/src/content/case-001-source-alternates.js's doc comment).
+  const alternatesSchema = (inner, field) =>
+    z.array(
+      z.object({
+        [`replaces${field}Id`]: z.string().min(1, `replaces${field}Id is required`),
+        [field.toLowerCase()]: inner,
+      })
+    );
+  const ALTERNATE_SCHEMAS = {
+    sourceAlternates: alternatesSchema(buildSourceSchema({}), "Source"),
+    mcqAlternates: alternatesSchema(McqQuestSchema, "Quest"),
+    sequencingAlternates: alternatesSchema(SequencingQuestSchema, "Quest"),
+    evidenceOrganizingAlternates: alternatesSchema(EvidenceOrganizingQuestSchema, "Quest"),
+    sourceAnalysisAlternates: alternatesSchema(SourceAnalysisQuestSchema, "Quest"),
+  };
 
-  // Teacher Mode's curated swap pool — each entry wraps a full official-shape
-  // source/quest object plus a `replacesXId` pointer, validated against the
-  // exact same schemas as the official content it's meant to replace (see
-  // apps/web/src/content/case-001-source-alternates.js's doc comment).
-  const SourceAlternatesSchema = z.array(
-    z.object({
-      replacesSourceId: z.string().min(1, "replacesSourceId is required"),
-      source: buildSourceSchema({}),
-    })
-  );
-  const McqAlternatesSchema = z.array(
-    z.object({
-      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
-      quest: McqQuestSchema,
-    })
-  );
-  const SequencingAlternatesSchema = z.array(
-    z.object({
-      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
-      quest: SequencingQuestSchema,
-    })
-  );
-  const EvidenceOrganizingAlternatesSchema = z.array(
-    z.object({
-      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
-      quest: EvidenceOrganizingQuestSchema,
-    })
-  );
-  const SourceAnalysisAlternatesSchema = z.array(
-    z.object({
-      replacesQuestId: z.string().min(1, "replacesQuestId is required"),
-      quest: SourceAnalysisQuestSchema,
-    })
-  );
-  results.push(
-    runSchema(
-      "case-001-source-alternates.js: CASE_001_SOURCE_ALTERNATES",
-      SourceAlternatesSchema,
-      content.unit01.sourceAlternates
-    )
-  );
-  results.push(
-    runSchema(
-      "case-001-mcq-alternates.js: CASE_001_MCQ_ALTERNATES",
-      McqAlternatesSchema,
-      content.unit01.mcqAlternates
-    )
-  );
-  results.push(
-    runSchema(
-      "case-001-sequencing-alternates.js: CASE_001_SEQUENCING_ALTERNATES",
-      SequencingAlternatesSchema,
-      content.unit01.sequencingAlternates
-    )
-  );
-  results.push(
-    runSchema(
-      "case-001-evidence-organizing-alternates.js: CASE_001_EVIDENCE_ORGANIZING_ALTERNATES",
-      EvidenceOrganizingAlternatesSchema,
-      content.unit01.evidenceOrganizingAlternates
-    )
-  );
-  results.push(
-    runSchema(
-      "case-001-hipp-alternates.js: CASE_001_HIPP_ALTERNATES",
-      SourceAnalysisAlternatesSchema,
-      content.unit01.sourceAnalysisAlternates
-    )
-  );
-  results.push(
-    runSchema(
-      "case-006-evidence-organizing-alternates.js: CASE_006_EVIDENCE_ORGANIZING_ALTERNATES",
-      EvidenceOrganizingAlternatesSchema,
-      content.unit02.evidenceOrganizingAlternates
-    )
-  );
+  const QUEST_LIST_SCHEMAS = {
+    mcq: McqQuestListSchema,
+    sequencing: SequencingQuestListSchema,
+    "evidence-organizing": EvidenceOrganizingQuestListSchema,
+    hipp: SourceAnalysisQuestListSchema,
+    saq: SaqQuestListSchema,
+    dbq: DbqQuestListSchema,
+  };
 
-  results.push(runSchema("unit-02-campaign.js: UNIT_02", UnitSchema, content.unit02.unit));
-  results.push(
-    runSchema("unit-02-campaign.js: CASE_004_LANES", CaseLanesSchema, content.unit02.lanes)
-  );
-  results.push(
-    runSchema(
-      "unit-02-campaign.js: CASE_004_SOURCES",
-      buildSourcesSchema({ reconstructionIds: content.unit02.lanes.map((lane) => lane.id) }),
-      content.unit02.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-activities.js: UNIT_02_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit02.activities
-    )
-  );
-  results.push(
-    runSchema("unit-02-campaign.js: UNIT_02_REVIEW", ReviewSchema, content.unit02.review)
-  );
-  results.push(
-    runSchema("unit-02-quests.js: UNIT_02_MCQ_QUESTS", McqQuestListSchema, content.unit02.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_READER_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit02.readerMcqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit02.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit02.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit02.sourceAnalysisQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_ARCHIVE_CHALLENGE_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit02.archiveChallengeQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_INVESTIGATION_EVIDENCE_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit02.investigationEvidenceQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS",
-      McqQuestListSchema,
-      content.unit02.archiveStrongestEvidenceQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_ARCHIVE_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit02.archiveSequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-02-quests.js: UNIT_02_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit02.archiveSaqQuests
-    )
-  );
+  function schemaForKey(unitKey, key, unit) {
+    if (key === "sources") {
+      // A unit with lanes reconstructs some of its sources from them; Unit 1 has none.
+      return unit.lanes
+        ? buildSourcesSchema({ reconstructionIds: unit.lanes.map((lane) => lane.id) })
+        : buildSourcesSchema({});
+    }
+    const questType = questTypeForKey(unitKey, key);
+    if (questType) return QUEST_LIST_SCHEMAS[questType];
+    return SINGLE_SCHEMAS[key] ?? ALTERNATE_SCHEMAS[key] ?? null;
+  }
 
-  results.push(runSchema("unit-03-campaign.js: UNIT_03", UnitSchema, content.unit03.unit));
-  results.push(
-    runSchema("unit-03-campaign.js: CASE_007_LANES", CaseLanesSchema, content.unit03.lanes)
-  );
-  results.push(
-    runSchema(
-      "unit-03-campaign.js: CASE_007_SOURCES",
-      buildSourcesSchema({ reconstructionIds: content.unit03.lanes.map((lane) => lane.id) }),
-      content.unit03.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-activities.js: UNIT_03_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit03.activities
-    )
-  );
-  results.push(
-    runSchema("unit-03-quests.js: UNIT_03_MCQ_QUESTS", McqQuestListSchema, content.unit03.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit03.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit03.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit03.sourceAnalysisQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_INVESTIGATION_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit03.investigationQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_INVESTIGATION_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit03.investigationMcqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_ARCHIVE_CHALLENGE_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit03.archiveChallengeQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_ARCHIVE_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit03.archiveMcqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit03.archiveSaqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-03-quests.js: UNIT_03_ARCHIVE_DBQ_QUESTS",
-      DbqQuestListSchema,
-      content.unit03.archiveDbqQuests
-    )
-  );
-
-  results.push(runSchema("unit-04-campaign.js: UNIT_04", UnitSchema, content.unit04.unit));
-  results.push(
-    runSchema("unit-04-campaign.js: CASE_010_LANES", CaseLanesSchema, content.unit04.lanes)
-  );
-  results.push(
-    runSchema(
-      "unit-04-campaign.js: CASE_010_SOURCES",
-      buildSourcesSchema({ reconstructionIds: content.unit04.lanes.map((lane) => lane.id) }),
-      content.unit04.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-04-activities.js: UNIT_04_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit04.activities
-    )
-  );
-  results.push(
-    runSchema("unit-04-quests.js: UNIT_04_MCQ_QUESTS", McqQuestListSchema, content.unit04.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit04.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit04.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit04.sourceAnalysisQuests
-    )
-  );
-  // Unit 4's two missions, and the first of each type to be one: case-011 is a sequencing mission
-  // and case-012 a hipp mission. Both validate against the same list schemas as their Practice
-  // Check counterparts above, because a mission's quest is an ordinary quest of that type.
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_ARCHIVE_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit04.archiveSequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit04.archiveSourceAnalysisQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit04.archiveSaqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-04-quests.js: UNIT_04_ARCHIVE_DBQ_QUESTS",
-      DbqQuestListSchema,
-      content.unit04.archiveDbqQuests
-    )
-  );
-
-  results.push(runSchema("unit-05-campaign.js: UNIT_05", UnitSchema, content.unit05.unit));
-  results.push(
-    runSchema("unit-05-campaign.js: CASE_013_LANES", CaseLanesSchema, content.unit05.lanes)
-  );
-  results.push(
-    runSchema(
-      "unit-05-campaign.js: CASE_013_SOURCES",
-      buildSourcesSchema({ reconstructionIds: content.unit05.lanes.map((lane) => lane.id) }),
-      content.unit05.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-05-activities.js: UNIT_05_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit05.activities
-    )
-  );
-  results.push(
-    runSchema("unit-05-quests.js: UNIT_05_MCQ_QUESTS", McqQuestListSchema, content.unit05.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit05.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit05.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit05.sourceAnalysisQuests
-    )
-  );
-  // Unit 5's two missions: case-014 is a sequencing and case-015 an evidence-organizing. Same rule
-  // as Unit 4's pair above — a mission's quest is an ordinary quest of its type, so it validates
-  // against the same list schema as the Practice Check arrays.
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_ARCHIVE_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit05.archiveSequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_ARCHIVE_EVIDENCE_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit05.archiveEvidenceQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit05.archiveSaqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-05-quests.js: UNIT_05_ARCHIVE_DBQ_QUESTS",
-      DbqQuestListSchema,
-      content.unit05.archiveDbqQuests
-    )
-  );
-
-  results.push(runSchema("unit-06-campaign.js: UNIT_06", UnitSchema, content.unit06.unit));
-  results.push(
-    runSchema("unit-06-campaign.js: CASE_016_LANES", CaseLanesSchema, content.unit06.lanes)
-  );
-  results.push(
-    runSchema(
-      "unit-06-campaign.js: CASE_016_SOURCES",
-      buildSourcesSchema({ reconstructionIds: content.unit06.lanes.map((lane) => lane.id) }),
-      content.unit06.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-06-activities.js: UNIT_06_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit06.activities
-    )
-  );
-  results.push(
-    runSchema("unit-06-quests.js: UNIT_06_MCQ_QUESTS", McqQuestListSchema, content.unit06.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit06.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit06.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit06.sourceAnalysisQuests
-    )
-  );
-  // Unit 6's two missions: case-017 is a hipp and case-018 an mcq — the first unit to run that
-  // pair, and the reason the two arrays below are a SourceAnalysis and an Mcq where Unit 5's are a
-  // Sequencing and an Evidence. A mission's quest is an ordinary quest of its type.
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit06.archiveSourceAnalysisQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_ARCHIVE_MCQ_QUESTS",
-      McqQuestListSchema,
-      content.unit06.archiveMcqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit06.archiveSaqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-06-quests.js: UNIT_06_ARCHIVE_DBQ_QUESTS",
-      DbqQuestListSchema,
-      content.unit06.archiveDbqQuests
-    )
-  );
-
-  // Unit 7 gained its UNIT_07_ACTIVITIES block in Phase 89E. Three of its seven sources now route
-  // to an engine — slate A, interview/assembly/trace, on the manifest page, the medical inspection
-  // card and the board minute — and the other four keep `activityRoute: null` and open in the
-  // reader, which is what every non-mission record on the other six maps does.
-  // checkActivityRoutes() demands an activity only for a route that names an engine, and fails in
-  // both directions: a route with nothing behind it, and an activity keyed to a source that is not
-  // in this unit.
-  results.push(runSchema("unit-07-campaign.js: UNIT_07", UnitSchema, content.unit07.unit));
-  results.push(
-    runSchema("unit-07-campaign.js: CASE_019_LANES", CaseLanesSchema, content.unit07.lanes)
-  );
-  results.push(
-    runSchema(
-      "unit-07-campaign.js: CASE_019_SOURCES",
-      buildSourcesSchema({ reconstructionIds: content.unit07.lanes.map((lane) => lane.id) }),
-      content.unit07.sources
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-07-activities.js: UNIT_07_ACTIVITIES",
-      ActivityMapSchema,
-      content.unit07.activities
-    )
-  );
-  results.push(
-    runSchema("unit-07-quests.js: UNIT_07_MCQ_QUESTS", McqQuestListSchema, content.unit07.mcqQuests)
-  );
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_EVIDENCE_ORGANIZING_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit07.evidenceOrganizingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit07.sequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_SOURCE_ANALYSIS_QUESTS",
-      SourceAnalysisQuestListSchema,
-      content.unit07.sourceAnalysisQuests
-    )
-  );
-  // Unit 7's two missions: case-020 is an evidence-organizing and case-021 a sequencing — Unit 5's
-  // pair rather than Unit 6's, chosen by material rather than by ledger (see the header on
-  // unit-07-quests.js). A mission's quest is an ordinary quest of its type.
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_ARCHIVE_EVIDENCE_QUESTS",
-      EvidenceOrganizingQuestListSchema,
-      content.unit07.archiveEvidenceQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_ARCHIVE_SEQUENCING_QUESTS",
-      SequencingQuestListSchema,
-      content.unit07.archiveSequencingQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_ARCHIVE_SAQ_QUESTS",
-      SaqQuestListSchema,
-      content.unit07.archiveSaqQuests
-    )
-  );
-  results.push(
-    runSchema(
-      "unit-07-quests.js: UNIT_07_ARCHIVE_DBQ_QUESTS",
-      DbqQuestListSchema,
-      content.unit07.archiveDbqQuests
-    )
-  );
+  // Every content array of every registered unit, against its schema. Order follows UNIT_IDS and
+  // then each module's own export order, which is why the run reads unit by unit.
+  for (const [unitKey, unit] of Object.entries(content)) {
+    for (const [key, value] of Object.entries(unit)) {
+      const schema = schemaForKey(unitKey, key, unit);
+      const origin = origins[unitKey][key];
+      if (!schema) {
+        console.error(
+          `\nvalidate-content.js has no schema for ${unitKey}.${key} ` +
+            `(${origin.file}: ${origin.exportName}).\n\n` +
+            "Every content export is validated, so a new one has to say what it is: add its key to " +
+            "QUEST_KEY_TYPES if it is a quest array, or to SINGLE_SCHEMAS if it is not. This is " +
+            "deliberately an error rather than a skip — content that quietly stops being validated " +
+            "is the failure this table exists to prevent.\n"
+        );
+        process.exit(1);
+      }
+      results.push(runSchema(`${origin.file}: ${origin.exportName}`, schema, value));
+    }
+  }
 
   // Primary source reference library (apps/web/src/content/primary-source-library/)
   // — syllabus-wide research reference for Units 1-9, not gameplay content.
@@ -766,12 +257,7 @@ function main() {
     "cross-reference: case ids",
     "cross-reference: source ids",
     "cross-reference: case ced.period matches unit period",
-    "cross-reference: mcq quest ids",
-    "cross-reference: sequencing quest ids",
-    "cross-reference: evidence-organizing quest ids",
-    "cross-reference: hipp quest ids",
-    "cross-reference: saq quest ids",
-    "cross-reference: dbq quest ids",
+    ...Object.keys(QUEST_TYPES).map((type) => `cross-reference: ${type} quest ids`),
     "cross-reference: archive challenge quest references",
     "cross-reference: investigation challenge quest references",
     "cross-reference: reader question references",
@@ -782,261 +268,35 @@ function main() {
     "cross-reference: hipp alternate references",
     "cross-reference: primary source library ids",
     "cross-reference: primary source library visual ids",
-    "cross-reference: activity routes match activity kinds",
+    ACTIVITY_ROUTE_GROUP,
   ];
 
-  // Every quest id, grouped by QUEST_TYPES key, across all three units — the resolution set
-  // archiveChallenge/investigationMode pointers below get checked against. Mirrors the same
-  // questType -> content-array mapping quest-types/index.js's QUEST_TYPES keys use.
-  const idsOf = (list) => list.map((quest) => quest.id);
-  // Source-tagged per-type quest arrays — the single source of truth both
-  // questsByType (below, for resolving a questType/questId pointer) and the
-  // cross-bucket uniqueness check (further below) are built from. Every
-  // array here gets merged into ONE flat lookup per type in main.js's
-  // ARCHIVE_CHALLENGE_QUESTS_BY_TYPE/INVESTIGATION_QUESTS_BY_TYPE/
-  // PRACTICE_CHECK_QUESTS, so an id reused across two of these arrays would
-  // silently resolve to whichever one main.js's .find() hits first.
-  const questArraysByType = {
-    mcq: [
-      { source: "unit-01-quests.js:UNIT_01_MCQ_QUESTS", items: content.unit01.mcqQuests },
-      { source: "unit-02-quests.js:UNIT_02_MCQ_QUESTS", items: content.unit02.mcqQuests },
-      { source: "unit-03-quests.js:UNIT_03_MCQ_QUESTS", items: content.unit03.mcqQuests },
-      { source: "unit-04-quests.js:UNIT_04_MCQ_QUESTS", items: content.unit04.mcqQuests },
-      { source: "unit-05-quests.js:UNIT_05_MCQ_QUESTS", items: content.unit05.mcqQuests },
-      { source: "unit-06-quests.js:UNIT_06_MCQ_QUESTS", items: content.unit06.mcqQuests },
-      {
-        source: "unit-06-quests.js:UNIT_06_ARCHIVE_MCQ_QUESTS",
-        items: content.unit06.archiveMcqQuests,
-      },
-      { source: "unit-07-quests.js:UNIT_07_MCQ_QUESTS", items: content.unit07.mcqQuests },
-      {
-        source: "unit-01-quests.js:UNIT_01_INVESTIGATION_MCQ_QUESTS",
-        items: content.unit01.investigationMcqQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_INVESTIGATION_MCQ_QUESTS",
-        items: content.unit03.investigationMcqQuests,
-      },
-      {
-        source: "unit-01-quests.js:UNIT_01_READER_MCQ_QUESTS",
-        items: content.unit01.readerMcqQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_READER_MCQ_QUESTS",
-        items: content.unit02.readerMcqQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS",
-        items: content.unit02.archiveStrongestEvidenceQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_ARCHIVE_MCQ_QUESTS",
-        items: content.unit03.archiveMcqQuests,
-      },
-    ],
-    sequencing: [
-      {
-        source: "unit-01-quests.js:UNIT_01_SEQUENCING_QUESTS",
-        items: content.unit01.sequencingQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_SEQUENCING_QUESTS",
-        items: content.unit02.sequencingQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_SEQUENCING_QUESTS",
-        items: content.unit03.sequencingQuests,
-      },
-      {
-        source: "unit-01-quests.js:UNIT_01_INVESTIGATION_SEQUENCING_QUESTS",
-        items: content.unit01.investigationSequencingQuests,
-      },
-      {
-        source: "unit-01-quests.js:UNIT_01_ARCHIVE_CHALLENGE_QUESTS",
-        items: content.unit01.archiveChallengeQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_ARCHIVE_SEQUENCING_QUESTS",
-        items: content.unit02.archiveSequencingQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_SEQUENCING_QUESTS",
-        items: content.unit04.sequencingQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_ARCHIVE_SEQUENCING_QUESTS",
-        items: content.unit04.archiveSequencingQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_SEQUENCING_QUESTS",
-        items: content.unit05.sequencingQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_ARCHIVE_SEQUENCING_QUESTS",
-        items: content.unit05.archiveSequencingQuests,
-      },
-      {
-        source: "unit-06-quests.js:UNIT_06_SEQUENCING_QUESTS",
-        items: content.unit06.sequencingQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_SEQUENCING_QUESTS",
-        items: content.unit07.sequencingQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_ARCHIVE_SEQUENCING_QUESTS",
-        items: content.unit07.archiveSequencingQuests,
-      },
-    ],
-    "evidence-organizing": [
-      {
-        source: "unit-01-quests.js:UNIT_01_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit01.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit02.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit03.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_ARCHIVE_CHALLENGE_QUESTS",
-        items: content.unit02.archiveChallengeQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_INVESTIGATION_EVIDENCE_QUESTS",
-        items: content.unit02.investigationEvidenceQuests,
-      },
-      {
-        source: "unit-01-quests.js:UNIT_01_ARCHIVE_EVIDENCE_QUESTS",
-        items: content.unit01.archiveEvidenceQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_ARCHIVE_CHALLENGE_QUESTS",
-        items: content.unit03.archiveChallengeQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit04.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit05.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_ARCHIVE_EVIDENCE_QUESTS",
-        items: content.unit05.archiveEvidenceQuests,
-      },
-      {
-        source: "unit-06-quests.js:UNIT_06_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit06.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_EVIDENCE_ORGANIZING_QUESTS",
-        items: content.unit07.evidenceOrganizingQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_ARCHIVE_EVIDENCE_QUESTS",
-        items: content.unit07.archiveEvidenceQuests,
-      },
-    ],
-    hipp: [
-      {
-        source: "unit-01-quests.js:UNIT_01_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit01.sourceAnalysisQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit02.sourceAnalysisQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit03.sourceAnalysisQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_INVESTIGATION_QUESTS",
-        items: content.unit03.investigationQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit04.sourceAnalysisQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit04.archiveSourceAnalysisQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit05.sourceAnalysisQuests,
-      },
-      {
-        source: "unit-06-quests.js:UNIT_06_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit06.sourceAnalysisQuests,
-      },
-      {
-        source: "unit-06-quests.js:UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit06.archiveSourceAnalysisQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_SOURCE_ANALYSIS_QUESTS",
-        items: content.unit07.sourceAnalysisQuests,
-      },
-    ],
-    saq: [
-      {
-        source: "unit-01-quests.js:UNIT_01_ARCHIVE_SAQ_QUESTS",
-        items: content.unit01.archiveSaqQuests,
-      },
-      {
-        source: "unit-02-quests.js:UNIT_02_ARCHIVE_SAQ_QUESTS",
-        items: content.unit02.archiveSaqQuests,
-      },
-      {
-        source: "unit-03-quests.js:UNIT_03_ARCHIVE_SAQ_QUESTS",
-        items: content.unit03.archiveSaqQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_ARCHIVE_SAQ_QUESTS",
-        items: content.unit04.archiveSaqQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_ARCHIVE_SAQ_QUESTS",
-        items: content.unit05.archiveSaqQuests,
-      },
-      {
-        source: "unit-06-quests.js:UNIT_06_ARCHIVE_SAQ_QUESTS",
-        items: content.unit06.archiveSaqQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_ARCHIVE_SAQ_QUESTS",
-        items: content.unit07.archiveSaqQuests,
-      },
-    ],
-    dbq: [
-      {
-        source: "unit-03-quests.js:UNIT_03_ARCHIVE_DBQ_QUESTS",
-        items: content.unit03.archiveDbqQuests,
-      },
-      {
-        source: "unit-04-quests.js:UNIT_04_ARCHIVE_DBQ_QUESTS",
-        items: content.unit04.archiveDbqQuests,
-      },
-      {
-        source: "unit-05-quests.js:UNIT_05_ARCHIVE_DBQ_QUESTS",
-        items: content.unit05.archiveDbqQuests,
-      },
-      {
-        source: "unit-06-quests.js:UNIT_06_ARCHIVE_DBQ_QUESTS",
-        items: content.unit06.archiveDbqQuests,
-      },
-      {
-        source: "unit-07-quests.js:UNIT_07_ARCHIVE_DBQ_QUESTS",
-        items: content.unit07.archiveDbqQuests,
-      },
-    ],
+  /** `unit-04-quests.js:UNIT_04_MCQ_QUESTS` — the label a cross-reference error is reported under. */
+  const label = (unitKey, key) => {
+    const origin = origins[unitKey][key];
+    return `${origin.file}:${origin.exportName}`;
   };
+  /** One `{ source, items }` entry per unit for a key every unit carries. */
+  const everyUnit = (key, pick = (value) => value) =>
+    Object.entries(content).map(([unitKey, unit]) => ({
+      source: label(unitKey, key),
+      items: pick(unit[key]),
+    }));
+
+  // Every quest id, grouped by QUEST_TYPES key, across every unit — the resolution set the
+  // archiveChallenge/investigationMode pointers below get checked against. Every array here gets
+  // merged into ONE flat lookup per type in main.js's ARCHIVE_CHALLENGE_QUESTS_BY_TYPE /
+  // INVESTIGATION_QUESTS_BY_TYPE / PRACTICE_CHECK_QUESTS, so an id reused across two of these
+  // arrays would silently resolve to whichever one main.js's .find() hits first.
+  const questArraysByType = Object.fromEntries(Object.keys(QUEST_TYPES).map((type) => [type, []]));
+  for (const [unitKey, unit] of Object.entries(content)) {
+    for (const key of Object.keys(unit)) {
+      const type = questTypeForKey(unitKey, key);
+      if (type) questArraysByType[type].push({ source: label(unitKey, key), items: unit[key] });
+    }
+  }
+
+  const idsOf = (list) => list.map((quest) => quest.id);
   const questsByType = Object.fromEntries(
     Object.entries(questArraysByType).map(([type, entries]) => [
       type,
@@ -1078,35 +338,31 @@ function main() {
         questId,
       }))
     );
+  /** Flattens one of the three entry builders above across every unit. */
+  const acrossUnits = (key, build) =>
+    Object.entries(content).flatMap(([unitKey, unit]) => build(label(unitKey, key), unit[key]));
+
+  /** One `{ source, replacesId, altId }` entry per alternate in a curated swap pool. */
+  const alternateEntries = (unitKey, key, idField) =>
+    content[unitKey][key].map((entry) => ({
+      source: label(unitKey, key),
+      replacesId: entry[`replaces${idField}Id`],
+      altId: (entry.source ?? entry.quest).id,
+    }));
 
   const crossFileErrors = [
-    ...checkUniqueGlobalIds("cross-reference: case ids", [
-      { source: "unit-01-campaign.js:UNIT_01.cases", items: content.unit01.unit.cases },
-      { source: "unit-02-campaign.js:UNIT_02.cases", items: content.unit02.unit.cases },
-      { source: "unit-03-campaign.js:UNIT_03.cases", items: content.unit03.unit.cases },
-      { source: "unit-04-campaign.js:UNIT_04.cases", items: content.unit04.unit.cases },
-      { source: "unit-05-campaign.js:UNIT_05.cases", items: content.unit05.unit.cases },
-      { source: "unit-06-campaign.js:UNIT_06.cases", items: content.unit06.unit.cases },
-      { source: "unit-07-campaign.js:UNIT_07.cases", items: content.unit07.unit.cases },
-    ]),
-    ...checkUniqueGlobalIds("cross-reference: source ids", [
-      { source: "unit-01-campaign.js:CASE_001_SOURCES", items: content.unit01.sources },
-      { source: "unit-02-campaign.js:CASE_004_SOURCES", items: content.unit02.sources },
-      { source: "unit-03-campaign.js:CASE_007_SOURCES", items: content.unit03.sources },
-      { source: "unit-04-campaign.js:CASE_010_SOURCES", items: content.unit04.sources },
-      { source: "unit-05-campaign.js:CASE_013_SOURCES", items: content.unit05.sources },
-      { source: "unit-06-campaign.js:CASE_016_SOURCES", items: content.unit06.sources },
-      { source: "unit-07-campaign.js:CASE_019_SOURCES", items: content.unit07.sources },
-    ]),
-    ...checkCasePeriodMatchesUnit("cross-reference: case ced.period matches unit period", [
-      content.unit01.unit,
-      content.unit02.unit,
-      content.unit03.unit,
-      content.unit04.unit,
-      content.unit05.unit,
-      content.unit06.unit,
-      content.unit07.unit,
-    ]),
+    ...checkUniqueGlobalIds(
+      "cross-reference: case ids",
+      everyUnit("unit", (unit) => unit.cases).map((entry) => ({
+        ...entry,
+        source: `${entry.source}.cases`,
+      }))
+    ),
+    ...checkUniqueGlobalIds("cross-reference: source ids", everyUnit("sources")),
+    ...checkCasePeriodMatchesUnit(
+      "cross-reference: case ced.period matches unit period",
+      Object.values(content).map((unit) => unit.unit)
+    ),
     // Every array feeding one QUEST_TYPES key gets merged into one flat
     // lookup in main.js (ARCHIVE_CHALLENGE_QUESTS_BY_TYPE/
     // INVESTIGATION_QUESTS_BY_TYPE/PRACTICE_CHECK_QUESTS' per-type
@@ -1119,101 +375,49 @@ function main() {
     ),
     ...checkChallengeReferences(
       "cross-reference: archive challenge quest references",
-      [
-        ...archiveChallengeEntries("unit-01-campaign.js:UNIT_01", content.unit01.unit),
-        ...archiveChallengeEntries("unit-02-campaign.js:UNIT_02", content.unit02.unit),
-        ...archiveChallengeEntries("unit-03-campaign.js:UNIT_03", content.unit03.unit),
-        ...archiveChallengeEntries("unit-04-campaign.js:UNIT_04", content.unit04.unit),
-        ...archiveChallengeEntries("unit-05-campaign.js:UNIT_05", content.unit05.unit),
-        ...archiveChallengeEntries("unit-06-campaign.js:UNIT_06", content.unit06.unit),
-        ...archiveChallengeEntries("unit-07-campaign.js:UNIT_07", content.unit07.unit),
-      ],
+      acrossUnits("unit", archiveChallengeEntries),
       questTypeKeys,
       questsByType
     ),
     ...checkChallengeReferences(
       "cross-reference: investigation challenge quest references",
-      [
-        ...investigationEntries("unit-01-campaign.js:CASE_001_SOURCES", content.unit01.sources),
-        ...investigationEntries("unit-02-campaign.js:CASE_004_SOURCES", content.unit02.sources),
-        ...investigationEntries("unit-03-campaign.js:CASE_007_SOURCES", content.unit03.sources),
-        ...investigationEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
-        ...investigationEntries("unit-05-campaign.js:CASE_013_SOURCES", content.unit05.sources),
-        ...investigationEntries("unit-06-campaign.js:CASE_016_SOURCES", content.unit06.sources),
-        ...investigationEntries("unit-07-campaign.js:CASE_019_SOURCES", content.unit07.sources),
-      ],
+      acrossUnits("sources", investigationEntries),
       questTypeKeys,
       questsByType
     ),
     ...checkChallengeReferences(
       "cross-reference: reader question references",
-      [
-        ...readerEntries("unit-01-campaign.js:CASE_001_SOURCES", content.unit01.sources),
-        ...readerEntries("unit-02-campaign.js:CASE_004_SOURCES", content.unit02.sources),
-        ...readerEntries("unit-03-campaign.js:CASE_007_SOURCES", content.unit03.sources),
-        ...readerEntries("unit-04-campaign.js:CASE_010_SOURCES", content.unit04.sources),
-        ...readerEntries("unit-05-campaign.js:CASE_013_SOURCES", content.unit05.sources),
-        ...readerEntries("unit-06-campaign.js:CASE_016_SOURCES", content.unit06.sources),
-        ...readerEntries("unit-07-campaign.js:CASE_019_SOURCES", content.unit07.sources),
-      ],
+      acrossUnits("sources", readerEntries),
       questTypeKeys,
       questsByType
     ),
     ...checkAlternateReferences(
       "cross-reference: source alternate references",
-      content.unit01.sourceAlternates.map((entry) => ({
-        source: "case-001-source-alternates.js:CASE_001_SOURCE_ALTERNATES",
-        replacesId: entry.replacesSourceId,
-        altId: entry.source.id,
-      })),
-      content.unit01.sources.map((s) => s.id)
+      alternateEntries("unit01", "sourceAlternates", "Source"),
+      idsOf(content.unit01.sources)
     ),
     ...checkAlternateReferences(
       "cross-reference: mcq alternate references",
-      content.unit01.mcqAlternates.map((entry) => ({
-        source: "case-001-mcq-alternates.js:CASE_001_MCQ_ALTERNATES",
-        replacesId: entry.replacesQuestId,
-        altId: entry.quest.id,
-      })),
-      content.unit01.mcqQuests.map((q) => q.id)
+      alternateEntries("unit01", "mcqAlternates", "Quest"),
+      idsOf(content.unit01.mcqQuests)
     ),
     ...checkAlternateReferences(
       "cross-reference: sequencing alternate references",
-      content.unit01.sequencingAlternates.map((entry) => ({
-        source: "case-001-sequencing-alternates.js:CASE_001_SEQUENCING_ALTERNATES",
-        replacesId: entry.replacesQuestId,
-        altId: entry.quest.id,
-      })),
-      content.unit01.sequencingQuests.map((q) => q.id)
+      alternateEntries("unit01", "sequencingAlternates", "Quest"),
+      idsOf(content.unit01.sequencingQuests)
     ),
     ...checkAlternateReferences(
       "cross-reference: evidence-organizing alternate references",
       [
-        ...content.unit01.evidenceOrganizingAlternates.map((entry) => ({
-          source:
-            "case-001-evidence-organizing-alternates.js:CASE_001_EVIDENCE_ORGANIZING_ALTERNATES",
-          replacesId: entry.replacesQuestId,
-          altId: entry.quest.id,
-        })),
-        ...content.unit02.evidenceOrganizingAlternates.map((entry) => ({
-          source:
-            "case-006-evidence-organizing-alternates.js:CASE_006_EVIDENCE_ORGANIZING_ALTERNATES",
-          replacesId: entry.replacesQuestId,
-          altId: entry.quest.id,
-        })),
+        ...alternateEntries("unit01", "evidenceOrganizingAlternates", "Quest"),
+        ...alternateEntries("unit02", "evidenceOrganizingAlternates", "Quest"),
       ],
-      [...content.unit01.evidenceOrganizingQuests, ...content.unit02.archiveChallengeQuests].map(
-        (q) => q.id
-      )
+      idsOf([...content.unit01.evidenceOrganizingQuests, ...content.unit02.archiveChallengeQuests])
     ),
     ...checkAlternateReferences(
       "cross-reference: hipp alternate references",
-      content.unit01.sourceAnalysisAlternates.map((entry) => ({
-        source: "case-001-hipp-alternates.js:CASE_001_HIPP_ALTERNATES",
-        replacesId: entry.replacesQuestId,
-        altId: entry.quest.id,
-      })),
-      content.unit01.sourceAnalysisQuests.map((q) => q.id)
+      alternateEntries("unit01", "sourceAnalysisAlternates", "Quest"),
+      idsOf(content.unit01.sourceAnalysisQuests)
     ),
     ...checkUniqueGlobalIds(
       "cross-reference: primary source library ids",

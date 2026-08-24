@@ -44,6 +44,7 @@ import {
   rectsOverlap,
 } from "../../apps/web/src/main.js";
 import { buildCircuit, findRoute } from "../../apps/web/src/engine/npc-routing.js";
+import { UNIT_IDS } from "../../apps/web/src/content/unit-registry.js";
 import institutePalette from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
 import richmondPalette from "../../apps/web/src/content/tilesets/maps/richmond-field.palette.js";
 
@@ -272,11 +273,6 @@ describe("every field map is registered in the tables outside main.js", () => {
 
   it.each(Object.keys(FIELD_MAPS))("%s is covered by the Field Guide", (unitId) => {
     expect(
-      section(FIELD_GUIDE, "const UNIT_IDS").includes(`"${unitId}"`),
-      `${unitId} is missing from build-field-guide.js's UNIT_IDS, so npm run docs:field-guide ` +
-        `silently omits this unit`
-    ).toBe(true);
-    expect(
       section(FIELD_GUIDE, "const OUTDOOR_TMJ").includes(`"${unitId}"`),
       `${unitId} is missing from build-field-guide.js's OUTDOOR_TMJ`
     ).toBe(true);
@@ -286,6 +282,21 @@ describe("every field map is registered in the tables outside main.js", () => {
         `${unitId} is missing from build-field-guide.js's MAIN_JS_LITERALS.${group}`
       ).toBe(true);
     }
+  });
+
+  // The direction of this check matters. A unit is registered in unit-registry.js as soon as its
+  // content is authored, and may deliberately have no map for several phases after that — Unit 7
+  // sat that way from Phase 89 to 89C, and Units 3-5 until Phase 81F. So the content list is a
+  // superset of the walkable list, and the failure worth catching is the reverse: a map in
+  // FIELD_MAPS whose unit nothing else knows about, which is a unit whose content is never
+  // validated and whose field guide page is never built.
+  it.each(Object.keys(FIELD_MAPS))("%s is a registered unit", (unitId) => {
+    expect(
+      UNIT_IDS,
+      `${unitId} has a field map but is not in unit-registry.js's UNIT_IDS — its content is not ` +
+        `validated, it is absent from the field guide, and every table derived from the registry ` +
+        `silently skips it`
+    ).toContain(unitId);
   });
 });
 

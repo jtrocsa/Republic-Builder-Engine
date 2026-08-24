@@ -34,6 +34,7 @@ import sharp from "sharp";
 
 import { compositeTmj, REPO_ROOT } from "./lib/composite-tmj.js";
 import { landPathD, projectPoint } from "../apps/web/src/engine/geo-projection.js";
+import { UNIT_IDS } from "../apps/web/src/content/unit-registry.js";
 
 const SRC = path.join(REPO_ROOT, "apps/web/src");
 const MAPS_DIR = path.join(SRC, "content/maps");
@@ -48,7 +49,6 @@ const OUT_FILE = path.join(OUT_DIR, "chronicle-field-guide.html");
 // do not raise it to make a failing build pass without looking at what grew.
 const BUDGET_BYTES = 5 * 1024 * 1024;
 
-const UNIT_IDS = ["unit-01", "unit-02", "unit-03", "unit-04", "unit-05", "unit-06", "unit-07"];
 const imports = (rel) => import(pathToFileURL(path.join(SRC, rel)).href);
 
 // ── tier 2: literal extraction from main.js ────────────────────────────────────────────────────

@@ -1,6 +1,22 @@
 # Content Validation
 
-Status: Phase 3 of the near-term architecture sequence (`docs/architecture/ARCHITECTURE-QUICKREF.md` §6) — complete. This document explains what's validated, why, what's deliberately out of scope, and why.
+Status: Phase 3 of the near-term architecture sequence (`docs/architecture/ARCHITECTURE-QUICKREF.md` §6) — complete. This document explains what's validated, why, what's deliberately out of scope, and why. Most of it is a point-in-time record of that phase, written when the validator covered two units; the section immediately below is the part that describes how it works **now**.
+
+## Registering a unit (current, Phase 90J)
+
+`apps/web/src/content/unit-registry.js` holds `UNIT_IDS` and is the single source of truth. Everything the validator does is derived from it, so a new unit costs four lines in two files:
+
+1. Its id in `UNIT_IDS` (`unit-registry.js`).
+2. Its three module imports and one `UNIT_MODULES` line (`local-content-repository.js`).
+
+Nothing is added to `scripts/validate-content.js` at all. It walks whatever `loadChronicleContent()` returns and looks each key up in two tables — `QUEST_KEY_TYPES` (which of `QUEST_TYPES`' six keys a quest array belongs to) and `SINGLE_SCHEMAS` (everything else). Both are keyed by content key, not by unit.
+
+Two things fail loudly that used to fail silently:
+
+- **A content export with no schema mapping is a hard error**, not a skip. Adding `UNIT_08_ARCHIVE_TIMELINE_QUESTS` without saying what it is stops the run and tells you which table to add it to. Under the old hand-written shape, an array left off the list was simply never validated and nothing said so.
+- **A quest export not named `UNIT_NN_…` throws**, because that prefix is how the array is found at all.
+
+`tests/unit/field-map-coordinates.test.js` closes the loop from the other side: a unit with a field map in `main.js` but no entry in `UNIT_IDS` fails. The direction matters — a unit may be registered here and deliberately have no map yet (Unit 7 sat that way from Phase 89 to 89C), so the content list is a superset of the walkable list, never the reverse.
 
 ## Active content formats
 
@@ -34,7 +50,9 @@ Every array-of-records schema rejects duplicate `id`s within its own array using
 
 ## The `local-content-repository.js` wrapper
 
-`apps/web/src/repositories/local-content-repository.js` was created. It has exactly one real caller: `scripts/validate-content.js`. It does not move or duplicate content — `loadChronicleContent()` just re-imports the same named exports `main.js` already imports directly from `content/unit-01-campaign.js` and `content/unit-02-campaign.js`, and groups them into one object so the validation script can load "all active content" in one call. `main.js` was **not** changed to use it — it keeps its existing direct imports, so this phase makes zero changes to how the live app loads content.
+`apps/web/src/repositories/local-content-repository.js` was created. It does not move or duplicate content — `loadChronicleContent()` re-imports the same named exports `main.js` already imports directly and groups them into one object so a caller can load "all active content" in one call. `main.js` was **not** changed to use it — it keeps its existing direct imports, so this made zero changes to how the live app loads content.
+
+It has since grown a second caller set: `scripts/build-field-guide.js` and three content sweeps in `tests/unit/`. And as of Phase 90J its per-unit blocks are derived rather than written out, from each module's own export names (`UNIT_07_ARCHIVE_EVIDENCE_QUESTS` → `archiveEvidenceQuests`, `CASE_019_SOURCES` → `sources`). It exports a second function, `chronicleContentOrigins()`, returning the same shape with `{ file, exportName }` in place of each value — that is how the validator still reports `unit-04-quests.js: UNIT_04_ARCHIVE_DBQ_QUESTS` rather than a camelCased key nobody can grep for.
 
 This matches the architecture review's own suggested near-term folder structure (`repositories/local-content-repository.js — thin wrapper around today's content imports`, §10 of `ARCHITECTURE-REVIEW-AND-SIMPLIFICATION.md`) and its rule for when to build one: only if it has an immediate real caller. It does — the validation script.
 
@@ -48,7 +66,7 @@ Runs `scripts/validate-content.js` under plain `node` (not Vite/Vitest). The scr
 
 1. Loads all active content via `loadChronicleContent()`.
 2. Runs each group through its Zod schema with `safeParse()` (never throws; collects issues).
-3. Runs the two cross-file checks that need to see across both units at once (see below).
+3. Runs the cross-file checks that need to see across every unit at once (see below).
 4. Prints a per-group `ok`/`FAIL` line, then a flat list of errors (each with the content group, the record's `id` where derivable, the Zod field path, and the schema's message) if anything failed.
 5. Exits `0` on success, `1` on any failure. Never writes to a content file.
 

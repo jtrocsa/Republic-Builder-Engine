@@ -1,13 +1,29 @@
 /**
- * Thin wrapper around Chronicle's existing content module imports.
+ * Loads "all active Chronicle content" in one call, for the validator, the field-guide builder
+ * and the content sweeps in tests/unit/. It does not move, duplicate or transform any content —
+ * every value it returns is the same object `main.js` imports directly, under a shorter key.
+ * `main.js` keeps importing `content/*.js` itself and is unaffected by this file's existence.
  *
- * This does not move, duplicate, or transform any content — it re-exports
- * the same named exports `main.js` already imports directly, grouped into
- * one shape so a caller (currently only `scripts/validate-content.js`) can
- * load "all active Chronicle content" in one call instead of importing each
- * content file itself. `main.js` keeps importing `content/*.js` directly and
- * is unaffected by this file's existence.
+ * This file used to name all sixty quest arrays and twenty-three campaign exports by hand, which
+ * made it one of the four files a new unit had to be threaded through. It doesn't any more: the
+ * per-unit blocks are derived from each module's own export names, because those names are
+ * perfectly regular and always have been.
+ *
+ *   UNIT_07_ARCHIVE_EVIDENCE_QUESTS  ->  archiveEvidenceQuests
+ *   CASE_019_SOURCES                 ->  sources
+ *   UNIT_02_REVIEW                   ->  review
+ *
+ * The important property is not that this is shorter. It is that the old shape failed silently: a
+ * quest array left off the list was simply never validated, and nothing said so. Here every export
+ * of a registered module is picked up, and `validate-content.js` refuses a key it has no schema
+ * for — so the same mistake now fails loudly at the other end instead of quietly here.
+ *
+ * The one thing still written out by hand is Teacher Mode's curated swap pool. Those are keyed to
+ * individual cases rather than to units (Case 1.01 and Case 1.06 only — a proof-of-pipeline seed,
+ * see apps/web/src/content/case-001-source-alternates.js), so there is no per-unit pattern to
+ * derive them from, and inventing one would be pretending the pipeline is broader than it is.
  */
+import { UNIT_IDS, unitContentKey, unitNumber } from "../content/unit-registry.js";
 import * as unit01Campaign from "../content/unit-01-campaign.js";
 import * as unit02Campaign from "../content/unit-02-campaign.js";
 import * as unit03Campaign from "../content/unit-03-campaign.js";
@@ -36,141 +52,163 @@ import { CASE_001_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-
 import { CASE_001_HIPP_ALTERNATES } from "../content/quests/case-001-hipp-alternates.js";
 import { CASE_006_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-006-evidence-organizing-alternates.js";
 
-export function loadChronicleContent() {
-  return {
-    unit01: {
-      brand: unit01Campaign.BRAND,
-      unit: unit01Campaign.UNIT_01,
-      sources: unit01Campaign.CASE_001_SOURCES,
-      // Activity content for the four engines in engine/activities/, keyed by the source id each
-      // one opens from. Every authored field map has three as of Phase 81F.
-      activities: UNIT_01_ACTIVITIES,
-      review: unit01Campaign.REVIEW,
-      mcqQuests: unit01Quests.UNIT_01_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit01Quests.UNIT_01_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit01Quests.UNIT_01_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit01Quests.UNIT_01_SOURCE_ANALYSIS_QUESTS,
-      investigationMcqQuests: unit01Quests.UNIT_01_INVESTIGATION_MCQ_QUESTS,
-      investigationSequencingQuests: unit01Quests.UNIT_01_INVESTIGATION_SEQUENCING_QUESTS,
-      readerMcqQuests: unit01Quests.UNIT_01_READER_MCQ_QUESTS,
-      archiveChallengeQuests: unit01Quests.UNIT_01_ARCHIVE_CHALLENGE_QUESTS,
-      archiveEvidenceQuests: unit01Quests.UNIT_01_ARCHIVE_EVIDENCE_QUESTS,
-      archiveSaqQuests: unit01Quests.UNIT_01_ARCHIVE_SAQ_QUESTS,
-      // Teacher Mode's curated swap pool (apps/web/src/repositories/
-      // remote-content-selection-repository.js) — proof-of-pipeline seed for
-      // Case 1.01 only, see docs/architecture for the plan this was built
-      // against.
-      sourceAlternates: CASE_001_SOURCE_ALTERNATES,
-      mcqAlternates: CASE_001_MCQ_ALTERNATES,
-      sequencingAlternates: CASE_001_SEQUENCING_ALTERNATES,
-      evidenceOrganizingAlternates: CASE_001_EVIDENCE_ORGANIZING_ALTERNATES,
-      sourceAnalysisAlternates: CASE_001_HIPP_ALTERNATES,
-    },
-    unit02: {
-      unit: unit02Campaign.UNIT_02,
-      sources: unit02Campaign.CASE_004_SOURCES,
-      lanes: unit02Campaign.CASE_004_LANES,
-      activities: UNIT_02_ACTIVITIES,
-      review: unit02Campaign.UNIT_02_REVIEW,
-      mcqQuests: unit02Quests.UNIT_02_MCQ_QUESTS,
-      readerMcqQuests: unit02Quests.UNIT_02_READER_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit02Quests.UNIT_02_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit02Quests.UNIT_02_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit02Quests.UNIT_02_SOURCE_ANALYSIS_QUESTS,
-      archiveChallengeQuests: unit02Quests.UNIT_02_ARCHIVE_CHALLENGE_QUESTS,
-      investigationEvidenceQuests: unit02Quests.UNIT_02_INVESTIGATION_EVIDENCE_QUESTS,
-      archiveStrongestEvidenceQuests: unit02Quests.UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
-      archiveSequencingQuests: unit02Quests.UNIT_02_ARCHIVE_SEQUENCING_QUESTS,
-      archiveSaqQuests: unit02Quests.UNIT_02_ARCHIVE_SAQ_QUESTS,
-      evidenceOrganizingAlternates: CASE_006_EVIDENCE_ORGANIZING_ALTERNATES,
-    },
-    unit03: {
-      unit: unit03Campaign.UNIT_03,
-      sources: unit03Campaign.CASE_007_SOURCES,
-      lanes: unit03Campaign.CASE_007_LANES,
-      activities: UNIT_03_ACTIVITIES,
-      mcqQuests: unit03Quests.UNIT_03_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit03Quests.UNIT_03_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit03Quests.UNIT_03_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit03Quests.UNIT_03_SOURCE_ANALYSIS_QUESTS,
-      investigationQuests: unit03Quests.UNIT_03_INVESTIGATION_QUESTS,
-      investigationMcqQuests: unit03Quests.UNIT_03_INVESTIGATION_MCQ_QUESTS,
-      archiveChallengeQuests: unit03Quests.UNIT_03_ARCHIVE_CHALLENGE_QUESTS,
-      archiveMcqQuests: unit03Quests.UNIT_03_ARCHIVE_MCQ_QUESTS,
-      archiveSaqQuests: unit03Quests.UNIT_03_ARCHIVE_SAQ_QUESTS,
-      archiveDbqQuests: unit03Quests.UNIT_03_ARCHIVE_DBQ_QUESTS,
-    },
-    // Unit 4 carries no investigation quests — see the header of unit-04-quests.js for why, and
-    // note that adding them later is additive rather than a change to anything here.
-    unit04: {
-      unit: unit04Campaign.UNIT_04,
-      sources: unit04Campaign.CASE_010_SOURCES,
-      lanes: unit04Campaign.CASE_010_LANES,
-      activities: UNIT_04_ACTIVITIES,
-      mcqQuests: unit04Quests.UNIT_04_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit04Quests.UNIT_04_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit04Quests.UNIT_04_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit04Quests.UNIT_04_SOURCE_ANALYSIS_QUESTS,
-      archiveSequencingQuests: unit04Quests.UNIT_04_ARCHIVE_SEQUENCING_QUESTS,
-      archiveSourceAnalysisQuests: unit04Quests.UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
-      archiveSaqQuests: unit04Quests.UNIT_04_ARCHIVE_SAQ_QUESTS,
-      archiveDbqQuests: unit04Quests.UNIT_04_ARCHIVE_DBQ_QUESTS,
-    },
-    // Unit 5 carries no investigation quests either, for the same reason Unit 4 does not. Its two
-    // missions are a sequencing and an evidence-organizing, so it has an archiveEvidenceQuests key
-    // where Unit 4 has archiveSourceAnalysisQuests.
-    unit05: {
-      unit: unit05Campaign.UNIT_05,
-      sources: unit05Campaign.CASE_013_SOURCES,
-      lanes: unit05Campaign.CASE_013_LANES,
-      activities: UNIT_05_ACTIVITIES,
-      mcqQuests: unit05Quests.UNIT_05_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit05Quests.UNIT_05_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit05Quests.UNIT_05_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit05Quests.UNIT_05_SOURCE_ANALYSIS_QUESTS,
-      archiveSequencingQuests: unit05Quests.UNIT_05_ARCHIVE_SEQUENCING_QUESTS,
-      archiveEvidenceQuests: unit05Quests.UNIT_05_ARCHIVE_EVIDENCE_QUESTS,
-      archiveSaqQuests: unit05Quests.UNIT_05_ARCHIVE_SAQ_QUESTS,
-      archiveDbqQuests: unit05Quests.UNIT_05_ARCHIVE_DBQ_QUESTS,
-    },
-    // Unit 6 reached parity with Units 1-5 in Phase 87: its map shipped in Phase 85, its two
-    // interiors in Phase 86, and its three activities here. Its two missions are a hipp and an mcq,
-    // so it has archiveSourceAnalysisQuests and archiveMcqQuests where Unit 5 has
-    // archiveSequencingQuests and archiveEvidenceQuests. First unit to carry that pair.
-    unit06: {
-      unit: unit06Campaign.UNIT_06,
-      sources: unit06Campaign.CASE_016_SOURCES,
-      lanes: unit06Campaign.CASE_016_LANES,
-      activities: UNIT_06_ACTIVITIES,
-      mcqQuests: unit06Quests.UNIT_06_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit06Quests.UNIT_06_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit06Quests.UNIT_06_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit06Quests.UNIT_06_SOURCE_ANALYSIS_QUESTS,
-      archiveSourceAnalysisQuests: unit06Quests.UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
-      archiveMcqQuests: unit06Quests.UNIT_06_ARCHIVE_MCQ_QUESTS,
-      archiveSaqQuests: unit06Quests.UNIT_06_ARCHIVE_SAQ_QUESTS,
-      archiveDbqQuests: unit06Quests.UNIT_06_ARCHIVE_DBQ_QUESTS,
-    },
-    // Unit 7 reached parity with Units 1-6 in Phase 89E: its content landed in Phase 89, its cast
-    // in Phase 89B, its wharf in Phase 89C, its two interiors in Phase 89D and its three activities
-    // here. It sat between Phase 89 and Phase 89C registered for validation and deliberately absent
-    // from main.js's UNITS, because activeFieldMap() falls back to Unit 1's Caribbean for a unit it
-    // has no map for; and it carried no `activities` key until now for the reason Unit 6 carried
-    // none between Phases 85 and 87. Its two missions are an evidence-organizing and a sequencing,
-    // which is Unit 5's pair rather than Unit 6's.
-    unit07: {
-      unit: unit07Campaign.UNIT_07,
-      sources: unit07Campaign.CASE_019_SOURCES,
-      lanes: unit07Campaign.CASE_019_LANES,
-      activities: UNIT_07_ACTIVITIES,
-      mcqQuests: unit07Quests.UNIT_07_MCQ_QUESTS,
-      evidenceOrganizingQuests: unit07Quests.UNIT_07_EVIDENCE_ORGANIZING_QUESTS,
-      sequencingQuests: unit07Quests.UNIT_07_SEQUENCING_QUESTS,
-      sourceAnalysisQuests: unit07Quests.UNIT_07_SOURCE_ANALYSIS_QUESTS,
-      archiveEvidenceQuests: unit07Quests.UNIT_07_ARCHIVE_EVIDENCE_QUESTS,
-      archiveSequencingQuests: unit07Quests.UNIT_07_ARCHIVE_SEQUENCING_QUESTS,
-      archiveSaqQuests: unit07Quests.UNIT_07_ARCHIVE_SAQ_QUESTS,
-      archiveDbqQuests: unit07Quests.UNIT_07_ARCHIVE_DBQ_QUESTS,
-    },
+/**
+ * The three modules that make up a unit. This is the only per-unit list left in the file, and a
+ * new unit costs one line in it plus its three imports above — static, because Vite has to see
+ * them, and because a grep for `unit-08-quests.js` should find this file.
+ *
+ * Activity content is keyed by the source id each activity opens from, for the four engines in
+ * engine/activities/. Every authored field map has three.
+ */
+const UNIT_MODULES = {
+  "unit-01": { campaign: unit01Campaign, quests: unit01Quests, activities: UNIT_01_ACTIVITIES },
+  "unit-02": { campaign: unit02Campaign, quests: unit02Quests, activities: UNIT_02_ACTIVITIES },
+  "unit-03": { campaign: unit03Campaign, quests: unit03Quests, activities: UNIT_03_ACTIVITIES },
+  "unit-04": { campaign: unit04Campaign, quests: unit04Quests, activities: UNIT_04_ACTIVITIES },
+  "unit-05": { campaign: unit05Campaign, quests: unit05Quests, activities: UNIT_05_ACTIVITIES },
+  "unit-06": { campaign: unit06Campaign, quests: unit06Quests, activities: UNIT_06_ACTIVITIES },
+  "unit-07": { campaign: unit07Campaign, quests: unit07Quests, activities: UNIT_07_ACTIVITIES },
+};
+
+/**
+ * Teacher Mode's curated swap pool, and the only content here not keyed by unit. Case 1.01 and
+ * Case 1.06 only — a proof-of-pipeline seed, see apps/web/src/content/case-001-source-alternates.js
+ * for what it is and is not. There is no per-unit pattern to derive these from, and inventing one
+ * would be pretending the pipeline is broader than it is.
+ */
+const ALTERNATES = {
+  unit01: {
+    sourceAlternates: ["case-001-source-alternates.js", CASE_001_SOURCE_ALTERNATES],
+    mcqAlternates: ["case-001-mcq-alternates.js", CASE_001_MCQ_ALTERNATES],
+    sequencingAlternates: ["case-001-sequencing-alternates.js", CASE_001_SEQUENCING_ALTERNATES],
+    evidenceOrganizingAlternates: [
+      "case-001-evidence-organizing-alternates.js",
+      CASE_001_EVIDENCE_ORGANIZING_ALTERNATES,
+    ],
+    sourceAnalysisAlternates: ["case-001-hipp-alternates.js", CASE_001_HIPP_ALTERNATES],
+  },
+  unit02: {
+    evidenceOrganizingAlternates: [
+      "case-006-evidence-organizing-alternates.js",
+      CASE_006_EVIDENCE_ORGANIZING_ALTERNATES,
+    ],
+  },
+};
+
+/** The export name each alternates file uses, recovered from its filename: `case-001-x.js` -> `CASE_001_X`. */
+function alternatesExportName(file) {
+  return file.replace(/\.js$/, "").replace(/-/g, "_").toUpperCase();
+}
+
+/** `ARCHIVE_EVIDENCE_QUESTS` -> `archiveEvidenceQuests`. */
+function camelCase(screamingSnake) {
+  return screamingSnake.toLowerCase().replace(/_([a-z0-9])/g, (_, char) => char.toUpperCase());
+}
+
+/**
+ * A campaign module's exports don't share one prefix the way a quest module's do — a unit's own
+ * object is `UNIT_04`, its sources and lanes are named for the case they belong to, and only Units
+ * 1 and 2 carry a review at all. Five rules cover all twenty-three exports across the seven
+ * campaigns. Anything a future campaign exports that none of them match is returned under its own
+ * camelCased name rather than dropped, so a new export shows up somewhere rather than nowhere.
+ */
+function campaignEntries(unitId, campaign) {
+  const unitExport = `UNIT_${unitNumber(unitId)}`;
+  const file = `${unitId}-campaign.js`;
+  const keyFor = (name) => {
+    if (name === unitExport) return "unit";
+    if (name === "BRAND") return "brand";
+    if (name.endsWith("_SOURCES")) return "sources";
+    if (name.endsWith("_LANES")) return "lanes";
+    if (name.endsWith("REVIEW")) return "review";
+    return camelCase(name);
   };
+  return Object.entries(campaign).map(([name, value]) => ({
+    key: keyFor(name),
+    value,
+    origin: { file, exportName: name },
+  }));
+}
+
+/**
+ * A quest module's exports are entirely regular: every one is `UNIT_NN_` followed by the quest
+ * list's name. The throw is worth keeping rather than tidying away — it is the thing standing
+ * between "someone exported a quest array under a different name" and that array never being
+ * validated again.
+ */
+function questEntries(unitId, quests) {
+  const prefix = `UNIT_${unitNumber(unitId)}_`;
+  const file = `${unitId}-quests.js`;
+  return Object.entries(quests).map(([name, value]) => {
+    if (!name.startsWith(prefix)) {
+      throw new Error(
+        `${unitId} quests: export "${name}" does not start with "${prefix}". Every quest array is ` +
+          "named for its unit so the validator can find it — rename the export rather than " +
+          "special-casing it here, or it will stop being validated."
+      );
+    }
+    return {
+      key: camelCase(name.slice(prefix.length)),
+      value,
+      origin: { file, exportName: name },
+    };
+  });
+}
+
+/**
+ * Every content entry of every registered unit, as `{ key, value, origin }`. The two exported
+ * loaders below are both views of this — one keeps the values, one keeps the origins — so they
+ * cannot drift apart into a validator that reports one file's name while checking another's.
+ */
+function unitEntries(unitId) {
+  const missing = UNIT_IDS.filter((id) => !UNIT_MODULES[id]);
+  if (missing.length) {
+    throw new Error(
+      `unit-registry.js lists ${missing.join(", ")} but local-content-repository.js has no ` +
+        "modules for them — add the imports and the UNIT_MODULES line."
+    );
+  }
+  const { campaign, quests, activities } = UNIT_MODULES[unitId];
+  const alternates = ALTERNATES[unitContentKey(unitId)] || {};
+  return [
+    ...campaignEntries(unitId, campaign),
+    {
+      key: "activities",
+      value: activities,
+      origin: {
+        file: `${unitId}-activities.js`,
+        exportName: `UNIT_${unitNumber(unitId)}_ACTIVITIES`,
+      },
+    },
+    ...questEntries(unitId, quests),
+    ...Object.entries(alternates).map(([key, [file, value]]) => ({
+      key,
+      value,
+      origin: { file, exportName: alternatesExportName(file) },
+    })),
+  ];
+}
+
+/** Every unit's content, keyed `unit01`...`unit07`. The shape the validator and tests read. */
+export function loadChronicleContent() {
+  return Object.fromEntries(
+    UNIT_IDS.map((unitId) => [
+      unitContentKey(unitId),
+      Object.fromEntries(unitEntries(unitId).map(({ key, value }) => [key, value])),
+    ])
+  );
+}
+
+/**
+ * The same shape, but each value is the `{ file, exportName }` the content came from — so a
+ * validation failure can name `unit-04-quests.js: UNIT_04_ARCHIVE_DBQ_QUESTS` rather than the
+ * camelCased key nobody can grep for.
+ */
+export function chronicleContentOrigins() {
+  return Object.fromEntries(
+    UNIT_IDS.map((unitId) => [
+      unitContentKey(unitId),
+      Object.fromEntries(unitEntries(unitId).map(({ key, origin }) => [key, origin])),
+    ])
+  );
 }
