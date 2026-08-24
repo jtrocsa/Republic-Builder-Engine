@@ -65,6 +65,24 @@ test.describe("Dev warp", () => {
     expect(saved.story.flags.sawMeridianMark).toBeUndefined();
   });
 
+  test("opens the field with the Reconstruction Table already unlocked", async ({ page }) => {
+    // Part 12's opener. The case-close chain sits behind three finished missions, which is why it
+    // had never been walked — 6B's script reached this button and stopped.
+    await page.goto("/?warp=reconstruct");
+    await expect(page.locator('[data-action="reconstruction"]')).toBeVisible();
+    await expect(page.locator(".channel-progress")).toHaveCount(0);
+    expect((await readProgress(page)).caseEvidence["case-001"]).toHaveLength(3);
+  });
+
+  test("lands at the Navigation Table with three units ready to close", async ({ page }) => {
+    await page.goto("/?warp=unitclose");
+    await expect(page.locator(".archive-layout")).toBeVisible();
+    // Unit 3 has no authored Archive Review, so it closes through its record button — the contrast
+    // with Unit 2 next door is the whole point of the state.
+    await expect(page.locator('[data-action="close-unit"]')).toBeVisible();
+    expect((await readProgress(page)).selectedUnitId).toBe("unit-03");
+  });
+
   test("ignores a name it does not have, without touching the save (edge case)", async ({
     page,
   }) => {

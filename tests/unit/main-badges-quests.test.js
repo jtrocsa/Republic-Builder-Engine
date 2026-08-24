@@ -30,7 +30,7 @@ describe("badgeRecordsForUnit", () => {
     expect(caribbean.earned).toBe(true);
   });
 
-  it("returns no badges for a unit id with no configured badges (invalid/missing data)", () => {
+  it("returns no badges for something that is not a unit (invalid/missing data)", () => {
     expect(badgeRecordsForUnit({ id: "unit-does-not-exist" })).toEqual([]);
   });
 });

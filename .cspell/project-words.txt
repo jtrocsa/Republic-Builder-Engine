@@ -445,6 +445,7 @@ unheld
 unhighlighted
 ultrawide
 unioning
+unitclose
 unlayered
 unmigrated
 unpathable

@@ -5262,6 +5262,54 @@ const DEV_WARPS = {
     ...WARP_CASE_SIXTEEN,
     ...WARP_TOUR_DONE,
   },
+  // The far end of the Reconstruction Table's gate: Case 1.01 with all three records already
+  // secured, so the Evidence Channel is showing the gold button rather than the count. Reaching it
+  // by hand costs three missions, which is why the whole case-close chain — reconstruction, upload,
+  // the recall — had never been walked before Part 12.
+  reconstruct: {
+    currentScreen: "field",
+    caseEvidence: { "case-001": ["taino-context", "columbus-letter", "waldseemuller-map"] },
+    ...WARP_CASE_ONE,
+    ...WARP_TOUR_DONE,
+  },
+  // At the Navigation Table with Units 1 through 3 finished — every case archived and every
+  // unit-level Archive Challenge filed — so all three are ready to close. The point of the state is
+  // the contrast: Unit 2 closes through its authored Archive Review and Unit 3, which has none,
+  // closes through the record button beside it. Spine Review Part 12.
+  unitclose: {
+    currentScreen: "archive",
+    selectedUnitId: "unit-03",
+    selectedCaseId: "case-007",
+    completedCases: [
+      "case-001",
+      "case-002",
+      "case-003",
+      "case-004",
+      "case-005",
+      "case-006",
+      "case-007",
+      "case-008",
+      "case-009",
+    ],
+    unlocked: [
+      "case-001",
+      "case-002",
+      "case-003",
+      "case-004",
+      "case-005",
+      "case-006",
+      "case-007",
+      "case-008",
+      "case-009",
+    ],
+    archiveChallenges: {
+      "unit-01-archive-atlantic-world-saq": { status: "complete" },
+      "unit-02-archive-colonial-crossroads-saq": { status: "complete" },
+      "unit-03-archive-common-cause-saq": { status: "complete" },
+      "unit-03-archive-common-cause-dbq": { status: "complete" },
+    },
+    ...WARP_TOUR_DONE,
+  },
   // Straight onto the interview's board, past its Mission Instructions. `ensureSourceActivity()`
   // fills in the engine's own default state, so the flag alone is the whole seed.
   mission: {
@@ -5385,7 +5433,7 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06, UNIT_07];
+export const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06, UNIT_07];
 const UNIT_SOURCES = {
   "case-001": CASE_001_SOURCES,
   "case-004": CASE_004_SOURCES,
@@ -5712,6 +5760,20 @@ function caseNumberLabel(kase) {
   return splitCaseTitle(kase)
     .prefix.replace(/\s*—\s*$/, "")
     .trim();
+}
+
+/**
+ * Where and when a case happened, in one line, without saying the year twice.
+ *
+ * Most cases already carry the date inside `location` ("Caribbean · 1493", "Philadelphia,
+ * Pennsylvania · 1763–1783"), and appending `date` unconditionally printed it twice on every one of
+ * them. Two of Unit 2's cases carry a placeless location with no date ("The Atlantic circuit"),
+ * which is why the append exists at all. This lived inline in `fieldScreen()`'s kicker until the
+ * Preservation Case needed the same line for a badge — the second consumer, which is what makes it
+ * a function rather than a second copy.
+ */
+function caseWhereAndWhen(kase) {
+  return kase.location.includes(kase.date) ? kase.location : `${kase.location} · ${kase.date}`;
 }
 
 // Per-classroom Navigation Table visibility (Phase 48C) — default visible,
@@ -10075,63 +10137,36 @@ function introRegistrationScreen() {
   return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">${esc(r.eyebrow)}</p><h1>${esc(r.title)}</h1><p class="subtitle">${esc(r.subtitle)}</p><p><b>${esc(r.profileLabel)}:</b> ${esc(progress.profile.name)} · <b>${esc(r.assignmentLabel)}:</b> ${esc(r.assignment)}</p><p>${esc(r.codexLabel)} — ${esc(r.codexBody)}</p><div class="completion-actions"><button class="btn btn-outline" data-action="intro-advance" data-next="identity">${esc(r.back)}</button><button class="btn btn-gold" data-action="intro-advance" data-next="hallway">${esc(r.enter)} →</button></div></section></main>`;
 }
 
-const UNIT_BADGES = {
-  "unit-01": [
-    {
-      id: "case-001",
-      label: "Caribbean",
-      title: "Caribbean Field Badge",
-      icon: "✦",
-      description: "Village life, Columbus account, and Waldseemüller map record preserved.",
-    },
-    {
-      id: "case-002",
-      label: "Atlantic",
-      title: "Atlantic Exchange Badge",
-      icon: "⌁",
-      description: "Exchange route record will appear after the Atlantic case is archived.",
-    },
-    {
-      id: "case-003",
-      label: "Hispaniola",
-      title: "Hispaniola Empire Badge",
-      icon: "◆",
-      description:
-        "Empire and resistance record will appear after the Hispaniola case is archived.",
-    },
-  ],
-  "unit-02": [
-    {
-      id: "case-004",
-      label: "Riverbend",
-      title: "Riverbend Field Badge",
-      icon: "⚑",
-      description:
-        "Company charter, indentured servant's letter, and wharf accounts preserved from the settlement.",
-    },
-    {
-      id: "case-005",
-      label: "Atlantic Circuit",
-      title: "Triangle Ledger Badge",
-      icon: "▲",
-      description: "Atlantic trade circuit charted and its records validated.",
-    },
-    {
-      id: "case-006",
-      label: "Regions",
-      title: "Charter & Compact Badge",
-      icon: "❖",
-      description: "Colonial regions display restored with founding records.",
-    },
-  ],
-};
+// One badge per case, derived from the case — Spine Review Part 12, P12-3 and P12-5.
+//
+// This was a hand-written `UNIT_BADGES` table with entries for `unit-01` and `unit-02` only, while
+// the Preservation Case mapped over all seven `UNITS`. Periods 3 through 7 therefore each printed a
+// heading over an empty grid, in a dialog whose own subtitle promises "Badges are preserved here
+// after each field area is completed" — five of the seven units preserved nothing, and the only
+// test on this pinned the empty-array fallback. It is the same shape as `UNIT_MAP_VIEW` in Phase
+// 90I and `FIELD_COPY` before it: a per-unit table with a sane fallback and no test.
+//
+// Deriving also retires a second defect. The hand-written descriptions for case-002 and case-003
+// read "…record will appear after the Atlantic case is archived", and `description` renders in both
+// states — so an earned badge said "Preserved" and then described itself as not yet existing.
+// Where and when the case happened is true in both states and is what a badge case shows anyway.
+//
+// The three marks repeat per unit deliberately: a unit's three cases are a set, and the first,
+// second and third badge of every period share a mark the way a badge case's rows do.
+const BADGE_MARKS = ["✦", "⌁", "◆"];
 export function badgeRecordsForUnit(unit) {
-  return (UNIT_BADGES[unit.id] || []).map((badge) => ({
-    ...badge,
+  return (unit?.cases || []).map((kase, index) => ({
+    id: kase.id,
+    label: kase.shortTitle,
+    title: `${kase.shortTitle} Badge`,
+    icon: BADGE_MARKS[index % BADGE_MARKS.length],
+    description: caseWhereAndWhen(kase),
+    // Case 1.01 is the one case that can be finished without `unlockNext()` running — see
+    // main-badges-quests.test.js, which pins the OR rather than the completion flag.
     earned:
-      badge.id === "case-001"
+      kase.id === "case-001"
         ? progress.completedCases.includes("case-001") || countEvidence("case-001") >= 3
-        : progress.completedCases.includes(badge.id),
+        : progress.completedCases.includes(kase.id),
   }));
 }
 
@@ -11017,6 +11052,15 @@ function archiveScreen() {
   const lockedReasonMarkup = isUnlocked(selected.id)
     ? ""
     : `<p class="route-locked-reason">${esc(lockedReasonForCase(selected))}</p>`;
+  // How this unit closes, once every case and Archive Challenge in it is done. Two shapes, because
+  // only two of the seven units have authored an Archive Review — offering one for the other five
+  // opened Unit 1's questions under their name, and it was load-bearing, since submitting it was the
+  // only thing outside Teacher Mode that opened the next unit. Spine Review Part 12, P12-1.
+  const unitCloseButton = !unitReadyForReview(selectedUnit)
+    ? ""
+    : unitReviewFor(selectedUnit)
+      ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>`
+      : `<button class="btn btn-outline" data-action="close-unit" data-unit="${esc(selectedUnit.id)}">Archive the ${esc(selectedUnit.period)} record →</button>`;
   const view = MAP_VIEWS[UNIT_MAP_VIEW[selectedUnit.id]] || MAP_VIEWS[DEFAULT_MAP_VIEW];
   const viewport = NAV_TABLE_VIEWPORT;
   const labelsMarkup = view.labels
@@ -11039,7 +11083,7 @@ function archiveScreen() {
     markerPositions.get(selected.id) ||
     projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
   const { left: threadLeft, top: threadTop } = xyToPercent(threadXY, viewport);
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="hub-return">← Main Hall</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Select a marker to read its route.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(resolvedCaseTitle(selected))}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitReadyForReview(selectedUnit) ? `<button class="btn btn-outline" data-action="review">Begin ${esc(selectedUnit.period)} Archive Review →</button>` : ""}</aside></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="hub-return">← Main Hall</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Select a marker to read its route.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(resolvedCaseTitle(selected))}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitCloseButton}</aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
@@ -12476,14 +12520,7 @@ function fieldScreen() {
   const remaining = Math.max(0, sources.length - countEvidence(caseId));
   const reconstructionGate = `<p class="channel-progress">${remaining} ${remaining === 1 ? "record" : "records"} still to secure. The Reconstruction Table opens when the last one is in.</p>`;
   const fieldNotice = progress.fieldNotice;
-  // Most cases already carry the date inside `location` ("Caribbean · 1493", "Philadelphia,
-  // Pennsylvania · 1763–1783"), and appending `date` unconditionally printed it twice on every one
-  // of them — "Caribbean · 1493 · 1493" has been on the Unit 1 field screen since it shipped. Two
-  // of Unit 2's cases carry a placeless location with no date ("The Atlantic circuit"), which is why
-  // the append exists at all, so this keeps it for those and drops it where it would repeat.
-  const kicker = activeCase.location.includes(activeCase.date)
-    ? activeCase.location
-    : `${activeCase.location} · ${activeCase.date}`;
+  const kicker = caseWhereAndWhen(activeCase);
   return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
 }
 
@@ -12699,10 +12736,10 @@ function missionDebriefScreen(kind, source, activity, entry) {
   // The three records of a case turning out to be one story. Gated on the whole case being filed
   // rather than on this being "the last" mission — a player who finishes in a different order still
   // gets it, wherever they actually ended.
-  const arc =
-    activity.arcClose && caseArcFiled(source.id)
-      ? `<section class="mission-debrief__arc"><h2>What the three records make together</h2><blockquote><p>${esc(activity.arcClose.line)}</p>${activity.arcClose.speaker ? `<cite>${esc(fieldNpcName(activity.arcClose.speaker))}</cite>` : ""}</blockquote><p>${esc(activity.arcClose.established)}</p></section>`
-      : "";
+  const arcClose = caseArcFiled(source.id) ? arcCloseForDebrief(source.id, activity) : null;
+  const arc = arcClose
+    ? `<section class="mission-debrief__arc"><h2>What the three records make together</h2>${arcClose.line ? `<blockquote><p>${esc(arcClose.line)}</p>${arcClose.speaker ? `<cite>${esc(fieldNpcName(arcClose.speaker))}</cite>` : ""}</blockquote>` : ""}<p>${esc(arcClose.established)}</p></section>`
+    : "";
 
   // Something on the record that should not be there. Last on the screen on purpose: it is the one
   // thing the mission does not resolve, and it should be the note the player leaves on.
@@ -12725,6 +12762,34 @@ function missionDebriefScreen(kind, source, activity, entry) {
  * same bar the Codex itself uses (decision log `0058`). A case with only one activity is trivially
  * complete, which is correct: an arc of one is a mission, and it simply has no `arcClose` to show.
  */
+/**
+ * The arc close to show on the debrief that ends a case — Spine Review Part 12, P12-4.
+ *
+ * The gate above says the point out loud: "a player who finishes in a different order still gets
+ * it, wherever they actually ended." Reading `activity.arcClose` directly defeated that, because
+ * exactly one of the three missions in Units 2, 4, 5, 6 and 7 has none authored. A player who
+ * happened to file that one last — one ordering in three — got no arc at all, which is the whole
+ * case-level payoff and the only place the three records are said to be one story.
+ *
+ * The two halves are not the same kind of thing, which is why the fallback keeps one and drops the
+ * other. `line` is a quote in the voice of somebody from *that* mission and would be a lie coming
+ * out of a mission the player has not just played. `established` is about the case: in Units 3
+ * through 7 the sibling arc closes share it verbatim. So a mission with no arc close of its own
+ * borrows the paragraph and speaks for nobody.
+ *
+ * `sourcesForCase` order, so which sibling is borrowed from is the authored order and not the order
+ * this player happened to play in.
+ */
+export function arcCloseForDebrief(sourceId, activity) {
+  if (activity.arcClose) return activity.arcClose;
+  const caseId = caseIdForSource(sourceId);
+  if (!caseId) return null;
+  const sibling = sourcesForCase(caseId)
+    .map((source) => activityFor(source.id))
+    .find((candidate) => candidate?.arcClose?.established);
+  return sibling ? { established: sibling.arcClose.established } : null;
+}
+
 function caseArcFiled(sourceId) {
   const caseId = caseIdForSource(sourceId);
   if (!caseId) return false;
@@ -13624,7 +13689,24 @@ function returnWarpScreen() {
   });
 }
 
+/**
+ * The Archive Review, per unit — and `null` for a unit that has not authored one.
+ *
+ * Two of the seven units have one. Every reader of this table used to end `|| REVIEW`, so the other
+ * five rendered Unit 1's Atlantic World checkpoint under their own heading: "Begin Period 5 Archive
+ * Review →" opened Unit 1's questions titled *A House Divided*, `completionScreen()` scored the
+ * answers against Unit 1's key, and the Archive Evaluator was sent Unit 5's unit object with Unit
+ * 1's rubric. The fourth appearance of the shape CLAUDE.md names: a per-unit table with a sane
+ * fallback and no test. Spine Review Part 12, P12-1.
+ *
+ * `unitReviewFor()` returns null rather than falling back, and `unit-review-coverage.test.js` fails
+ * if a reader reintroduces a fallback. Where a unit has no review, `closeUnit()` is the unit close
+ * instead — see its own comment for why that had to exist before this table could stop lying.
+ */
 const UNIT_REVIEWS = { "unit-01": REVIEW, "unit-02": UNIT_02_REVIEW };
+export function unitReviewFor(unit) {
+  return UNIT_REVIEWS[typeof unit === "string" ? unit : unit?.id] || null;
+}
 function reviewStateFor(unitId) {
   // Unit 1's review answers stay in their legacy home so existing saves keep working.
   if (unitId === "unit-01") return progress.review;
@@ -13632,7 +13714,15 @@ function reviewStateFor(unitId) {
 }
 function reviewScreen() {
   const unit = unitById(progress.selectedUnitId) || UNIT_01;
-  const review = UNIT_REVIEWS[unit.id] || REVIEW;
+  const review = unitReviewFor(unit);
+  // A unit with no authored review has no review screen. Nothing offers one any more, but a save
+  // written before this fix can still carry `currentScreen: "review"`, and the recovery for that is
+  // the room the button lived in — the same shape missionScreen() uses for a retired case.
+  if (!review) {
+    progress.currentScreen = "archive";
+    save();
+    return archiveScreen();
+  }
   const state = reviewStateFor(unit.id);
   const answers = state.answers || {};
   const saq = state.saq || {};
@@ -13647,14 +13737,25 @@ function reviewScreen() {
 
 function completionScreen() {
   const unit = unitById(progress.selectedUnitId) || UNIT_01;
-  const review = UNIT_REVIEWS[unit.id] || REVIEW;
+  const review = unitReviewFor(unit);
   const state = reviewStateFor(unit.id);
-  const correct = review.mcq.filter(
-    (q, index) => Number((state.answers || {})[index]) === q.answer
-  ).length;
-  const saqCount = Object.values(state.saq || {}).filter((v) => String(v).trim().length > 0).length;
   const casesDone = unit.cases.filter((c) => progress.completedCases.includes(c.id)).length;
-  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">Unit record complete</p><h1>${esc(resolvedUnitTitle(unit))} archived.</h1><p>Your Codex now preserves this investigation. The Institute has logged your sources, practice responses, and completed case records.</p><div class="completion-stats"><span>Cases archived: ${casesDone}/${unit.cases.length}</span><span>MCQ checkpoint: ${correct}/${review.mcq.length}</span><span>SAQ responses drafted: ${saqCount}/${review.saq.prompts.length}</span></div><div class="completion-actions"><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="review">Review unit work</button></div></section></main>`;
+  // The two review counts only for a unit that has a review to count. They used to be scored
+  // against Unit 1's answer key for the five units that do not — P12-1.
+  const reviewStats = review
+    ? `<span>MCQ checkpoint: ${review.mcq.filter((q, index) => Number((state.answers || {})[index]) === q.answer).length}/${review.mcq.length}</span><span>SAQ responses drafted: ${Object.values(state.saq || {}).filter((v) => String(v).trim().length > 0).length}/${review.saq.prompts.length}</span>`
+    : "";
+  // The next unit, on the screen that opened it. `closeUnit()` has just unlocked its first case, but
+  // `selectedUnitId` still points at the unit being closed — so before this the player returned to a
+  // Navigation Table full of ✓ markers with the newly opened period one undiscovered tab away.
+  // Spine Review Part 12, P12-6. Named rather than "Continue": which period comes next is the one
+  // thing this screen knows and the table does not say.
+  const nextUnit = UNITS[UNITS.findIndex((u) => u.id === unit.id) + 1];
+  const nextOpen = nextUnit && nextUnit.cases.some((c) => isUnlocked(c.id));
+  const onward = nextOpen
+    ? `<button class="btn btn-gold" data-action="open-next-unit" data-unit="${esc(nextUnit.id)}">Open ${esc(nextUnit.period)} →</button><button class="btn btn-outline" data-action="home">Return to Institute</button>`
+    : `<button class="btn btn-gold" data-action="home">Return to Institute →</button>`;
+  return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">Unit record complete</p><h1>${esc(resolvedUnitTitle(unit))} archived.</h1><p>Your Codex now preserves this investigation. The Institute has logged your sources, practice responses, and completed case records.</p><div class="completion-stats"><span>Cases archived: ${casesDone}/${unit.cases.length}</span>${reviewStats}</div><div class="completion-actions">${onward}${review ? `<button class="btn btn-outline" data-action="review">Review unit work</button>` : ""}</div></section></main>`;
 }
 
 function render() {
@@ -14743,9 +14844,9 @@ function handlePuzzleScreenClick(target, action) {
       progress.reconstruction[s.dataset.reconstruction] = s.value;
     });
     const reconstructionCaseId = activeFieldCaseId();
-    const correct = sourcesForCase(reconstructionCaseId).every(
-      (s) => progress.reconstruction[s.id] === s.reconstruction
-    );
+    const board = sourcesForCase(reconstructionCaseId);
+    const placed = board.filter((s) => progress.reconstruction[s.id] === s.reconstruction).length;
+    const correct = placed === board.length;
     save();
     if (correct) {
       playSfx("upload");
@@ -14755,9 +14856,13 @@ function handlePuzzleScreenClick(target, action) {
       save();
       render();
     } else
+      // How many are already right, which the one sentence this replaced never said — Units 3, 6
+      // and 7 put seven records on this board, and "revisit the source type and date" is the same
+      // advice at one wrong as at seven. It still names no record: which ones are misfiled is the
+      // question, and the count only says how close the answer is. Spine Review Part 12, P12-8.
       showFeedback(
         "reconstructionFeedback",
-        "Revisit the source type and date. Each record belongs in a different evidentiary lane.",
+        `${placed} of ${board.length} records are in the right lane. Revisit the source type and date — each record belongs where its own kind of evidence does.`,
         "error"
       );
     return true;
@@ -14792,7 +14897,8 @@ function handleReviewClick(target, action) {
   }
   if (action === "submit-review") {
     const reviewUnitId = progress.selectedUnitId || "unit-01";
-    const reviewData = UNIT_REVIEWS[reviewUnitId] || REVIEW;
+    const reviewData = unitReviewFor(reviewUnitId);
+    if (!reviewData) return true;
     const reviewState = reviewStateFor(reviewUnitId);
     document.querySelectorAll("[data-mcq]:checked").forEach((i) => {
       reviewState.answers[i.dataset.mcq] = Number(i.value);
@@ -14816,17 +14922,54 @@ function handleReviewClick(target, action) {
         "error"
       );
     } else {
-      if (reviewUnitId === "unit-01") progress.unitComplete = true;
-      if (!progress.completedUnits.includes(reviewUnitId))
-        progress.completedUnits.push(reviewUnitId);
-      unlockNextUnit(reviewUnitId);
-      progress.currentScreen = "completion";
-      save();
-      render();
+      closeUnit(reviewUnitId);
     }
     return true;
   }
+  if (action === "close-unit") {
+    const unit = unitById(target.dataset.unit);
+    // The same gate the button is drawn behind, checked again here rather than trusted — this is
+    // the one control that opens the next unit, and a stale render must not be able to fire it.
+    if (!unit || !unitReadyForReview(unit) || unitReviewFor(unit)) return true;
+    closeUnit(unit.id);
+    return true;
+  }
+  if (action === "open-next-unit") {
+    const unit = unitById(target.dataset.unit);
+    if (!unit) return true;
+    progress.selectedUnitId = unit.id;
+    progress.selectedCaseId = unit.cases[0]?.id || progress.selectedCaseId;
+    progress.currentScreen = "archive";
+    save();
+    render();
+    return true;
+  }
   return false;
+}
+
+/**
+ * A unit is finished — the one place that says so.
+ *
+ * Two controls reach it: `submit-review` for the two units with an authored Archive Review, and
+ * `close-unit` for the five without. Both do exactly this, because `unlockNextUnit()` is the only
+ * thing outside Teacher Mode that opens the next unit and a second copy of it is how a unit ends up
+ * closable one way and not the other. Spine Review Part 12, P12-1.
+ *
+ * The notice is the other half of P12-6: finishing a *case* has always written one, and finishing a
+ * whole unit wrote nothing at all.
+ */
+function closeUnit(unitId) {
+  if (unitId === "unit-01") progress.unitComplete = true;
+  if (!progress.completedUnits.includes(unitId)) progress.completedUnits.push(unitId);
+  unlockNextUnit(unitId);
+  const unit = unitById(unitId);
+  const nextUnit = UNITS[UNITS.findIndex((u) => u.id === unitId) + 1];
+  progress.hubNotice = nextUnit
+    ? `${resolvedUnitTitle(unit)} archived. ${nextUnit.period} is open at the Navigation Table.`
+    : `${resolvedUnitTitle(unit)} archived.`;
+  progress.currentScreen = "completion";
+  save();
+  render();
 }
 
 function handleAuthScreenClick(target, action) {
@@ -15393,7 +15536,9 @@ function handleEvaluatorClick(target, action) {
   }
   if (action === "evaluate-saq") {
     const unit = unitById(progress.selectedUnitId) || UNIT_01;
-    const review = UNIT_REVIEWS[unit.id] || REVIEW;
+    const review = unitReviewFor(unit);
+    // Without this the evaluator was sent this unit's identity and Unit 1's rubric — P12-1.
+    if (!review) return true;
     const state = reviewStateFor(unit.id);
     const taskId = `saq-${unit.id}`;
     const prior = progress.submissions[taskId];
@@ -15619,6 +15764,18 @@ async function handleAppChange(event) {
         }
       );
     }
+  } else if (field.matches("[data-mcq]") || field.matches("[data-saq]")) {
+    // The Archive Review, which until Part 12 was the one written surface in the game that kept
+    // nothing until it was submitted: `submit-review` read both off the DOM, so typing three SAQ
+    // paragraphs and pressing "← Archive map" left nothing to come back to, on a unit's summative
+    // written work. Every other written surface in this handler already does exactly this. P12-2.
+    //
+    // No render(): the value the player typed is already on the screen, and rebuilding it would
+    // scroll a part-written review back to the top for nothing.
+    const reviewState = reviewStateFor(progress.selectedUnitId || "unit-01");
+    if (field.matches("[data-saq]")) reviewState.saq[field.dataset.saq] = field.value.trim();
+    else if (field.checked) reviewState.answers[field.dataset.mcq] = Number(field.value);
+    save();
   } else if (field.matches("[data-mcq-quest]")) {
     const questId = field.dataset.mcqQuest;
     progress.questResponses[questId] = { selected: field.value };

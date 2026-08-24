@@ -29,7 +29,7 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed**  | 2026-08-23 | —                                                |
 | [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed**  | 2026-08-23 | —                                                |
 | [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed**  | 2026-08-23 | —                                                |
-| 12                                                   | Unit close and the next unit                | not started |            | the case-close chain (from 9) · `arcClose` (11)  |
+| [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed**  | 2026-08-23 | 1 S3 _(P12-7, carried — see `0088` §5)_          |
 | 10                                                   | The ten non-field missions                  | not started |            |                                                  |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
@@ -39,9 +39,12 @@ Walk order is the row order above: `0 → 1…9 → 11 → 12 → 10`. Parts 1�
 each part's play script starts from the previous part's exit state — that is what keeps a script to
 twelve steps. 10–12 branch off the spine and are reorderable.
 
-**Pull-forward candidate.** Part 10's four pre-solved sequencing quests are a correctness bug with a
-known fix that needs no review to discover. If students reach Units 3–4 before the program does, fix
-it as its own commit out of band rather than waiting.
+**~~Pull-forward candidate.~~ Already fixed, out of band, in Phase 81F** — before this row was ever
+read. Part 10's pre-solved sequencing quests were three rather than four, they are scrambled, and
+`tests/unit/sequencing-quest-order.test.js` now fails on a solved quest, on a `position` run with a
+hole or a duplicate, and on finding nothing to check at all. Part 10 keeps its inbound list; this
+was simply not on it any more. Corrected while closing Part 12 — the ledger had carried the claim
+for nine phases.
 
 ---
 
@@ -94,11 +97,13 @@ part file, 12-step script, ~120 lines for this ledger.
 `?warp=<name>` in dev only (`DEV_WARPS` in `main.js`, guarded by `import.meta.env.DEV` and verified
 absent from the production bundle). Adding one is a line in that table.
 
-`intro` · `hall` · `hub` · `table` · `field` · `mission` · `railhead` · `port` · `reveal`
+`intro` · `hall` · `hub` · `table` · `field` · `mission` · `railhead` · `port` · `reveal` ·
+`reconstruct` · `unitclose`
 
 This list was six for three phases after `DEV_WARPS` grew to nine. `intro` also had no test coverage
 at all until Parts 1–4 — the one warp no spec named, and the one every play script here opens on.
-`tests/e2e/intro-sequence.spec.js` covers it now.
+`tests/e2e/intro-sequence.spec.js` covers it now, and every warp has a case in
+`tests/e2e/dev-warp.spec.js` — add both in the same commit that adds the warp.
 
 ---
 
