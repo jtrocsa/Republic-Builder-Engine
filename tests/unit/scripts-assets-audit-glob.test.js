@@ -78,11 +78,20 @@ describe("createGlobMatcher wildcard semantics (not exercised by current literal
   });
 });
 
-describe("toPosixPath + createGlobMatcher together, simulating a Windows-joined absolute path", () => {
-  it("matches once both the pattern and the candidate are normalized to POSIX form (integration case)", () => {
-    const windowsStyleCandidate = `${ROOT.replace(/\//g, "\\")}\\assets\\tilesets\\farm\\3.png`;
-    const pattern = toPosixPath(`${ROOT}/assets/tilesets/farm/3.png`);
-    const isMatch = createGlobMatcher(pattern);
-    expect(isMatch(toPosixPath(windowsStyleCandidate))).toBe(true);
-  });
-});
+// Windows only, and deliberately so. `toPosixPath()` splits on `path.sep`, which is a backslash
+// only on Windows — on POSIX a backslash is a legal character in a filename, so converting one to
+// a separator there would be a bug, not a feature. The scenario this covers (path.resolve handing
+// back a backslash-joined absolute path) cannot arise on Linux, so running it there tests nothing
+// and only fails. Found by CI, which is the first thing in this repo ever to run the suite on
+// Linux; this was the only one of 1,857 tests that did not survive the platform change.
+describe.runIf(process.platform === "win32")(
+  "toPosixPath + createGlobMatcher together, simulating a Windows-joined absolute path",
+  () => {
+    it("matches once both the pattern and the candidate are normalized to POSIX form (integration case)", () => {
+      const windowsStyleCandidate = `${ROOT.replace(/\//g, "\\")}\\assets\\tilesets\\farm\\3.png`;
+      const pattern = toPosixPath(`${ROOT}/assets/tilesets/farm/3.png`);
+      const isMatch = createGlobMatcher(pattern);
+      expect(isMatch(toPosixPath(windowsStyleCandidate))).toBe(true);
+    });
+  }
+);
