@@ -14,6 +14,13 @@ import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-s
 // their quest among the others. They now assert the thing that was actually broken: the mission
 // screen shows *this* case's quest, and only that one.
 //
+// The two groups say different words when they finish, and that asymmetry is deliberate — a mission
+// says "Mission complete" and an Archive Challenge says "Archive Challenge complete". Both used to
+// say the latter, because `archiveChallengeQuestCard()` is the shared core and hard-coded it, so all
+// fourteen missions announced themselves as the other thing (Spine Review Part 10, P10-1). The six
+// mission assertions below and the two unit-level ones at the bottom of this file must **not** be
+// harmonised.
+//
 // case-006 "Charter & Compact" is the cleanest target: real content (unit-02-quests.js), 6 sources
 // mapping 2:1 onto 3 region slots.
 const QUEST_ID = "case-006-archive-region-display";
@@ -54,9 +61,7 @@ test.describe("Archive Challenge", () => {
     );
     await reflection.blur();
 
-    await expect(page.locator(".activity-feedback.success")).toContainText(
-      "Archive Challenge complete"
-    );
+    await expect(page.locator(".activity-feedback.success")).toContainText("Mission complete");
 
     const stored = await readProgress(page);
     expect(stored.archiveChallenges[QUEST_ID]?.status).toBe("complete");
@@ -96,9 +101,7 @@ test.describe("Archive Challenge", () => {
     await moveUp("outfit-and-clear");
     await moveUp("middle-passage");
 
-    await expect(page.locator(".activity-feedback.success")).toContainText(
-      "Archive Challenge complete"
-    );
+    await expect(page.locator(".activity-feedback.success")).toContainText("Mission complete");
 
     const stored = await readProgress(page);
     expect(stored.questResponses[TRIANGLE_QUEST_ID].order).toEqual([
@@ -169,9 +172,7 @@ test.describe("Archive Challenge", () => {
     );
     await reflection.blur();
 
-    await expect(page.locator(".activity-feedback.success")).toContainText(
-      "Archive Challenge complete"
-    );
+    await expect(page.locator(".activity-feedback.success")).toContainText("Mission complete");
 
     const stored = await readProgress(page);
     expect(stored.questResponses[EMPIRE_QUEST_ID].order).toEqual([
@@ -233,9 +234,7 @@ test.describe("Archive Challenge", () => {
     );
     await reflection.blur();
 
-    await expect(page.locator(".activity-feedback.success")).toContainText(
-      "Archive Challenge complete"
-    );
+    await expect(page.locator(".activity-feedback.success")).toContainText("Mission complete");
 
     const stored = await readProgress(page);
     expect(stored.archiveChallenges[EXCHANGE_QUEST_ID]?.status).toBe("complete");
@@ -291,9 +290,7 @@ test.describe("Archive Challenge", () => {
     );
     await reflection.blur();
 
-    await expect(page.locator(".activity-feedback.success")).toContainText(
-      "Archive Challenge complete"
-    );
+    await expect(page.locator(".activity-feedback.success")).toContainText("Mission complete");
 
     const stored = await readProgress(page);
     expect(stored.archiveChallenges[FOUNDING_QUEST_ID]?.status).toBe("complete");
@@ -337,9 +334,7 @@ test.describe("Archive Challenge", () => {
 
     await quest.locator('input[type="radio"][value="0"]').check();
 
-    await expect(page.locator(".activity-feedback.success")).toContainText(
-      "Archive Challenge complete"
-    );
+    await expect(page.locator(".activity-feedback.success")).toContainText("Mission complete");
 
     const stored = await readProgress(page);
     expect(stored.archiveChallenges[APPEAL_QUEST_ID]?.status).toBe("complete");

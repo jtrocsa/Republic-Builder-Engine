@@ -10662,11 +10662,19 @@ function archiveRoomScreen() {
 // completion (alreadyComplete). archiveChallengeCard()/
 // archiveChallengeAdditionCard() below are thin wrappers that resolve the
 // quest object this core needs.
+//
+// `kind` exists because this core serves two things the game deliberately keeps
+// apart (INVARIANTS.md §34): a Mission — one case, reached by Chronotravel,
+// using the four swappable quest types — and an Archive Challenge, a unit's
+// saq/dbq at the Archive Terminal. Both of its completion strings used to say
+// "Archive Challenge", so all fourteen non-field missions announced themselves
+// as the other thing. It defaults to "Archive Challenge" because that is what
+// the other two callers genuinely are. Spine Review Part 10, P10-1.
 function archiveChallengeQuestCard(
   kicker,
   questType,
   quest,
-  { alreadyComplete = false, onComplete } = {}
+  { alreadyComplete = false, onComplete, kind = "Archive Challenge", completedNote = "" } = {}
 ) {
   if (!quest) return "";
   const questId = quest.id;
@@ -10689,10 +10697,20 @@ function archiveChallengeQuestCard(
     save();
   }
   if (alreadyComplete) {
-    return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(kicker)}</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — this collection has already been restored and preserved.</p></div>`;
+    // Two states, not one. `alreadyComplete` was added to carry a save whose case was completed
+    // before the Phase 58 split, when the quest behind it was never actually answered — hence "was
+    // restored on an earlier save". But `missionScreen()` passes it
+    // `completedCases.includes(kase.id)`, which is true of **every** normally finished mission, so
+    // that message was shown to the student who had just done the work themselves, about a record
+    // whose answer is sitting in `progress.questResponses`. Spine Review Part 10, P10-2.
+    const answered = questAnsweredAny(questType, state);
+    const restored = answered
+      ? `${kind} complete — case record preserved.`
+      : `${kind} complete — this record was restored from an earlier save.`;
+    return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(kicker)}</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">${esc(restored)}</p></div>`;
   }
   const feedback = complete
-    ? `<p class="activity-feedback success" role="status" aria-live="polite">Archive Challenge complete — case record preserved.</p>`
+    ? `<p class="activity-feedback success" role="status" aria-live="polite">${esc(`${kind} complete — case record preserved.`)}${completedNote ? ` ${esc(completedNote)}` : ""}</p>`
     : `<p class="activity-feedback${questPartialSuccess(questType, result) ? " success" : ""}" role="status" aria-live="polite">${questHint(questType, result)}</p>`;
   const status = complete
     ? "correct"
@@ -10751,12 +10769,21 @@ function missionScreen() {
     return archiveScreen();
   }
   const unit = unitForCase(kase.id) || UNIT_01;
+  // What finishing this actually opens. `unlockNext()` has always unlocked the next case in the
+  // unit and never said so, on the fourteen missions where there is no field to walk back out of
+  // and no transmission to watch — the only signal was a marker changing colour on a screen the
+  // player had to navigate to first. Spine Review Part 10, P10-6.
+  const nextCase = unit.cases[unit.cases.findIndex((c) => c.id === kase.id) + 1];
   const card = archiveChallengeCard(
     // Not escaped here: archiveChallengeQuestCard() escapes the kicker itself.
     resolvedCaseTitle(kase),
     kase.archiveChallenge.questType,
     kase.archiveChallenge.questId,
     {
+      // A mission, not an Archive Challenge — the distinction is load-bearing (INVARIANTS.md §34)
+      // and this shared card printed the wrong one of the two on all fourteen. P10-1.
+      kind: "Mission",
+      completedNote: nextCase ? `${resolvedCaseName(nextCase)} is now open.` : "",
       alreadyComplete: progress.completedCases.includes(kase.id),
       onComplete: () => unlockNext(kase.id),
     }
@@ -10773,7 +10800,7 @@ function missionScreen() {
   // also stops `.activity-copy h1` from rendering "Case 1.02 — The Exchange Ledger" at ~55px in a
   // ~350px column, which wrapped the heading across five lines.
   const missionKicker = [caseNumberLabel(kase), unit.period].filter(Boolean).join(" · ");
-  return `${chrome()}<main class="shell activity-shell activity-shell--wide quest-practice-shell mission-shell"><section class="activity-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">${esc(missionKicker)}</p><h1>${esc(resolvedCaseName(kase))}</h1><p class="mission-question">${esc(kase.question)}</p><p>${esc(kase.summary)}</p><p class="mission-meta"><span>${esc(kase.location)}</span><span>${esc(kase.date)}</span></p></section><section class="activity-board quest-practice-board">${card}${additions}</section></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell activity-shell activity-shell--wide quest-practice-shell mission-shell"><section class="activity-copy"><button class="back-link" data-action="archive">← Navigation Table</button><p class="kicker">${esc(missionKicker)}</p><h1>${esc(resolvedCaseName(kase))}</h1><p class="mission-question">${esc(kase.question)}</p><p>${esc(kase.summary)}</p><p class="mission-meta"><span>${esc(caseWhereAndWhen(kase))}</span></p></section><section class="activity-board quest-practice-board">${card}${additions}</section></main>${authorPanel()}`;
 }
 
 // Archive Challenges for the active unit, reached from the Archive Terminal in the Archive Room.
@@ -13347,9 +13374,9 @@ function codexScreen() {
     })
     .join("");
 
-  // Ten of the twenty-one cases are non-map missions and declare no `sources` at all, so on those
-  // this section was a heading and a note over an empty grid — reachable from either hub room's
-  // side panel any time one of them is the active case.
+  // Fourteen of the twenty-one cases are non-map missions and declare no `sources` at all, so on
+  // those this section was a heading and a note over an empty grid — reachable from either hub
+  // room's side panel any time one of them is the active case.
   const satchelSection =
     satchel ||
     `<p class="codex-empty">${sourcesForCase(codexCaseId).length ? "Nothing secured on this case yet." : "This case has no field records — it is worked from the Archive, out of what you have already filed."}</p>`;

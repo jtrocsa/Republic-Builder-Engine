@@ -462,7 +462,7 @@ and since Phase 70 `tests/unit/activity-content.test.js` fails if it is skipped.
 at 878, 842 and 868 lines against a predicted ~700, which matches unit-02's actual 921 rather than
 the figure this paragraph carried. Nine of the eighteen records now open into an activity and the
 other nine stay reader records — three per map is the slate, not a shortfall. Only a field case can
-carry an activity: the ten non-map cases declare no `sources` at all, and reaching one from
+carry an activity: the fourteen non-map cases declare no `sources` at all, and reaching one from
 `missionScreen()` needs a path nobody has built.
 
 **Item 9 is the second standing condition, and it came out of the Phase 71 playtest of both authored

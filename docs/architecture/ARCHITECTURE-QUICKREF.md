@@ -170,6 +170,7 @@
 
 - Phase 90J — **A unit is declared once.** No ADR; this is the first item on the deferred list from the Phase 90I workflow audit, taken before Unit 8 rather than after. Unit 7 cost roughly seventy hand-edit sites, and three per-unit tables had silently fallen behind by the time it shipped — `UNIT_MAP_VIEW` stopped at Unit 5 and framed Kansas on a map of the mid-Atlantic, `build-field-guide.js` documented five of seven maps, `LIAISON_MAPS` omitted the map Voss had most recently been posted to. **None of the three failed.** New `apps/web/src/content/unit-registry.js` holds `UNIT_IDS` and imports nothing, so `main.js`, Node scripts and tests can all read it without dragging the campaign in. `local-content-repository.js` stopped naming all sixty quest arrays and twenty-three campaign exports by hand and derives them from each module's own export names — the mangling is perfectly regular and always has been (`UNIT_07_ARCHIVE_EVIDENCE_QUESTS` → `archiveEvidenceQuests`, `CASE_019_SOURCES` → `sources`), verified by fingerprinting `loadChronicleContent()`'s output before and after to a **byte-identical** diff. `scripts/validate-content.js` went **1,267 → 474 lines**: ninety-eight hand-written `runSchema` calls became one loop over two content-keyed tables, and the seven-line-per-check cross-reference blocks became `Object.entries(content)`. Same **145 groups**, proven by diffing the sorted group list. **The point is not that it is shorter.** The old shape failed silently — a quest array left off the list was never validated and nothing said so — and the new one makes that the loudest thing in the run: a content export with no schema mapping is a **hard error**, and a quest export missing its `UNIT_NN_` prefix throws. Both were confirmed by deliberately introducing them, along with a schema violation and a cross-unit duplicate id, and all four report the real export name because `chronicleContentOrigins()` carries `{ file, exportName }` alongside every value. `build-field-guide.js`'s `UNIT_IDS` literal is deleted in favour of the import, and `field-map-coordinates.test.js` closes the loop from the other side — a unit with a field map but no registry entry fails, confirmed failing first. **The direction of that check is deliberate**: a unit may be registered and deliberately have no map (Unit 7 from Phase 89 to 89C, Units 3–5 until 81F), so the content list is a superset of the walkable list and never the reverse. **`main.js` was not touched**, and a new unit now costs one line in the registry plus three imports and one line in `UNIT_MODULES`. 1,857 tests passing; `npm run check` and `npm run build` green; the field guide still builds all seven maps.
 - Phase 90K — **A unit closes through what it has.** Spine Review Part 12, the unit close, and decision log `0088`. Three of its four S2s were the same shape a fourth time — a per-unit table with two entries, a sane fallback and no test. `UNIT_REVIEWS` was the load-bearing one: five of seven units opened Unit 1's Atlantic World checkpoint under their own heading, and it survived four units because **`submit-review` is the only caller of `unlockNextUnit()` outside Teacher Mode** — deleting the fallback on its own would have walled those five units off, which is the generalisable part (a fallback doing a second job cannot be removed by removing it). So the second job got somewhere to live first: `closeUnit()`, reached by `submit-review` for the two units with a review and by a new `close-unit` for the five without. `UNIT_BADGES` was the second — Periods 3–7 printed a heading over an empty grid in a dialog promising a badge per completed area, and badges are derived from each unit's own cases now, so Unit 8 gets them free. `arcClose` was the third: authored on two of three missions in five units, so one ordering in three lost the case-level payoff entirely, against a gate whose own comment says the opposite; the `established` paragraph is about the case and now survives, while the voiced quote, which belongs to one mission, does not. Also fixed: the Archive Review was **the one written surface in the game that kept nothing until Submit** — a unit's summative SAQ, read off the DOM in one place — and is now in `handleAppChange` with every other one. New `tests/unit/unit-close.test.js` (32 tests) and `tests/e2e/unit-close.spec.js` (4), every one confirmed failing against the reverted defect first, plus two dev warps (`reconstruct`, `unitclose`) and their cases. 1,889 unit tests and 257 e2e pass; **no visual baseline moved**. Carried on purpose: `progress.unitComplete` and `completedUnits` are still written and read by nothing — see `0088` §5.
+- Phase 90L — **A mission is not an Archive Challenge.** Spine Review Part 10 and decision log `0089`, which **closes the Spine Review** — thirteen parts, 2026-08-03 to 2026-08-23. Fourteen of the twenty-one cases are non-field missions (not the ten this part was named for — Units 6 and 7 added four and the figure had propagated into `main.js`, `INVARIANTS.md` §33, `MISSION-ACTIVITY-CATALOG.md` and the quickref line written one phase earlier; all corrected). One line of markup carried three defects at once: `archiveChallengeQuestCard()` is the shared core for a mission **and** for a real Archive Challenge, and hard-coded the latter's word into both completion strings — so all fourteen missions announced themselves as the other thing, against a distinction `INVARIANTS.md` §34 calls load-bearing and which had a content test and no screen test. Worse, the string they got was the **migration** message: `alreadyComplete` exists for saves completed before the Phase 58 split whose quest was never answered, but `missionScreen()` passes it `completedCases.includes(...)`, true of every finished mission — so a student who did the work was told their record "has already been restored", and both sides are now told apart by `questAnsweredAny()` and both are tested. Also fixed: twelve of the fourteen printed the date twice in `mission-meta` (third consumer of Phase 90K's `caseWhereAndWhen()`), and finishing a mission now names the case it just opened, which `unlockNext()` had done silently since Phase 58. New `tests/e2e/non-field-missions.spec.js` (5) walks all fourteen, confirmed failing against each reverted defect first. **Three visual baselines updated deliberately and reviewed** — the removed chip is a 211-pixel change against a 2,098-pixel threshold, so the visual suite would not have caught it either way, which is worth knowing about that threshold. Routed onward: **P10-4**, a finished mission's answer is saved and shown nowhere — the fix is a read-only render mode across the four quest types, a `QUEST_TYPES` contract change and therefore its own phase (`0089` §2) — and **P10-5**, case numbering, to the content queue.
 
 ## 5. Current active phase
 
@@ -221,10 +222,9 @@ Nothing else from `THE-FIELD-LIAISON.md` is scheduled: the reveal, `liaison-meri
 
 **Phase 89E has shipped and Unit 7 is complete**, so the queue that stood here is empty. All seven
 shipped units are at parity — a walkable map, its interiors, and three playable missions each — and
-nothing in the game is half-built. **Spine Review Parts 0 through 9, 11 and 12 are closed** — the
-whole of its strictly-ordered spine, the Institute Archive and the unit close, leaving **Part 10
-alone**. Three candidates are ready and **none is approved yet**; this is an owner's call rather
-than a default, and the three are different kinds of work.
+nothing in the game is half-built. **The Spine Review is closed** as of Phase 90L — all thirteen
+parts, 2026-08-03 to 2026-08-23. Three candidates are ready and **none is approved yet**; this is an
+owner's call rather than a default, and the three are different kinds of work.
 
 **~~Candidate A′ — Spine Review Part 7~~ shipped as Phase 90F**, which closes the activity screen's
 two entry states. Part 6 closed in Phase 90E before it. Part 7's own routed item went to **Part 8**
@@ -252,19 +252,31 @@ them left five of seven units closing through Unit 1's Archive Review, with no b
 one-in-three chance of losing the case's arc. Its own S3 was carried rather than routed onward
 (`unitComplete`/`completedUnits`, dead state — `0088` §5).
 
-**Candidate A⁶ — Spine Review Part 10, the ten non-field missions.** The last part, and the whole
-program after it. Its inbound list is now empty: the "four pre-solved sequencing quests" the ledger
-named as a pull-forward candidate were **three** and were fixed out of band in Phase 81F, guarded by
-`tests/unit/sequencing-quest-order.test.js` — the ledger carried that claim for nine phases and was
-corrected while closing Part 12. `docs/playtest/PLAYTHROUGH-LEDGER.md` is the source of program
-state; read it before starting. The standing rules bind: an S3 finding must name a destination, and
-a part's ledger row is updated in the same commit as its fix.
+**~~Candidate A⁶ — Spine Review Part 10~~ shipped as Phase 90L, and with it the whole Spine
+Review.** Thirteen parts, 2026-08-03 to 2026-08-23, one S1, and one recurring shape across the last
+three parts — a per-unit table with a fallback and no test. `docs/playtest/PLAYTHROUGH-LEDGER.md`
+holds the closing summary; decision log `0089` §5 argues it. **No part of the program is open.**
+
+**Candidate D — a read-only render mode for a finished quest.** Routed out of Part 10 as P10-4, and
+the one finding the program could not fix under its own rules. A completed non-field mission — 14 of
+21 — has the player's answer in `progress.questResponses` and shows a single sentence instead of it;
+the Codex does not hold it either, and says so. Re-rendering it editable is worse than the current
+state, because grading recomputes every render and a changed answer would flip "complete" back to a
+hint while `completedCases` kept the case archived — the same both-sides-disagree failure Phase 90F
+spent a part closing on the activity engines. So the fix is a disabled mode in `renderQuest()`, which
+is a change to the contract all six quest types implement, and it gives the Practice Check and the
+Archive Challenges the same affordance for free. See `0089` §2.
 
 **Candidate C — the e2e harness is not clean at its own default, and half of it is now handled.**
 Phase 90J gave `playwright.config.js` `retries: CI ? 2 : 1`, a 60s timeout and a
 `maxDiffPixelRatio`, which is why Phase 90K's full run reported **257 passed, 3 flaky, exit 0**
 rather than three failures — a real improvement, and also a mask, since the same three specs are
-still parking short. `workers` is still unset, so it runs 6 on a 12-core machine against one Vite
+still parking short. **The pixel threshold is a second thing to decide on purpose.** Phase 90L
+removed a visible chip from the mission screen and all twenty baselines stayed green: measured with
+the threshold off, the change is **211 pixels against the 2,098 that `0.002` allows** at 1366×768.
+The three baselines were updated deliberately and reviewed, but the suite had no opinion — so a
+small text or border change is currently below the floor, which is the cost that bought the end of
+the baseline churn. `workers` is still unset, so it runs 6 on a 12-core machine against one Vite
 dev server. What is left is that decision. The history below is why it is a decision and not a
 one-line cap. Phase 90F ran it twice and got 7 then 8 failures, overlapping
 but not identical, and Phase 90G hit the same `.field-speech-bubble` timeout again, **all timeouts
