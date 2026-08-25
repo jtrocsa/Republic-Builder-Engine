@@ -486,15 +486,6 @@ SMIL
 webp
 Lyria
 Freesound
-gapless
-Mixolydian
-sidechained
-loopable
 güiro
-vihuela
-lamellophone
-galant
 klezmer
 chiptune
-reharmonisation
-millwheel

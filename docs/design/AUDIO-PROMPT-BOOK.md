@@ -1,1043 +1,1084 @@
 # The Chronicle Audio Prompt Book
 
-Every music track and sound effect the game wants, written as a prompt you can paste into a
-generator. One entry per track: where it plays, what it should sound like, what to avoid, and what it
-replaces.
+Every music track and sound effect the game needs, written as text you can paste straight into a
+generator.
 
-Written for **Lyria 3 in Gemini** for the music, and for a text-to-SFX tool (ElevenLabs SFX,
-Freesound) for the effects Lyria cannot make. This is a production document, not a design decision —
-it does not change any code, and nothing here is wired up yet.
+Music goes in **Lyria 3 (Gemini)**. Sound effects go in a text-to-sound tool like **ElevenLabs SFX**,
+or come from **Freesound** — Lyria makes music, not footsteps.
 
-**Status of audio in the game today**, so you know what you are replacing:
+## How to read this
 
-- Every sound is synthesised live from oscillators in
-  [`engine/audio-engine.js`](../../apps/web/src/engine/audio-engine.js). There are **no audio files
-  anywhere in the repository**.
-- **Six loops exist** — `archive`, `island`, `settlement`, `dialogue`, `upload`, `quiet` — each a bare
-  arpeggio of four to seven notes on a timer, identical every repeat.
-- **Six of the seven field maps share one loop.** Only Unit 1 has its own; Riverbend, Philadelphia,
-  Canal Crossroads, Richmond, the Kansas railhead and Ellis Island are all `settlement`.
-- **Around twenty-two of the thirty-two screens play `quiet`** — one note every six seconds. That
-  includes the whole intro, the warp screen, the reader, and every quest screen.
-- **Meridian has no audio identity at all.**
+Each track looks like this:
 
-That holding position was deliberate — decision log
-[`0027-side-sprite-audio-sfx.md`](../decision-log/0027-side-sprite-audio-sfx.md) chose procedural
-audio _"until the final sound direction is settled."_ This document is that direction.
+> ### `key` — Plain name
+>
+> **Plays:** where you hear it. **Length:** how long to generate. **Status:** new, or what it replaces.
+>
+> **► PASTE THIS:**
+>
+> > _This is the only part you copy. Everything else on the page is notes for whoever wires it up._
+>
+> **Don't want:** things to add if the first result is wrong.
 
----
+That's it. **Anything after ► PASTE THIS is the prompt.** Everything else is context.
 
-## §0 · How to use this
+## Before you start
 
-### Prompt anatomy
+Four things that will save you time:
 
-Every music prompt below is written in the same order, because that is the order Lyria responds to
-best and because it makes the prompts editable as a set:
+1. **Lyria won't give you a track that loops cleanly.** Generate 45–60 seconds, then open it in
+   Audacity (free), find a spot where the beat lands, cut there, and fade the two ends into each other
+   by a few hundredths of a second. Every prompt below already asks for "same speed all the way
+   through, no fading in or out" so this is possible. A track that slows down at the end can't loop.
+2. **Make three versions of anything important and keep the most boring one.** Exploration music plays
+   for twenty or thirty minutes straight. A catchy tune becomes an annoying tune.
+3. **Turn your volume down when you judge these.** The game plays audio very quietly. A mix that sounds
+   right in Gemini will lose its quiet details in the game.
+4. **Keep sound effects out of the low-middle range.** The game has no way to duck the music under an
+   effect, so effects need to be bright and thin to be heard over a track.
 
-> **instrumentation → mood → tempo → key/mode → density → production character → negative list**
+## What to name the files
 
-If you want to change one thing about a track, change that clause and leave the rest.
+| Kind              | Pattern            | Example                      |
+| ----------------- | ------------------ | ---------------------------- |
+| Music that loops  | `<key>.ogg`        | `island.ogg`, `richmond.ogg` |
+| Short musical cue | `sting-<name>.ogg` | `sting-chrono-out.ogg`       |
+| Sound effect      | `sfx-<name>.ogg`   | `sfx-lock-water.ogg`         |
 
-### Rules that apply to every music prompt
+Export as OGG. Mono for effects, stereo for music. Make all the loops roughly the same loudness so
+changing screens doesn't jump.
 
-- **`instrumental only, no vocals`** appears in every prompt. Lyria will add wordless voices
-  otherwise, and a voice under gameplay dialogue is unusable.
-- **Lyria will not hand you a gapless loop.** Generate 45–60 seconds, then find a bar line in
-  Audacity or Reaper, cut there, and crossfade 20–50 ms. Every prompt asks for _"steady tempo
-  throughout, no fade in, no fade out"_ so that edit is possible. A track that ritards at the end
-  cannot be looped.
-- **Generate three takes of anything important** and keep the one with the least melodic movement.
-  Exploration music is heard for twenty minutes at a stretch; a memorable tune becomes an irritating
-  tune. The Institute and field tracks especially should be closer to texture than to song.
-- **Audition at low volume.** The game's master gain is `0.045`, which is very quiet. A mix that
-  sounds balanced in Gemini will lose its quiet details in-game.
+## Where the game's audio stands today
 
-### Three engine constraints worth knowing
+So you know what you're replacing:
 
-| Constraint                | What it means for the audio                                                                                                               |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| One audio bus, no ducking | Music and effects sum at equal weight. A music bed must leave midrange space for a stinger to land on top of it — avoid dense, loud mids. |
-| No fades between screens  | A screen change is a hard cut. Tracks should start and end on low-energy material so the cut is not jarring.                              |
-| Audio is off by default   | The player opts in with the header toggle. First impressions happen on the title screen, so that track earns the extra take.              |
-
-### File naming
-
-| Kind             | Pattern            | Example                      |
-| ---------------- | ------------------ | ---------------------------- |
-| Music loop       | `<scene-key>.ogg`  | `island.ogg`, `richmond.ogg` |
-| Musical one-shot | `sting-<name>.ogg` | `sting-chrono-out.ogg`       |
-| Sound effect     | `sfx-<name>.ogg`   | `sfx-lock-water.ogg`         |
-
-Scene keys reuse the `musicScene` strings already in the code where one exists, so the later wiring
-phase is a lookup swap rather than a rename. Keys marked **new** below do not exist yet.
-
-Export as OGG Vorbis, mono for effects, stereo for music, and normalise loops to roughly the same
-perceived loudness so a screen change does not jump.
+- Every sound is generated live by a bit of code — beeps from an oscillator. **There are no audio files
+  in the project at all.**
+- **There are six loops.** Each is four to seven notes played in a row, over and over, identical every
+  time.
+- **Six of the seven maps share one of them.** Only the Caribbean map has its own. Riverbend,
+  Philadelphia, the canal town, Richmond, the Kansas railhead and Ellis Island all play the same thing.
+- **About twenty-two of the thirty-two screens play one note every six seconds.** That includes the
+  entire opening, the time-travel screen, the document reader, and every question screen.
+- **The Meridian Institute has no music at all.**
 
 ---
 
-## §1 · The global identity
+## §1 · The one thing that ties it together
 
-Seven period-authentic scores could easily sound like seven unrelated soundtracks. Two things stop
-that: one motif that appears everywhere, and one set of tonal rules that never bends.
+Seven historically accurate scores could easily sound like seven different games. One thing stops that.
 
-### The Chronicle motif
+### The Chronicle four notes
 
-**A rising fourth, up a step, and back down to the start.** In C: `G → C → D → C`. It never states a
-third, so it is neither major nor minor — it is _unresolved_, which is the whole thesis of the game.
+**A short four-note phrase that shows up everywhere: G, C, D, C.**
 
-The existing `archive` loop is already close to this shape by accident. This document makes it
-deliberate.
+It deliberately skips the note that would tell your ear whether it's happy or sad, so it always sounds
+slightly unresolved. That's the point — the game is about history staying open to argument.
 
-Where it appears:
+- The **title theme and the Institute tracks** play it out in full.
+- **Every map plays it once per phrase on one period instrument** — a wooden flute in the Caribbean, a
+  harpsichord in Philadelphia, a clarinet at Ellis Island. Same four notes, seven different mouths.
+- **Meridian plays the same four notes on better equipment.** That's their whole character. See §6.
 
-- **Full statement** — the title theme, and the Institute tracks.
-- **One instrument, once per phrase** — every field map quotes it in whichever period instrument fits
-  that era. On the Caribbean shore it is a wooden flute; in Philadelphia a harpsichord; at Ellis
-  Island a clarinet. Same four notes, seven different mouths.
-- **The same intervals in a different housing** — Meridian's theme. See §6.
+Every field prompt below already contains the line _"one instrument plays a simple four-note phrase —
+G, C, D, C — once per phrase, and never develops it into a tune."_ Leave that line in.
 
-When writing a field prompt, the clause to include is roughly: _"one instrument states a simple
-four-note figure — a rising fourth, up a step, and back — once per phrase, never developed."_
+### Nothing resolves
 
-### The period rule
+Every music prompt avoids a satisfying, final-sounding ending. The game's closing idea is that history
+must stay open to evidence and disagreement, and music that wraps up neatly argues the opposite.
 
-**The instruments change with the era. The motif and its harmonic language do not.**
+### Five rules the story imposes on the music
 
-Every field track stays in a modal, third-ambiguous harmonic world — Dorian, Mixolydian, or plain
-pentatonic. No functional cadences, no dominant-to-tonic resolutions. The game's closing thesis is
-_"history must remain open — to evidence, questioning, disagreement, and revision,"_ and music that
-resolves argues the opposite.
+These come from the game's story canon and they're not stylistic preferences — breaking them breaks the
+fiction.
 
-### Tone guardrails
+| Rule                                                      | What it means for a track                                                                                                                          |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Time travel is allowed and safe                           | **No tension when you arrive somewhere.** Nothing is chasing the player. Arrival is curiosity.                                                     |
+| The Archive is the one safe place                         | Archive music is **warm and stable**. Never glitchy, never unstable, never threatened.                                                             |
+| A historical "anomaly" is a paperwork error, not magic    | The example in the story is a number scraped off a ledger and rewritten. **Nothing glows.** The anomaly cue is one wrong note, not a horror sting. |
+| Normal historical uncertainty is not a supernatural event | Sources disagreeing is normal. Don't score a contradiction as if reality were breaking.                                                            |
+| Nobody is the villain                                     | Chronicle and Meridian disagree about ethics. **Neither gets villain music.**                                                                      |
 
-From [`CHRONICLE-CANON.md`](./CHRONICLE-CANON.md). These are not suggestions; the game's narrative
-rules depend on them.
+### The universal "don't want" list
 
-- **Observation is free.** Entering the past is not transgressive and nothing is chasing the player.
-  **No alarm tension on arrival**, ever. Arrival is curiosity, not danger.
-- **The Codex is the one fixed point.** Archive and Codex audio is **stable, warm, and resolved** —
-  never unstable, glitching, corrupted, or under threat.
-- **An anomaly is archival, not fantastical.** The canonical example is fourteen hogsheads written
-  over a scraped fifteen in the wrong hand. _Nothing glows._ An anomaly cue is **one note that does
-  not belong** — not a horror sting. It is observed, not solved.
-- **Ordinary historical uncertainty is never drift.** Bias, gaps and disagreement are normal. Do not
-  score a contradictory source as if something were wrong with reality.
-- **Nobody is a villain.** Chronicle believes the record must survive to be argued with; Meridian
-  believes knowing better obliges you to act. Neither gets villain music.
+Add any of these to a prompt if a result goes wrong:
 
-### The standing avoid list
+> glitchy or corrupted sounds, tape-stop effects, ticking clocks, sci-fi shimmer, big riser-then-boom
+> trailer sounds, neon synthesizers, sterile spaceship ambience, evil-sounding orchestration, heroic
+> brass fanfare, any singing or choir, modern drum kit, pumping/throbbing compression, EDM or dubstep,
+> lo-fi hip-hop beats.
 
-Append to any prompt that needs it; the per-track avoid lists below add to this rather than repeat
-it.
+### Six phrases to never type
 
-> glitch or corruption textures, tape-stop effects, ticking clocks, "quantum" shimmer, riser-and-
-> impact trailer sound design, cyberpunk neon synths, sterile sci-fi ambience, villain red-and-black
-> orchestration, heroic brass fanfare, choir or any vocals, modern drum kit, sidechained pumping,
-> dubstep or EDM elements, lo-fi hip-hop beats.
-
-### A vocabulary note
-
-The game bans six phrases outright, and they are test-enforced elsewhere in the repository: _temporal
-integrity · quantum record · anchor instability · causal resonance · timeline corruption · one true
-timeline._ Do not let them creep into a prompt, a filename, or a track title — prompts get copied
-into commit messages and become copy.
+The game bans these outright and there's an automated test enforcing it elsewhere in the project:
+_temporal integrity · quantum record · anchor instability · causal resonance · timeline corruption ·
+one true timeline._ Don't put them in a prompt or a file name — prompts get copied around and turn into
+game text.
 
 ---
 
-## §2 · Institute and frame tracks
+## §2 · The Institute — 10 tracks
 
-Ten tracks. The Chronicle Institute is a converted old building — warm wood, torch sconces, stone,
-mended many times and short of money. Its art is drawn from the Medieval Tavern tile family for
-exactly that reason. So the Institute's palette is **wood, brass and parchment**: hammered dulcimer,
-celeste, bowed vibraphone, nylon-string guitar, and a low sustained cello pedal underneath.
+The Chronicle Institute is an old building someone converted: wood panelling, torches on the walls,
+stone floors, mended a lot of times, short of money. So its instruments are **wood, brass and paper**.
 
-Patient and institutional. Withholding, not sinister.
+Four instruments do most of the work, and it's worth knowing what they sound like:
 
-### `title` — the title sequence
+- **Hammered dulcimer** — a box of strings hit with little wooden mallets. Bright, woody, a bit like a
+  harp being tapped.
+- **Celeste** — a small keyboard that sounds like tiny bells. The Sugar Plum Fairy instrument.
+- **Bowed vibraphone** — metal bars played with a violin bow instead of a mallet, so they hum instead
+  of ringing. Glassy and sustained.
+- **Cello** — usually just holding one long low note underneath everything.
 
-**Plays on** the animated seal and "CHRONICLE / An AP U.S. History Adventure". **Length** 75 s,
-loopable. **Status** new. This is the theme, the full statement of the motif, and the first thing
-anyone hears — give it the extra takes.
+The feeling is patient and institutional. Warm, but holding something back.
 
-> Instrumental only, no vocals. The main theme for a historical adventure game, played by a small
-> chamber ensemble in a wood-panelled room. It opens with a solo hammered dulcimer stating a simple
-> four-note figure — a rising fourth, up a step, and back down — which is then answered by a celeste
-> and taken up by a warm string quartet. A low sustained cello pedal holds underneath throughout. The
-> harmony is modal and never resolves to a clear major or minor; it keeps arriving somewhere adjacent
-> to home. 72 BPM in D Dorian. Patient, curious and quietly grand rather than triumphant — the sound
-> of a serious institution rather than an adventure. Close, dry, wooden recording with a little room
-> tone, no cinematic reverb. Steady tempo throughout, no fade in, no fade out.
+### `title` — the title screen
 
-**Avoid** — heroic brass fanfare, timpani, trailer percussion, orchestral swell, a resolving final
-cadence, choir, anything that sounds like a film studio logo.
+**Plays:** on the animated seal, "CHRONICLE / An AP U.S. History Adventure". **Length:** 75 seconds.
+**Status:** new. This is the main theme and the first thing anyone hears — make several versions.
+
+**► PASTE THIS:**
+
+> Instrumental only, no singing. The main theme for a historical adventure game, played by a small
+> group of acoustic instruments in a wood-panelled room. It starts with a solo hammered dulcimer
+> playing a simple four-note phrase — G, C, D, C — which is then answered by a celeste and picked up by
+> a warm string quartet. One long low cello note holds underneath the whole time. The harmony never
+> settles into a clearly happy or clearly sad key; it keeps landing just next to home. 72 beats per
+> minute, in D minor but unresolved. Patient, curious and quietly grand rather than triumphant — a
+> serious institution, not a treasure hunt. Recorded close and dry with a little room sound, no big
+> movie reverb. Same speed all the way through, no fading in or out.
+
+**Don't want:** heroic brass fanfare, timpani, movie-trailer drums, a big orchestral swell, a
+final-sounding ending, choir, anything like a film studio logo.
 
 ### `menu` — the main menu
 
-**Plays on** the student/teacher landing. **Length** 45 s. **Status** new. A reduced arrangement of
-`title` — same motif, fewer players, so the two screens feel like one room.
+**Plays:** the screen where you pick student or teacher. **Length:** 45 seconds. **Status:** new.
+Same theme as the title, fewer instruments, so the two screens feel like the same room.
 
-> Instrumental only, no vocals. A quiet, waiting-room arrangement of a chamber theme: solo hammered
-> dulcimer playing a simple four-note figure — a rising fourth, up a step, and back down — with a
-> single sustained cello note underneath and an occasional celeste answer. Almost nothing else. 66
-> BPM in D Dorian. Unhurried, warm, slightly formal, entirely unpressured. Dry wooden recording,
-> close mic, minimal reverb. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — melodic development, percussion, anything that builds. This track's job is to be ignored.
+> Instrumental only, no singing. A quiet waiting-room version of a chamber theme: a solo hammered
+> dulcimer plays a simple four-note phrase — G, C, D, C — with one long low cello note underneath and
+> an occasional answer from a celeste. Almost nothing else happens. 66 beats per minute, in D minor but
+> never settling. Unhurried, warm, slightly formal, no pressure at all. Dry wooden recording, close
+> microphone, hardly any reverb. Same speed all the way through, no fading in or out.
+
+**Don't want:** the melody going anywhere, drums, anything that builds. This track's job is to be
+ignored.
 
 ### `intro` — the opening sequence
 
-**Plays on** `intro-welcome`, `intro-briefing`, `intro-protocol`, `identity`, `intro-registration`.
-**Length** 60 s. **Status** new — these screens are silent today. The player is being recruited in
-the present day, so this is the one Institute track allowed a faintly contemporary edge.
+**Plays:** all five opening screens, where the Director recruits you and you make your character.
+**Length:** 60 seconds. **Status:** new — these screens are silent right now.
 
-> Instrumental only, no vocals. A quiet, attentive underscore for a present-day briefing. A muted
-> felt upright piano plays a slow four-note figure — a rising fourth, up a step, and back down — over
-> sustained low strings and a soft bowed vibraphone shimmer. A single soft mallet marks the beginning
-> of each phrase, like a page being set down. 68 BPM in D Dorian, unresolved. Serious and welcoming
-> at once: someone explaining important work to a person they have decided to trust. Intimate close
-> recording, minimal reverb. Steady tempo throughout, no fade in, no fade out.
+This part of the game is set in the present day, so it's the one Institute track allowed to sound
+slightly modern.
 
-**Avoid** — mystery-box tension, pulsing synth ostinato, string tremolo, anything implying a
-countdown or a warning.
+**► PASTE THIS:**
+
+> Instrumental only, no singing. Quiet, attentive background music for a present-day briefing. A soft
+> felt-muted upright piano plays a slow four-note phrase — G, C, D, C — over long held low strings and
+> a faint glassy hum from a vibraphone played with a bow. A single soft mallet marks the start of each
+> phrase, like someone setting a page down. 68 beats per minute, in D minor, never resolving. Serious
+> and welcoming at the same time: someone explaining important work to a person they've decided to
+> trust. Recorded close and intimate, hardly any reverb. Same speed all the way through, no fading in
+> or out.
+
+**Don't want:** mystery-thriller tension, a pulsing synthesizer, shivering strings, anything that
+sounds like a countdown or a warning.
 
 ### `hallway` — the Entrance Hall
 
-**Plays on** hub room `"hallway"` — the first moment of player control, and the Director's escort
-walk north into the Main Hall. **Length** 60 s. **Status** new (currently `archive`).
+**Plays:** the very first room, where you get control and the Director walks you north into the Main
+Hall. **Length:** 60 seconds. **Status:** new.
 
-> Instrumental only, no vocals. A warm arrival cue for the entrance hall of an old institution.
-> Nylon-string guitar and celeste trade a simple four-note figure — a rising fourth, up a step, and
-> back down — over a soft sustained cello. A gentle walking pulse underneath, marked only by a light
-> plucked bass on the downbeat, so the music moves at the pace of two people walking together. 76 BPM
-> in D Dorian. Curious, welcoming, a little awed — arriving somewhere older and larger than expected.
-> Warm wooden room acoustic. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — grandeur, pipe organ, cathedral reverb, any sense of threshold-crossing drama.
+> Instrumental only, no singing. A warm arrival piece for the entrance hall of an old institution. A
+> nylon-string guitar and a celeste pass a simple four-note phrase — G, C, D, C — back and forth over a
+> soft held cello note. Underneath there's a gentle walking pulse, just a light plucked bass note on
+> each beat, so the music moves at the speed of two people walking together. 76 beats per minute, in D
+> minor and unresolved. Curious, welcoming, slightly awed — arriving somewhere older and bigger than
+> you expected. Warm wooden room sound. Same speed all the way through, no fading in or out.
+
+**Don't want:** grandeur, pipe organ, cathedral echo, any big "crossing the threshold" drama.
 
 ### `hub-main` — the Main Hall
 
-**Plays on** hub room `"main"` — where Emery Voss, Director Hale, Dr. Soto and Professor Park stand,
-and where the Preservation Case and the Navigation Table live. **Length** 75 s. **Status** new
-(currently `archive`). This is the most-heard track in the game; make it the least eventful.
+**Plays:** the room with Emery Voss, Director Hale, Dr. Soto and Professor Park, the badge case, and
+the Navigation Table. **Length:** 75 seconds. **Status:** new.
 
-> Instrumental only, no vocals. A comfortable, lived-in loop for a wood-panelled hall where scholars
-> are working. Hammered dulcimer and nylon-string guitar interlock in a slow, gently rolling pattern,
-> with a bowed vibraphone holding long notes above and a low cello pedal beneath. The four-note motif
-> — a rising fourth, up a step, and back down — surfaces in the dulcimer roughly once every two
-> phrases and is never developed. 70 BPM in D Dorian. Warm, patient, busy but unhurried; the sound of
-> a place where people have been doing careful work for a long time. Dry, close, wooden. Steady tempo
-> throughout, no fade in, no fade out.
+**This is the most-heard track in the game. Make it the least interesting one.**
 
-**Avoid** — melodic hooks, key changes, dynamic builds, anything memorable enough to notice twice.
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A comfortable, lived-in loop for a wood-panelled hall where scholars
+> are working. A hammered dulcimer and a nylon-string guitar weave a slow, gently rolling pattern
+> together, with a bow-played vibraphone holding long notes above and a low cello underneath. About
+> once every two phrases the dulcimer plays a four-note figure — G, C, D, C — and then drops it without
+> developing it. 70 beats per minute, in D minor and never resolving. Warm, patient, busy but unhurried
+> — a place where people have been doing careful work for a very long time. Dry, close, wooden. Same
+> speed all the way through, no fading in or out.
+
+**Don't want:** a catchy hook, key changes, getting louder, anything memorable enough to notice twice.
 
 ### `archive-room` — the Archive Room
 
-**Plays on** hub room `"archive"` — the Archive Terminal, the lit hearth, no NPCs. **Length** 60 s.
-**Status** new (currently `archive`). Same building, fewer people: the reading-room version of
-`hub-main`.
+**Plays:** the side room with the writing desk and the fireplace. No characters in here. **Length:** 60
+seconds. **Status:** new. Same building as the Main Hall, fewer people.
 
-> Instrumental only, no vocals. A hushed reading-room loop. A single nylon-string guitar plays sparse,
-> widely spaced notes over a very low sustained cello, with an occasional celeste note like a small
-> sound in a large quiet room. Long silences between phrases. 60 BPM in D Dorian. Still, warm,
-> hearthside, entirely safe — the one place in the game where nothing is at stake. Close intimate
-> recording with a faint sense of a stone room. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — mystery, tension, or any implication that the archive is threatened or unstable. This is
-the fixed point; it has to sound like one.
+> Instrumental only, no singing. A hushed reading-room loop. A single nylon-string guitar plays sparse,
+> widely spaced notes over a very low held cello, with an occasional celeste note like a small sound in
+> a big quiet room. Long silences between phrases. 60 beats per minute, in D minor. Still, warm, by the
+> fireside, completely safe — the one place in the game where nothing is at stake. Recorded close and
+> intimate with a faint sense of a stone room. Same speed all the way through, no fading in or out.
+
+**Don't want:** mystery, tension, or anything hinting the archive is in danger. This is the safe place
+in the story and it has to sound like it.
 
 ### `archive` — the Navigation Table
 
-**Plays on** the `archive` screen: the world map with a marker on every surviving record, and the
-only place a case can be launched. **Length** 60 s. **Status** rewrite of the existing `archive` loop.
+**Plays:** the world map screen where you choose which case to travel to. **Length:** 60 seconds.
+**Status:** replaces the current `archive` loop.
 
-> Instrumental only, no vocals. An anticipatory loop for standing over a great map table choosing
-> where to go. Bowed vibraphone and celeste hold slow shifting chords while a hammered dulcimer picks
-> out a four-note figure — a rising fourth, up a step, and back down — over a low sustained cello. A
-> slow, even pulse underneath, like a compass needle settling. 66 BPM in D Dorian, deliberately
-> unresolved. Expectant and considered rather than exciting: the moment before a decision, not the
-> decision itself. Warm, wide, gently resonant. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — swashbuckling adventure-map music, ticking clocks, sonar pings, anything that sounds like
-a science-fiction instrument panel.
+> Instrumental only, no singing. Anticipatory music for standing over a big map table deciding where to
+> go. A bow-played vibraphone and a celeste hold slow shifting chords while a hammered dulcimer picks
+> out a four-note figure — G, C, D, C — over a low held cello. Underneath, a slow even pulse, like a
+> compass needle settling. 66 beats per minute, in D minor and deliberately unresolved. Expectant and
+> considered rather than exciting — the moment before a decision, not the decision. Warm, wide, gently
+> resonant. Same speed all the way through, no fading in or out.
 
-### `travel` — the warp screen, held
+**Don't want:** swashbuckling treasure-map music, ticking clocks, sonar pings, anything that sounds
+like a spaceship control panel.
 
-**Plays on** the `travel` screen's `ready` phase — after the tunnel and the plate have resolved, while
-the ring reads "Synced" and the game waits for the player to press the arrival prompt. **Length** 40 s,
-seamless. **Status** new (currently `quiet`).
+### `travel` — the time-travel screen, held
 
-The timing is fixed in code: a 2000 ms tunnel, then a 2500 ms dwell on the painting, then an
-indefinite hold. So `sting-chrono-out` (§7) covers the first 4.5 seconds, and **this pad sits
-underneath it and holds for as long as the player looks at the painting.**
+**Plays:** the travel screen after the tunnel finishes and the painting has settled, while the ring
+says "Synced" and the game waits for you to click. **Length:** 40 seconds. **Status:** new.
 
-> Instrumental only, no vocals. A suspended, weightless drone for a held moment. Two bowed string
-> notes a fourth apart, sustained and very slowly swelling against each other, with a distant
-> shimmering vibraphone above and a deep soft sub-bass beneath. No melody, no pulse, no rhythm at all.
-> Static and patient — a held breath, not a countdown. Warm rather than cold; there is no danger here.
-> Wide, slow, long natural decay. Absolutely steady, no fade in, no fade out, no development.
+**How this fits together:** the screen runs a 2-second tunnel, then 2.5 seconds settling onto a
+painting, then it waits for the player indefinitely. The short cue `sting-chrono-out` (§7) covers the
+first 4.5 seconds. **This track sits underneath it and holds for as long as the player looks at the
+painting.**
 
-**Avoid** — any pulse or rhythm, rising tension, science-fiction whoosh textures, alarm tones, urgency
-of any kind. The player is looking at a painting, not defusing something.
+**► PASTE THIS:**
 
-### `upload` — record transmission
+> Instrumental only, no singing. A weightless, suspended drone for a held moment. Two bowed string
+> notes a few steps apart, held and very slowly swelling against each other, with a distant shimmering
+> vibraphone above and a deep soft bass note beneath. No melody, no beat, no rhythm at all. Still and
+> patient — a held breath, not a countdown. Warm rather than cold; there's no danger here. Wide and
+> slow with long natural decay. Completely steady, no fading in or out, nothing develops.
 
-**Plays on** the `upload` screen: "Field record transmitting," with the beam animation. **Length** 30 s.
-**Status** rewrite of the existing `upload` loop.
+**Don't want:** any beat or rhythm, rising tension, sci-fi whooshing, alarm sounds, urgency of any
+kind. The player is looking at a painting, not defusing a bomb.
 
-> Instrumental only, no vocals. A short, purposeful, gently ascending loop. Celeste and hammered
-> dulcimer climb through a rising modal figure in even eighth notes, layered over a warm sustained
-> string chord that grows slightly brighter with each pass. A soft mallet marks each phrase. 88 BPM in
-> D Mixolydian. Satisfying and industrious without being triumphant — work being completed properly,
-> not a victory. Warm, bright, close. Steady tempo throughout, no fade in, no fade out.
+### `upload` — sending the record home
 
-**Avoid** — fanfare, cymbal crash, science-fiction data-transfer bleeps, a big final chord.
+**Plays:** the "Field record transmitting" screen with the beam animation. **Length:** 30 seconds.
+**Status:** replaces the current `upload` loop.
 
-### `completion` — the unit archived
+**► PASTE THIS:**
 
-**Plays on** the `completion` screen at the end of a unit. **Length** 45 s. **Status** new (currently
-`quiet`).
+> Instrumental only, no singing. A short, purposeful, gently rising loop. A celeste and a hammered
+> dulcimer climb an ascending figure in even eighth notes over a warm held string chord that gets
+> slightly brighter each time round. A soft mallet marks each phrase. 88 beats per minute, major-ish
+> but with one flattened note keeping it from sounding too sweet. Satisfying and industrious without
+> being triumphant — a job being finished properly, not a victory. Warm, bright, close. Same speed all
+> the way through, no fading in or out.
 
-> Instrumental only, no vocals. A warm, settled closing piece for a small chamber ensemble. The
-> four-note motif — a rising fourth, up a step, and back down — is stated once by the full group,
-> unhurried, then handed to a solo cello which lets it fade into a long sustained chord. Hammered
-> dulcimer and celeste decorate lightly underneath. 64 BPM in D Dorian. The feeling is satisfaction
-> and a slight opening outward rather than triumph: something has been preserved, and there is more to
-> do. The last chord should be warm but inconclusive — it must not sound like an ending. Rich, close,
-> wooden. No fade in.
+**Don't want:** fanfare, cymbal crash, sci-fi data-transfer beeps, a big final chord.
 
-**Avoid** — a full authentic cadence, brass, cymbals, a key change into major, any "you won" gesture.
-The player preserved a record; they did not defeat anything.
+### `completion` — a unit finished
+
+**Plays:** the end-of-unit summary screen. **Length:** 45 seconds. **Status:** new.
+
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A warm, settled closing piece for a small acoustic group. The whole
+> group plays a four-note phrase — G, C, D, C — once, unhurried, then hands it to a solo cello which
+> lets it fade into one long held chord. A hammered dulcimer and celeste decorate lightly underneath.
+> 64 beats per minute, in D minor. The feeling is satisfaction and a slight sense of opening outward,
+> not triumph — something has been saved, and there's more to do. The last chord should be warm but
+> unfinished-sounding; it must not feel like an ending. Rich, close, wooden. No fading in.
+
+**Don't want:** a proper final-sounding cadence, brass, cymbals, switching to a happy major key, any
+"you won" moment. The player preserved a record; they didn't defeat anything.
 
 ---
 
-## §3 · The seven field maps
+## §3 · The seven maps — 7 tracks
 
-The core of this document, and the biggest single improvement available: six of these seven maps
-currently share one loop.
+**Start here.** Six of these seven currently play the same loop, so this section changes the game more
+than anything else in this document.
 
-Each map gets its own track, instrumented from what would actually have been heard in that place in
-that year, and each quotes the Chronicle motif in one period instrument so the set still reads as one
-score.
+Each map gets instruments that were actually around in that place in that year, and each one plays the
+four Chronicle notes on one of them so the whole soundtrack still hangs together.
 
-| Unit | Proposed key   | Place and year                                 | Currently    |
-| ---- | -------------- | ---------------------------------------------- | ------------ |
-| 1    | `island`       | A Caribbean island, 1492–93                    | `island`     |
-| 2    | `riverbend`    | Chesapeake tidewater, Virginia, 1619–1630      | `settlement` |
-| 3    | `philadelphia` | Philadelphia, 1770s                            | `settlement` |
-| 4    | `canal`        | An Erie Canal boomtown, upstate New York, 1845 | `settlement` |
-| 5    | `richmond`     | Richmond, Virginia, 1864                       | `settlement` |
-| 6    | `railhead`     | Cottonwood Junction, Kansas, June 1873         | `settlement` |
-| 7    | `port`         | Ellis Island, New York Harbor, 17 April 1907   | `settlement` |
+| Unit | File name          | Place and year                                 | Plays today     |
+| ---- | ------------------ | ---------------------------------------------- | --------------- |
+| 1    | `island.ogg`       | A Caribbean island, 1492–93                    | its own loop    |
+| 2    | `riverbend.ogg`    | Chesapeake tidewater, Virginia, 1619–1630      | the shared loop |
+| 3    | `philadelphia.ogg` | Philadelphia, 1770s                            | the shared loop |
+| 4    | `canal.ogg`        | An Erie Canal boomtown, upstate New York, 1845 | the shared loop |
+| 5    | `richmond.ogg`     | Richmond, Virginia, 1864                       | the shared loop |
+| 6    | `railhead.ogg`     | Cottonwood Junction, Kansas, June 1873         | the shared loop |
+| 7    | `port.ogg`         | Ellis Island, New York Harbor, 17 April 1907   | the shared loop |
 
-Three things every field track must respect:
+Three things that apply to all seven:
 
-- **A field track belongs to its era and place first.** A map carries at most two Chronicle-frame
-  details, and a student who finishes a map should have learned a period, not a plot. None of these
-  seven should sound like time travel.
-- **Length matters more here than anywhere else.** These play for twenty or thirty minutes at a
-  stretch. Generate 60 s, keep the least melodic take, and resist anything hummable.
-- **Arrival is not danger.** Observation is free in this game's rules. No map opens on tension.
+- **These belong to their time and place first.** A student who finishes a map should come away having
+  learned a period, not a plot. None of these seven should sound like time travel.
+- **Length matters most here.** These play for twenty or thirty minutes straight. Make three versions
+  and keep the least tuneful one.
+- **Arriving somewhere is not dangerous** in this game's story. No map opens on tension.
 
 ### `island` — Unit 1 · a Caribbean island, 1492–93
 
-> _"Anchor holds. Two peoples are counting the same shoreline, and only one of them is writing it
-> down."_
+_"Two peoples are counting the same shoreline, and only one of them is writing it down."_
 
-**The map** — a Taíno village and conuco garden, a Spanish landing camp along the shore, three ships
-anchored offshore, dirt footpaths through the palms. **Length** 60 s. **Status** rewrite of `island`.
+**The map:** a Taíno village and garden plots, a Spanish landing camp along the shore, three ships
+anchored offshore, dirt paths through the palms. **Length:** 60 seconds. **Status:** replaces `island`.
 
-The two-cultures idea lives in the _arrangement_: the Taíno material is present, close and playing;
-the Iberian material is distant, intermittent, and offshore.
+The two-cultures idea is in the arrangement, not the notes: the Taíno instruments are close and
+playing; the Spanish one is distant and only turns up now and then.
 
-> Instrumental only, no vocals. A warm, unhurried exploration loop for a top-down pixel-art history
-> game. Taíno-rooted percussion carries it — a güiro scrape, gourd rattles, and a soft low slit-log
-> drum in a gentle rolling 6/8 lilt — under a breathy cane flute playing a rising-and-falling
-> pentatonic figure in D. Once per phrase the flute states a simple four-note motif: a rising fourth,
-> up a step, and back down. Far underneath and much quieter, a single Iberian gut-string vihuela chord
-> enters every second or third phrase only, as if carried across water from a ship anchored offshore.
-> 84 BPM. Sparse, with plenty of air between phrases. Sunlit, open and curious rather than tense.
-> Close-mic'd dry acoustic recording, minimal reverb. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — orchestral strings, brass, synthesizers, steel drums or any tropical-resort cliché,
-cinematic percussion, a discovery fanfare, ominous low drones. Nothing here is about to go wrong yet.
+> Instrumental only, no singing. A warm, unhurried exploration loop for a top-down pixel-art history
+> game. Taíno percussion carries it — a güiro (a notched gourd scraped with a stick), gourd rattles,
+> and a soft low hollow-log drum in a gentle rolling 6/8 sway — under a breathy cane flute playing a
+> rising-and-falling five-note-scale melody. Once per phrase the flute plays a simple four-note figure:
+> G, C, D, C. Far underneath and much quieter, a single chord on an early Spanish gut-string guitar
+> enters only every second or third phrase, as if carried across the water from a ship anchored
+> offshore. 84 beats per minute. Sparse, with lots of air between phrases. Sunlit, open and curious
+> rather than tense. Recorded close and dry, hardly any reverb. Same speed all the way through, no
+> fading in or out.
+
+**Don't want:** orchestral strings, brass, synthesizers, steel drums or any beach-resort sound, movie
+percussion, a discovery fanfare, ominous low drones. Nothing has gone wrong here yet.
 
 ### `riverbend` — Unit 2 · Chesapeake tidewater, Virginia, 1619–1630
 
-> _"Anchor holds. A wall, a wharf, and everyone inside them arguing about who owes whom what."_
+_"A wall, a wharf, and everyone inside them arguing about who owes whom what."_
 
-**The map** — a palisaded settlement on a wooded river bend: meetinghouse, clapboard dwellings, barn,
-fenced tobacco plots, a wharf below the bluff, cleared fields running back into the trees. **Length**
-60 s. **Status** new (currently `settlement`).
+**The map:** a fenced settlement on a wooded river bend — meetinghouse, clapboard houses, barn, tobacco
+plots, a wharf below the bluff, cleared fields running back into the trees. **Length:** 60 seconds.
+**Status:** new.
 
-Three peoples are on this map and all three belong in the music: the English inside the palisade, the
-Powhatan of Tsenacommacah beyond the treeline, and the Angolan labourers who arrive in 1619. The
-English material is the loudest because it is the one writing things down — which is the point, not an
-endorsement.
+Three peoples are on this map and all three belong in the music: the English inside the fence, the
+Powhatan beyond the treeline, and the Angolan labourers who arrive in 1619. The English part is loudest
+because they're the ones writing things down — that's the point being made, not an endorsement.
 
-> Instrumental only, no vocals. A plain, working loop for an early colonial river settlement. An
-> English consort leads: a treble recorder and two viols playing a square, hymn-like tune with no
-> ornament, joined by a small tabor drum keeping a flat walking pulse. The recorder states a simple
-> four-note motif once per phrase — a rising fourth, up a step, and back down. From further off, a
-> gourd rattle and a cane flute answer in a different rhythm that never quite lines up with the
-> consort. Underneath everything, very quiet, a plucked lamellophone repeating a short cyclic figure.
-> 74 BPM in D Dorian. Austere, damp, industrious; unglamorous and a little cold. Dry period recording
-> with a sense of open air and trees. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — Renaissance-faire jollity, sea shanties, Celtic fiddle, harpsichord (too urban and too
+> Instrumental only, no singing. A plain, working loop for an early colonial river settlement. A small
+> English group leads: a wooden recorder and two viols (early bowed instruments held on the knee)
+> playing a square, hymn-like tune with no decoration, plus a small hand drum keeping a flat walking
+> beat. The recorder plays a simple four-note figure — G, C, D, C — once per phrase. From further away,
+> a gourd rattle and a cane flute answer in a different rhythm that never quite lines up with the
+> others. Underneath everything and very quiet, a plucked thumb piano repeating a short looping
+> pattern. 74 beats per minute, in D minor. Austere, damp, hardworking; unglamorous and a bit cold.
+> Dry period recording with a sense of open air and trees. Same speed all the way through, no fading in
+> or out.
+
+**Don't want:** Renaissance-fair jollity, sea shanties, Celtic fiddle, harpsichord (too fancy and too
 late for this), orchestral warmth, any sense of adventure or frontier romance.
 
-> **A dating discrepancy, flagged not fixed.** The two art-pipeline headers for this map —
-> `content/maps/riverbend-field.palette.js` and `scripts/generate-riverbend-tmj.js` — both describe it
-> as "a New England river settlement, ~1620s". The campaign content in `content/unit-02-campaign.js`
-> places it in the **Chesapeake tidewater, Virginia, 1619–1630**: tobacco, headright, Tsenacommacah,
-> Angolan labourers, Jamestown letters. The campaign is authoritative and the two art comments are
-> stale. This prompt is written to the Chesapeake. Correcting those comments is a separate, unrelated
-> change.
+> **One inconsistency to know about.** Two of the art-pipeline files for this map call it "a New England
+> river settlement, ~1620s". The actual game content puts it in the Chesapeake tidewater of Virginia,
+> 1619–1630 — tobacco, Jamestown letters, the Powhatan, Angolan labourers. The game content is correct
+> and the two art comments are out of date. This prompt is written to Virginia.
 
 ### `philadelphia` — Unit 3 · Philadelphia, 1770s
 
-> _"Anchor holds. A city printing the argument faster than anyone in it can finish having it."_
+_"A city printing the argument faster than anyone in it can finish having it."_
 
-**The map** — a Revolutionary-era town square: the brick statehouse and clock tower, a print shop, a
-chapel and churchyard, market stalls, a liberty pole, the Delaware waterfront with piers and masts.
-Cobbled, paved, busy. **Length** 60 s. **Status** new (currently `settlement`).
+**The map:** a Revolutionary-era town square — brick statehouse and clock tower, a print shop, a chapel
+and churchyard, market stalls, a liberty pole, the waterfront with piers and masts. Cobbled and busy.
+**Length:** 60 seconds. **Status:** new.
 
-The one map whose _rhythm section is a machine_. A hand press pulls roughly one sheet every few
-seconds, and that is the pulse of the town.
+This is the one map whose drum part is a machine. A hand printing press pulls about one sheet every few
+seconds, and that's the heartbeat of the town.
 
-> Instrumental only, no vocals. A busy, articulate loop for a colonial American city street. A
-> harpsichord plays a brisk, clean, contrapuntal figure in a galant eighteenth-century style, doubled
-> lightly by a baroque flute. Underneath, the percussion is mechanical rather than musical: the heavy
-> regular thump and creak of a wooden printing press, plus a rope-tension side drum tapping a quiet
-> military cadence some distance away. A fife plays a short bright phrase across the top every few
-> bars, out in the street, never resolving into a recognisable tune. The harpsichord states a
-> four-note motif — a rising fourth, up a step, and back down — once per phrase. 96 BPM in D
-> Mixolydian. Energetic, argumentative, crowded and civic; not martial, not yet at war. Dry, close,
-> period-instrument recording. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — quoting any actual patriotic tune, orchestral pomp, a full fife-and-drum march, triumphal
-brass, anything that takes a side. The argument is still being had.
+> Instrumental only, no singing. A busy, chattering loop for a colonial American city street. A
+> harpsichord plays a brisk, clean, neatly interlocking figure in a light 1700s style, doubled softly
+> by a wooden baroque flute. The percussion isn't musical — it's the heavy regular thump and creak of a
+> wooden printing press, plus an old military snare drum tapping a quiet marching pattern some distance
+> away. Every few bars a fife plays a short bright phrase out in the street that never turns into a
+> recognisable tune. The harpsichord plays a four-note figure — G, C, D, C — once per phrase. 96 beats
+> per minute, major-sounding but with one flattened note keeping it slightly rough. Energetic,
+> argumentative, crowded and civic; not military, not at war yet. Dry, close, old-instrument recording.
+> Same speed all the way through, no fading in or out.
+
+**Don't want:** any actual patriotic tune quoted, orchestral pomp, a full fife-and-drum march,
+triumphant brass, anything that picks a side. The argument is still going on.
 
 ### `canal` — Unit 4 · an Erie Canal boomtown, upstate New York, 1845
 
-> _"Anchor holds. The lock lifts a loaded boat by hand. Everything else here is an argument about who
-> paid for it."_
+_"The lock lifts a loaded boat by hand. Everything else here is an argument about who paid for it."_
 
-**The map** — a stone-lined canal with a working lock and brass winding gear, moored cargo barges, a
-water-powered flour mill, brick shopfronts and a free bank, a reform square with a church and meeting
-hall, terraced immigrant housing. **Length** 60 s. **Status** new (currently `settlement`).
+**The map:** a stone canal with a working lock and brass gear, moored cargo barges, a water-powered
+flour mill, brick shopfronts and a bank, a reform square with a church and meeting hall, terraced
+immigrant housing. **Length:** 60 seconds. **Status:** new.
 
-This is the most cheerful map in the game, and the cheer is the point: a boomtown believes in itself.
-The reform square gives it its counter-melody.
+This is the most cheerful map in the game, and the cheerfulness is the point — a boomtown believes in
+itself. The reform meeting hall gives it a counter-melody.
 
-> Instrumental only, no vocals. A bright, rolling, working-town loop for an American canal boomtown.
-> A fiddle and a hammered dulcimer carry a lively reel-adjacent figure together, with an Irish tin
-> whistle weaving above and a plucked banjo keeping a steady rolling pattern underneath. Percussion is
-> the place itself: mule bells at a walking pace and the soft continuous rush of water over lock
-> gates. Every second phrase a small pump organ enters underneath with a plain shape-note hymn line,
-> squarer and slower than everything above it, as if heard through the door of a meeting hall. The
-> fiddle states a four-note motif — a rising fourth, up a step, and back down — once per phrase. 104
-> BPM in G Mixolydian. Optimistic, industrious, slightly overcrowded; a town certain it is going
-> somewhere. Warm, dry, close acoustic recording. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — bluegrass or any twentieth-century country idiom, minstrel-show pastiche, orchestral
-Americana, hoedown clichés, saloon honky-tonk piano (wrong decade and wrong state).
+> Instrumental only, no singing. A bright, rolling, hardworking loop for an American canal boomtown. A
+> fiddle and a hammered dulcimer play a lively jig-like figure together, with an Irish tin whistle
+> weaving above and a plucked banjo rolling underneath. The percussion is the place itself: mule bells
+> at walking pace and the soft continuous rush of water spilling over lock gates. Every second phrase a
+> small pump organ comes in underneath with a plain old-fashioned hymn line, squarer and slower than
+> everything above it, as if heard through the door of a meeting hall. The fiddle plays a four-note
+> figure — G, C, D, C — once per phrase. 104 beats per minute, major-sounding with one flattened note.
+> Optimistic, industrious, a little overcrowded — a town certain it's going somewhere. Warm, dry, close
+> recording. Same speed all the way through, no fading in or out.
+
+**Don't want:** bluegrass or any 20th-century country sound, minstrel-show pastiche, orchestral
+Americana, hoedown clichés, saloon honky-tonk piano (wrong decade, wrong state).
 
 ### `richmond` — Unit 5 · Richmond, Virginia, 1864
 
-> _"Anchor holds. A capital running a war on paper it is also running out of."_
+_"A capital running a war on paper it is also running out of."_
 
-**The map** — a columned capitol on a green hill above brick government offices, a price board, a
-hospital ward with tents, the Tredegar ironworks stack, cranes and cargo on a paved quay, the James
-River and the falls below. **Length** 60 s. **Status** new (currently `settlement`).
+**The map:** a columned capitol on a green hill above brick government offices, a price board, a
+hospital ward with tents, the ironworks chimney, cranes and cargo on a paved quay, the river and falls
+below. **Length:** 60 seconds. **Status:** new.
 
-**Richmond does not burn until April 1865.** In 1864 the city is intact, overcrowded and overbuilt —
-this is not rubble-and-ashes scoring. The war is present as _shortage and strain_, not destruction.
+**Richmond doesn't burn until April 1865.** In 1864 the city is undamaged, overcrowded and overbuilt.
+This is not rubble-and-ashes music. The war shows up as **shortage and strain**, not destruction.
 
-> Instrumental only, no vocals. A strained, genteel loop for a wartime southern capital that has not
-> been damaged but is running out of everything. A parlor piano, slightly out of tune and played
-> softly, works through a sentimental period drawing-room melody. A solo cornet answers it from
-> further away, unaccompanied and a little flat. Underneath, a muffled military side drum keeps a slow
-> dead-march pulse, and a low sustained industrial hum — a distant furnace and river falls — never
-> stops. What would be a full brass band is reduced to that one cornet. The piano states a four-note
-> motif — a rising fourth, up a step, and back down — once per phrase. 60 BPM in D minor, though it
-> never cadences. Dignified, tired, and quietly desperate; keeping up appearances. Close, dry, with
-> real room noise. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — quoting "Dixie" or any Confederate tune, battle music, cannon, orchestral tragedy,
-horror-movie strings, rubble ambience, anything mournful enough to read as sympathy for the regime.
-The record here is being kept _by_ the government the player is investigating.
+> Instrumental only, no singing. Strained, genteel music for a wartime southern capital that hasn't
+> been damaged but is running out of everything. A parlour piano, slightly out of tune and played
+> softly, works through a sentimental period drawing-room melody. A solo cornet (a small trumpet)
+> answers it from further away, alone and a little flat. Underneath, a muffled military snare drum
+> keeps a slow funeral-march pulse, and a low sustained industrial hum — a distant furnace and river
+> falls — never stops. What should be a full brass band is just that one cornet. The piano plays a
+> four-note figure — G, C, D, C — once per phrase. 60 beats per minute, in D minor, but it never
+> arrives anywhere. Dignified, tired and quietly desperate; keeping up appearances. Close, dry, with
+> real room noise. Same speed all the way through, no fading in or out.
+
+**Don't want:** "Dixie" or any Confederate tune quoted, battle music, cannon fire, orchestral tragedy,
+horror strings, rubble sounds, anything mournful enough to read as sympathy for the government. The
+records here are being kept **by** the people the player is investigating.
 
 ### `railhead` — Unit 6 · Cottonwood Junction, Kansas, June 1873
 
-> _"Anchor holds. A town the survey drew before anyone arrived to live in it."_
+_"A town the survey drew before anyone arrived to live in it."_
 
-**The map** — the line runs east–west across the whole map. North of it is the town, where paper is
-made and kept: depot, land office, telegraph office, town-site office, store. South of it is what the
-paper is for: the Kanza village on the creek, the hide yard, the graders' camp, the stock pens.
-Tallgrass prairie, bluestem, cottonwood. **Length** 60 s. **Status** new (currently `settlement`).
+**The map:** the railway line runs east–west right across the map. North of it is the town, where paper
+gets made and stored — depot, land office, telegraph office, store. South of it is what the paper is
+for: the Kanza village on the creek, the hide yard, the workers' camp, the cattle pens. Tall prairie
+grass and cottonwood trees. **Length:** 60 seconds. **Status:** new.
 
-The composition of the map should be the composition of the track: **the town's music and the Kanza
-music are on either side of the line, in different tempos, and the town cannot hear the other one.**
-The Kanza leave in June; the Panic breaks in September. The town is booming on a printed page and
-nervous in conversation.
+**The layout of the map should be the layout of the track.** The town's music and the Kanza music are on
+opposite sides of the line, in different tempos, and the town can't hear the other one. The Kanza leave
+in June; the financial crash comes in September. The town is booming on paper and nervous in
+conversation.
 
-> Instrumental only, no vocals. A wide, open, slightly lonely loop for a new prairie railhead town.
-> A single fiddle plays a spare, unhurried tune with a lot of open string, joined by a jaw harp and a
-> softly strummed guitar. There is far more space than sound. The pulse comes from a telegraph key
-> tapping an irregular pattern and, further off, the slow idle breathing of a locomotive taking water.
-> Continuous quiet wind through tall grass underneath everything. Separately, very distant and in a
-> different unrelated tempo, a cedar flute and a soft water drum play their own phrase, never
-> synchronising with the fiddle and never getting louder. The fiddle states a four-note motif — a
-> rising fourth, up a step, and back down — once per phrase. 80 BPM in G Mixolydian. Optimistic on the
-> surface with something unsettled underneath; big sky, thin population. Dry, wide, very little
-> reverb. Steady tempo throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — spaghetti-western guitar and whistling, Hollywood "Indian" tom-tom-and-fifths cliché,
-harmonica wailing, cowboy campfire music, orchestral frontier grandeur, cacti-and-desert scoring. This
-is Kansas tallgrass, not Monument Valley.
+> Instrumental only, no singing. A wide, open, slightly lonely loop for a brand-new prairie railway
+> town. A single fiddle plays a spare, unhurried tune using a lot of open strings, joined by a jaw harp
+> (a small twangy mouth instrument) and a softly strummed guitar. There's far more space than sound.
+> The pulse comes from a telegraph key tapping an irregular pattern and, further off, the slow idling
+> breath of a steam locomotive taking on water. Quiet wind through tall grass runs underneath
+> everything. Separately, very distant and in a completely different unrelated tempo, a cedar flute and
+> a soft water drum play their own phrase — never lining up with the fiddle and never getting louder.
+> The fiddle plays a four-note figure — G, C, D, C — once per phrase. 80 beats per minute,
+> major-sounding with one flattened note. Optimistic on the surface with something unsettled
+> underneath; big sky, few people. Dry, wide, almost no reverb. Same speed all the way through, no
+> fading in or out.
+
+**Don't want:** spaghetti-western twangy guitar and whistling, the Hollywood "Indian" tom-tom cliché,
+wailing harmonica, cowboy campfire music, orchestral frontier grandeur, desert or cactus sounds. This
+is Kansas tall-grass prairie, not Monument Valley.
 
 ### `port` — Unit 7 · Ellis Island, New York Harbor, 17 April 1907
 
-> _"Anchor holds. Everyone on this quay was written down in Europe before anyone here looked at them."_
+_"Everyone on this quay was written down in Europe before anyone here looked at them."_
 
-**The map** — the brick reception building across the whole north edge, a paved and lamped forecourt,
-one wrought-iron rail with a single gate, then the wharf with baggage and waiting families, then the
-Upper Bay and two timber piers. 11,747 people came off the barges that day. **Length** 60 s.
-**Status** new (currently `settlement`).
+**The map:** the brick reception building across the whole north edge, a paved and lamplit forecourt,
+one iron railing with a single gate in it, then the wharf with baggage and waiting families, then the
+bay and two wooden piers. 11,747 people came off the barges that day. **Length:** 60 seconds.
+**Status:** new.
 
-The deliberate inversion of Unit 6: Cottonwood Junction's line could be walked across; **this one
-cannot.** So where `railhead` is open and thin, `port` is dense and procedural — warm and human on
-top, orderly and impersonal underneath.
+This is the deliberate opposite of Unit 6: Kansas's railway line could be walked across, **this railing
+cannot.** So where the Kansas track is open and thin, this one is crowded and mechanical — warm and
+human on top, orderly and indifferent underneath.
 
-> Instrumental only, no vocals. A crowded harbour loop for a great immigration station. Four folk
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A crowded harbour loop for a great immigration station. Four folk
 > traditions play near each other without quite playing together: a Central European button accordion,
-> a klezmer-inflected clarinet, a southern Italian mandolin tremolo, and a plucked upright bass walking
-> beneath them. They share a tempo but not a phrase, so the texture overlaps and crowds. Under all of
-> it, a low sustained steam-whistle drone and a slow, absolutely even pulse, like a queue advancing.
-> The clarinet states a four-note motif — a rising fourth, up a step, and back down — once per phrase.
-> 96 BPM in D minor, unresolved. Warm, human and hopeful on the surface; orderly, procedural and
-> indifferent underneath. Period acoustic recording character, no modern polish. Steady tempo
-> throughout, no fade in, no fade out.
+> a clarinet played in the Eastern European Jewish klezmer style with sliding notes, a southern Italian
+> mandolin playing fast repeated notes, and a plucked upright bass walking underneath them. They share
+> a tempo but not a phrase, so the texture overlaps and crowds. Under all of it, a low sustained
+> steam-whistle drone and a slow, absolutely even pulse, like a queue shuffling forward. The clarinet
+> plays a four-note figure — G, C, D, C — once per phrase. 96 beats per minute, in D minor, unresolved.
+> Warm, human and hopeful on the surface; orderly, procedural and indifferent underneath. Old acoustic
+> recording character, no modern polish. Same speed all the way through, no fading in or out.
 
-**Avoid** — sentimental immigrant-saga film scoring, a solo violin lament, orchestral strings, the
-Statue of Liberty gesture, patriotic swell, anything triumphal or anything tragic. The day is
-administrative, and that is what makes it what it is.
+**Don't want:** sentimental immigrant-saga film music, a lone weeping violin, orchestral strings, a
+Statue of Liberty moment, patriotic swelling, anything triumphant or anything tragic. The day is
+paperwork, and that's exactly what makes it what it is.
 
 ---
 
-## §4 · Interiors — optional, and currently unplayable
+## §4 · Indoor rooms — 8 tracks you should NOT generate yet
 
-> **Read this before generating any of the eight.** Interiors deliberately do not get their own music
-> today. `sceneForMusic()` reads the _outdoor_ map's scene even when the player is inside a room,
-> because "an interior is a room in that town, not a change of place, and stepping through a door
-> should not restart the score" — see [`0048-field-interiors.md`](../decision-log/0048-field-interiors.md).
-> Every interior does declare a `musicScene` field, but only for shape parity with outdoor maps, and
-> nothing ever reads it.
+> **Skip this section.** The eight rooms you can walk into (the print shop, the boarding house, and so
+> on) deliberately keep playing the outdoor map's music. Walking through a door isn't supposed to
+> restart the score, so the code reads the outdoor map's track even when you're inside.
 >
-> **These eight tracks would not play.** Generate them only if that decision is revisited. They are
-> written here so the list is complete, and because a couple of these rooms are strong enough that
-> they might justify revisiting it.
+> **These eight would not play if you made them.** They're written down so the list is complete, and
+> because one or two of these rooms are good enough that someone might want to change that decision
+> later.
 
-All eight are **reduced arrangements of the parent map's theme** — same motif, same key, fewer
-instruments, and an interior acoustic (close walls, no wind, no crowd). The shared prompt stem:
+If that decision ever changes, each of these is the parent map's track with fewer instruments and an
+indoor sound. The shared starting point:
 
-> Instrumental only, no vocals. A reduced interior arrangement of [parent theme]: the same modal
-> material and the same four-note motif — a rising fourth, up a step, and back down — played by one or
-> two instruments only, in a small room with close walls. Quieter, slower and more spacious than the
-> outdoor version. No wind, no crowd, no exterior ambience. Steady tempo, no fade in, no fade out.
+> Instrumental only, no singing. A stripped-back indoor version of [the map's theme]: the same key and
+> the same four-note figure — G, C, D, C — played by only one or two instruments, in a small room with
+> close walls. Quieter, slower and more spacious than the outdoor version. No wind, no crowd, no
+> outdoor sounds. Steady speed, no fading in or out.
 
-| Room                         | Unit | What it is                                                                                                                                                                            | The one thing the arrangement should say                                                                                                                                                                     |
-| ---------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Printing office**          | 4    | Partisan newspaper and jobbing shop: iron hand press, two compositor's cases, a stove, the editor's desk and safe                                                                     | Keep the press thump from `canal` and drop almost everything else — in here the machine is the only instrument. Add the fine irregular click of type being set.                                              |
-| **Boardinghouse**            | 4    | Curtained sleeping alcove with three rope beds, a flagged kitchen end, a common room with boarding tables. Boat crews, Irish diggers, a temperance visitor                            | Solo tin whistle and a quiet fiddle, close and tired, at the end of a working day. The reform hymn from `canal` never enters here.                                                                           |
-| **Counting room**            | 5    | A slave-trading commission house in Shockoe Bottom: panelled office, clerks' writing table, iron safe, bound ledgers, longcase clock                                                  | **Nothing theatrical.** No menace, no low drone, no horror. A longcase clock, a pen, and a single sustained cello note. It should sound like a well-run office, because that is the whole point of the room. |
-| **Chimborazo ward**          | 5    | Long whitewashed hospital room, sash windows, two ranks of empty made-up camp cots, linen press, the matron's register                                                                | The `richmond` parlor piano alone, very quiet and far away, in a room with a hard echo. Non-graphic throughout, as the room itself is.                                                                       |
-| **Land office**              | 6    | United States district land office: counter with an iron rail and one gate, register's desk, plat table, tract books, floor safe                                                      | The `railhead` fiddle reduced to long held open strings, over the scratch of a pen and the settle of a heavy book. The prairie wind is gone the moment the door shuts.                                       |
-| **Telegraph office**         | 6    | Western Union office: railed instrument table, message file, message window, public benches. **No clock, on purpose** — standard time is not until 1883                               | The telegraph key from `railhead` promoted to lead instrument, with a jaw harp answering it. Deliberately no clock tick and no steady pulse — nothing in this room agrees on what time it is.                |
-| **Reception hall**           | 7    | The registry floor: pale-tiled hall crossed by two iron railings whose gates are at opposite ends, so it is walked as a switchback. Two registry desks, a money exchange, public pens | The `port` queue-pulse alone, in a huge tiled room with a long hard reverb, with the four folk instruments reduced to distant fragments. The procedure has won; the music has not.                           |
-| **Board of special inquiry** | 7    | Committee room: herringbone parquet, panelled wainscot, carpet, a long table with empty chairs, a clerk's table, a longcase clock, bound minute books                                 | Almost silence. A longcase clock, a carpeted room tone, and one sustained low note. The nicest room in the building is the one where the decision is made, and it should be the quietest thing in the game.  |
+| Room                         | Unit | What it is                                                                                                                                                                   | What the indoor version should say                                                                                                                                                                                  |
+| ---------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Printing office**          | 4    | A partisan newspaper and job-printing shop: iron hand press, type cases, a stove, the editor's desk and safe                                                                 | Keep the press thump from the canal track and drop nearly everything else — in here the machine is the only instrument. Add the fine irregular click of type being set.                                             |
+| **Boarding house**           | 4    | Curtained sleeping alcove with three rope beds, a flagged kitchen, a common room with boarding tables. Boat crews, Irish canal diggers, a temperance visitor                 | Solo tin whistle and a quiet fiddle, close and tired, at the end of a working day. The hymn from the canal track never comes in here.                                                                               |
+| **Counting room**            | 5    | A slave-trading commission house in Shockoe Bottom: panelled office, clerks' writing table, iron safe, ledgers, a grandfather clock                                          | **Nothing theatrical.** No menace, no low drone, no horror. A clock, a pen, and one held cello note. It should sound like a well-run office — that is the entire point of the room.                                 |
+| **Hospital ward**            | 5    | A long whitewashed room, sash windows, two rows of empty made-up camp beds, a linen press, the matron's register                                                             | The Richmond parlour piano alone, very quiet and far away, in a room with a hard echo. Non-graphic throughout, like the room itself.                                                                                |
+| **Land office**              | 6    | A US district land office: counter with an iron rail and one gate, the register's desk, map table, tract books, floor safe                                                   | The Kansas fiddle reduced to long held open strings, over the scratch of a pen and the thump of a heavy book. The prairie wind vanishes the moment the door shuts.                                                  |
+| **Telegraph office**         | 6    | A Western Union office: railed instrument table, message file, message window, benches. **No clock, on purpose** — standard time doesn't exist until 1883                    | Promote the telegraph key from the Kansas track to lead instrument, with a jaw harp answering it. Deliberately no clock tick and no steady beat — nothing in this room agrees what time it is.                      |
+| **Reception hall**           | 7    | The registry floor: a big tiled hall crossed by two iron railings whose gates are at opposite ends, so you walk it as a zigzag. Registry desks, money exchange, holding pens | Just the queue pulse from the Ellis Island track, in a huge tiled room with a long hard echo, with the four folk instruments reduced to distant fragments. The procedure has won; the music hasn't.                 |
+| **Board of special inquiry** | 7    | The hearing room: parquet floor, panelled walls, carpet, a long table with empty chairs, a clerk's table, a grandfather clock, minute books                                  | Almost silence. A grandfather clock, the sound of a carpeted room, and one held low note. The nicest room in the building is the one where the decision gets made, and it should be the quietest thing in the game. |
 
 ---
 
-## §5 · Systemic screens
+## §5 · Everything that isn't a place — 9 tracks
 
-Nine tracks for the screens that are not places. These are all **beds** — they play under reading,
-writing, and clicking, and every one of them should be less interesting than the field tracks.
+These play under reading, writing and clicking. **Every one of them should be less interesting than
+the map tracks.**
 
-### `dialogue` — a conversation is open
+### `dialogue` — while you're talking to someone
 
-**Plays on** `field` while an NPC conversation is open. **Length** 40 s. **Status** rewrite of
-`dialogue`. Dialogue is written one idea per box with real pauses, so this must be gap-tolerant.
+**Plays:** on a map while a conversation is open. **Length:** 40 seconds. **Status:** replaces
+`dialogue`. Dialogue is written one idea per box with real pauses, so this has to tolerate gaps.
 
-> Instrumental only, no vocals. A very thin conversational underscore. Two sustained notes a fourth
-> apart on bowed vibraphone, with a single soft plucked note marking long irregular intervals. Almost
-> nothing happens. 60 BPM, modal and unresolved. Attentive and neutral — it should not colour what is
-> being said, sympathetically or otherwise. Close and quiet, no reverb tail. Steady, no fade in, no
-> fade out.
+**► PASTE THIS:**
 
-**Avoid** — melody, emotional shading, string swells, anything that tells the player how to feel about
-a speaker. Several of these people are lying.
+> Instrumental only, no singing. Very thin background music for a conversation. Two held notes a few
+> steps apart on a bow-played vibraphone, with one soft plucked note marking long irregular gaps.
+> Almost nothing happens. 60 beats per minute, unresolved. Attentive and neutral. Close and quiet, no
+> echo. Steady, no fading in or out.
 
-### `desk` — the activity engines
+**Don't want:** melody, emotion, string swells, anything that tells the player how to feel about a
+speaker. Several of these people are lying.
 
-**Plays on** `interview`, `assembly`, `discrepancy`, `trace`. **Length** 60 s. **Status** new
-(currently `archive`). This is desk work on a record — the four engines are the same posture.
+### `desk` — the four record activities
 
-> Instrumental only, no vocals. A focused, quietly industrious work loop. A muted felt piano repeats a
-> short cyclic figure with small variations, over a low sustained cello and the faint regular sound of
-> paper being handled. A bowed vibraphone holds one long note that changes about once every eight bars.
-> 72 BPM, modal, no resolution. Absorbed and steady — concentration, not tension. Close, dry, small
-> room. Steady tempo throughout, no fade in, no fade out.
+**Plays:** the interview, assembly, discrepancy and trace activities. **Length:** 60 seconds.
+**Status:** new.
 
-**Avoid** — puzzle-game tension, ticking, a timer feel, anything that implies a wrong answer is
-costly. These are not timed.
+**► PASTE THIS:**
+
+> Instrumental only, no singing. Focused, quietly industrious work music. A felt-muted piano repeats a
+> short looping figure with small variations, over a low held cello and the faint regular sound of
+> paper being handled. A bow-played vibraphone holds one long note that changes about once every eight
+> bars. 72 beats per minute, unresolved. Absorbed and steady — concentration, not tension. Close, dry,
+> small room. Same speed all the way through, no fading in or out.
+
+**Don't want:** puzzle-game tension, ticking, a timer feeling, anything implying a wrong answer costs
+something. None of these are timed.
 
 ### `desk-interview` — optional variant
 
-**Plays on** `interview` only, if you want the one conversational engine to feel different from the
-three document engines. **Length** 60 s. **Status** new and optional.
+**Plays:** the interview activity only, if you want the conversation one to feel different from the
+three document ones. **Length:** 60 seconds. **Status:** new and optional.
 
-> As `desk`, but replace the paper handling with longer silences and give the felt piano a slower,
-> more questioning phrase that ends unfinished each time. Slightly warmer. Same tempo and key so the
-> two tracks are interchangeable mid-session.
+**► PASTE THIS:**
 
-### `source` — the record reader
+> Same as the `desk` prompt above, but replace the paper-handling sound with longer silences, and give
+> the felt piano a slower, more questioning phrase that stops unfinished each time. Slightly warmer.
+> Keep the same tempo and key so the two can swap mid-session.
 
-**Plays on** `source`. **Length** 45 s. **Status** new (currently `quiet`). A student is reading a
-primary source; nothing should compete with that.
+### `source` — reading a document
 
-> Instrumental only, no vocals. Near-ambient reading music. One very low sustained string note and a
-> single celeste note that recurs every fifteen or twenty seconds. No pulse, no melody, no development
-> whatsoever. Warm, still, and almost unnoticeable. Long decays. Absolutely steady, no fade in, no
-> fade out.
+**Plays:** the document reader. **Length:** 45 seconds. **Status:** new. A student is reading a primary
+source; nothing should compete with that.
 
-**Avoid** — everything. If it is noticeable it is wrong.
+**► PASTE THIS:**
 
-### `writing` — extended written work
+> Instrumental only, no singing. Near-silent reading music. One very low held string note and a single
+> celeste note that comes back every fifteen or twenty seconds. No beat, no melody, no development at
+> all. Warm, still, almost unnoticeable. Long decays. Completely steady, no fading in or out.
 
-**Plays on** `archive-challenges` and `review` — the unit's SAQ and DBQ. **Length** 60 s. **Status**
-new (currently `quiet`). Deliberately boring: a student may sit here for twenty minutes composing an
-argument.
+**Don't want:** everything. If you notice it, it's wrong.
 
-> Instrumental only, no vocals. A completely static, warm ambient bed for sustained concentration. Two
-> or three low sustained string notes in a stable open chord, very slowly breathing against each other,
-> with a barely audible warm room tone underneath. No rhythm, no melody, no change of any kind. Calm,
-> spacious and neutral. Long, slow, absolutely steady. No fade in, no fade out.
+### `writing` — the long written assignments
 
-**Avoid** — any event at all. No swells, no entries, no chord changes.
+**Plays:** the Archive Challenges and the unit review — the essay-style work. **Length:** 60 seconds.
+**Status:** new. Deliberately boring: a student may sit here twenty minutes writing an argument.
 
-### `practice` — practice and prediction
+**► PASTE THIS:**
 
-**Plays on** `practice-check` and `investigation`. **Length** 45 s. **Status** new (currently `quiet`).
+> Instrumental only, no singing. A completely static, warm background for sustained concentration. Two
+> or three low held string notes in a stable open chord, breathing very slowly against each other, with
+> a barely audible warm room tone underneath. No rhythm, no melody, no change of any kind. Calm,
+> spacious, neutral. Long and slow and completely steady. No fading in or out.
 
-> Instrumental only, no vocals. A light, low-stakes loop. Celeste and plucked nylon-string guitar
-> trade a small, gentle, slightly playful figure over a soft sustained pad. 84 BPM, modal, warm.
-> Encouraging and unpressured — practice, not assessment. Close and bright. Steady tempo, no fade in,
-> no fade out.
+**Don't want:** anything happening at all. No swells, no new instruments, no chord changes.
 
-**Avoid** — quiz-show urgency, timers, tension, anything that raises the stakes.
+### `practice` — practice questions
 
-### `browse` — collection and progress
+**Plays:** the practice check and the prediction screens. **Length:** 45 seconds. **Status:** new.
 
-**Plays on** `codex`, `mastery`, `archive-rotation`. **Length** 60 s. **Status** new (currently
-`quiet`). The player is looking at what they have collected — this is the badge-case feeling.
+**► PASTE THIS:**
 
-> Instrumental only, no vocals. A warm, satisfied browsing loop. Hammered dulcimer plays a gently
-> rolling pattern over a sustained cello, with celeste accents, and states the four-note motif — a
-> rising fourth, up a step, and back down — about once per phrase. 76 BPM in D Dorian. Pleased,
-> unhurried, a little proud, without ever becoming a fanfare. Warm and close. Steady tempo, no fade in,
-> no fade out.
+> Instrumental only, no singing. A light, low-stakes loop. A celeste and a plucked nylon-string guitar
+> pass a small, gentle, slightly playful figure back and forth over a soft held pad. 84 beats per
+> minute, warm. Encouraging and unpressured — practice, not a test. Close and bright. Steady speed, no
+> fading in or out.
 
-**Avoid** — triumph, achievement-unlocked shimmer, anything that celebrates rather than reflects.
+**Don't want:** quiz-show urgency, timers, tension, anything that raises the stakes.
 
-### `reconstruction` — the Record Reconstruction
+### `browse` — looking at what you've collected
 
-**Plays on** `reconstruction` — the signature end-of-field activity, where every secured record is
-filed into the lane it belongs in. **Length** 60 s. **Status** new (currently `archive`). The one
-systemic track allowed to build.
+**Plays:** the Codex, the skills record, and the daily review. **Length:** 60 seconds. **Status:** new.
+This is the badge-case feeling.
 
-> Instrumental only, no vocals. A gathering, assembling loop. It begins with a solo hammered dulcimer
-> and adds one instrument each time the phrase repeats — cello, then celeste, then a warm string pad —
-> until the full small ensemble is playing the four-note motif together. The motif is a rising fourth,
-> up a step, and back down. 78 BPM in D Dorian, and it still does not resolve. Purposeful and
-> accumulating: pieces coming together into something that holds. Warm, close, wooden. Steady tempo
-> throughout, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — a final cadence, a climax, cymbals. It accumulates; it does not arrive.
+> Instrumental only, no singing. A warm, satisfied browsing loop. A hammered dulcimer plays a gently
+> rolling pattern over a held cello, with celeste accents, and plays a four-note figure — G, C, D, C —
+> about once per phrase. 76 beats per minute, in D minor. Pleased, unhurried, a little proud, without
+> ever becoming a fanfare. Warm and close. Steady speed, no fading in or out.
+
+**Don't want:** triumph, achievement-unlocked sparkle, anything that celebrates rather than reflects.
+
+### `reconstruction` — the end-of-map activity
+
+**Plays:** the Record Reconstruction, where you file every record you collected into the right category.
+**Length:** 60 seconds. **Status:** new. The one background track allowed to build.
+
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A gathering, assembling loop. It starts with a solo hammered dulcimer
+> and adds one more instrument each time the phrase comes round — cello, then celeste, then a warm
+> string pad — until the whole small group is playing a four-note figure together: G, C, D, C. 78 beats
+> per minute, in D minor, and it still doesn't resolve. Purposeful and accumulating: pieces coming
+> together into something that holds. Warm, close, wooden. Same speed all the way through, no fading in
+> or out.
+
+**Don't want:** a final-sounding ending, a climax, cymbals. It piles up; it doesn't arrive.
 
 ### `arcade` — the mini-games
 
-**Plays on** `mini-games` — Storm Navigation and Cargo Sorting. **Length** 60 s. **Status** new
-(currently `archive`). Explicitly a pacing break, not scored, not required. The one genuinely playful
-track in the game, and the one place the retro-game register can come forward.
+**Plays:** Storm Navigation and Cargo Sorting. **Length:** 60 seconds. **Status:** new.
 
-> Instrumental only, no vocals. A bright, bouncy, retro-flavoured game loop. A chiptune-style square
-> lead plays a cheerful hopping melody over a plucked bass and a light shaker pulse, with a hammered
-> dulcimer doubling the lead so it still belongs to this game's palette. 132 BPM, major and
-> unambiguously happy — the only track here allowed to resolve. Bright, punchy, close. Steady tempo,
-> no fade in, no fade out.
+These are a break from the work and are not graded — the one genuinely playful track in the game, and
+the one place the retro-game sound can come forward.
 
-**Avoid** — nothing much; this is the release valve. Keep it short-looping and keep the dulcimer in so
-it does not sound imported from another game.
+**► PASTE THIS:**
 
-### Screens with no music, on purpose
+> Instrumental only, no singing. A bright, bouncy, retro video-game loop. A chiptune square-wave lead
+> plays a cheerful hopping melody over a plucked bass and a light shaker beat, with a hammered dulcimer
+> doubling the lead so it still belongs to this game. 132 beats per minute, in a major key and
+> unambiguously happy — the only track here allowed to resolve properly. Bright, punchy, close. Steady
+> speed, no fading in or out.
 
-`join`, `login`, `teacher-dashboard`, `grading`, and `manage-content-case` are teacher and account
-surfaces. They get **silence** — they are administration, not the game, and a teacher grading twenty
-submissions does not want a loop. Listed here so the set reads as deliberate rather than unfinished.
+**Don't want:** not much — this is the release valve. Just keep the dulcimer in so it doesn't sound
+imported from a different game.
+
+### Screens that get silence on purpose
+
+The join, login, teacher dashboard, grading and content-management screens get **no music**. They're
+administration, not the game, and a teacher grading twenty submissions doesn't want a loop. Listed here
+so it's clear that's a decision, not something unfinished.
 
 ---
 
-## §6 · Meridian and character themes
+## §6 · Meridian and the characters — 3 tracks
 
-Three tracks. **Meridian currently has no audio identity at all** — no scene, no sting, nothing — and
-of everything in this document it is the largest hole.
+**The Meridian Institute currently has no music at all**, and of everything in this document that's the
+biggest hole.
 
 ### `meridian` — the Meridian Institute
 
-**Plays on** Meridian-associated scenes; currently only the Unit 6 reveal, with more to come in Units
-7–9. **Length** 60 s. **Status** new.
+**Plays:** Meridian scenes — currently just the Unit 6 reveal, with more coming in Units 7–9.
+**Length:** 60 seconds. **Status:** new.
 
-The whole idea, from [`MERIDIAN-VISUAL-IDENTITY.md`](../art/MERIDIAN-VISUAL-IDENTITY.md): **Meridian
-is not a villain.** Chronicle believes the record must survive to be argued with; Meridian believes
-that knowing better obliges you to act. The visual difference between them is _resources and upkeep_,
-not geometry — Chronicle is an old converted building that has been mended; Meridian is purpose-built,
-polished, matched, and recently funded. The art is meant to make a player uneasy about which of them
-they are standing in _before_ any dialogue says so.
+**The whole idea: Meridian is not the villain.** Chronicle thinks the historical record has to survive
+so people can argue with it. Meridian thinks that knowing better obliges you to act. The visible
+difference between them is **money and upkeep**, not good versus evil — Chronicle is an old converted
+building that's been patched up; Meridian is purpose-built, polished, matching, and recently funded. The
+art is meant to make you uneasy about which one you're standing in _before_ anyone explains anything.
 
-So the strongest available move is **the same motif in a different housing**: Meridian plays
-Chronicle's four notes, but newer, larger, better lit, and faintly too precise.
+So the move is: **Meridian plays Chronicle's four notes on better equipment.**
 
-> Instrumental only, no vocals. An elegant, controlled, well-funded loop for a purpose-built
-> institution. The same four-note figure Chronicle uses — a rising fourth, up a step, and back down —
-> but played by a matched group of bowed strings in unison, perfectly in tune and perfectly together,
-> over a polished brass-toned bell and a deep even pulse that never varies by a fraction. Everything is
-> exactly on the beat. A dark, warm, gaslit low register underneath. 72 BPM, the same key as the
-> Chronicle theme, still unresolved. Elegant, confident, orderly, and just slightly too precise to be
-> comfortable — impressive rather than threatening. Rich, wide, expensive-sounding recording, in
-> contrast to Chronicle's dry close wooden one. Steady tempo, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — villain scoring of every kind: minor-key menace, low brass stabs, distorted synths, choir,
-ticking, red-alert tension, science-fiction textures. Nothing here is evil. The unease should come
-entirely from how _well maintained_ it sounds next to Chronicle.
+> Instrumental only, no singing. An elegant, controlled, expensive-sounding loop for a purpose-built
+> institution. The same four-note figure Chronicle uses — G, C, D, C — but played by a matched group of
+> bowed strings in perfect unison, perfectly in tune and perfectly together, over a polished
+> brass-toned bell and a deep even pulse that never varies at all. Everything lands exactly on the
+> beat. A dark, warm, gaslit low register underneath. 72 beats per minute, same key as the main theme,
+> still unresolved. Elegant, confident, orderly, and just slightly too precise to be comfortable —
+> impressive rather than threatening. A rich, wide, expensive recording, in contrast to Chronicle's dry
+> close wooden one. Steady speed, no fading in or out.
 
-**How it should age.** Meridian's arc across the game runs _improvised → confident → wealthy →
-divided → exposed_, and its own members notice the decline. If you generate variants later, degrade in
-that direction: the unison strings gradually stop being quite in unison, and the perfect pulse
-develops a small drag. **It must never become a horror cue.**
+**Don't want:** villain music of every kind — minor-key menace, low brass stabs, distorted synths,
+choir, ticking, red-alert tension, sci-fi textures. **Nothing here is evil.** The unease should come
+entirely from how much better maintained it sounds than Chronicle.
 
-### `voss` — Emery Voss, the Field Liaison
+**If you make variants later:** Meridian's story arc runs improvised → confident → wealthy → divided →
+exposed, and its own members notice the decline. Degrade it in that direction — the strings gradually
+stop being quite in unison and the perfect pulse develops a slight drag. **It must never become horror
+music.**
 
-**Plays on** her scripted beats. **Length** 45 s. **Status** new.
+### `voss` — Emery Voss, the field liaison
 
-Voss is direct, observant, comfortable saying she does not know, and she responds to historical
-suffering as suffering — which the Director does not. Her reveal is scored in the shipped game with the
-warm `codex-reveal` evidence cue, **not** a betrayal sting, and that is the tonal instruction: the
-emotional weight comes from the relationship having been real. The player should finish the game unable
-to say cleanly that she was wrong.
+**Plays:** her scripted scenes. **Length:** 45 seconds. **Status:** new.
 
-> Instrumental only, no vocals. A warm, direct, slightly wistful theme for a solo instrument. A cello
-> plays a simple singing line, unaccompanied at first, then joined by a nylon-string guitar. The line
-> is plain and unornamented — nothing clever, nothing withheld. Underneath, entering only in the second
-> half and very quietly, one sustained note from a different, cooler-toned instrument that does not
-> quite belong to the same ensemble, and does not resolve with it. 68 BPM in D Dorian. Sympathetic,
-> honest, and unresolved — a person you trust who is carrying something. Close, warm, intimate. Steady
-> tempo, no fade in, no fade out.
+Voss is direct, observant, comfortable saying she doesn't know, and she reacts to historical suffering
+as suffering — which the Director doesn't. When her secret comes out, the game plays its **warm
+evidence cue**, not a betrayal sting. That's the instruction: the weight comes from the relationship
+having been real. The player should finish the game unable to say cleanly that she was wrong.
 
-**Avoid** — a betrayal sting, a minor-key twist, sinister reharmonisation of her own theme, tragic
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A warm, direct, slightly wistful theme for a solo instrument. A cello
+> plays a simple singing line, alone at first, then joined by a nylon-string guitar. The line is plain
+> and undecorated — nothing clever, nothing held back. Underneath, entering only in the second half and
+> very quietly, one held note from a different, cooler-sounding instrument that doesn't quite belong to
+> the same group and doesn't resolve with it. 68 beats per minute, in D minor. Sympathetic, honest and
+> unresolved — someone you trust who is carrying something. Close, warm, intimate. Steady speed, no
+> fading in or out.
+
+**Don't want:** a betrayal sting, a minor-key twist, a sinister rewrite of her own theme, tragic
 strings. Her theme stays sympathetic. The shadow is one note underneath it, not a swap.
 
 ### `director` — Rowan Hale
 
-**Plays on** his scripted beats, including the orientation walk. **Length** 40 s. **Status** new and
-lowest priority of the three.
+**Plays:** his scripted scenes, including the orientation walk. **Length:** 40 seconds. **Status:** new,
+and the lowest priority of the three.
 
-Precise, controlled, protective, sincere. Never smug, never cruel, never a villain reading his own
-indictment.
+Precise, controlled, protective, sincere. Never smug, never cruel, never a villain reading out his own
+crimes.
 
-> Instrumental only, no vocals. A measured, formal theme for a small string group. Even, deliberate
-> phrasing with clean articulation and no rubato at all, stating the four-note motif — a rising fourth,
-> up a step, and back down — with unusual care. A low cello anchors it. 64 BPM in D Dorian. Controlled,
-> sincere, protective; the sound of someone who has thought carefully about the thing he is about to
-> say. Warm but formal. Close, dry. Steady tempo, no fade in, no fade out.
+**► PASTE THIS:**
 
-**Avoid** — pomposity, authority-figure brass, anything smug or cold. He is not the antagonist either.
+> Instrumental only, no singing. A measured, formal theme for a small string group. Even, deliberate
+> phrasing with clean articulation and absolutely no speeding up or slowing down, playing a four-note
+> figure — G, C, D, C — with unusual care. A low cello anchors it. 64 beats per minute, in D minor.
+> Controlled, sincere, protective — someone who has thought carefully about what he's about to say.
+> Warm but formal. Close, dry. Steady speed, no fading in or out.
+
+**Don't want:** pomposity, authority-figure brass, anything smug or cold. He isn't the antagonist
+either.
 
 ---
 
-## §7 · Lyria stingers
+## §7 · Short musical cues — 10, still Lyria
 
-Ten short musical one-shots. These are the cues Lyria _can_ do — they are music, just brief.
+These are the sounds Lyria _can_ make, because they're music — just very short.
 
-Durations are taken from the code, not guessed. Where a sting replaces an existing procedural cue,
-that is named so the later swap is mechanical.
+The lengths come from the game's actual code, not guesswork. Where a cue replaces an existing beep,
+that's noted.
 
-**A rule for all ten:** a stinger has to land on top of a music bed with no ducking, so keep them
-**bright and thin rather than loud and wide.** Leave the low midrange alone; that is where the beds
-live.
+**One rule for all ten:** the game can't turn the music down when a cue plays, so keep them **bright and
+thin, not loud and wide.** Stay out of the low-middle range — that's where the background tracks live.
 
-### `sting-chrono-out` — Chronotravel departure
+### `sting-chrono-out` — travelling back in time
 
-**Fires on** `goToCase()` — the moment a case is launched from the Navigation Table. **Length** 4.5 s
-in two parts. **Replaces** the `chrono` cue.
+**Plays:** the moment you launch a case from the Navigation Table. **Length:** 4.5 seconds, in two
+halves. **Status:** replaces the current time-travel beep.
 
-The warp screen's timing is fixed: a 2000 ms tunnel, then a 2500 ms dwell on the destination painting.
-Write to those two beats exactly. Underneath, the `travel` pad (§2) takes over and holds.
+The screen's timing is fixed: 2 seconds of tunnel, then 2.5 seconds settling onto a painting. Write to
+those two beats exactly.
 
-> Instrumental only, no vocals. A two-part transition cue, 4.5 seconds total. For the first two
-> seconds: a rising, accelerating shimmer of struck metal and bowed strings sweeping upward together,
-> gathering speed and then easing off — motion, not impact, and no percussion hit. Then at two seconds
-> it opens out into a warm sustained chord on strings and celeste, which settles and holds for the
-> remaining two and a half seconds, resolving into stillness rather than into a cadence. Awe and
-> arrival. No fade in. Let the final chord ring naturally.
+**► PASTE THIS:**
 
-**Avoid** — a riser-and-impact, a whoosh-boom, a sub-bass drop, alarm tones, anything that sounds like
-danger or like a portal. Travel in this game is routine and permitted.
+> Instrumental only, no singing. A two-part transition sound, 4.5 seconds total. For the first two
+> seconds: a rising, speeding-up shimmer of struck metal and bowed strings sweeping upward together,
+> gathering pace and then easing off — movement, not impact, and no drum hit. Then at the two-second
+> mark it opens out into a warm held chord on strings and celeste, which settles and stays for the
+> remaining two and a half seconds, resolving into stillness rather than into a proper ending. Awe and
+> arrival. No fade in. Let the final chord ring out naturally.
 
-### `sting-return-warp` — recall to the Archive
+**Don't want:** a whoosh-then-boom, a bass drop, alarm sounds, anything that sounds like danger or a
+magic portal. Time travel in this game is routine and permitted.
 
-**Fires on** the recall chrome action and on filing a field record home. **Length** 2.5 s. **Replaces**
-the `return-warp` cue, which already has a resolving chord at 1.52 s — keep that shape.
+### `sting-return-warp` — coming home
 
-> Instrumental only, no vocals. A short descending arrival cue, 2.5 seconds. A gentle downward sweep of
-> celeste and bowed strings over about a second, settling into a warm, fully resolved chord on
+**Plays:** recalling to the Archive, and filing a field record home. **Length:** 2.5 seconds.
+**Status:** replaces the current return beep.
+
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A short descending arrival sound, 2.5 seconds. A gentle downward sweep
+> of celeste and bowed strings over about a second, settling into a warm, fully resolved chord on
 > hammered dulcimer and cello that rings for the rest. Coming home; relief and completion. Warm and
 > close. No fade in.
 
-**Avoid** — anything ominous. This is the one cue in the game allowed a clean resolution, because the
-Archive is the fixed point.
+**Don't want:** anything ominous. This is the one cue in the game allowed a clean, satisfying ending,
+because the Archive is the safe place.
 
-### `sting-record-filed` — a record is secured
+### `sting-record-filed` — you secured a record
 
-**Fires on** `secure-source` — filing a record into the case evidence, and the most-heard cue in the
-game. **Length** 0.6 s. **Replaces** `secure`.
+**Plays:** every time you file a record into your evidence. **This is the most-heard sound in the
+game.** **Length:** 0.6 seconds. **Status:** replaces the current confirm beep.
 
-> Instrumental only, no vocals. A very short, bright, satisfying confirmation: three quick ascending
-> notes on celeste and a soft struck woodblock, over in six tenths of a second. Clean, small, and
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A very short, bright, satisfying confirmation: three quick rising
+> notes on a celeste plus a soft struck woodblock, over in six tenths of a second. Clean, small, and
 > pleasant to hear a hundred times. No reverb tail.
 
-**Avoid** — length, reverb, melody, anything that would become tiresome. Test it by playing it thirty
-times in a row.
+**Don't want:** length, reverb, melody, anything that gets tiring. Test it by playing it thirty times
+in a row.
 
-### `sting-archive-receive` — the Preservation Case
+### `sting-archive-receive` — the badge case
 
-**Fires on** interacting with the Preservation Case plinth in the Main Hall. **Length** 0.9 s.
-**Replaces** `archive-receive`.
+**Plays:** interacting with the badge display in the Main Hall. **Length:** 0.9 seconds. **Status:**
+replaces the current beep.
 
-> Instrumental only, no vocals. A soft, warm acknowledgement under a second: a low struck dulcimer
-> chord with a single bright celeste note above it, decaying naturally. Gentle and unhurried; a display
-> case opening, not an award.
+**► PASTE THIS:**
 
-### `sting-codex-reveal` — evidence is shown
+> Instrumental only, no singing. A soft, warm acknowledgement under a second: a low struck hammered
+> dulcimer chord with a single bright celeste note above it, decaying naturally. Gentle and unhurried —
+> a display case opening, not an award.
 
-**Fires on** an image reveal in the Director's intro, **and on the Meridian reveal in Unit 6** — the
-same warm cue for both, which is deliberate and is the tonal instruction for Voss's whole arc.
-**Length** 1.4 s. **Replaces** `codex-reveal`.
+### `sting-codex-reveal` — you're being shown something
 
-> Instrumental only, no vocals. A slow, ceremonial reveal, 1.4 seconds. A sustained warm string bed
-> underneath four unhurried ascending notes on celeste and bowed vibraphone, opening into a broad, open
-> chord that rings out. Significant and warm — something is being shown to you in confidence. Wide and
+**Plays:** an image reveal in the Director's intro, **and at the Meridian reveal in Unit 6.** The same
+warm sound for both, deliberately. **Length:** 1.4 seconds. **Status:** replaces the current reveal
+beep.
+
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A slow, ceremonial reveal, 1.4 seconds. A warm held string bed under
+> four unhurried rising notes on celeste and bow-played vibraphone, opening into a broad open chord
+> that rings out. Significant and warm — someone is showing you something in confidence. Wide and
 > resonant. No fade in.
 
-**Avoid** — a discovery sparkle, a mystery sting, anything sinister. This cue plays at the moment the
-player learns the most unsettling thing in the game so far, and it must stay warm. That contrast is the
-scene.
+**Don't want:** a discovery sparkle, a mystery sting, anything sinister. This plays at the moment the
+player learns the most unsettling thing in the game so far, and it has to stay warm. **That contrast is
+the scene.**
 
-### `sting-upload` — transmission complete
+### `sting-upload` — transmission finished
 
-**Fires on** a correct reconstruction, and on an Archive Challenge flipping to complete. **Length**
-1.5 s. **Replaces** `upload`.
+**Plays:** a correct reconstruction, and finishing an Archive Challenge. **Length:** 1.5 seconds.
+**Status:** replaces the current beep.
 
-> Instrumental only, no vocals. A brief ascending completion cue, 1.5 seconds: celeste and hammered
-> dulcimer climbing five notes into a warm sustained chord on strings. Satisfying and industrious, not
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A brief rising completion sound, 1.5 seconds: celeste and hammered
+> dulcimer climbing five notes into a warm held string chord. Satisfying and industrious, not
 > triumphant. Bright and close. No fade in.
 
-**Avoid** — fanfare, brass, cymbal, a big finish.
+**Don't want:** fanfare, brass, cymbal, a big finish.
 
-### `sting-badge` — an area badge is earned
+### `sting-badge` — you earned a badge
 
-**Fires on** earning a badge into the Preservation Case. **Length** 3 s. **Status** new — nothing plays
-here today. This is the game's Pokémon-badge moment and one of only two places allowed real celebration.
+**Plays:** earning an area badge into the display case. **Length:** 3 seconds. **Status:** new —
+nothing plays here at the moment.
 
-> Instrumental only, no vocals. A warm three-second flourish for a small chamber ensemble: hammered
-> dulcimer and celeste run up together into a full, glowing sustained chord on strings, with a single
-> soft struck bell at the peak. Proud and generous, but wooden and warm rather than orchestral —
-> earned recognition from an institution, not a video-game jingle. Rich and close. No fade in.
+This is the game's Pokémon-badge moment and one of only two places allowed real celebration.
 
-**Avoid** — synthetic achievement chimes, brass fanfare, choir, cymbal crash.
+**► PASTE THIS:**
 
-### `sting-era-secured` — Era Record Secured
+> Instrumental only, no singing. A warm three-second flourish for a small acoustic group: hammered
+> dulcimer and celeste run upward together into a full, glowing held chord on strings, with a single
+> soft struck bell at the top. Proud and generous, but wooden and warm rather than orchestral — earned
+> recognition from an institution, not a video-game jingle. Rich and close. No fade in.
 
-**Fires on** a unit reaching the Era Record Secured state. **Length** 4 s. **Status** new. The largest
+**Don't want:** synthetic achievement chimes, brass fanfare, choir, cymbal crash.
+
+### `sting-era-secured` — a whole era preserved
+
+**Plays:** when a unit reaches its finished state. **Length:** 4 seconds. **Status:** new. The biggest
 cue in the game.
 
-> Instrumental only, no vocals. A four-second closing flourish. The full small chamber ensemble states
-> the four-note motif — a rising fourth, up a step, and back down — once, together and unhurried, then
-> opens into a wide sustained chord that rings and slowly fades. Warm, complete, and slightly open-
-> ended; an achievement that is also a door. Rich, wooden, close, with real room. No fade in.
+**► PASTE THIS:**
 
-**Avoid** — a full authentic cadence, timpani, cymbals, anything conclusive. Even the biggest cue in
-this game does not fully resolve.
+> Instrumental only, no singing. A four-second closing flourish. The full small acoustic group plays a
+> four-note figure — G, C, D, C — once, together and unhurried, then opens into a wide held chord that
+> rings and slowly fades. Warm, complete, and slightly open-ended — an achievement that's also a door.
+> Rich, wooden, close, with real room sound. No fade in.
 
-### `sting-mission-complete` — a mission's record is recovered
+**Don't want:** a proper final cadence, timpani, cymbals, anything conclusive. Even the biggest moment
+in this game doesn't fully resolve.
 
-**Fires on** completing a mission's culminating record. **Length** 2 s. **Status** new.
+### `sting-mission-complete` — a mission's record recovered
 
-> Instrumental only, no vocals. A two-second confirmation with a little more weight than a routine
-> filing: hammered dulcimer and cello state three ascending notes together, landing on a warm open
-> chord that rings briefly. Solid and satisfying, modest in scale. Close and dry. No fade in.
+**Plays:** finishing a mission's main record. **Length:** 2 seconds. **Status:** new.
+
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A two-second confirmation with a bit more weight than a routine filing:
+> hammered dulcimer and cello play three rising notes together, landing on a warm open chord that rings
+> briefly. Solid and satisfying, modest in scale. Close and dry. No fade in.
 
 ### `sting-anomaly` — something in the record is wrong
 
-**Fires on** encountering a unit's anomaly. **Length** 1.2 s. **Status** new.
+**Plays:** finding a unit's anomaly. **Length:** 1.2 seconds. **Status:** new.
 
-Read [`CHRONICLE-CANON.md`](./CHRONICLE-CANON.md) before generating this one. An anomaly is
-**archival, not fantastical** — the canonical example is fourteen hogsheads written over a scraped
-fifteen, in the wrong hand. _Nothing glows._ It is **observed, not solved**, and the moment it becomes
-a puzzle with an answer it stops working.
+**Read this before generating it.** In this game an anomaly is **a paperwork problem, not magic.** The
+story's own example is a number scraped off a ledger and rewritten in the wrong handwriting. _Nothing
+glows._ You notice it; you don't solve it. The moment it becomes a puzzle with an answer, it stops
+working.
 
-> Instrumental only, no vocals. A very small, quiet, wrong-sounding moment lasting just over a second.
-> The ensemble's warm chord is playing, and one single note enters that does not belong to it — a
-> slightly out-of-tune struck string, quiet, close, and unexplained — then everything continues as
-> before. No swell, no build, no resolution, no reaction. It should be easy to miss and impossible to
+**► PASTE THIS:**
+
+> Instrumental only, no singing. A very small, quiet, wrong-sounding moment lasting just over a second.
+> A warm chord is playing, and one single note comes in that doesn't belong to it — a slightly
+> out-of-tune plucked string, quiet, close and unexplained — and then everything carries on as before.
+> No swell, no build-up, no resolution, no reaction. It should be easy to miss and impossible to
 > un-hear.
 
-**Avoid** — horror stings, dissonant string stabs, low drones, reversed audio, a glitch or tape-stop
-texture, anything that signals "something supernatural is happening." Also avoid making it _sad_.
-Ordinary historical uncertainty is never drift, and this cue must not fire emotionally as if the world
-were breaking.
+**Don't want:** horror stings, screeching strings, low drones, reversed audio, glitch or tape-stop
+effects, anything signalling "something supernatural is happening". **Also don't make it sad.** Normal
+historical uncertainty isn't a supernatural event, and this cue mustn't play as though reality is
+breaking.
 
 ---
 
-## §8 · Non-musical sound effects
+## §8 · Sound effects — 37, NOT Lyria
 
-Roughly thirty-seven effects that Lyria is the wrong tool for. Generate these with a text-to-SFX tool
-(**ElevenLabs SFX** is the best fit) or source them from **Freesound** under CC0 — noting that
-licensing was one of the reasons the game went procedural in the first place, so CC0 or generated
-assets only, nothing that needs attribution baked into the build.
+Lyria makes music. These aren't music. Use **ElevenLabs SFX** (you type a description, it makes the
+sound) or grab them from **Freesound** — but only CC0 / public-domain ones, since avoiding licensing
+hassle was one reason the game went with generated beeps in the first place.
 
-Some existing procedural cues are genuinely fine and are marked **keep procedural**; replacing them
-buys nothing.
+A few of the existing beeps are genuinely fine and are marked **keep what's there**.
 
-**Honesty about what is wired:** of the categories below, only the UI and feedback cues have existing
-call sites. **Footsteps, doors, and ambience do not exist in the game at all** — there is no ambient
-audio layer and no per-surface movement sound. Those would need engine work in the wiring phase. They
-are here because they are the highest-value additions available, not because they are one file away.
+> **Worth knowing:** only the interface and feedback sounds below have anywhere to play right now.
+> **Footsteps, doors and background ambience don't exist in the game at all** — there's no ambient audio
+> layer and no per-surface footstep system. Those need code written before they'd do anything. They're
+> listed because they're the biggest improvements available, not because they're one file away.
 
-### UI (8)
+### Interface — 8
 
-| Id                | Trigger                         | Length | Prompt / verdict                                                                 |
-| ----------------- | ------------------------------- | ------ | -------------------------------------------------------------------------------- |
-| `sfx-click`       | any button press                | 0.08 s | A single soft, dry click of a wooden button being pressed. Warm, close, no ring. |
-| `sfx-hover`       | interactive element focus       | 0.05 s | A very quiet, short paper-brush sound. Barely there.                             |
-| `sfx-toggle-on`   | the audio toggle, off → on      | 0.3 s  | **keep procedural** — the existing two-note rise works.                          |
-| `sfx-toggle-off`  | the audio toggle, on → off      | 0.3 s  | Currently silent by design; leave it silent.                                     |
-| `sfx-panel-open`  | a panel or overlay opens        | 0.25 s | A soft leather-and-paper sound of a folder being opened. Close, dry.             |
-| `sfx-panel-close` | a panel or overlay closes       | 0.2 s  | The same folder closing — slightly shorter, slightly lower.                      |
-| `sfx-page-turn`   | moving between reader pages     | 0.4 s  | A single sheet of heavy old paper being turned over. Close, dry, no room.        |
-| `sfx-refused`     | an action that will not proceed | 0.2 s  | A soft, low, non-punitive wooden knock. Not a buzzer, not an error tone.         |
+| File              | When it plays                   | Length | What to make                                                                    |
+| ----------------- | ------------------------------- | ------ | ------------------------------------------------------------------------------- |
+| `sfx-click`       | any button press                | 0.08 s | A single soft dry click of a wooden button being pressed. Warm, close, no ring. |
+| `sfx-hover`       | moving onto a button            | 0.05 s | A very quiet short brush of paper. Barely there.                                |
+| `sfx-toggle-on`   | turning audio on                | 0.3 s  | **Keep what's there** — the existing two-note rise works fine.                  |
+| `sfx-toggle-off`  | turning audio off               | —      | Currently silent by design. Leave it silent.                                    |
+| `sfx-panel-open`  | a panel opens                   | 0.25 s | A soft leather-and-paper sound of a folder being opened. Close, dry.            |
+| `sfx-panel-close` | a panel closes                  | 0.2 s  | The same folder closing — a bit shorter and lower.                              |
+| `sfx-page-turn`   | changing pages in the reader    | 0.4 s  | One sheet of heavy old paper turning over. Close, dry, no room sound.           |
+| `sfx-refused`     | an action that won't go through | 0.2 s  | A soft low wooden knock. **Not a buzzer, not an error tone.**                   |
 
-### Movement — footsteps by surface (8)
+### Footsteps — 8, by surface
 
-Each is **one footstep**, mono, very dry, with **four to six variations** so the walk cycle does not
-machine-gun. Keep them quiet: the player walks constantly.
+Each one is **a single footstep**, mono, very dry. **Make four to six versions of each** or the walk
+cycle will sound like a machine gun. Keep them quiet — the player walks constantly.
 
-| Id                    | Surface                              | Prompt                                                                                    |
-| --------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `sfx-step-sand`       | Unit 1 shoreline                     | A single barefoot step on dry loose sand. Soft, granular, no impact.                      |
-| `sfx-step-dirt`       | Units 1–2 and 4 paths, Unit 6 street | A single boot step on packed dry earth. Dull, close, a little grit.                       |
-| `sfx-step-cobble`     | Unit 3 and Unit 7 streets            | A single hard shoe step on rounded cobblestones. Sharp, small, dry.                       |
-| `sfx-step-plank`      | Unit 4 towpath bridge, Unit 7 wharf  | A single boot step on a hollow wooden boardwalk plank. Slight resonance underneath.       |
-| `sfx-step-gravel`     | Unit 6 track ballast, Unit 7 wharf   | A single boot step on coarse gravel. Crunchy, sharp, no reverb.                           |
-| `sfx-step-stone-wet`  | Unit 7 quay                          | A single hard shoe step on wet stone paving. Slightly slapping, a small room reflection.  |
-| `sfx-step-floorboard` | all wooden interiors                 | A single shoe step on an old wooden floorboard indoors. A faint creak on some variations. |
-| `sfx-step-tile`       | the Unit 7 reception hall            | A single hard shoe step on a large tiled hall floor, with a long hard reflection.         |
+| File                  | Surface                                  | What to make                                                                           |
+| --------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| `sfx-step-sand`       | Caribbean shore                          | One bare foot stepping on dry loose sand. Soft, grainy, no impact.                     |
+| `sfx-step-dirt`       | most outdoor paths                       | One boot stepping on packed dry earth. Dull, close, a bit of grit.                     |
+| `sfx-step-cobble`     | Philadelphia and Ellis Island streets    | One hard shoe stepping on rounded cobblestones. Sharp, small, dry.                     |
+| `sfx-step-plank`      | the canal bridge, the Ellis Island wharf | One boot stepping on a hollow wooden boardwalk plank. Slight resonance underneath.     |
+| `sfx-step-gravel`     | Kansas track ballast, the wharf          | One boot stepping on coarse gravel. Crunchy, sharp, no echo.                           |
+| `sfx-step-stone-wet`  | the Ellis Island quay                    | One hard shoe stepping on wet stone paving. Slightly slapping, a small reflection.     |
+| `sfx-step-floorboard` | all wooden interiors                     | One shoe stepping on an old wooden floorboard indoors. A faint creak on some versions. |
+| `sfx-step-tile`       | the Ellis Island reception hall          | One hard shoe stepping on a big tiled hall floor, with a long hard echo.               |
 
-### Doors (4)
+### Doors — 4
 
-Two archetypes across the eight interiors, plus the Institute's own.
+| File                   | Where                                                                     | Length | What to make                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| `sfx-door-wood-open`   | print shop, boarding house, land office, telegraph office                 | 0.7 s  | A simple plank door with an iron latch being lifted and pushed open. Dry, close, a small creak.      |
+| `sfx-door-wood-close`  | the same                                                                  | 0.6 s  | The same door pulled shut, latch dropping.                                                           |
+| `sfx-door-heavy-open`  | counting room, hospital ward, reception hall, hearing room, the Institute | 0.9 s  | A heavy panelled door with a brass handle opening into a bigger room. A little echo on the far side. |
+| `sfx-door-heavy-close` | the same                                                                  | 0.8 s  | The same door closing solidly, handle returning.                                                     |
 
-| Id                     | Where                                                                 | Length | Prompt                                                                                                 |
-| ---------------------- | --------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ |
-| `sfx-door-wood-open`   | print shop, boardinghouse, land office, telegraph office              | 0.7 s  | A simple plank door with an iron latch being lifted and pushed open. Dry, close, a small creak.        |
-| `sfx-door-wood-close`  | the same                                                              | 0.6 s  | The same door pulled shut and the latch dropping.                                                      |
-| `sfx-door-heavy-open`  | counting room, hospital ward, reception hall, inquiry room, Institute | 0.9 s  | A heavy panelled door with a brass handle opening into a larger room. A little reverb on the far side. |
-| `sfx-door-heavy-close` | the same                                                              | 0.8 s  | The same door closing solidly, with the handle returning.                                              |
+### Background ambience — 8
 
-### World ambience beds (8)
+**These are the most valuable items in this whole document after the map music.** They loop underneath
+the music and are what will actually make a map feel like a real place. **30 seconds each, seamless,
+stereo, mixed well below the music.**
 
-**The highest-value items in this document after the field music.** These loop _under_ the music and
-are what will actually make the maps feel inhabited. 30 s each, seamless, stereo, mixed well below the
-music.
+| File               | Map                       | What to make                                                                                                                                                                                                                                                                                 |
+| ------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `amb-shore`        | Caribbean                 | Gentle small waves on a sheltered tropical shore, unhurried seabirds, a soft breeze through palm fronds. No music, no voices, no screeching gulls.                                                                                                                                           |
+| `amb-riverbend`    | Virginia                  | A slow wide river at a wooded bend: water moving past a bank, wind in leaves, songbirds and crows at the treeline, and a distant axe on wood every so often. No voices.                                                                                                                      |
+| `amb-street-1770s` | Philadelphia              | A busy pre-industrial city street: many footsteps on cobbles, iron-rimmed cart wheels passing, an indistinct crowd murmur too far off to make out words, a distant church bell, river gulls. No engines.                                                                                     |
+| `amb-canal`        | canal town                | Water spilling steadily over closed timber lock gates into a canal basin, heard from a few metres away — a continuous rush with an irregular wooden knocking underneath as a moored boat shifts against the wall. Mule bells and a mill wheel further off. No birdsong, no voices.           |
+| `amb-richmond`     | Richmond                  | A crowded wartime city under strain: a distant heavy furnace and hammering, river falls below, cart traffic on paving, a low unintelligible crowd, and a very distant dull artillery thud every twenty or thirty seconds — far enough away that nobody reacts to it. No shouting, no combat. |
+| `amb-prairie`      | Kansas                    | Wide open tall-grass prairie wind, constant and unhurried, with meadowlarks and grasshoppers, and a stationary steam locomotive idling and venting in the distance. Occasional cattle. Very few human sounds.                                                                                |
+| `amb-harbour`      | Ellis Island              | A crowded harbour wharf: a large multilingual crowd murmuring indistinctly, trunks and bundles being set down on stone, water slapping timber piles, gulls, and long low steam whistles from ships out in the bay. No individual voices audible.                                             |
+| `amb-institute`    | the three Institute rooms | A quiet indoor room tone: a low fire crackling some distance away, an occasional creak of settling wood, the faintest paper handling. Almost silent.                                                                                                                                         |
 
-| Id                 | Map                 | Prompt                                                                                                                                                                                                                                                                                                    |
-| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `amb-shore`        | Unit 1              | Gentle small waves on a sheltered tropical shore, with unhurried seabirds and a soft breeze through palm fronds. No music, no voices, no gulls screaming.                                                                                                                                                 |
-| `amb-riverbend`    | Unit 2              | A slow wide river at a wooded bend: water moving past a bank, wind in leaves, songbirds and crows at the treeline, a distant axe on wood every so often. No voices.                                                                                                                                       |
-| `amb-street-1770s` | Unit 3              | A busy pre-industrial city street: many footsteps on cobbles, iron-rimmed cart wheels passing, indistinct crowd murmur too far off to make out words, a church bell in the distance, gulls from the river. No engines.                                                                                    |
-| `amb-canal`        | Unit 4              | Water spilling steadily over closed timber lock gates into a canal basin, heard from the towpath a few metres away — a continuous mid-weight rush with an irregular wooden knocking underneath as a moored boat shifts against the wall. Mule bells and a millwheel further off. No birdsong, no voices.  |
-| `amb-richmond`     | Unit 5              | A crowded wartime city under strain: a distant heavy industrial furnace and hammering, river falls below, cart traffic on paving, a low unintelligible crowd, and a very distant dull artillery report every twenty or thirty seconds — far enough away that nobody reacts to it. No shouting, no combat. |
-| `amb-prairie`      | Unit 6              | Wide open tallgrass prairie wind, constant and unhurried, with meadowlarks and grasshoppers, and a stationary steam locomotive idling and venting at a distance. Occasional cattle. Very few human sounds.                                                                                                |
-| `amb-harbour`      | Unit 7              | A crowded harbour wharf: a large multilingual crowd murmuring indistinctly, trunks and bundles being set down on stone, water slapping against timber piles, gulls, and long low steam whistles from ships some distance out. No individual voices audible.                                               |
-| `amb-institute`    | the three hub rooms | A quiet interior room tone: a low fire crackling in a hearth some distance away, an occasional settling of wood, and the faintest paper handling. Almost silent.                                                                                                                                          |
+### The record activities — 6
 
-### Activity engines (6)
+Short, dry and quiet — these fire on nearly every click inside the four activities.
 
-Short, dry, and quiet — these fire on nearly every click inside the four engines.
+| File              | When                          | Length | What to make                                                               |
+| ----------------- | ----------------------------- | ------ | -------------------------------------------------------------------------- |
+| `sfx-pick-up`     | picking up a piece            | 0.12 s | One sheet of paper lifted off a desk. Soft, close.                         |
+| `sfx-place`       | dropping it somewhere valid   | 0.15 s | A sheet of paper set down flat on wood. Soft, definite.                    |
+| `sfx-snap`        | a piece locking into place    | 0.1 s  | A small dry wooden click, slightly brighter than the button click.         |
+| `sfx-reject`      | dropping it somewhere invalid | 0.15 s | A soft paper rustle that stops short. Not punishing.                       |
+| `sfx-log-answer`  | logging an interview answer   | 0.3 s  | A fountain pen writing two or three quick strokes on paper. Close and dry. |
+| `sfx-file-record` | filing a finished record      | 0.5 s  | A sheet of paper sliding into a card index, and the drawer nudged shut.    |
 
-| Id                | Trigger                         | Length | Prompt                                                                     |
-| ----------------- | ------------------------------- | ------ | -------------------------------------------------------------------------- |
-| `sfx-pick-up`     | picking up a draggable fragment | 0.12 s | A single sheet of paper being lifted off a desk. Soft, close.              |
-| `sfx-place`       | dropping into a valid slot      | 0.15 s | A sheet of paper being set down flat on wood. Soft, definite.              |
-| `sfx-snap`        | a fragment locking into place   | 0.1 s  | A small dry wooden click, slightly brighter than a UI click.               |
-| `sfx-reject`      | dropping onto an invalid slot   | 0.15 s | A soft paper rustle that stops short. Non-punitive.                        |
-| `sfx-log-answer`  | logging an interview answer     | 0.3 s  | A fountain pen writing two or three quick strokes on paper. Close and dry. |
-| `sfx-file-record` | filing a completed record       | 0.5 s  | A sheet of paper being slid into a card index and the drawer nudged shut.  |
+### Right and wrong — 3
 
-### Feedback (3)
-
-| Id              | Trigger                      | Length | Prompt / verdict                                                                                                |
-| --------------- | ---------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
-| `sfx-correct`   | a correct practice answer    | 0.35 s | **keep procedural**, or a soft two-note celeste rise. Quiet and encouraging, never a game-show ding.            |
-| `sfx-incorrect` | an incorrect practice answer | 0.35 s | A soft, low, neutral wooden tap. **It must not sound like punishment** — being wrong is how the practice works. |
-| `sfx-unlock`    | a case or route unlocking    | 0.6 s  | A brass latch turning and releasing on a wooden case. Warm, mechanical, satisfying.                             |
+| File            | When                      | Length | What to make                                                                                                |
+| --------------- | ------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| `sfx-correct`   | a correct practice answer | 0.35 s | **Keep what's there**, or a soft two-note celeste rise. Quiet and encouraging, never a game-show ding.      |
+| `sfx-incorrect` | a wrong practice answer   | 0.35 s | A soft, low, neutral wooden tap. **It must not sound like punishment** — being wrong is how practice works. |
+| `sfx-unlock`    | a case unlocking          | 0.6 s  | A brass latch turning and releasing on a wooden case. Warm, mechanical, satisfying.                         |
 
 ---
 
-## §9 · Production order
+## §9 · What order to make them in
 
-Generate in this order. Each batch is a coherent listening session, and each one is worth shipping on
-its own.
+Each batch is a sensible sitting, and each one is worth having on its own.
 
-| Batch | What                                                       | Why first                                                                                                                                 |
-| ----- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | The seven field maps (§3)                                  | Six of the seven currently share one loop. This is the single biggest change available, and it is where players spend most of their time. |
-| **2** | `title`, `hub-main`, `archive` (§2)                        | The three most-heard non-field tracks, and the first impression.                                                                          |
-| **3** | `sting-chrono-out`, `sting-return-warp`, `travel` (§7, §2) | The warp is the game's signature transition and currently plays a synthesised sweep over a single held note.                              |
-| **4** | The eight ambience beds (§8)                               | Cheap to generate, enormous effect. Layered under batch 1, these are what make a map feel like a place.                                   |
-| **5** | The remaining §2 Institute tracks                          | `intro`, `hallway`, `archive-room`, `menu`, `upload`, `completion`.                                                                       |
-| **6** | The remaining stingers (§7)                                | `sting-record-filed` first — it is the most-heard cue in the game.                                                                        |
-| **7** | The systemic beds (§5)                                     | Deliberately unremarkable, so they can wait.                                                                                              |
-| **8** | `meridian`, `voss`, `director` (§6)                        | Needed before Units 8–9 ship, not before then.                                                                                            |
-| **9** | Footsteps, doors, activity and UI effects (§8)             | These need engine work to have anywhere to play, so they are last.                                                                        |
-| **—** | The eight interiors (§4)                                   | **Do not generate** unless the interior-music decision is revisited. They would not play.                                                 |
+| Batch | What                                                       | Why now                                                                                                                            |
+| ----- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | The seven maps (§3)                                        | Six of them currently share one loop, and this is where players spend nearly all their time. Biggest single improvement available. |
+| **2** | `title`, `hub-main`, `archive` (§2)                        | The three most-heard non-map tracks, and the first impression.                                                                     |
+| **3** | `sting-chrono-out`, `sting-return-warp`, `travel` (§7, §2) | Time travel is the game's signature moment and currently plays a synthesised sweep over one held note.                             |
+| **4** | The eight ambience beds (§8)                               | Cheap to make, huge effect. Layered under batch 1, these are what make a map feel like a place.                                    |
+| **5** | The rest of the Institute tracks (§2)                      | `intro`, `hallway`, `archive-room`, `menu`, `upload`, `completion`.                                                                |
+| **6** | The rest of the short cues (§7)                            | Do `sting-record-filed` first — it's the most-heard sound in the game.                                                             |
+| **7** | The background tracks (§5)                                 | Deliberately unremarkable, so they can wait.                                                                                       |
+| **8** | `meridian`, `voss`, `director` (§6)                        | Needed before Units 8–9 ship, not before that.                                                                                     |
+| **9** | Footsteps, doors, interface and activity effects (§8)      | These need code written before they have anywhere to play, so they're last.                                                        |
+| **—** | The eight indoor rooms (§4)                                | **Don't make these.** They wouldn't play.                                                                                          |
 
-### What the wiring phase will need
+### What still needs building before any of this can be heard
 
-Out of scope for this document, but worth recording while it is fresh, because the current engine
-cannot play any of the above:
+None of this is in scope right now, but it's worth writing down while it's fresh — **the game currently
+cannot play an audio file at all.**
 
-- An `apps/web/src/assets/audio/` directory and a loader — `decodeAudioData`, a preload step, and a
-  loading state, none of which exist today.
-- **Two gain buses** instead of one, so effects can duck the music. Everything currently sums into a
-  single master at `0.045`.
-- **Fades** on `stopMusic()`, which today just clears the scheduler and lets notes decay.
-- A **volume control**, since the only current setting is a binary on/off.
-- New `musicScene` keys per §3, plus branches in `sceneForMusic()` for the screens that currently
-  fall through to `quiet`.
-- A decision on **interior music** if §4 is ever wanted.
+- An `apps/web/src/assets/audio/` folder and code to load and decode files. Neither exists.
+- **Two separate volume controls** instead of one, so effects can duck the music. Everything currently
+  goes through a single master volume.
+- **Fades** when the music stops. Right now it just stops.
+- **A volume slider.** The only setting today is on/off.
+- New track names wired to each map, plus music for the screens that currently fall silent.
+- A decision about indoor music if §4 is ever wanted.
 
-None of that should be built speculatively. It is listed so that whoever picks up the wiring phase
-knows the shape of it before they start.
+Don't build any of that speculatively. It's listed so whoever picks up the wiring knows the shape of the
+job before starting.
