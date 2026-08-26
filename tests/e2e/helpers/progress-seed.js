@@ -35,6 +35,18 @@ export async function beginFromTitle(page) {
   await title.waitFor({ state: "detached" }).catch(() => {});
 }
 
+// The Codex reveal (briefing 02/02, second line) opens a full-screen veil over .director-scene at
+// z-index 20, so it covers the dialogue box. Any loop that walks the intro by clicking that box has
+// to clear the veil first, or Playwright's actionability check retries against the intercepting
+// element until the 30s timeout — a hang, not a clean failure. Returns true if it dismissed one.
+export async function dismissCodexVeil(page) {
+  const veil = page.locator("#directorCodexVeil");
+  if (!(await veil.isVisible().catch(() => false))) return false;
+  await veil.click();
+  await veil.waitFor({ state: "detached" }).catch(() => {});
+  return true;
+}
+
 // The walk from a freshly loaded page into the seeded save: past the title, then the two clicks.
 async function enterSavedGame(page) {
   await beginFromTitle(page);

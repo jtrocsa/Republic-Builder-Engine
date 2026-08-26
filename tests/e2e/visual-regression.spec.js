@@ -8,6 +8,7 @@ import {
   beginFromTitle,
   walkTo,
   walkToNpc,
+  dismissCodexVeil,
 } from "./helpers/progress-seed.js";
 
 // Phase 45A: the visual-regression net that makes the rest of Phase 45 (and the CSS
@@ -149,8 +150,24 @@ test.describe("Gameplay visual-regression baselines", () => {
     // cheap to check by eye once and expensive to keep re-checking by hand.
     const protocolPanel = page.locator(".director-extra-content");
     let sawProtocol = false;
+    let sawCodex = false;
     for (let i = 0; i < 40; i += 1) {
       if (await nameInput.isVisible().catch(() => false)) break;
+      // The Codex veil covers the dialogue box on briefing 02/02. Baselined on its way past, since
+      // it is the one beat of the intro that takes the whole screen.
+      if (
+        await page
+          .locator("#directorCodexVeil")
+          .isVisible()
+          .catch(() => false)
+      ) {
+        if (!sawCodex) {
+          sawCodex = true;
+          await expect(page).toHaveScreenshot(snap("director-codex-reveal"));
+        }
+        await dismissCodexVeil(page);
+        continue;
+      }
       if (!(await dialogueBox.isVisible().catch(() => false))) break;
       if (!sawProtocol && (await protocolPanel.isVisible().catch(() => false))) {
         sawProtocol = true;
@@ -160,6 +177,7 @@ test.describe("Gameplay visual-regression baselines", () => {
       await page.waitForTimeout(30);
     }
     expect(sawProtocol, "the field protocol screen never appeared during the intro").toBe(true);
+    expect(sawCodex, "the Codex reveal never appeared during the intro").toBe(true);
     await expect(nameInput).toBeVisible();
     await expect(page).toHaveScreenshot(snap("identity-screen"));
   });

@@ -11,7 +11,12 @@
 
 import { test, expect } from "@playwright/test";
 
-import { seedProgress, loadSeededSave, holdKey } from "./helpers/progress-seed.js";
+import {
+  seedProgress,
+  loadSeededSave,
+  holdKey,
+  dismissCodexVeil,
+} from "./helpers/progress-seed.js";
 
 const SCENE_WALK_SPEED = 2.2; // main.js
 const TILE = 48; // HUB_GRID.tile
@@ -112,12 +117,26 @@ test.describe("The intro, end to end", () => {
           .catch(() => false)
       )
         break;
+      if (await dismissCodexVeil(page)) continue;
       if (!(await box.isVisible().catch(() => false))) break;
       const eyebrow = await page
         .locator(".director-scene__head .kicker")
         .textContent()
         .catch(() => null);
       if (eyebrow?.includes("briefing")) eyebrows.add(eyebrow.trim());
+      // The dialogue box is a fixed three lines with overflow: hidden as of Phase 91, so a body
+      // that grows past its budget is truncated in silence rather than breaking anything visible.
+      // Checked on every fully-typed line, which under reduced motion is every line: during typing
+      // the partial text is always shorter, so only the settled frame can overflow.
+      const overflow = await page.locator("#directorLineText").evaluate((el) => ({
+        scroll: el.scrollHeight,
+        client: el.clientHeight,
+        text: el.textContent.slice(0, 40),
+      }));
+      expect(
+        overflow.scroll,
+        `dialogue line is taller than its box and is being clipped: "${overflow.text}…"`
+      ).toBeLessThanOrEqual(overflow.client + 1);
       await box.click();
       await page.waitForTimeout(30);
     }
@@ -125,6 +144,42 @@ test.describe("The intro, end to end", () => {
       "Director’s briefing · 01 / 02",
       "Director’s briefing · 02 / 02",
     ]);
+  });
+
+  // The three loops that walk the intro all advance by CLICKING the dialogue box, and the veil's own
+  // click-anywhere dismissal covers that path for free. The keyboard is the path none of them touch,
+  // and it is the one that fails silently: handleWindowKeydown's intro branch maps Enter to
+  // director-dialogue-click unconditionally, so without its veil guard the briefing walks forward
+  // behind a full-screen overlay and the player never sees it move.
+  test("the Codex veil takes the keyboard, and gives it back", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/?warp=intro");
+
+    const box = page.locator(".director-dialogue-box");
+    const veil = page.locator("#directorCodexVeil");
+    await expect(box).toBeVisible();
+
+    // Walk to the Codex line. Reduced motion resolves each line in one frame, so every click is a
+    // whole line and the veil opens synchronously with the one that mentions it.
+    for (let i = 0; i < 12 && !(await veil.isVisible().catch(() => false)); i += 1) {
+      await box.click();
+      await page.waitForTimeout(30);
+    }
+    await expect(veil).toBeVisible();
+
+    const eyebrowBefore = await page.locator(".director-scene__head .kicker").textContent();
+    const lineBefore = await page.locator("#directorLineText").textContent();
+
+    // Enter must land on the veil, not on the dialogue behind it.
+    await page.keyboard.press("Enter");
+    await expect(veil).toHaveCount(0);
+    expect(await page.locator(".director-scene__head .kicker").textContent()).toBe(eyebrowBefore);
+    expect(await page.locator("#directorLineText").textContent()).toBe(lineBefore);
+
+    // And the bar is interactive again: inert is off, and the Continue button still advances.
+    await expect(page.locator(".director-scene__bar")).not.toHaveAttribute("inert", /.*/);
+    await page.locator(".director-continue-button").click();
+    await expect(page.locator(".director-scene__head .kicker")).not.toHaveText(eyebrowBefore);
   });
 
   test("the Entrance Hall escort never teleports the player onto the Director", async ({

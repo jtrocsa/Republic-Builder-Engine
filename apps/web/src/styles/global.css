@@ -2684,11 +2684,504 @@ dd {
   gap: 12px;
   flex-wrap: wrap;
 }
-/* Landing screen (mainMenuScreen()) — narrower/tighter card than the standard
-   .completion-shell, same border/gradient treatment (overrides just max-width/padding). */
+/* Landing screen (mainMenuScreen()) — the Student/Teacher choice and the Student sub-menu, which
+   share every class. Restyled in Phase 91 from the owner's mockup: a narrower, darker, self-lit
+   card standing on its own ambient field, rather than a tighter copy of the .completion-shell card.
+
+   Everything below is scoped to .landing-shell and nothing to .completion-shell, which is shared
+   with completionScreen() and — through .auth-shell — every join/sign-in/teacher form. The
+   identity-screen visual baseline is the canary: it is .completion-shell with no .landing-shell, so
+   if that snapshot moves, a rule below has escaped its scope. */
 .landing-shell > section {
-  max-width: 560px;
-  padding: 40px 36px;
+  position: relative;
+  max-width: 396px;
+  padding: 40px 34px 34px;
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(
+    160deg,
+    rgba(19, 64, 80, 0.92) 0%,
+    rgba(9, 38, 50, 0.94) 55%,
+    rgba(7, 28, 38, 0.96) 100%
+  );
+  backdrop-filter: blur(2px);
+  /* The ring is an animated box-shadow rather than a border so it can breathe without moving
+     layout by a subpixel. The drop shadow is the constant term in both keyframes. */
+  box-shadow:
+    0 30px 90px -30px rgba(var(--c-black-rgb), 0.75),
+    0 0 0 1px rgba(var(--c-gold-rgb), 0.42),
+    0 0 46px -14px rgba(var(--c-gold-rgb), 0.12);
+  animation: landing-card-glow 9s ease-in-out infinite alternate;
+}
+/* Spectral 700, not the mockup's Playfair Display 900. titleScreen()'s .title-wordmark renders this
+   exact word in Spectral 700 gold one Enter-press earlier and the landing is the screen it fades
+   to; a second display face here would change the wordmark's typeface mid-transition. Declared
+   after the section rule so it out-orders .completion-shell h1 on source order at equal
+   specificity. */
+.landing-shell h1 {
+  margin: 0 0 26px;
+  font-family: var(--c-font-display);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 6vw, 3.875rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: #fdf1c9;
+  text-shadow: 0 0 34px rgba(253, 241, 201, 0.22);
+}
+.landing-shell > section > p {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+/* Scoped button treatment. Never the global .btn-gold/.btn-outline, which carry most of the
+   visual-regression suite. */
+.landing-shell .btn-gold {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f3d79c 0%, #e2b467 100%);
+  box-shadow: 0 6px 18px -8px rgba(var(--c-black-rgb), 0.6);
+}
+.landing-shell .btn-gold:hover:not(:disabled) {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+.landing-shell .btn-outline {
+  border: 1px solid rgba(var(--c-gold-rgb), 0.55);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #fdf1c9;
+}
+.landing-shell .btn-outline:hover:not(:disabled) {
+  background: rgba(var(--c-gold-rgb), 0.12);
+  transform: translateY(-1px);
+}
+.landing-shell .btn {
+  padding: 11px 16px;
+  font-size: 0.9375rem;
+}
+/* Start New Game and Load Save sit as a pair, with the "no save yet" hint on its own row beneath.
+   .main-menu-item goes display: contents so the button and the hint become flex items of
+   .completion-actions directly, rather than one item whose width is set by whichever of the two is
+   wider. Without it the hint makes its wrapper 159px, the pair totals 314px against a 290px row,
+   and flex-wrap breaks the line before it ever considers shrinking — so the buttons stack even
+   though they would fit. The hint then takes flex-basis: 100% to claim its own row. */
+.landing-shell .completion-actions {
+  align-items: flex-start;
+}
+.landing-shell .main-menu-item {
+  display: contents;
+}
+/* mainMenuItemMarkup()'s disabled hint. It reuses .kicker, whose 0.67rem comes from a font shorthand
+   that .completion-shell p (one specificity point higher) overrides back to 1rem — so unscoped it
+   renders as a second heading, louder than the group title above it. This is a footnote. */
+.landing-shell .main-menu-item .kicker {
+  flex: 0 0 100%;
+  margin: 0;
+  font-family: var(--c-font-ui);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(216, 227, 222, 0.62);
+}
+
+/* The ambient field behind the landing card.
+ *
+ * Fixed rather than absolute because .shell is width: min(1480px, 100% - 56px) and so does not
+ * span the viewport — an absolutely positioned layer would stop at the card's gutter.
+ *
+ * Six nodes, not the mockup's forty-six. The mockup emitted one element per star and per mote with
+ * inline positions; here the whole dot field is two baked multi-stop radial-gradient stacks
+ * generated from the mockup's own seeded PRNG (sin(s * 12.9898) * 43758.5453, fractional part).
+ * Baked rather than generated at runtime for two reasons: the positions must be identical on every
+ * boot or the landing can never hold a visual baseline, and the markup stays a fixed-size string.
+ */
+.landing-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(85% 70% at 50% 45%, rgba(0, 0, 0, 0) 40%, rgba(3, 14, 20, 0.55) 100%),
+    radial-gradient(120% 90% at 50% 20%, #0e3040 0%, #0a2531 45%, #061821 100%);
+}
+.landing-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.landing-ambient span {
+  position: absolute;
+  display: block;
+}
+/* Three slow colour blobs. Each keyframe's 0% and 100% are the same composition, with the travel at
+   50% — under prefers-reduced-motion the global umbrella near the top of this file freezes every
+   animation on its last frame, so identical endpoints are what make the frozen state the intended
+   one rather than a blob parked 300px off its mark. Every keyframe below follows that rule. */
+.landing-ambient__blob-a {
+  inset: -12%;
+  opacity: 0.55;
+  filter: blur(60px);
+  background: radial-gradient(closest-side, rgba(28, 120, 138, 0.55), rgba(28, 120, 138, 0) 70%);
+  animation: landing-drift-a 34s ease-in-out infinite;
+}
+.landing-ambient__blob-b {
+  inset: -18% -10% -4% -22%;
+  opacity: 0.42;
+  filter: blur(70px);
+  background: radial-gradient(closest-side, rgba(16, 74, 104, 0.7), rgba(16, 74, 104, 0) 72%);
+  animation: landing-drift-b 46s ease-in-out infinite;
+}
+.landing-ambient__blob-c {
+  inset: -10% -24% -20% 10%;
+  filter: blur(80px);
+  background: radial-gradient(
+    closest-side,
+    rgba(var(--c-gold-rgb), 0.14),
+    rgba(var(--c-gold-rgb), 0) 70%
+  );
+  animation: landing-drift-c 58s ease-in-out infinite;
+}
+.landing-ambient__sweep {
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 34%;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(190, 232, 240, 0.055) 45%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: landing-sweep 28s ease-in-out infinite;
+}
+.landing-ambient__stars {
+  inset: 0;
+  animation: landing-twinkle 11s ease-in-out infinite;
+  background:
+    radial-gradient(
+      circle 2.15px at 93.3% 21.29%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.01px at 7.89% 81.59%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.47px at 16.55% 79.73%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.39px at 49.76% 59.11%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.77px at 89.32% 22.74%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.32px at 34.37% 99.18%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.2px at 57.24% 11.44%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.79px at 71.69% 86.47%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.5px at 94.51% 36.24%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 1.61px at 20.81% 62.61%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 1.7px at 64.12% 48.8%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.32px at 4.71% 28.97%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.42px at 3.15% 73.77%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.2px at 49.94% 47.77%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.44px at 45.68% 49.66%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.12px at 46.76% 7.36%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.17px at 91.64% 49.77%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.71px at 40.16% 83.4%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.11px at 99.51% 39.58%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.97px at 26.79% 84.87%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.99px at 76.27% 55.92%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.84px at 97.39% 73.19%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.2px at 10.67% 39.7%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.35px at 0.11% 34.25%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.25px at 73.14% 60.37%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.08px at 30.61% 23.48%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.32px at 20.93% 40.95%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.09px at 93.44% 62.75%,
+      rgba(243, 215, 156, 0.75) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.5px at 26.97% 39.86%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.12px at 43.3% 66.84%,
+      rgba(190, 232, 240, 0.7) 0 100%,
+      transparent 100%
+    );
+}
+.landing-ambient__motes {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 200%;
+  animation: landing-motes 44s ease-in-out infinite;
+  background:
+    radial-gradient(
+      circle 2.6px at 92.17% 87.29%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.73px at 5.72% 47.47%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.34px at 55.82% 22.5%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 1.67px at 37.37% 30.93%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.79px at 45.35% 17.49%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.32px at 62.61% 16.98%,
+      rgba(240, 208, 144, 0.55) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.35px at 16.56% 8.22%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.61px at 32.91% 81.09%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.33px at 53.96% 1.67%,
+      rgba(240, 208, 144, 0.55) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.87px at 97.15% 8.81%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.04px at 82.12% 7.75%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 3.18px at 17.9% 59.76%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.65px at 99.52% 24.15%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.92px at 81.6% 38.81%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 2.29px at 44.18% 32.82%,
+      rgba(178, 224, 235, 0.42) 0 100%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 1.55px at 92.69% 36.79%,
+      rgba(240, 208, 144, 0.55) 0 100%,
+      transparent 100%
+    );
+}
+@keyframes landing-card-glow {
+  from {
+    box-shadow:
+      0 30px 90px -30px rgba(var(--c-black-rgb), 0.75),
+      0 0 0 1px rgba(var(--c-gold-rgb), 0.42),
+      0 0 46px -14px rgba(var(--c-gold-rgb), 0.12);
+  }
+  to {
+    box-shadow:
+      0 30px 90px -30px rgba(var(--c-black-rgb), 0.75),
+      0 0 0 1px rgba(var(--c-gold-rgb), 0.6),
+      0 0 64px -10px rgba(var(--c-gold-rgb), 0.22);
+  }
+}
+@keyframes landing-drift-a {
+  0%,
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(7%, 5%, 0) scale(1.22);
+  }
+}
+@keyframes landing-drift-b {
+  0%,
+  100% {
+    transform: translate3d(5%, 6%, 0) scale(1.15);
+  }
+  50% {
+    transform: translate3d(-7%, -5%, 0) scale(1);
+  }
+}
+@keyframes landing-drift-c {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate3d(0, 3%, 0) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate3d(-4%, -6%, 0) scale(1.18);
+  }
+}
+@keyframes landing-sweep {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-40%, 0, 0) rotate(8deg);
+  }
+  50% {
+    opacity: 0.4;
+    transform: translate3d(60%, 0, 0) rotate(8deg);
+  }
+}
+@keyframes landing-twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes landing-motes {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(1vw, -50%, 0);
+  }
+}
+/* The sweep band and the mote field are motion, not composition: frozen on their last frame by the
+   reduced-motion umbrella they read as a rendering artifact laid across the card. Hidden outright
+   instead. The blobs, stars and card ring all rest at a deliberate composition and stay. */
+@media (prefers-reduced-motion: reduce) {
+  /* Scoped through .landing-ambient deliberately: the base rule is `.landing-ambient span`, which
+     at (0,1,1) outranks a bare class selector and quietly kept display: block here. */
+  .landing-ambient .landing-ambient__sweep,
+  .landing-ambient .landing-ambient__motes {
+    display: none;
+  }
 }
 /* Teacher sign-in/create-account/join screens (Phase 44, C5) — .completion-
    shell's 820px max-width swims the auth card at large monitor sizes (the
@@ -2744,12 +3237,18 @@ dd {
 }
 .landing-option-group {
   margin-top: 18px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  padding: 18px 18px 20px;
+  border: 1px solid rgba(126, 190, 205, 0.28);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
 }
 .landing-option-group > .kicker {
-  margin: 0 0 10px;
+  margin: 0 0 14px;
+  font-family: var(--c-font-ui);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: #a9cbd8;
 }
 .landing-option-group .completion-actions {
   margin: 0;
@@ -2767,7 +3266,12 @@ dd {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 58px);
+  /* A definite height, not a minimum. .director-extra-content is flex: 1 and takes the gap between
+     the head and the bar; against a min-height the container has no size to divide, so the panel
+     sizes to its content, grows the scene past the viewport and pushes the buttons below the fold —
+     the same failure mode the sprite caused in Phase 90B, one element over. overflow: hidden below
+     plus the panel's own overflow-y: auto are what make a hard height safe on a short viewport. */
+  height: calc(100vh - 58px);
   width: 100%;
   overflow: hidden;
   /* isolate: without its own stacking context, .director-scene__backdrop's z-index:-1 would
@@ -2775,11 +3279,16 @@ dd {
      behind this scene's content. */
   isolation: isolate;
   /* Bottom padding reserves room for .director-scene__bar, which is absolutely positioned rather
-     than in normal flow. */
-  padding: 28px clamp(24px, 5vw, 64px) 156px;
+     than in normal flow. Roughly doubled in Phase 91: the bar gained a taller dialogue box (a fixed
+     three lines at 1.5rem instead of one growing line at 1.15rem) and a full-size reveal card above
+     it. Measured at 1366x768, where the bar comes to ~389px from the scene's bottom edge. */
+  padding: 44px clamp(24px, 5vw, 62px) clamp(300px, 42vh, 420px);
 }
 .director-scene h1 {
-  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+  font-weight: 600;
+  font-size: clamp(2.3rem, 4.2vw, 3.625rem);
+  line-height: 1.06;
+  color: #f7e7bd;
 }
 .director-scene .completion-stats {
   margin: 8px 0;
@@ -2788,29 +3297,35 @@ dd {
   margin: 8px 0;
 }
 .director-scene__head {
+  position: relative;
+  z-index: 1;
   flex: none;
+  /* Kept in normal flow rather than absolutely positioned at the mockup's top: 44px. The panel below
+     pins its own top to a number that has to stay in step with this block's height — see the
+     comment on .director-extra-content — and taking the head out of flow decouples two numbers that
+     are deliberately coupled. */
+  max-width: min(620px, 46vw);
   margin-bottom: 10px;
   /* On art rather than a flat panel, so the type carries its own contrast instead of relying on
      the scrim to be dark enough everywhere. */
-  text-shadow: 0 2px 10px rgba(var(--c-black-rgb), 0.75);
+  text-shadow: 0 2px 14px rgba(var(--c-black-rgb), 0.8);
 }
 .director-scene__head .kicker {
   margin-bottom: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--gold);
 }
+/* The frame, and only the frame. This used to be the box the sprite stood in — a flex item between
+   the head block and the reserved bar space — but the sprite now measures from the scene's own
+   bottom edge (see .director-scene__sprite), and a frame squeezed into the middle third of the
+   screen is not framing anything. Absolute and inset: 0 so the four brackets sit on the scene's
+   corners. Nothing in here is interactive. */
 .director-scene__stage {
-  position: relative;
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  min-height: 0;
-  /* No bottom padding, and the sprite then hangs below this box by its own negative margin. The
-     stage's floor is the top of the reserved bar space, which against a flat backdrop was simply
-     where the character stood — but against a painting it is a foot above the painted floor, and
-     he read as levitating over the map table. Standing him into the bar's zone puts his feet on
-     the boards and lets the dialogue box overlap his shins, which is the composition this screen
-     was imitating in the first place. */
-  padding-bottom: 0;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 /* The two Chronicler cards. Identical in every dimension on purpose: the choice is between two
    names, not between two kinds of person, and nothing in the layout may imply that one is the
@@ -2836,28 +3351,42 @@ dd {
   text-transform: uppercase;
 }
 .director-scene__sprite {
-  /* Was width: 240px against a tight 28x44 crop, i.e. a 377px body. Restoring that body height
-     needs a 469px element, because 11 of the canvas's 56 rows are prop headroom — and 469px
-     clipped the "Begin Orientation" button off the bottom of a 1366x768 Chromebook, this
-     project's named target viewport. So it takes the smaller of the two: the full height where
-     there is room for it, and a share of the viewport where there is not. */
-  /* Taken out of flow in Phase 90B, which is what lets the height be chosen for the composition
-     instead of for the layout. In flow it was a flex item sizing .director-scene__stage, so 62vh
-     overflowed the stage, grew .director-scene past the viewport and pushed the absolutely
-     positioned bar — and the "Begin Orientation" button with it — below the fold. That is the
-     exact failure the original 52vh was picked to avoid; the cap was doing a job the position
-     should have been doing. Now the stage's height is the stage's business and he can hang out of
-     the bottom of it. */
+  /* Hale at 484x1359 (DIRECTOR_CUTOUT), not the 48x56 walk-sheet portrait this used to blow up.
+     The height is a straight cap now rather than the old canvas arithmetic: 800px where there is
+     room, otherwise whatever clears the chrome bar and the dialogue bar. At 1366x768 that resolves
+     to 590px, putting his head 59px below the top of the stage.
+
+     Anchored to .director-scene, not to .director-scene__stage — which is why the markup makes him
+     the stage's SIBLING rather than its child. The stage is a flex item squeezed between the head
+     block and the scene's ~322px bottom padding, so a sprite positioned inside it has its feet
+     ~322px up the screen and, at this height, its head off the top. Measuring from the scene's own
+     bottom edge instead puts his boots on the floor of the painting and lets the dialogue box
+     overlap his shins, which is the composition this screen has wanted since Phase 90B.
+
+     Still out of flow, which that phase established and this must not undo: in flow he was a flex
+     item sizing the stage, so a viewport-relative height grew .director-scene past the viewport and
+     pushed the bar — with the "Begin Orientation" button on it — below the fold.
+
+     Offset right of centre so the head block on the left has clear ground. He is a slim figure
+     (0.36 aspect, 210px wide at 1366), so the offset reads as composition rather than as a shove.
+
+     No image-rendering: pixelated. The art is still pixel art, but 1359 -> 590 is a 0.43x
+     NON-INTEGER downscale, where nearest-neighbour drops rows unevenly and shreds the anti-aliased
+     outline. Smooth downscaling is the correct filter for this asset at this size. */
   position: absolute;
+  z-index: 0;
   left: 50%;
-  bottom: -34px;
-  transform: translateX(-50%);
+  bottom: clamp(28px, 6vh, 52px);
+  transform: translateX(calc(-50% + clamp(56px, 9vw, 130px)));
   width: auto;
-  height: min(calc(377px * 56 / 45), 62vh);
-  image-rendering: pixelated;
-  /* Grounding shadow, tightened against art: the old one was a soft 24px halo that read as glow
-     rather than contact once there was a floor behind it. */
-  filter: drop-shadow(0 10px 14px rgba(var(--c-black-rgb), 0.62));
+  height: min(800px, calc(100vh - 178px));
+  /* A gold key rim and a teal fill rim to seat him in the Archive's own light, then a grounding
+     shadow. Tuned against the plate by eye — the mockup also carried
+     saturate(.84) brightness(.9) contrast(1.03), which was correcting a painted figure; this art is
+     already warm brown against a warm gold room and reads better without it. */
+  filter: drop-shadow(10px -4px 14px rgba(var(--c-gold-rgb), 0.26))
+    drop-shadow(-8px 0 12px rgba(23, 148, 158, 0.16))
+    drop-shadow(0 18px 18px rgba(var(--c-black-rgb), 0.55));
 }
 /* The room the Director is standing in — INSTITUTE_PLATE, the painted Institute Archive
    establishing shot the recall warp screen already loads on. Purely decorative (aria-hidden).
@@ -2893,19 +3422,28 @@ dd {
 .director-scene__scrim {
   position: absolute;
   inset: 0;
+  /* Three gradients, one element. The mockup drew its bottom band as a separate 300px span; folded
+     in here instead, because the standing instruction above forbids a seventh backdrop layer and
+     this is the layer whose stated job already IS legibility. */
   background:
     linear-gradient(
+      to top,
+      rgba(var(--c-navy-rgb), 0.92) 0%,
+      rgba(var(--c-navy-rgb), 0.45) 26%,
+      rgba(var(--c-navy-rgb), 0) 42%
+    ),
+    linear-gradient(
       to bottom,
-      rgba(var(--c-navy-rgb), 0.88) 0%,
-      rgba(var(--c-navy-rgb), 0.42) 22%,
-      rgba(var(--c-navy-rgb), 0.24) 45%,
-      rgba(var(--c-navy-rgb), 0.66) 78%,
-      rgba(var(--c-navy-rgb), 0.92) 100%
+      rgba(var(--c-navy-rgb), 0.9) 0%,
+      rgba(var(--c-navy-rgb), 0.4) 20%,
+      rgba(var(--c-navy-rgb), 0.16) 44%,
+      rgba(var(--c-navy-rgb), 0.6) 74%,
+      rgba(var(--c-navy-rgb), 0.94) 100%
     ),
     radial-gradient(
       ellipse 70% 55% at 50% 62%,
       rgba(var(--c-black-rgb), 0) 0%,
-      rgba(var(--c-black-rgb), 0.34) 100%
+      rgba(var(--c-black-rgb), 0.36) 100%
     );
 }
 /* Thin corner-bracket lines framing the stage, gold accent, low opacity. The one piece of the old
@@ -2914,33 +3452,33 @@ dd {
    CSS backdrop. */
 .director-scene__bracket {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.22);
   opacity: 0.7;
   pointer-events: none;
 }
 .director-scene__bracket--tl {
-  top: 6px;
-  left: 6px;
+  top: 14px;
+  left: 14px;
   border-right: none;
   border-bottom: none;
 }
 .director-scene__bracket--tr {
-  top: 6px;
-  right: 6px;
+  top: 14px;
+  right: 14px;
   border-left: none;
   border-bottom: none;
 }
 .director-scene__bracket--bl {
-  bottom: 6px;
-  left: 6px;
+  bottom: 14px;
+  left: 14px;
   border-right: none;
   border-top: none;
 }
 .director-scene__bracket--br {
-  bottom: 6px;
-  right: 6px;
+  bottom: 14px;
+  right: 14px;
   border-left: none;
   border-top: none;
 }
@@ -2950,6 +3488,7 @@ dd {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 .director-reveal-rail:empty {
@@ -2967,15 +3506,34 @@ dd {
   color: var(--gold-soft);
   animation: director-reveal-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+/* The badge card at the size the reveal deserves — it is the screen's one illustration of the idea
+   being spoken, and at pill size it read as a status chip. The chips below share its ground and
+   icon circle at a smaller scale so the two reveal types read as one family. */
+.director-reveal-card--badge {
+  gap: 16px;
+  padding: 16px 26px 16px 20px;
+  border-color: rgba(var(--c-gold-rgb), 0.4);
+  border-radius: var(--c-radius-md);
+  background: linear-gradient(180deg, rgba(6, 45, 62, 0.94), rgba(3, 28, 40, 0.96));
+  box-shadow: 0 14px 26px rgba(var(--c-black-rgb), 0.36);
+}
 .director-reveal-badge__text {
   display: flex;
   flex-direction: column;
+  gap: 3px;
   line-height: 1.25;
+}
+.director-reveal-badge__text > span {
+  font-family: "Cinzel", serif;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f0d488;
 }
 .director-reveal-badge__text em {
   font-style: normal;
-  font-size: 0.7rem;
-  color: rgba(216, 227, 222, 0.7);
+  font-size: 0.8125rem;
+  color: rgba(216, 227, 222, 0.72);
 }
 .director-reveal-card--image img {
   width: 26px;
@@ -3047,21 +3605,154 @@ dd {
     transform: none;
   }
 }
+/* The Codex reveal, full screen.
+ *
+ * It is the last beat of the briefing — the one object the player will carry through every unit —
+ * and in the reveal rail it was a 26px thumbnail beside a caption. Here it stops the screen.
+ *
+ * Mounted on demand by openCodexOverlay() and removed on dismiss, never rendered as an empty shell.
+ * That is not tidiness: an inset: 0 element with a background reports as *visible* to Playwright
+ * even with nothing in it, which is exactly how .director-extra-content once captured the wrong
+ * baseline (see its :not(:empty) comment). If it is in the DOM, it is showing.
+ *
+ * Absolute rather than fixed, inside .director-scene's own stacking context (the scene sets
+ * isolation: isolate), so z-index 20 clears the bar without escaping the screen. */
+.director-codex-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 22px;
+  padding: 24px;
+  background: rgba(2, 16, 24, 0.86);
+  backdrop-filter: blur(7px);
+  cursor: pointer;
+  animation: director-codex-veil-in 420ms ease-out both;
+}
+.director-codex-veil__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  padding: 56px 88px 48px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.34);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(6, 45, 62, 0.72), rgba(3, 22, 32, 0.86));
+  box-shadow: 0 40px 90px rgba(var(--c-black-rgb), 0.55);
+  text-align: center;
+  /* Reused, not re-authored: artifact-container-rise and artifact-light-gather above are the same
+     curves and durations the mockup asked for, they already carry a reduced-motion override, and
+     revealCardMarkup()'s comment says the artifact-* treatment was named generically so that later
+     artifact reveals could share it. This is that later reveal. */
+  animation: artifact-container-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Centred with box offsets, NOT transform: translate(-50%, -50%). artifact-light-gather animates
+   transform and runs with a "both" fill, and an animation's fill beats a plain declaration — the
+   same trap written up on .title-wordmark.lit. A centring translate here is silently discarded the
+   moment the animation applies, and the glow lands a quarter-turn down and to the right. */
+.director-codex-veil__glow {
+  --glow-size: min(460px, 80vw);
+  position: absolute;
+  left: calc(50% - var(--glow-size) / 2);
+  top: calc(128px - var(--glow-size) / 2);
+  width: var(--glow-size);
+  height: var(--glow-size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--c-gold-rgb), 0.5),
+    rgba(23, 148, 158, 0.26) 52%,
+    transparent 72%
+  );
+  pointer-events: none;
+  animation: artifact-light-gather 1100ms ease-out both;
+}
+.director-codex-veil__art {
+  position: relative;
+  width: 224px;
+  height: auto;
+  /* Pixelated here and not on the Director: this one IS drawn at an integer-ish upscale from a
+     96x128 sprite, where nearest-neighbour is the whole point. */
+  image-rendering: pixelated;
+  filter: drop-shadow(0 18px 26px rgba(var(--c-black-rgb), 0.5));
+}
+.director-codex-veil__caption {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.director-codex-veil .kicker {
+  margin: 0;
+  font-size: 0.9375rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+}
+.director-codex-veil h2 {
+  margin: 0;
+  font-family: var(--c-font-display);
+  font-weight: 600;
+  font-size: clamp(2.2rem, 4vw, 3.375rem);
+  line-height: 1;
+  color: #f7e7bd;
+}
+.director-codex-veil__body {
+  margin: 0;
+  max-width: 520px;
+  font-family: var(--c-font-display);
+  font-size: 1.3125rem;
+  line-height: 1.5;
+  color: rgba(216, 227, 222, 0.82);
+  text-wrap: pretty;
+}
+.director-codex-veil__hint {
+  margin: 0;
+  font-family: var(--c-font-ui);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(216, 227, 222, 0.55);
+}
+@keyframes director-codex-veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* artifact-light-gather rests at opacity .55, which is a lit glow rather than a resting state, and
+   the veil itself must be fully opaque the instant it exists. */
+@media (prefers-reduced-motion: reduce) {
+  .director-codex-veil {
+    animation: none;
+    opacity: 1;
+  }
+  .director-codex-veil__glow {
+    animation: none;
+    opacity: 0.55;
+  }
+}
 .director-reveal-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 42px;
+  height: 42px;
   flex: none;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(var(--c-gold-rgb), 0.5);
   border-radius: 50%;
+  background: rgba(var(--c-gold-rgb), 0.08);
   color: var(--gold);
-  font-size: 0.85rem;
+  font-size: 1.25rem;
 }
 .director-reveal-badge svg {
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
 }
 .director-reveal-card--chips {
   flex-direction: row;
@@ -3075,23 +3766,32 @@ dd {
 .director-reveal-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border: 1px solid var(--line);
+  gap: 9px;
+  padding: 9px 15px 9px 10px;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.4);
   border-radius: 999px;
-  background: rgba(5, 40, 56, 0.9);
-  font-size: 0.74rem;
+  background: linear-gradient(180deg, rgba(6, 45, 62, 0.94), rgba(3, 28, 40, 0.96));
+  box-shadow: 0 10px 20px rgba(var(--c-black-rgb), 0.3);
+  font-size: 0.8125rem;
   color: var(--gold-soft);
   opacity: 0;
   animation: director-reveal-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .director-reveal-chip__icon {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid rgba(var(--c-gold-rgb), 0.45);
+  border-radius: 50%;
+  background: rgba(var(--c-gold-rgb), 0.08);
   color: var(--gold);
 }
 .director-reveal-chip__icon svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 .director-reveal-chip__label {
   display: flex;
@@ -3100,15 +3800,15 @@ dd {
 }
 .director-reveal-chip__label em {
   font-style: normal;
-  font-size: 0.66rem;
-  color: rgba(216, 227, 222, 0.65);
+  font-size: 0.7rem;
+  color: rgba(216, 227, 222, 0.68);
 }
 /* A gentle fade + slight rise, not a bouncy pop — softened per feedback that reveals should
    read as "fading in" alongside the dialogue rather than popping in all at once. */
 @keyframes director-reveal-pop {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(10px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -3121,36 +3821,41 @@ dd {
    since positioning it comes from this wrapper, not the buttons themselves. */
 .director-scene__bar {
   position: absolute;
-  left: clamp(24px, 5vw, 64px);
-  right: clamp(24px, 5vw, 64px);
-  bottom: 28px;
+  z-index: 1;
+  left: clamp(24px, 5vw, 62px);
+  right: clamp(24px, 5vw, 62px);
+  bottom: 40px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 20px;
 }
 .director-dialogue-box {
   position: relative;
-  /* Wider and capped by a reading measure rather than by a round number: at 620px the two-line
-     briefing bodies broke across three. The right padding is caret clearance, not symmetry. */
-  width: min(74%, 680px);
+  /* --c-width-content is 1180px, which is the mockup's number for this box; it is a token already,
+     so use the token. The right padding is caret clearance, not symmetry. */
+  width: min(100%, var(--c-width-content));
   margin: 0 auto;
-  padding: 14px 46px 16px 22px;
-  border: 2px solid rgba(var(--c-gold-rgb), 0.66);
+  padding: 26px 76px 30px 36px;
+  border: 2px solid rgba(var(--c-gold-rgb), 0.62);
   border-radius: var(--c-radius-lg);
-  background: rgba(3, 28, 40, 0.96);
+  background: rgba(3, 28, 40, 0.94);
   cursor: pointer;
   box-shadow:
-    0 16px 26px rgba(var(--c-black-rgb), 0.34),
+    0 20px 34px rgba(var(--c-black-rgb), 0.4),
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .director-dialogue-box__name {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   font-family: "Cinzel", serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
+  font-size: 0.9375rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--gold);
 }
+/* SHARED. hubSceneDialogueMarkup() renders this same class inside .hallway-dialogue, so the
+   Entrance Hall, the Main Hall tour and every Voss scene speak through it. Leave it alone: the
+   fixed-height treatment below is scoped to .director-scene precisely so those three keep this. */
 .director-dialogue-box__text {
   margin: 0;
   min-height: 1.7em;
@@ -3160,10 +3865,67 @@ dd {
   line-height: 1.62;
   color: var(--c-text);
 }
+/* The box is a fixed three lines deep on the director screens and does not resize as the typewriter
+   runs. It used to grow from one line to nearly four, which moved the caret, the buttons and the
+   reveal card above it on almost every character.
+   1.5rem, not the mockup's 27px: the longest authored line is 215 characters (the Original Drift
+   line). At 27px in this box's 1068px text column three lines hold ~237 characters — 9% of
+   headroom, and overflow: hidden truncates silently when it runs out. At 1.5rem it is ~264, i.e.
+   23%, and still a 30% jump from the 1.15rem this replaces.
+   --dlg-lines is a variable rather than a constant so a narrow viewport, or the one screen that
+   also carries the protocol panel, can change the count without re-authoring the rule. */
+.director-scene .director-dialogue-box__text {
+  --dlg-lines: 3;
+  /* --dlg-line is the height of ONE line box, in rem, and the box is that times --dlg-lines. Both
+     the em form and a three-term calc were tried first and neither is reliable here: measured at
+     390px, calc(var(--dlg-lines) * var(--dlg-leading) * var(--dlg-size)) resolved to
+     6 x 16.8px = 100.8px, silently dropping the middle factor, while all three custom properties
+     read back correctly from getComputedStyle. One unitless multiplier against one length is the
+     shape that survives substitution. Keep --dlg-line = --dlg-size x 1.5 by hand when overriding;
+     there are two overrides and both are a few lines below. */
+  --dlg-size: 1.5rem;
+  --dlg-line: 2.25rem;
+  height: calc(var(--dlg-lines) * var(--dlg-line));
+  /* The shared rule above caps this at max-height: 6em, and a cap in em against a height in rem is
+     a trap that only fires on the narrow breakpoints: at 1.05rem the cap is 100.8px, so a six-line
+     box measured 100.797px and clipped the longest body by two lines while every custom property
+     read back correctly. It is also why the 1200px case sat at exactly 144px — that was the cap,
+     not the height. Released here; the explicit height IS the constraint. */
+  max-height: none;
+  overflow: hidden;
+  font-family: var(--c-font-display);
+  font-size: var(--dlg-size);
+  line-height: 1.5;
+  color: #f7e7bd;
+  text-wrap: pretty;
+}
+/* intro-protocol also renders the four protocol cards and the First Assignment block in a panel on
+   the left, and that panel's height budget is measured against the bar. Its two authored lines are
+   46 and 59 characters — one line each in this box — so it gives a line back. */
+.director-scene--protocol .director-dialogue-box__text {
+  --dlg-lines: 2;
+}
+/* intro-protocol's title is both the longest of the three ("Four rules, and then the work.") and the
+   only one competing with a panel of its own content for the same column. At the shared size it
+   wraps to two lines, takes 224px of a 344px content box, and leaves the four rules 120px to live
+   in. Smaller here, and only here: on this screen the title is a label and the panel is the point. */
+.director-scene--protocol h1 {
+  font-size: clamp(1.7rem, 2.6vw, 2.35rem);
+}
+/* The scene reserves bottom padding for a bar it cannot measure, and this screen's bar is the short
+   one: no reveal card (the oath lines carry no reveal, so the rail collapses) and a two-line box.
+   The shared clamp over-reserves ~44px here, and those 44px are the difference between the First
+   Assignment block sitting inside the panel and sitting below its scroll fold — which the panel's
+   own content is written to avoid (see the note on protocol card bodies in
+   content/chronicle-opening.defaults.js). A flat number rather than a vh clamp because what is
+   being cleared is the bar, and the bar's height is set by its content, not by the viewport. */
+.director-scene--protocol {
+  padding-bottom: 292px;
+}
 .director-continue-indicator {
   position: absolute;
-  right: 18px;
-  bottom: 14px;
+  right: 26px;
+  bottom: 22px;
   color: var(--gold);
   animation: director-continue-blink 1.1s ease-in-out infinite;
 }
@@ -3185,21 +3947,38 @@ dd {
    assignment tags + description. Rendered as its own panel in the scene's upper-left rather than
    stacked below the dialogue bar, so the bar stays the same size on every director-scene screen
    (stacking it would grow the bar and reintroduce the reflow problem this whole layout fixes). */
+/* In normal flow, and that is the change worth reading.
+ *
+ * This used to be absolutely positioned at top: 126px with max-height: calc(100% - 342px), and both
+ * numbers carried comments asking a future editor to keep them in step with the head block and the
+ * bar by hand. Phase 91 grew both — the h1 by ~40% and the bar by ~80% — and the panel promptly
+ * landed inside the title and hung past the buttons, because nothing enforced either coupling.
+ *
+ * .director-scene is already a flex column of [head, this], with the bar absolutely positioned and
+ * its space held open by the scene's own bottom padding. So flex: 1 with min-height: 0 gives this
+ * panel exactly the gap between the head and the bar, whatever either of them does next. There is
+ * no magic number left to keep in step. */
 .director-extra-content {
-  position: absolute;
-  /* 104px until Phase 90B, when the heading pair gained its own bottom margin and the first rule
-     card came up against the h1's descenders. Keep this in step with .director-scene__head. */
-  top: 126px;
-  left: clamp(24px, 5vw, 64px);
+  position: relative;
+  /* Above .director-scene__sprite, which is a sibling at z-index 0. */
+  z-index: 1;
   width: min(392px, 42%);
-  /* Was calc(100% - 320px). The panel is a fixed-height scroll column and the First Assignment
-     block sits at the bottom of it, so this bound is the thing that decides whether the block is
-     above the fold — re-measured against the baseline after the top moved, not adjusted by eye. */
-  max-height: calc(100% - 342px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+/* flex: 1 is scoped to :not(:empty) for the same load-bearing reason the padding below is, and this
+   phase proved it twice. Every director screen renders this element and only intro-protocol fills
+   it; given flex: 1 unconditionally, the empty one on the welcome and briefing screens still takes
+   its share of the column, so it has a real size, so Playwright reports it VISIBLE — and
+   visual-regression's "wait for the protocol panel" loop fires on the welcome screen and captures
+   the wrong shot into director-protocol-scene. Exactly what happened before the :not(:empty) scoping
+   was added to the padding, and exactly what happened again here. An empty box with a size is a
+   visible box. */
+.director-extra-content:not(:empty) {
+  flex: 1;
+  min-height: 0;
 }
 /* A backing, because this panel now sits on a painting rather than a flat gradient. The
    description is plain body text with no pill behind it, and over the lit half of the plate it was
@@ -3355,26 +4134,89 @@ dd {
     padding: 12px 14px 16px;
   }
 }
+/* Below ~1310px the dialogue box stops being 1180px wide and starts shrinking with the viewport,
+   so three lines of the longest authored body no longer hold it. One variable, not a re-authored
+   rule — see the --dlg-lines comment on .director-scene .director-dialogue-box__text. */
+/* A closed range, not an open one, and that is load-bearing. The phone block below sets these same
+   custom properties; with both queries matching at 390px, Chromium resolved --dlg-lines to this
+   rule's 4 inside the height calc while getComputedStyle reported the phone block's 6 — a literal
+   calc(6 * 1.575rem) on the same element measured 151.188px against the variable form's 100.797px.
+   Two rules setting one custom property that a calc() then reads is the shape to avoid; one
+   breakpoint, one owner. */
+@media (min-width: 701px) and (max-width: 1310px) {
+  .director-scene .director-dialogue-box__text {
+    --dlg-lines: 4;
+  }
+  .director-scene--protocol .director-dialogue-box__text {
+    --dlg-lines: 3;
+  }
+}
 @media (max-width: 700px) {
   .director-scene {
-    padding-bottom: 190px;
+    padding: 24px 16px clamp(300px, 46vh, 380px);
+  }
+  .director-scene__head {
+    /* Nothing to clear at this width — he is centred and behind the type. */
+    max-width: none;
   }
   .director-scene__sprite {
-    height: calc(204px * 56 / 45);
+    height: min(360px, 46vh);
+    /* No right offset: there is no room for a two-column composition on a phone, so he goes back to
+       centre and the head block sits over him. */
+    transform: translateX(-50%);
+    filter: drop-shadow(5px -2px 8px rgba(var(--c-gold-rgb), 0.24))
+      drop-shadow(0 10px 12px rgba(var(--c-black-rgb), 0.55));
+  }
+  .director-scene__bracket {
+    width: 24px;
+    height: 24px;
   }
   .director-scene__bar {
     left: 16px;
     right: 16px;
     bottom: 16px;
+    gap: 12px;
   }
   .director-dialogue-box {
-    width: 88%;
+    width: 100%;
+    padding: 18px 40px 20px 20px;
+  }
+  /* Six, measured rather than guessed: the longest authored body needs 151px of line boxes in this
+     box's ~283px text column, which is six of them at 1.05rem. */
+  .director-scene .director-dialogue-box__text {
+    --dlg-lines: 6;
+    --dlg-size: 1.05rem;
+    --dlg-line: 1.575rem;
+  }
+  .director-scene--protocol .director-dialogue-box__text {
+    --dlg-lines: 3;
+  }
+  .director-reveal-card--badge {
+    padding: 12px 18px 12px 14px;
+    gap: 12px;
+  }
+  .director-reveal-badge {
+    width: 34px;
+    height: 34px;
+  }
+  .director-reveal-badge__text > span {
+    font-size: 1rem;
   }
   .director-extra-content {
     position: static;
     width: auto;
     max-height: none;
     margin: 12px 0 20px;
+  }
+  /* The mockup's 88px panel padding plus a 224px codex overflows a 360px phone. */
+  .director-codex-veil__panel {
+    padding: 32px 24px 28px;
+  }
+  .director-codex-veil__art {
+    width: 140px;
+  }
+  .director-codex-veil h2 {
+    font-size: 2.2rem;
   }
 }
 .author-panel {

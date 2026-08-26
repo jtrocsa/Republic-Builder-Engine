@@ -359,6 +359,17 @@ const app = document.querySelector("#app");
 const INTRO_REVEAL_IMAGES = {
   codex: new URL("./assets/chronicle-sprites/chronicle-codex.png", import.meta.url).href,
 };
+// Director Hale as the intro scene shows him: a standing full-body cutout at 484x1359, which is
+// ~28x the linear resolution of the 48x56 walk-sheet portrait this used to draw. It lives in
+// assets/plates/ rather than assets/institute/ because that folder is the walk-sheet tier — 50 KB
+// per file (scripts/assets/audit.js) and a 7-column 48x56 canvas that character-sheet-geometry
+// asserts. Deliberately NOT in CHRONOTRAVEL_PLATES: that table is keyed by destination and its test
+// asserts every key is a shipped unit. It shares only the folder and the build script's WebP pass.
+//
+// Static string literal, not a template: a template inside new URL() makes Vite glob the whole
+// folder and emit all eleven plates into every build. See content/chronotravel-plates.js's header.
+const DIRECTOR_CUTOUT = new URL("./assets/plates/director-rowan-hale-cutout.webp", import.meta.url)
+  .href;
 // Small inline-SVG line icons for the reveal badge/chip system (revealCardMarkup()) — matches
 // the project's existing convention of inline SVG for small UI chrome (e.g. the cursor in
 // global.css) rather than new PNG asset files, since no icon assets exist for these concepts.
@@ -5378,6 +5389,12 @@ function stopWarpTunnel() {
 // — revisiting via "Previous message" shows it fully complete instantly.
 let introLineIndex = 0;
 let introTypewriterTimer = null;
+// The Codex reveal is the one reveal that takes the whole screen, and it lands *after* its line has
+// been spoken rather than before it. These hold the reveal between the line finishing and the veil
+// opening; introPendingCodex is also the flag openCodexOverlay() reads, so clearing it is what
+// cancels a scheduled reveal.
+let introPendingCodex = null;
+let introCodexTimer = null;
 const introSeenSteps = new Set();
 // Set right before the Entrance Hall hands off to the Main Hall so instituteMainRoomScreen() renders
 // one frame with the fade overlay at full opacity, then render()'s institute requestAnimationFrame
@@ -5925,6 +5942,12 @@ function dismissTitle() {
   render();
 }
 
+// The landing's ambient field — three drifting colour blobs, a light sweep, a star field and a
+// mote layer, all styled and animated in global.css. Every dot position is baked into the CSS
+// rather than emitted here, so this is a constant string and the field is identical on every boot.
+// aria-hidden and pointer-events:none: it is behind the card and has nothing to say.
+const LANDING_AMBIENT = `<div class="landing-ambient" aria-hidden="true"><span class="landing-ambient__blob-a"></span><span class="landing-ambient__blob-b"></span><span class="landing-ambient__blob-c"></span><span class="landing-ambient__sweep"></span><span class="landing-ambient__stars"></span><span class="landing-ambient__motes"></span></div>`;
+
 function mainMenuItemMarkup(item) {
   const enabled = item.enabled();
   return `<div class="main-menu-item"><button class="btn ${item.variant}" data-action="${item.action}" ${enabled ? "" : "disabled"}>${esc(item.label)}</button>${!enabled && item.disabledHint ? `<p class="kicker">${esc(item.disabledHint)}</p>` : ""}</div>`;
@@ -5932,7 +5955,7 @@ function mainMenuItemMarkup(item) {
 
 function mainMenuScreen() {
   if (landingMode === "student") {
-    return `<main class="shell completion-shell landing-shell"><section>
+    return `<main class="shell completion-shell landing-shell">${LANDING_AMBIENT}<section>
 <h1>${esc(BRAND.campaign)}</h1>
 <div class="landing-option-group">
 <p class="kicker">Have a classroom code?</p>
@@ -5945,7 +5968,7 @@ function mainMenuScreen() {
 <button class="btn btn-outline" data-action="landing-back" type="button">← Back</button>
 </section></main>`;
   }
-  return `<main class="shell completion-shell landing-shell"><section><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div></section></main>`;
+  return `<main class="shell completion-shell landing-shell">${LANDING_AMBIENT}<section><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div></section></main>`;
 }
 
 // --- Real accounts screens (join/login/teacher-dashboard/grading) ---------
@@ -9551,12 +9574,15 @@ const DIRECTOR_STAGE_DECOR = `<span class="director-scene__bracket director-scen
 // render()) is the single source of truth for filling it in, whether that's typing a fresh line or
 // instantly restoring a previously-seen step. Keeping that logic in one place avoids the markup and
 // the JS state machine silently drifting out of sync.
-function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "" }) {
-  const stage = `<img class="director-scene__sprite" src="${CHARACTER_SHEETS.director.portrait}" alt="Director Rowan Hale" draggable="false">`;
+function directorSceneMarkup({ eyebrow, title, buttonsHtml, extraContent = "", sceneClass = "" }) {
+  // DIRECTOR_CUTOUT, not CHARACTER_SHEETS.director.portrait: this screen is the one place Hale is
+  // shown at full height rather than as a body in a room, and the 48x56 walk-sheet portrait was
+  // being blown up ~12x to fill it. The walk sheets are untouched and still what the hub rooms draw.
+  const sprite = `<img class="director-scene__sprite" src="${DIRECTOR_CUTOUT}" alt="Director Rowan Hale" draggable="false">`;
   // The reveal rail lives here, directly above the dialogue box it's illustrating, rather than
   // floating in the stage's top-right corner — see docs decision to anchor reveals to what's
   // being said instead of parking them in a disconnected corner.
-  return `<section class="director-scene">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${DIRECTOR_STAGE_DECOR}${stage}</div><div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-reveal-rail" id="directorRevealRail"></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
+  return `<section class="director-scene ${sceneClass}">${DIRECTOR_SCENE_BACKDROP}<div class="director-scene__head"><p class="kicker">${esc(eyebrow)}</p><h1>${esc(title)}</h1></div><div class="director-scene__stage">${DIRECTOR_STAGE_DECOR}</div>${sprite}<div class="director-extra-content" hidden>${extraContent}</div><div class="director-scene__bar"><div class="director-reveal-rail" id="directorRevealRail"></div><div class="director-dialogue-box" data-action="director-dialogue-click" role="button" tabindex="0" aria-label="Director Rowan Hale speaking — click to continue"><p class="director-dialogue-box__name">Director Rowan Hale</p><p class="director-dialogue-box__text" id="directorLineText"></p><span class="director-continue-indicator" id="directorContinueIndicator" hidden>▼</span></div><div class="completion-actions" id="directorSceneActions">${buttonsHtml}</div></div></section>`;
 }
 
 function introWelcomeScreen() {
@@ -9578,7 +9604,7 @@ function introProtocolScreen() {
   const assignment = CHRONICLE_OPENING_DEFAULTS.assignment;
   const buttons = `<button class="btn btn-gold director-continue-button" data-action="intro-advance" data-next="identity">${esc(oath.action)} →</button>`;
   const extraContent = `<div class="completion-stats">${protocol.map((p) => `<span><b>${esc(p.number)}</b> ${esc(p.title)} — ${esc(p.body)}</span>`).join("")}</div><div class="completion-stats"><span class="kicker">${esc(assignment.kicker)}</span><span>${esc(assignment.unit)}</span><span>${esc(assignment.title)}</span></div><p>${esc(assignment.description)}</p>`;
-  return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent })}</main>`;
+  return `${chrome()}<main class="director-stage">${directorSceneMarkup({ eyebrow: oath.eyebrow, title: oath.title, buttonsHtml: buttons, extraContent, sceneClass: "director-scene--protocol" })}</main>`;
 }
 
 // Resolves the {stepKey, lines} for whichever intro beat is currently active.
@@ -9627,6 +9653,55 @@ function revealCardMarkup(reveal) {
   return `<div class="director-reveal-card director-reveal-card--badge"><span class="director-reveal-badge">${icon || esc(reveal.icon || "✦")}</span><span class="director-reveal-badge__text"><span>${esc(reveal.label)}</span>${reveal.sublabel ? `<em>${esc(reveal.sublabel)}</em>` : ""}</span></div>`;
 }
 
+// How long the Codex waits after its line lands. The shorter number is for a player who skipped
+// the typewriter: they are already clicking, so the beat before the veil has to be short enough not
+// to eat the next click.
+const CODEX_REVEAL_DELAY_MS = 520;
+const CODEX_REVEAL_DELAY_SKIPPED_MS = 400;
+
+// Injected on demand and removed on dismiss — never rendered as an empty shell. See the CSS.
+function openCodexOverlay() {
+  introCodexTimer = null;
+  const reveal = introPendingCodex;
+  introPendingCodex = null;
+  if (!reveal) return;
+  // render() replaces the whole app in one go, so a timer scheduled on one screen can fire on
+  // another. If the scene is gone, so is the reveal.
+  const scene = document.querySelector(".director-scene");
+  if (!scene || document.getElementById("directorCodexVeil")) return;
+  const src = INTRO_REVEAL_IMAGES[reveal.src] || "";
+  scene.insertAdjacentHTML(
+    "beforeend",
+    `<div class="director-codex-veil" id="directorCodexVeil" data-action="codex-overlay-dismiss" role="button" tabindex="0" aria-label="${esc(reveal.label)} — click to continue"><div class="director-codex-veil__panel"><span class="director-codex-veil__glow" aria-hidden="true"></span><img class="director-codex-veil__art" src="${src}" alt="${esc(reveal.label)}"><div class="director-codex-veil__caption"><p class="kicker">Secured</p><h2>${esc(reveal.label)}</h2>${reveal.sublabel ? `<p class="director-codex-veil__body">${esc(reveal.sublabel)}</p>` : ""}</div></div><p class="director-codex-veil__hint">Click anywhere to continue</p></div>`
+  );
+  // The bar is painted over but still focusable, and Enter on a button behind a veil is the same
+  // bug as a click through it. One attribute instead of a focus trap.
+  document.querySelector(".director-scene__bar")?.setAttribute("inert", "");
+  playSfx("codex-reveal");
+}
+
+function closeCodexOverlay() {
+  clearTimeout(introCodexTimer);
+  introCodexTimer = null;
+  introPendingCodex = null;
+  document.getElementById("directorCodexVeil")?.remove();
+  document.querySelector(".director-scene__bar")?.removeAttribute("inert");
+}
+
+// Called from both places a line can finish: the typewriter running out of characters, and a player
+// skipping it mid-word. Reduced motion opens it synchronously — startIntroTypewriter() resolves the
+// whole line in one frame there, so a half-second wait would land the veil in the middle of
+// whatever the player did next.
+function scheduleCodexReveal({ skipped = false } = {}) {
+  if (!introPendingCodex) return;
+  clearTimeout(introCodexTimer);
+  if (prefersReducedMotion()) return openCodexOverlay();
+  introCodexTimer = setTimeout(
+    openCodexOverlay,
+    skipped ? CODEX_REVEAL_DELAY_SKIPPED_MS : CODEX_REVEAL_DELAY_MS
+  );
+}
+
 function completeCurrentIntroStep(step) {
   introSeenSteps.add(step.stepKey);
   document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
@@ -9650,6 +9725,8 @@ function advanceIntroDialogue() {
     } else {
       document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
     }
+    // This path never goes through finishLine(), so it has to do finishLine()'s other job itself.
+    scheduleCodexReveal({ skipped: true });
     return true;
   }
   if (introLineIndex < step.lines.length - 1) {
@@ -10072,6 +10149,7 @@ const INTRO_PAUSE_AFTER = { ".": 5, "!": 5, "?": 5, ",": 2 };
 function startIntroTypewriter() {
   clearTimeout(introTypewriterTimer);
   introTypewriterTimer = null;
+  closeCodexOverlay();
   const step = currentIntroLines();
   const textEl = document.getElementById("directorLineText");
   const railEl = document.getElementById("directorRevealRail");
@@ -10080,6 +10158,9 @@ function startIntroTypewriter() {
   if (introSeenSteps.has(step.stepKey)) {
     introLineIndex = step.lines.length - 1;
     textEl.textContent = step.lines[introLineIndex].text;
+    // Replaying a step the player has already seen puts every reveal back in the rail, the Codex
+    // included, and deliberately does NOT re-open the veil: "Previous message" then forward lands
+    // here, and a full-screen stop on every revisit is hostile.
     railEl.innerHTML = step.lines
       .filter((line) => line.reveal)
       .map((line) => revealCardMarkup(line.reveal))
@@ -10092,9 +10173,13 @@ function startIntroTypewriter() {
   const line = step.lines[introLineIndex];
   textEl.textContent = "";
   document.getElementById("directorContinueIndicator")?.setAttribute("hidden", "");
+  introPendingCodex = null;
   if (line.reveal) {
-    railEl.insertAdjacentHTML("beforeend", revealCardMarkup(line.reveal));
-    if (line.reveal.type === "image") playSfx("codex-reveal");
+    // An image reveal is held back until the line has been spoken — it opens a veil over the whole
+    // screen, and arriving before the first character would cover the sentence that explains it.
+    // Everything else still goes into the rail up front, alongside the line it illustrates.
+    if (line.reveal.type === "image") introPendingCodex = line.reveal;
+    else railEl.insertAdjacentHTML("beforeend", revealCardMarkup(line.reveal));
   }
 
   const finishLine = () => {
@@ -10103,6 +10188,7 @@ function startIntroTypewriter() {
     } else {
       document.getElementById("directorContinueIndicator")?.removeAttribute("hidden");
     }
+    scheduleCodexReveal();
   };
 
   if (prefersReducedMotion()) {
@@ -14410,6 +14496,13 @@ function handleOnboardingClick(target, action) {
     }
     return true;
   }
+  // Ahead of director-dialogue-click: the veil covers the dialogue box, and the delegated handler
+  // resolves any click inside it to this action via closest("[data-action]") — which is what makes
+  // "click anywhere to continue" true without a listener of its own.
+  if (action === "codex-overlay-dismiss") {
+    closeCodexOverlay();
+    return true;
+  }
   if (action === "director-dialogue-click") {
     if (advanceIntroDialogue()) return true;
     // Current step's last line is already fully revealed — clicking the dialogue box should do
@@ -16090,6 +16183,16 @@ function handleWindowKeydown(event) {
     progress.currentScreen === "intro-briefing" ||
     progress.currentScreen === "intro-protocol"
   ) {
+    // The Codex veil owns the keyboard while it is up. Without this, Enter falls through to the
+    // dialogue advance below and walks the briefing forward behind a full-screen overlay — the
+    // keyboard twin of a click passing through it, which the veil's own z-index already prevents.
+    if (document.getElementById("directorCodexVeil")) {
+      if ((key === "enter" || key === " " || key === "escape") && !event.repeat) {
+        event.preventDefault();
+        closeCodexOverlay();
+      }
+      return;
+    }
     // Mirrors the click/tap advance on .director-dialogue-box (data-action="director-dialogue-click")
     // so keyboard users get the same skip-then-advance behavior — no separate implementation.
     if ((key === "enter" || key === " ") && !event.repeat) {

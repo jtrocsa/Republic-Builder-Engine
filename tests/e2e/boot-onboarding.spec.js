@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { PROGRESS_KEY, walkToHubNpc, beginFromTitle } from "./helpers/progress-seed.js";
+import {
+  PROGRESS_KEY,
+  walkToHubNpc,
+  beginFromTitle,
+  dismissCodexVeil,
+} from "./helpers/progress-seed.js";
 
 // Scenario 1: cold load -> identity creation -> Entrance Hall -> Main Hall.
 // No seed here (a fresh profile) — this is the one spec that exercises the real onboarding
@@ -25,6 +30,7 @@ test.describe("Boot and onboarding", () => {
     const nameInput = page.locator('input[data-profile="name"]');
     for (let i = 0; i < 40; i += 1) {
       if (await nameInput.isVisible().catch(() => false)) break;
+      if (await dismissCodexVeil(page)) continue;
       if (!(await dialogueBox.isVisible().catch(() => false))) break;
       await dialogueBox.click();
       await page.waitForTimeout(30);

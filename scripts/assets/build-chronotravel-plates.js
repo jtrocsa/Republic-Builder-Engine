@@ -36,6 +36,18 @@ export const OUTPUT_DIR = path.join(REPO_ROOT, "apps", "web", "src", "assets", "
 // resampling it to a rounder number.
 const WEBP = { quality: 78, effort: 6 };
 
+// Per-slug overrides, for a source whose art is not what the default was measured against.
+//
+// The Director cutout is the only one so far: it is a transparent-background character with a hard
+// black outline, i.e. exactly the "line art" the default above says it is *not* tuned for. At 78 the
+// outline rings. Measured on the trimmed 484x1359 source: q70 86 KB, q78 94 KB, q85 112 KB,
+// q90 135 KB, q95 174 KB — 90 is where the ringing stops being visible, and 135 KB sits inside the
+// range the ten full-frame plates already occupy (140-290 KB). alphaQuality is pinned at 100
+// because the cutout's edge IS the asset; there is no background to hide a soft alpha ramp against.
+const WEBP_BY_SLUG = {
+  "director-rowan-hale-cutout": { quality: 90, alphaQuality: 100, effort: 6 },
+};
+
 export async function buildPlates({ sourceDir = SOURCE_DIR, outputDir = OUTPUT_DIR } = {}) {
   if (!existsSync(sourceDir)) {
     throw new Error(
@@ -55,7 +67,9 @@ export async function buildPlates({ sourceDir = SOURCE_DIR, outputDir = OUTPUT_D
     const from = path.join(sourceDir, name);
     const to = path.join(outputDir, `${slug}.webp`);
     const { width, height } = await sharp(from).metadata();
-    await sharp(from).webp(WEBP).toFile(to);
+    await sharp(from)
+      .webp(WEBP_BY_SLUG[slug] ?? WEBP)
+      .toFile(to);
     built.push({
       slug,
       width,

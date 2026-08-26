@@ -165,7 +165,16 @@ export const CHRONICLE_OPENING_DEFAULTS = {
           },
           {
             text: "You are not there to fix anything — you are there to come back with evidence that holds up. What you secure goes into the Codex, and drift does not reach it.",
-            reveal: { type: "image", src: "codex", label: "The Codex" },
+            // sublabel is the same field the badge reveal above uses, and it earns its place here for
+            // the same reason: as of Phase 91 an image reveal is a full-screen card, and a card with
+            // only a name on it is a label rather than a beat. It compresses the clause this line
+            // has just spoken instead of adding a new claim — canon 5, stated once.
+            reveal: {
+              type: "image",
+              src: "codex",
+              label: "The Codex",
+              sublabel: "What you secure, drift cannot reach",
+            },
           },
         ],
         action: "Accept field protocol",
