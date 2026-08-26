@@ -75,6 +75,28 @@ function snap(name, extra = {}) {
   return { animations: "disabled", ...extra, name: `${name}.png` };
 }
 
+// The Bank War, in the order that makes each step the cause of the next. Same role as
+// EXCHANGE_PLACEMENTS below: the read-only baselines are of a *finished* quest, so they need a real
+// answer rather than the authored (deliberately scrambled) one.
+const BANK_WAR_FILED = [
+  "bank-chartered-1816",
+  "jackson-elected-1828",
+  "veto-1832",
+  "deposits-removed-1833",
+  "charter-expires-1836",
+  "panic-1837",
+];
+
+// Case 1.02's exchange ledger, filed correctly — every source in its own slot. Used for the
+// read-only baseline below; the placements are the quest's own correctSlotIds, so a content edit
+// that renames a slot fails here rather than quietly baselining a half-empty board.
+const EXCHANGE_PLACEMENTS = {
+  "case-002-maize-claim": "agriculture-diet",
+  "case-002-smallpox-claim": "demographic-catastrophe",
+  "case-002-horses-claim": "mobility-warfare",
+  "case-002-enslaved-africans-claim": "forced-labor",
+};
+
 // Riverbend's interview with all eight accounts taken — one useful answer from each of the eight
 // people, which is what `requires.useful: 8` asks for. Used by two tests below: it is what makes the
 // charter's record openable, and what fills the notebook the interview screen is baselined on.
@@ -977,6 +999,33 @@ test.describe("Gameplay visual-regression baselines", () => {
     });
     await expect(page.locator(".mission-shell")).toBeVisible();
     await expect(page).toHaveScreenshot(snap("mission-exchange-ledger"));
+
+    // The same board, finished — renderQuest(..., { readOnly: true }), Spine Review P10-4. This
+    // screen returned 403 characters of card and no quest at all before Phase 92, so there is no
+    // earlier baseline to compare against and this one is the whole record of what the mode looks
+    // like: every card placed and none of them faded, the selects greyed, the four bins filled.
+    await setScreen(page, {
+      currentScreen: "mission",
+      selectedUnitId: "unit-01",
+      activeCaseId: "case-002",
+      completedCases: ["case-002"],
+      questResponses: { "case-002-archive-exchange-claims": { placements: EXCHANGE_PLACEMENTS } },
+    });
+    await expect(page.locator("[data-quest-readonly]")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-exchange-ledger-filed"));
+
+    // The other read-only shape, and the one that changes most: a sequencing record hides its
+    // move buttons entirely and numbers the rows instead, because .quest-sequence-list is
+    // list-style: none and without the counter the answer would be an unlabelled column.
+    await setScreen(page, {
+      currentScreen: "mission",
+      selectedUnitId: "unit-04",
+      activeCaseId: "case-011",
+      completedCases: ["case-011"],
+      questResponses: { "case-011-mission-bank-war-chronology": { order: BANK_WAR_FILED } },
+    });
+    await expect(page.locator("[data-quest-readonly]")).toBeVisible();
+    await expect(page).toHaveScreenshot(snap("mission-bank-war-filed"));
   });
 
   test("archive challenges, review, completion, codex, and reconstruction", async ({ page }) => {

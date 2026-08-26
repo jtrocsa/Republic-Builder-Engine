@@ -14,7 +14,7 @@
 // Scoring is binary per dimension per document — no invented partial-credit
 // scale.
 import { z } from "zod";
-import { escapeHtml } from "../shared/html.js";
+import { escapeHtml, readOnlyAttr, readOnlyClass, disabledIf } from "../shared/html.js";
 import { SKILL_CATEGORIES } from "./evidence-organizing-quest.js";
 
 // Every source-analysis (HIPP) quest is a sourcing exercise by definition —
@@ -158,11 +158,13 @@ export const SourceAnalysisQuestListSchema = z
  * @param {import("zod").infer<typeof SourceAnalysisQuestSchema>} quest
  * @param {{ selected?: Record<string, string> }} [state] - `selected` maps
  *   hippPrompt id -> chosen option id.
+ * @param {{ readOnly?: boolean }} [options] - see quest-types/shared/html.js.
  */
-export function renderSourceAnalysisQuest(quest, state = {}) {
+export function renderSourceAnalysisQuest(quest, state = {}, options = {}) {
+  const readOnly = Boolean(options.readOnly);
   const selected = state.selected || {};
 
-  return `<section class="quest quest-source-analysis" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="hipp">
+  return `<section class="quest quest-source-analysis${readOnlyClass(readOnly)}" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="hipp"${readOnlyAttr(readOnly)}>
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
   <blockquote class="quest-document">
     <p class="quest-document-text">${escapeHtml(quest.document.text)}</p>
@@ -180,7 +182,7 @@ export function renderSourceAnalysisQuest(quest, state = {}) {
           (option) => `<label class="hipp-option">
         <input type="radio" name="hipp-${escapeHtml(quest.id)}-${escapeHtml(hippPrompt.id)}" data-hipp-option="${escapeHtml(option.id)}" value="${escapeHtml(option.id)}" ${
           selected[hippPrompt.id] === option.id ? "checked" : ""
-        }>
+        }${disabledIf(readOnly)}>
         <span>${escapeHtml(option.text)}</span>
       </label>`
         )

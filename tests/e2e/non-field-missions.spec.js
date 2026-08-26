@@ -16,6 +16,9 @@
 //      because keeping the migrated one working is the whole reason the branch survives.
 //   3. P10-3 — the date appears once. Twelve of the fourteen carry it inside `location` already.
 //   4. P10-6 — finishing one says what it just opened.
+//   5. P10-4 — a finished mission shows the player's own answer back, and cannot be edited into
+//      disagreeing with itself. Routed out of Part 10 to an ADR because it needed a read-only mode
+//      across the quest types; shipped as `renderQuest(..., { readOnly: true })`.
 import { expect, test } from "@playwright/test";
 import {
   PROGRESS_KEY,
@@ -127,6 +130,99 @@ test.describe("every non-field mission", () => {
     await openMission(page, "case-011", { completedCases: ["case-011"] });
     await expect(page.locator(".activity-feedback")).toContainText("restored from an earlier save");
   });
+
+  test("a finished mission shows the work back, read-only (P10-4)", async ({ page }) => {
+    // The state every second visit is in. Before this the card returned 403 characters with zero
+    // quest controls: the order the player arranged was sitting in `questResponses` and appeared
+    // on no screen in the game, the Codex included.
+    await openMission(page, "case-011", {
+      completedCases: ["case-011"],
+      questResponses: { [BANK_WAR]: { order: BANK_WAR_SOLVED } },
+      archiveChallenges: { [BANK_WAR]: { status: "complete" } },
+    });
+
+    const quest = page.locator(".archive-challenge-item .quest-sequencing");
+    await expect(quest).toBeVisible();
+    await expect(quest).toHaveAttribute("data-quest-readonly", "true");
+    // Their arrangement, in their order — not the authored (scrambled) one.
+    expect(
+      await quest
+        .locator("li.sequence-item")
+        .evaluateAll((rows) => rows.map((row) => row.dataset.sequenceItem))
+    ).toEqual(BANK_WAR_SOLVED);
+    await expect(page.locator(".activity-feedback")).toContainText("Mission complete");
+  });
+
+  // Every mission is one of the four swappable types, so one mission per type is the whole surface.
+  // Each is answered through the real UI rather than seeded, so the response shape is the app's own.
+  const ONE_PER_TYPE = [
+    { caseId: "case-011", type: "sequencing", answer: ".sequence-move-btn[data-direction='down']" },
+    { caseId: "case-012", type: "hipp", answer: ".hipp-option input" },
+    { caseId: "case-009", type: "mcq", answer: ".choice input" },
+    { caseId: "case-020", type: "evidence-organizing", answer: "[data-evidence-select]" },
+  ];
+
+  for (const { caseId, type, answer } of ONE_PER_TYPE) {
+    test(`nothing in a finished ${type} mission can still take input (P10-4)`, async ({ page }) => {
+      await openMission(page, caseId);
+
+      // Answer it for real, so questResponses is written by the app's own handler.
+      const control = page.locator(`.archive-challenge-item ${answer}`).first();
+      if (type === "evidence-organizing") {
+        const slot = await control.locator("option:not([value=''])").first().getAttribute("value");
+        await control.selectOption(slot);
+      } else {
+        await control.click();
+      }
+      const answered = await page.evaluate(
+        (key) => JSON.parse(window.localStorage.getItem(key)).questResponses,
+        PROGRESS_KEY
+      );
+      expect(Object.keys(answered).length, "the answer did not reach the save").toBeGreaterThan(0);
+
+      // Now finish it, the way `completedCases` records a finished case.
+      await page.evaluate(
+        ({ key, id }) => {
+          const data = JSON.parse(window.localStorage.getItem(key));
+          data.completedCases = [id];
+          window.localStorage.setItem(key, JSON.stringify(data));
+        },
+        { key: PROGRESS_KEY, id: caseId }
+      );
+      await reloadIntoSave(page);
+
+      const quest = page.locator(".archive-challenge-item .quest");
+      await expect(quest).toHaveAttribute("data-quest-readonly", "true");
+      expect(
+        await quest.evaluate((root) => ({
+          live: Array.from(root.querySelectorAll("input, select, button")).filter(
+            (el) => !el.disabled
+          ).length,
+          editable: Array.from(root.querySelectorAll("textarea")).filter((el) => !el.readOnly)
+            .length,
+          draggable: Array.from(root.querySelectorAll("[draggable]")).filter(
+            (el) => el.getAttribute("draggable") !== "false"
+          ).length,
+        }))
+      ).toEqual({ live: 0, editable: 0, draggable: 0 });
+
+      // And the mutators refuse independently of the markup. A disabled control still dispatches a
+      // synthetic event, which is exactly the shape a stale listener or a devtools poke takes — the
+      // guard is `isSealedQuestTarget()` in main.js, derived from the render rather than kept in
+      // step with it.
+      const before = await page.evaluate((key) => window.localStorage.getItem(key), PROGRESS_KEY);
+      // Whatever this type has. A sequencing record has no field at all — its rows are buttons, and
+      // this block is hidden entirely — so both delegated entry points get poked and the type that
+      // only has one is still covered.
+      const fields = quest.locator("input, select, textarea");
+      if (await fields.count()) await fields.first().dispatchEvent("change");
+      const buttons = quest.locator("button");
+      if (await buttons.count()) await buttons.first().dispatchEvent("click");
+      await expect
+        .poll(async () => page.evaluate((key) => window.localStorage.getItem(key), PROGRESS_KEY))
+        .toBe(before);
+    });
+  }
 
   test("the Archive Terminal holds written work, and still calls it that", async ({ page }) => {
     // The other caller of the shared card, and the reason `kind` is a parameter rather than a

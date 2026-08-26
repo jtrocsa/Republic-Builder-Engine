@@ -10789,10 +10789,18 @@ function archiveChallengeQuestCard(
     // `completedCases.includes(kase.id)`, which is true of **every** normally finished mission, so
     // that message was shown to the student who had just done the work themselves, about a record
     // whose answer is sitting in `progress.questResponses`. Spine Review Part 10, P10-2.
+    //
+    // And when there *is* an answer, show it. The player's work was in
+    // `progress.questResponses` all along and this card returned 403 characters with zero quest
+    // controls — stored and hidden, on fourteen of twenty-one missions, with no Codex entry either
+    // because the Codex holds field records and says so. It renders read-only rather than editable:
+    // grading is recomputed on every render, so an edited answer would flip "complete" back to a
+    // hint while `completedCases` kept the case archived. P10-4, decision log `0089` §2.
     const answered = questAnsweredAny(questType, state);
-    const restored = answered
-      ? `${kind} complete — case record preserved.`
-      : `${kind} complete — this record was restored from an earlier save.`;
+    if (answered) {
+      return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(kicker)}</p>${renderQuest(questType, quest, state, { readOnly: true })}<p class="activity-feedback success" role="status" aria-live="polite">${esc(`${kind} complete — case record preserved.`)}</p></div>`;
+    }
+    const restored = `${kind} complete — this record was restored from an earlier save.`;
     return `<div class="quest-practice-item archive-challenge-item" data-quest-status="correct"><p class="kicker">${esc(kicker)}</p><p class="quest-prompt">${esc(quest.prompt)}</p><p class="activity-feedback success" role="status" aria-live="polite">${esc(restored)}</p></div>`;
   }
   const feedback = complete
@@ -14263,6 +14271,19 @@ function showFeedback(id, message, type = "success") {
   }
 }
 
+// A sealed quest is sealed, and the check is derived from the render rather than kept in step
+// with it by hand. renderQuest(..., { readOnly: true }) writes data-quest-readonly on the quest
+// root and disables every control it owns; this is the other half, and it is the half that
+// matters, because markup alone is not a lock. A drop target has no disabled state at all, a
+// disabled input is one devtools attribute away from being live again, and neither of those is
+// hypothetical on a screen whose whole job is to show a finished answer back.
+//
+// Same shape as the activity engines' rule (INVARIANTS.md): every renderer disables its own
+// controls **and** every reducer refuses every verb that could un-complete a filed record.
+function isSealedQuestTarget(el) {
+  return Boolean(el?.closest?.('[data-quest-readonly="true"]'));
+}
+
 // Quest response state mutators — shared by the drag/drop handlers and their
 // keyboard-operable equivalents (moved out of the audio block, where they'd been
 // wedged by mistake; not audio logic).
@@ -14946,6 +14967,7 @@ function handleSourceReaderClick(target, action) {
 
 function handlePuzzleScreenClick(target, action) {
   if (action === "sequence-move") {
+    if (isSealedQuestTarget(target)) return true;
     applySequenceMove(
       target.dataset.sequenceQuest,
       target.dataset.sequenceItem,
@@ -15758,6 +15780,9 @@ function handleAppClick(event) {
 
 async function handleAppChange(event) {
   const field = event.target;
+  // Before every branch, not inside the six quest ones: nothing else in this handler can ever be
+  // inside a read-only quest, so one guard is cheaper than six that have to be remembered.
+  if (isSealedQuestTarget(field)) return;
   if (field.matches("[data-profile]")) {
     progress.profile[field.dataset.profile] = field.value;
     save();
@@ -15997,6 +16022,7 @@ function handleAppInput(event) {
 }
 
 function handleAppDragstart(event) {
+  if (isSealedQuestTarget(event.target)) return;
   // Drag is an accelerator over ASSEMBLY's select-then-place path, not the only way in: the same
   // fragment buttons work from a keyboard, which the ten-piece jigsaw this replaced never did.
   const activityFragment = event.target.closest("[data-activity-fragment]");
@@ -16047,6 +16073,10 @@ function handleAppDragleave(event) {
 }
 
 function handleAppDrop(event) {
+  // Not just a mirror of the dragstart guard: the drop target is a different element from the drag
+  // source, so a card lifted out of a teacher-added question on the same screen could otherwise be
+  // dropped into the sealed quest's slot and write to *its* quest id.
+  if (isSealedQuestTarget(event.target)) return;
   const cargoHold = event.target.closest("[data-cargo-hold]");
   if (cargoHold) {
     event.preventDefault();

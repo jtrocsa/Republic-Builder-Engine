@@ -164,8 +164,24 @@ function requireQuestType(questType) {
   return type;
 }
 
-export function renderQuest(questType, quest, state) {
-  return requireQuestType(questType).render(quest, state);
+// `options.readOnly` renders a finished quest as a record of an answer rather
+// than as a form: every control that could change the answer is disabled, and
+// the quest root carries `data-quest-readonly="true"` for the host's mutators
+// to refuse off (see quest-types/shared/html.js and main.js's handleAppChange/
+// handleAppDrop guards).
+//
+// It exists because a completed mission had its answer in
+// `progress.questResponses` and showed it nowhere — Spine Review Part 10,
+// P10-4 — and re-rendering that quest *editable* is worse than showing
+// nothing: grading is recomputed on every render, so an edited answer flips
+// the card back to a hint while `completedCases` keeps the case archived. See
+// decision log `0089` §2.
+//
+// Every type takes it; each one decides for itself which of its controls the
+// mode touches. Textareas go `readonly` rather than `disabled` so the
+// student's own writing stays selectable and scrollable.
+export function renderQuest(questType, quest, state, options) {
+  return requireQuestType(questType).render(quest, state, options);
 }
 
 export function gradeQuest(questType, quest, state) {

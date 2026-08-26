@@ -7,7 +7,7 @@
 // docs/architecture/QUEST-TYPE-ARCHITECTURE.md.
 import { z } from "zod";
 import { McqQuestionSchema } from "../../content/schemas/review.schema.js";
-import { escapeHtml } from "../shared/html.js";
+import { escapeHtml, readOnlyAttr, readOnlyClass, disabledIf } from "../shared/html.js";
 
 export const McqRelatedSourceSchema = z.object({
   label: z.string().min(1, "relatedSource.label is required"),
@@ -51,10 +51,12 @@ export const McqQuestListSchema = z.array(McqQuestSchema).superRefine((items, ct
 /**
  * @param {import("zod").infer<typeof McqQuestSchema>} quest
  * @param {{ selected?: number|string }} [state]
+ * @param {{ readOnly?: boolean }} [options] - see quest-types/shared/html.js.
  */
-export function renderMcqQuest(quest, state = {}) {
+export function renderMcqQuest(quest, state = {}, options = {}) {
   const { selected } = state;
-  return `<article class="quest quest-mcq" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="mcq">
+  const readOnly = Boolean(options.readOnly);
+  return `<article class="quest quest-mcq${readOnlyClass(readOnly)}" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="mcq"${readOnlyAttr(readOnly)}>
   ${
     quest.relatedSource
       ? `<p class="quest-related-source">${quest.relatedSource.attribution ? `<span class="quest-related-source-attribution">${escapeHtml(quest.relatedSource.attribution)}</span> — ` : ""}${escapeHtml(quest.relatedSource.excerpt)}</p>`
@@ -72,7 +74,7 @@ export function renderMcqQuest(quest, state = {}) {
         (choice, index) => `<label class="choice">
       <input type="radio" name="mcq-${escapeHtml(quest.id)}" data-mcq-quest="${escapeHtml(quest.id)}" value="${index}" ${
         String(selected) === String(index) ? "checked" : ""
-      }>
+      }${disabledIf(readOnly)}>
       <span class="choice-badge" aria-hidden="true">${String.fromCharCode(65 + index)}</span>
       <span class="choice-text">${escapeHtml(choice)}</span>
     </label>`

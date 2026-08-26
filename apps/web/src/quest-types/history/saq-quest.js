@@ -18,7 +18,7 @@
 // bespoke content without either concern living inside a quest-type module.
 import { z } from "zod";
 import { SaqSchema } from "../../content/schemas/review.schema.js";
-import { escapeHtml } from "../shared/html.js";
+import { escapeHtml, readOnlyAttr, readOnlyClass, readonlyIf } from "../shared/html.js";
 
 export const SaqQuestSchema = SaqSchema.extend({
   id: z.string().min(1, "saq quest id is required"),
@@ -43,8 +43,10 @@ export const SaqQuestListSchema = z.array(SaqQuestSchema).superRefine((items, ct
  * @param {import("zod").infer<typeof SaqQuestSchema>} quest
  * @param {{ responses?: Record<number, string> }} [state] - `responses` maps
  *   prompt index -> the student's draft text for that part.
+ * @param {{ readOnly?: boolean }} [options] - see quest-types/shared/html.js.
  */
-export function renderSaqQuest(quest, state = {}) {
+export function renderSaqQuest(quest, state = {}, options = {}) {
+  const readOnly = Boolean(options.readOnly);
   const responses = state.responses || {};
 
   // Reuses .quest-document/.rubric-note/.quest-reflection — the same
@@ -52,7 +54,7 @@ export function renderSaqQuest(quest, state = {}) {
   // quest types' render functions use — rather than introducing new,
   // unstyled classes for what's visually the same kind of stimulus/rubric/
   // response-textarea layout.
-  return `<section class="quest quest-saq" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="saq">
+  return `<section class="quest quest-saq${readOnlyClass(readOnly)}" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="saq"${readOnlyAttr(readOnly)}>
   <blockquote class="quest-document">
     <p class="quest-document-text">${escapeHtml(quest.stimulus)}</p>
   </blockquote>
@@ -60,7 +62,7 @@ export function renderSaqQuest(quest, state = {}) {
   ${quest.prompts
     .map(
       (prompt, index) => `<label class="quest-reflection">${escapeHtml(prompt)}
-    <textarea data-saq-quest="${escapeHtml(quest.id)}" data-saq-index="${index}">${escapeHtml(
+    <textarea data-saq-quest="${escapeHtml(quest.id)}" data-saq-index="${index}"${readonlyIf(readOnly)}>${escapeHtml(
       responses[index] || ""
     )}</textarea>
   </label>`

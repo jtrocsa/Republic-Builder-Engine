@@ -13,7 +13,14 @@
 // buildTriangleCargoSchema factory for the precedent this followed) rather
 // than inventing a new shape from scratch.
 import { z } from "zod";
-import { escapeHtml } from "../shared/html.js";
+import {
+  escapeHtml,
+  readOnlyAttr,
+  readOnlyClass,
+  disabledIf,
+  readonlyIf,
+  draggableIf,
+} from "../shared/html.js";
 
 function assertUniqueIds(items, ctx, label) {
   const firstSeenAt = new Map();
@@ -126,8 +133,10 @@ export const REFLECTION_MIN_LENGTH = 20;
 /**
  * @param {import("zod").infer<typeof EvidenceOrganizingQuestSchema>} quest
  * @param {{ placements?: Record<string,string>, reflection?: string }} [state]
+ * @param {{ readOnly?: boolean }} [options] - see quest-types/shared/html.js.
  */
-export function renderEvidenceOrganizingQuest(quest, state = {}) {
+export function renderEvidenceOrganizingQuest(quest, state = {}, options = {}) {
+  const readOnly = Boolean(options.readOnly);
   const placements = state.placements || {};
   const placedBySlot = new Map();
   quest.sources.forEach((source) => {
@@ -140,19 +149,19 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
 
   const reflectionLength = (state.reflection || "").trim().length;
 
-  return `<section class="quest quest-evidence-organizing" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="evidence-organizing">
+  return `<section class="quest quest-evidence-organizing${readOnlyClass(readOnly)}" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="evidence-organizing"${readOnlyAttr(readOnly)}>
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
   <div class="quest-evidence-sources">
     ${quest.sources
       .map((source) => {
         const placedSlotId = placements[source.id];
         const isPlaced = Boolean(placedSlotId);
-        return `<article class="evidence-card${isPlaced ? " evidence-card--placed" : ""}" draggable="true" data-evidence-source="${escapeHtml(source.id)}" ${isPlaced ? `data-evidence-placed="true"` : ""}>
+        return `<article class="evidence-card${isPlaced ? " evidence-card--placed" : ""}" ${draggableIf(readOnly)} data-evidence-source="${escapeHtml(source.id)}" ${isPlaced ? `data-evidence-placed="true"` : ""}>
       <h3>${escapeHtml(source.label)}${isPlaced ? `<span class="evidence-placed-badge" aria-hidden="true">✓</span>` : ""}</h3>
       <p class="evidence-attribution">${escapeHtml(source.attribution)}</p>
       <p class="evidence-excerpt">${escapeHtml(source.excerpt)}</p>
-      <label class="evidence-select-label"><span class="evidence-select-label-text">Place in</span>
-        <select data-evidence-select="${escapeHtml(source.id)}" data-quest-id="${escapeHtml(quest.id)}">
+      <label class="evidence-select-label"><span class="evidence-select-label-text">${readOnly ? "Filed under" : "Place in"}</span>
+        <select data-evidence-select="${escapeHtml(source.id)}" data-quest-id="${escapeHtml(quest.id)}"${disabledIf(readOnly)}>
           <option value="">— place —</option>
           ${quest.slots
             .map(
@@ -189,7 +198,7 @@ export function renderEvidenceOrganizingQuest(quest, state = {}) {
   ${
     quest.reflectionPrompt
       ? `<label class="quest-reflection">${escapeHtml(quest.reflectionPrompt)}
-    <textarea data-evidence-reflection="${escapeHtml(quest.id)}">${escapeHtml(state.reflection || "")}</textarea>
+    <textarea data-evidence-reflection="${escapeHtml(quest.id)}"${readonlyIf(readOnly)}>${escapeHtml(state.reflection || "")}</textarea>
   </label>
   <p class="quest-reflection-counter" data-evidence-reflection-counter="${escapeHtml(quest.id)}">${reflectionLength}/${REFLECTION_MIN_LENGTH} characters</p>`
       : ""

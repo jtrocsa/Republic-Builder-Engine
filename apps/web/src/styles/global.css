@@ -8571,6 +8571,82 @@ dd {
 .quest-practice-item[data-quest-status="partial"] {
   border-left-color: rgba(225, 182, 93, 0.7);
 }
+
+/* A finished quest, rendered as a record rather than as a form — renderQuest(..., { readOnly: true }),
+   see quest-types/shared/html.js. The markup is the same markup; what changes is that every control
+   is inert, so this block has exactly one job: stop the screen inviting an interaction that cannot
+   happen. Grab cursors, the placed-card fade and a resize grip all read as "still in play", and all
+   three are wrong on a record.
+
+   Hooked on the class, not on [data-quest-readonly]. The attribute is what main.js's mutators refuse
+   off, so moving or renaming it is a behaviour change; this is a paint change, and the two should
+   not be able to drag each other along. */
+.quest--read-only .sequence-item,
+.quest--read-only .evidence-card,
+.quest--read-only .hipp-option,
+.quest--read-only .choice {
+  cursor: default;
+}
+/* Every source is placed once the quest is finished, so the 55% fade that means "this one is done"
+   in the live form would put the whole board behind a veil in the record. */
+.quest--read-only .evidence-card--placed {
+  opacity: 1;
+}
+/* The chosen option is the entire content of a read-only HIPP. In the live form a checked radio is
+   enough because you just clicked it; read back weeks later it is a greyed 6px dot, so the row it
+   belongs to says so as well. MCQ already has this rule (.choice:has(input:checked)) for the live
+   form and inherits it here. */
+.quest--read-only .hipp-option:has(input:checked) {
+  border-color: var(--gold);
+  background: rgba(var(--c-gold-rgb), 0.13);
+  color: #fff6e0;
+}
+.quest--read-only .hipp-option:not(:has(input:checked)),
+.quest--read-only .choice:not(:has(input:checked)) {
+  opacity: 0.62;
+}
+/* Disabled radios grey out in every engine, and the checked one is the answer — it has to stay
+   legible while the rejected options are allowed to recede above. */
+.quest--read-only input[type="radio"]:disabled {
+  accent-color: #e0b45b;
+}
+/* readonly, not disabled: the student's own writing stays selectable and scrollable, which is the
+   whole reason this mode exists (a DBQ dossier runs several paragraphs). What goes is the resize
+   grip and the editable ground. */
+.quest--read-only .quest-reflection textarea {
+  resize: none;
+  background: rgba(255, 255, 255, 0.03);
+  border-style: dashed;
+  cursor: default;
+}
+/* A disabled <select> keeps its dropdown arrow and its full contrast in every engine, so the one
+   control that carries an evidence quest's whole answer went on reading as clickable. Dropping the
+   arrow is what actually says "this is a value, not a menu"; the dashed border matches the read-only
+   textarea beside it. */
+.quest--read-only .evidence-select-label select {
+  appearance: none;
+  border-style: dashed;
+  color: var(--gold-soft);
+  cursor: default;
+}
+/* A disabled up/down pair already exists in the live form — it is what the first and last rows
+   carry. Here every row would carry it, and a column of greyed buttons is noise. The order is the
+   answer, so the order gets numbered instead; .quest-sequence-list is list-style: none, so without
+   this the record would be an unlabelled column of sentences. */
+.quest--read-only .sequence-item-controls {
+  display: none;
+}
+.quest--read-only .quest-sequence-list {
+  counter-reset: sequence-record;
+}
+.quest--read-only .sequence-item {
+  counter-increment: sequence-record;
+}
+.quest--read-only .sequence-item-label::before {
+  content: counter(sequence-record) ". ";
+  color: var(--gold-soft);
+  font-family: "Cinzel", serif;
+}
 .activity-feedback.partial {
   background: rgba(225, 182, 93, 0.14);
   border: 1px solid rgba(225, 182, 93, 0.45);

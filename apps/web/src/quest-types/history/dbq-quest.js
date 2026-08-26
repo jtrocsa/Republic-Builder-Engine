@@ -14,7 +14,7 @@
 // their own evaluator sections around their own content. A teacher enters
 // the real grade by hand via gradingScreen(), same as SAQ/HIPP.
 import { z } from "zod";
-import { escapeHtml } from "../shared/html.js";
+import { escapeHtml, readOnlyAttr, readOnlyClass, readonlyIf } from "../shared/html.js";
 
 const DbqDocumentSchema = z.object({
   id: z.string().min(1, "document.id is required"),
@@ -81,12 +81,14 @@ export const DBQ_MIN_RESPONSE_LENGTH = 400;
 /**
  * @param {import("zod").infer<typeof DbqQuestSchema>} quest
  * @param {{ response?: string }} [state]
+ * @param {{ readOnly?: boolean }} [options] - see quest-types/shared/html.js.
  */
-export function renderDbqQuest(quest, state = {}) {
+export function renderDbqQuest(quest, state = {}, options = {}) {
+  const readOnly = Boolean(options.readOnly);
   const response = state.response || "";
   const length = response.trim().length;
 
-  return `<section class="quest quest-dbq" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="dbq">
+  return `<section class="quest quest-dbq${readOnlyClass(readOnly)}" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="dbq"${readOnlyAttr(readOnly)}>
   <p class="quest-prompt">${escapeHtml(quest.prompt)}</p>
   ${quest.documents
     .map(
@@ -98,7 +100,7 @@ export function renderDbqQuest(quest, state = {}) {
     .join("")}
   <div class="rubric-note"><b>Document-Based Question · 7 points total</b><p>${escapeHtml(quest.rubric)}</p></div>
   <label class="quest-reflection">Your Dossier response
-    <textarea data-dbq-response="${escapeHtml(quest.id)}" rows="14">${escapeHtml(response)}</textarea>
+    <textarea data-dbq-response="${escapeHtml(quest.id)}" rows="14"${readonlyIf(readOnly)}>${escapeHtml(response)}</textarea>
   </label>
   <p class="quest-reflection-counter" data-dbq-response-counter="${escapeHtml(quest.id)}">${length}/${DBQ_MIN_RESPONSE_LENGTH} characters</p>
 </section>`;

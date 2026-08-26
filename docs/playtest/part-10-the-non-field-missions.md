@@ -23,7 +23,7 @@ rather than read off the source. No owner pass was run.
 | P10-1 | S2  | `inconsistent` | **All fourteen missions announce themselves as "Archive Challenge complete"** — the one distinction that is load-bearing | Fixed. The card is told which of the two it is rendering.          |
 | P10-2 | S2  | `broken`       | A mission you finished yourself re-opens with the message written for a save that never answered it                      | Fixed. Two states, told apart by whether there is an answer.       |
 | P10-3 | S2  | `rough`        | Twelve of the fourteen print the date twice, side by side                                                                | Fixed. `caseWhereAndWhen()`, the helper Phase 90K already added.   |
-| P10-4 | S3  | `hollow`       | A finished mission's own work is saved and then shown nowhere                                                            | Routed → ADR. Needs a read-only mode across four quest types.      |
+| P10-4 | S3  | `hollow`       | A finished mission's own work is saved and then shown nowhere                                                            | Routed → ADR `0091`. **Shipped in Phase 92**, read-only mode.      |
 | P10-5 | S3  | `unclear`      | The case number is missing from the kicker on twelve of the fourteen                                                     | Routed → the content queue. Known-outstanding; a content decision. |
 | P10-6 | S3  | `inconsistent` | The game cannot decide whether a non-field mission is a place you travel to or work you do at the Archive                | Routed → ADR. Its cheap half — naming what unlocked — fixed here.  |
 | P10-7 | S3  | `rough`        | Two places still say "ten of the twenty-one"                                                                             | Fixed in passing.                                                  |
@@ -60,7 +60,8 @@ And underneath it, the thing that makes it more than copy: the player's answer *
 `progress.questResponses` holds the order they arranged — and the screen returns 403 characters of
 card with **zero quest controls**. It is stored and hidden. That half is P10-4 and does not get
 fixed here: showing it means a read-only render mode across four quest types, which is a change to
-the `QUEST_TYPES` contract, and this program fixes behaviour rather than shape.
+the `QUEST_TYPES` contract, and this program fixes behaviour rather than shape. It shipped as
+**Phase 92** — see decision log [`0091`](../decision-log/0091-the-answer-was-in-the-save-all-along.md).
 
 ---
 

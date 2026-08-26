@@ -10,7 +10,13 @@
 // correct), matching the rubric's per-point-independent-but-binary logic —
 // no partial credit for a near-miss ordering.
 import { z } from "zod";
-import { escapeHtml } from "../shared/html.js";
+import {
+  escapeHtml,
+  readOnlyAttr,
+  readOnlyClass,
+  readonlyIf,
+  draggableIf,
+} from "../shared/html.js";
 
 export const SequencingItemSchema = z.object({
   id: z.string().min(1, "item.id is required"),
@@ -99,8 +105,10 @@ export const REFLECTION_MIN_LENGTH = 20;
  *   current arrangement of item ids (post-drag). Defaults to the order items
  *   are authored in, which content authors must NOT author in already-correct
  *   order.
+ * @param {{ readOnly?: boolean }} [options] - see quest-types/shared/html.js.
  */
-export function renderSequencingQuest(quest, state = {}) {
+export function renderSequencingQuest(quest, state = {}, options = {}) {
+  const readOnly = Boolean(options.readOnly);
   const order =
     state.order && state.order.length === quest.items.length
       ? state.order
@@ -108,7 +116,7 @@ export function renderSequencingQuest(quest, state = {}) {
   const byId = new Map(quest.items.map((item) => [item.id, item]));
   const reflectionLength = (state.reflection || "").trim().length;
 
-  return `<section class="quest quest-sequencing" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="sequencing">
+  return `<section class="quest quest-sequencing${readOnlyClass(readOnly)}" data-quest-id="${escapeHtml(quest.id)}" data-quest-type="sequencing"${readOnlyAttr(readOnly)}>
   ${
     quest.relatedSource
       ? `<p class="quest-related-source">${quest.relatedSource.attribution ? `<span class="quest-related-source-attribution">${escapeHtml(quest.relatedSource.attribution)}</span> — ` : ""}${escapeHtml(quest.relatedSource.excerpt)}</p>`
@@ -119,11 +127,11 @@ export function renderSequencingQuest(quest, state = {}) {
     ${order
       .map((itemId, index) => {
         const item = byId.get(itemId);
-        return `<li class="sequence-item" draggable="true" data-sequence-item="${escapeHtml(itemId)}" data-sequence-index="${index}">
+        return `<li class="sequence-item" ${draggableIf(readOnly)} data-sequence-item="${escapeHtml(itemId)}" data-sequence-index="${index}">
       <span class="sequence-item-label">${escapeHtml(item.label)}</span>
       <span class="sequence-item-controls">
-        <button type="button" class="sequence-move-btn" data-action="sequence-move" data-sequence-quest="${escapeHtml(quest.id)}" data-sequence-item="${escapeHtml(itemId)}" data-direction="up" ${index === 0 ? "disabled" : ""} aria-label="Move &quot;${escapeHtml(item.label)}&quot; earlier in the sequence">↑</button>
-        <button type="button" class="sequence-move-btn" data-action="sequence-move" data-sequence-quest="${escapeHtml(quest.id)}" data-sequence-item="${escapeHtml(itemId)}" data-direction="down" ${index === order.length - 1 ? "disabled" : ""} aria-label="Move &quot;${escapeHtml(item.label)}&quot; later in the sequence">↓</button>
+        <button type="button" class="sequence-move-btn" data-action="sequence-move" data-sequence-quest="${escapeHtml(quest.id)}" data-sequence-item="${escapeHtml(itemId)}" data-direction="up" ${index === 0 || readOnly ? "disabled" : ""} aria-label="Move &quot;${escapeHtml(item.label)}&quot; earlier in the sequence">↑</button>
+        <button type="button" class="sequence-move-btn" data-action="sequence-move" data-sequence-quest="${escapeHtml(quest.id)}" data-sequence-item="${escapeHtml(itemId)}" data-direction="down" ${index === order.length - 1 || readOnly ? "disabled" : ""} aria-label="Move &quot;${escapeHtml(item.label)}&quot; later in the sequence">↓</button>
       </span>
     </li>`;
       })
@@ -132,7 +140,7 @@ export function renderSequencingQuest(quest, state = {}) {
   ${
     quest.reflectionPrompt
       ? `<label class="quest-reflection">${escapeHtml(quest.reflectionPrompt)}
-    <textarea data-sequence-reflection="${escapeHtml(quest.id)}">${escapeHtml(state.reflection || "")}</textarea>
+    <textarea data-sequence-reflection="${escapeHtml(quest.id)}"${readonlyIf(readOnly)}>${escapeHtml(state.reflection || "")}</textarea>
   </label>
   <p class="quest-reflection-counter" data-sequence-reflection-counter="${escapeHtml(quest.id)}">${reflectionLength}/${REFLECTION_MIN_LENGTH} characters</p>`
       : ""
