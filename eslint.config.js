@@ -21,6 +21,7 @@ export default [
         clearTimeout: "readonly",
         clearInterval: "readonly",
         requestAnimationFrame: "readonly",
+        MutationObserver: "readonly",
         structuredClone: "readonly",
         Blob: "readonly",
         Image: "readonly",

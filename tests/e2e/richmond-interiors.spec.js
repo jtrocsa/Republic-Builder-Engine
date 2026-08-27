@@ -90,16 +90,22 @@ test.describe("Richmond interiors", () => {
       height: el.style.height,
     }));
     expect(worldSize).toEqual({ width: "864px", height: "672px" });
-    const camX = await page
-      .locator("#caribbeanWorld")
-      .evaluate((el) => Number(el.style.transform.match(/-?[\d.]+/g)[0]));
+    const camX = () =>
+      page
+        .locator("#caribbeanWorld")
+        .evaluate((el) => Number(el.style.transform.match(/-?[\d.]+/g)[0]));
     const viewportWidth = await page
       .locator("#caseFieldMap")
       .evaluate((el) => el.getBoundingClientRect().width);
-    expect(camX, "a room narrower than the frame is centred in it").toBeCloseTo(
-      Math.round((viewportWidth - 864) / 2),
-      0
-    );
+    // Polled, not read once. The field mounts with `translate(0px, 0px)` and the first
+    // `updateFieldPlayer()` writes the real camera a frame later, so a one-shot read between the
+    // two returns 0 — a race the suite could not lose while six workers held the page at 4-13fps,
+    // and loses at two workers where the page runs at 40+. The centred value can legitimately be
+    // near zero (the telegraph office's is 10), so waiting for "non-zero" is not available;
+    // polling the assertion is. See decision log `0092` §6.
+    await expect
+      .poll(camX, { message: "a room narrower than the frame is centred in it" })
+      .toBeCloseTo(Math.round((viewportWidth - 864) / 2), 0);
 
     // One record in here, on the book-keeper, and none of the four out in the city.
     await expect(page.locator(".npc-source-badge")).toHaveCount(1);

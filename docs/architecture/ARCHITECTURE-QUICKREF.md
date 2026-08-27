@@ -175,6 +175,8 @@
 
 - Phase 92 — **The answer was in the save all along.** Decision log `0091`, and the fix for **P10-4**, the one Spine Review finding the program could not take under its own rules (it fixes behaviour, never shape). A finished non-field mission — fourteen of the twenty-one cases — had the player's answer sitting in `progress.questResponses` and returned 403 characters of card with **zero quest controls**; the Codex does not hold it either, because the Codex holds field records and says so. The obvious fix is worse than the bug: `archiveChallengeQuestCard()` grades on **every render** — there is no submit step anywhere in this codebase — so a student nudging one record on a finished mission would watch "Mission complete" flip to a hint while `completedCases` kept the case archived, which is the same both-sides-disagree failure Phase 90F spent a whole part closing on the activity engines. So it ships as a **read-only mode across all six quest types**: `renderQuest(type, quest, state, { readOnly: true })`, one optional key, each type deciding which of its own controls the mode touches. **Both ends or neither** — every renderer disables its own controls _and_ `isSealedQuestTarget()` refuses in `handleAppChange`/`handleAppDragstart`/`handleAppDrop`/`sequence-move`, reading `data-quest-readonly` off the quest root so the guard is **derived from the render rather than kept in step with it**. Markup alone is not a lock: a drop target has no disabled state at all, a disabled input is one devtools attribute away from live, and a synthetic `change` dispatches on a disabled control quite happily — and the drop guard is not a mirror of the dragstart one, because the drop target is a different element from the drag source. Textareas take `readonly` rather than `disabled`, since a disabled textarea greys its own text out and showing that writing back is the entire point. **Applied to the completed mission only, deliberately**: a completed Archive Challenge stays editable because SAQ/DBQ "complete" means _submitted_ and the card offers "Get feedback on my revision →", and the Practice Check stays editable because its own copy says re-answering never affects progress — the capability is one argument away for either. Three things the record has to say that the form does not, all found by looking at the screen: a disabled `<select>` keeps its dropdown arrow and still reads as clickable (so it drops the arrow and its label turns from "Place in" to "Filed under"), a sequencing record has no ordinals once its ↑/↓ pair is hidden (`.quest-sequence-list` is `list-style: none`, so a CSS counter puts the numbers back), and `.evidence-card--placed`'s 55% fade would veil a board where _every_ card is placed. The regression that would otherwise ship in silence is the **default** render — a renderer emitting `disabled` unconditionally locks the live form on every screen in the game and every other test in the suite still passes — so `tests/unit/quest-read-only-mode.test.js` asserts the default is untouched for all six, and both guards were confirmed against the real defect by reverting them and watching specific cases go red. Two new baselines, `mission-exchange-ledger-filed` and `mission-bank-war-filed`, neither with a predecessor to diff against.
 
+- Phase 93 — **The suite was timing the machine.** Decision log `0092`, closing **Candidate C** in three parts: the trade it feared is not real, the cap is not a cost either, and the cap still cannot ship. Measured before anything changed: a cold `page.goto("/")` takes **2.2s at one worker and 11.6s at six** — 5.3x latency for 6x the demand, which is what a _serialized_ resource looks like, and the resource is **one single-threaded Vite dev server**, not the twelve cores nobody was using. The page drops from 40-45fps to 4-13, and because `runFieldMovementLoop()` clamps its frame delta with `Math.min(48, …)` deliberately, a walk covers as little as **39%** of the ground per wall-clock second that it covers serially. **Every walk helper's deadline is denominated in wall clock and every walk's progress is denominated in frames** — that is what "a walk parked short" always was. **Shipped: the performance claim now has its own test.** `0083` §1 wanted the suite to catch a per-frame `render()` as a correctness failure, and a walk parking short fires just as readily for a busy laptop; `render()` assigns `app.innerHTML` wholesale and so removes every direct child of `#app`, while the per-frame path patches attributes and single nested nodes and never does, so a `childList` MutationObserver on `#app` without `subtree` counts renders and nothing else — verified at 4-9fps: **0 for a walk, 1 for a deliberate exit**, and that second half is what keeps the first honest. New `tests/e2e/frame-budget.spec.js`, two cases including the hub loop that had no coverage at all — and deliberately _not_ `0083`'s own walk-away-from-a-conversation scenario, because reaching an NPC needs a long walk and that is the most load-sensitive thing the suite does, which would give this spec the one property it exists not to have. **Shipped: `maxDiffPixels: 120`** replacing `maxDiffPixelRatio: 0.002` — re-measured with the tolerance off entirely, **every baseline that rendered was pixel-identical**, zero differing pixels, while the ratio was allowing 2,098 and had let a real 211-pixel change through in Phase 90L; absolute rather than a ratio because antialiasing noise lives on edges and does not scale with area, and **if churn returns the lever is `threshold`, not a bigger budget**. **Shipped: five camera reads that raced their own first write** — the field mounts `translate(0px, 0px)` and `updateFieldPlayer()` writes the real camera a frame later, so a one-shot read between the two returns 0 and fails as "camera x 0 vs -964", which reads exactly like the camera-purity regression those tests exist to catch; all five are `expect.poll` now, which is right at any worker count. **Not shipped: `workers: 2`, and that is the finding.** Two workers are _faster_ than six (67-70s against 90s on a fixed subset; a U-shaped curve with its minimum at two, and `0084`-`0087` had each already run `--workers=2` by hand without writing down why) — but a fast suite breaks specs calibrated to a slow one. `powhatan-man is reachable on foot` and one `field-movement-dialogue` case fail **every attempt** under full-suite load at two workers, deterministically, through four retries. Four fixes were measured and all failed: teaching `walkTo` to reverse out of a blocked slide fixed those walks and **broke five other specs** (`field-liaison` and `meridian-reveal` went 17/17 green to five "Voss is unreachable" failures, because a walker that steps one way then the other resets `stalls` every burst and burns the clock instead of stalling out); `slideBursts: 6`/`maxStalls: 24` failed 4 in 4; shorter bursts were worse; `maxStalls: 40` held 8 in 8 in isolation and not under load; and `retries: 3` scoped to the file failed all four attempts. **Two green tests turning permanently red is worse than the flakiness the cap fixes**, so `workers` stays unset with the measurement written into the config beside it. The cap is blocked on hardening the long walks, and the limitation underneath is that **`walkTo` slides, it does not path** — which `port-interiors` and `railhead-interiors` already work around with their own `nudgeTo`. Both of the things a fast suite exposed were latent for as long as the suite has existed, and **a slower suite could never have found either**.
+
 ## 5. Current active phase
 
 **Phase 81** is a six-part program (81A–81F) running from an approved plan: (A) reconcile the rules, (B) rewrite the opening lore against the canon, (C) build the cutscene system and make Emery Voss a character rather than a body, (D) decide Units 3–9's engine slates, places and plot beats as one solve, (E) station Voss on Units 3–5's maps, (F) author activities for Philadelphia, Canal Crossroads and Richmond. **The whole program is closed** — 81A, 81B, 81D, 81E and 81F in sequence, and 81C's remainder folded onto the general scene runner by 81G. See the phase index above and decision log `0064`. The ordering was the point: each pass made the next cheaper, and 81F is the one that could not have been authored first — it needed the slates from 81D and the givers from 81E.
@@ -226,9 +228,8 @@ Nothing else from `THE-FIELD-LIAISON.md` is scheduled: the reveal, `liaison-meri
 **Phase 89E has shipped and Unit 7 is complete**, so the queue that stood here is empty. All seven
 shipped units are at parity — a walkable map, its interiors, and three playable missions each — and
 nothing in the game is half-built. **The Spine Review is closed** as of Phase 90L — all thirteen
-parts, 2026-08-03 to 2026-08-23. Three candidates were ready and **Candidate D shipped as Phase
-92**, which leaves two. Neither is approved; this is an owner's call rather than a default, and the
-two are different kinds of work.
+parts, 2026-08-03 to 2026-08-23. Three candidates were ready; **Candidate D shipped as Phase 92 and
+Candidate C as Phase 93**, which leaves one.
 
 **~~Candidate A′ — Spine Review Part 7~~ shipped as Phase 90F**, which closes the activity screen's
 two entry states. Part 6 closed in Phase 90E before it. Part 7's own routed item went to **Part 8**
@@ -267,31 +268,35 @@ last item routed out of the program. Decision log `0091`. The affordance the can
 Practice Check and the Archive Challenges "for free" **exists and is deliberately not taken** —
 both stay editable for reasons written down in `0091` §4, and turning either on is one argument.
 
-**Candidate C — the e2e harness is not clean at its own default, and half of it is now handled.**
-Phase 90J gave `playwright.config.js` `retries: CI ? 2 : 1`, a 60s timeout and a
-`maxDiffPixelRatio`, which is why Phase 90K's full run reported **257 passed, 3 flaky, exit 0**
-rather than three failures — a real improvement, and also a mask, since the same three specs are
-still parking short. **The pixel threshold is a second thing to decide on purpose.** Phase 90L
-removed a visible chip from the mission screen and all twenty baselines stayed green: measured with
-the threshold off, the change is **211 pixels against the 2,098 that `0.002` allows** at 1366×768.
-The three baselines were updated deliberately and reviewed, but the suite had no opinion — so a
-small text or border change is currently below the floor, which is the cost that bought the end of
-the baseline churn. `workers` is still unset, so it runs 6 on a 12-core machine against one Vite
-dev server. What is left is that decision. The history below is why it is a decision and not a
-one-line cap. Phase 90F ran it twice and got 7 then 8 failures, overlapping
-but not identical, and Phase 90G hit the same `.field-speech-bubble` timeout again, **all timeouts
-rather than assertions** — `page.reload()` not returning inside
-30s, and a walk parking short so `.field-speech-bubble` never opened. Unmodified `f3e43eb` was
-then run in a detached worktree on the same machine and failed **4 of its own**, a third distinct
-set. **So the suite is the thing that is flaky, and `main` is where it is flaky.** That matters more
-than a normal test debt because CLAUDE.md names this suite the default way to verify a player-visible
-interaction: a gate that reds 2–8 random tests per run trains its reader to discount it, and the next
-session will burn the same half hour proving the red is not theirs. Not fixed in 90F because a
-Spine Review part fixes behaviour and never shape, and because the obvious one-line cap trades away
-something `0083` §1 valued deliberately — the suite catching a real performance regression as a
-correctness failure, which is the only way a suite ever can. Whoever takes this should decide that
-trade on purpose: cap workers, add a retry, give the visual specs their own preview server, or
-accept the noise and write down that it is accepted.
+**~~Candidate C — the e2e harness is not clean at its own default~~ was taken in Phase 93**, and it
+came back with three answers rather than one. Decision log `0092`.
+
+**The trade it feared is not real, and that part shipped.** `0083` §1 did not want to lose an e2e
+suite catching a per-frame `render()` as a correctness failure — but a walk parking short fires just
+as readily for a busy laptop, which is why the suite reported 2-8 red tests a run while claiming to
+watch for that. `tests/e2e/frame-budget.spec.js` measures it directly instead: a `childList`
+MutationObserver on `#app` counts wholesale re-renders and **does not care how fast the machine is**
+(verified at 4-9fps: 0 for a walk, 1 for a deliberate exit). The pixel threshold shipped too, at
+`maxDiffPixels: 120` against a measured noise floor of **zero**, replacing a ratio that allowed 2,098
+and had let a real 211-pixel change through.
+
+**The cap is not a cost either — and it still did not ship.** Two workers are _faster_ than six
+(67-70s against 90s on a fixed subset), because the contended resource is one single-threaded Vite
+dev server rather than the twelve cores. But a fast page breaks specs calibrated to a slow one: at
+two workers `powhatan-man is reachable on foot` and one `field-movement-dialogue` case fail **every
+attempt** under full-suite load, deterministically, through four retries. Two green tests turning
+permanently red is worse than the flakiness the cap fixes, so `workers` stays unset with the whole
+measurement written into `playwright.config.js` beside it.
+
+**So Candidate C leaves one named piece of work behind, and it is now well specified: harden the long
+walks.** `walkTo` slides past obstacles, it does not path, and `port-interiors` and
+`railhead-interiors` already work around that with their own `nudgeTo`. Four fixes were measured and
+all failed — teaching the shared helper to reverse fixes those walks and **breaks five other specs**,
+longer slides and shorter bursts are worse, a bigger stall budget holds in isolation but not under
+load, and scoped retries do not help a deterministic failure (`0092` §5 has the numbers). A walker
+that paths, or hand-steered waypoint routes for the four or five longest walks, is what unblocks `workers: 2` —
+and the cap is worth having, because it is both faster and the only way those latent races were ever
+going to surface.
 
 **Candidate B — Unit 8, the suburban corridor, 1957.** The next unit, and the first one whose whole
 build is now a known quantity: content, cast, map, interiors, activities, in that order, which is

@@ -274,10 +274,15 @@ test.describe("Ellis Island interiors", () => {
     const frame = await page
       .locator("#caseFieldMap")
       .evaluate((el) => el.getBoundingClientRect().width);
-    expect((await cameraAt(page)).x, "a room narrower than the frame is centred in it").toBeCloseTo(
-      Math.round((frame - 768) / 2),
-      0
-    );
+    // Polled, not read once. The field mounts with `translate(0px, 0px)` and the first
+    // `updateFieldPlayer()` writes the real camera a frame later, so a one-shot read between the
+    // two returns 0 — a race the suite could not lose while six workers held the page at 4-13fps,
+    // and loses at two workers where the page runs at 40+. See decision log `0092` §6.
+    await expect
+      .poll(async () => (await cameraAt(page)).x, {
+        message: "a room narrower than the frame is centred in it",
+      })
+      .toBeCloseTo(Math.round((frame - 768) / 2), 0);
 
     // **The minute is locked, and this is the only cross-surface lock in the game.** It carries
     // `requiresSourceId: "port-ship-manifest-page"`, which is held by the inspector in the hall next

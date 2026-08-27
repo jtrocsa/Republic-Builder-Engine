@@ -93,16 +93,22 @@ test.describe("Field interiors", () => {
 
     // A room narrower than its frame is centred in it rather than pinned to the top-left corner.
     // 20x14 at 48px is 960x672, so x centres and y — taller than the frame — does not.
-    const camX = await page
-      .locator("#caribbeanWorld")
-      .evaluate((el) => Number(el.style.transform.match(/-?[\d.]+/g)[0]));
+    const camX = () =>
+      page
+        .locator("#caribbeanWorld")
+        .evaluate((el) => Number(el.style.transform.match(/-?[\d.]+/g)[0]));
     const viewportWidth = await page
       .locator("#caseFieldMap")
       .evaluate((el) => el.getBoundingClientRect().width);
-    expect(camX, "a room narrower than the frame is centred in it").toBeCloseTo(
-      Math.round((viewportWidth - 960) / 2),
-      0
-    );
+    // Polled, not read once. The field mounts with `translate(0px, 0px)` and the first
+    // `updateFieldPlayer()` writes the real camera a frame later, so a one-shot read between the
+    // two returns 0 — a race the suite could not lose while six workers held the page at 4-13fps,
+    // and loses at two workers where the page runs at 40+. The centred value can legitimately be
+    // near zero (the telegraph office's is 10), so waiting for "non-zero" is not available;
+    // polling the assertion is. See decision log `0092` §6.
+    await expect
+      .poll(camX, { message: "a room narrower than the frame is centred in it" })
+      .toBeCloseTo(Math.round((viewportWidth - 960) / 2), 0);
 
     // A reload inside a room comes back inside that room. `reloadIntoSave()` is not incidental:
     // page.reload() re-runs module scope, resetting `showMainMenu` and re-arming the title, so the

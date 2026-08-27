@@ -80,6 +80,17 @@ test.describe("Field movement, collision, and dialogue", () => {
 
     // fieldMovement's module-level default is (28, 22) facing "down" — matches case-001's
     // declared spawn, so no extra positioning is needed for this case specifically.
+    //
+    // Waited for, not read straight away. The world mounts with `translate(0px, 0px)` and the
+    // first `updateFieldPlayer()` writes the real camera a frame later; reading between the two
+    // returns a camera of 0 against a player 964px into the map, which reads as the exact
+    // regression this test exists to catch. Six workers held the page slow enough that the race
+    // could not be lost. At two it can. See decision log `0092` §6.
+    await expect
+      .poll(async () => (await readFieldState(page)).camera.x, {
+        message: "the first camera update never landed",
+      })
+      .not.toBe(0);
     const initial = await readFieldState(page);
     expectCameraTracksPosition(initial);
 
