@@ -177,15 +177,15 @@ for (const [caseId, sheets] of Object.entries(SHEETS_BY_CASE)) {
 // assertions: the carpenter's barn corner and the Powhatan pair's river landing are walkable to,
 // not stranded behind collision or standing inside a building.
 //
-// One test per NPC, each walking from the spawn. Chaining all three in a single test made the
-// carpenter-to-Powhatan leg a 30-tile traverse across the whole settlement, which runs out of the
-// walker's step budget — a flake about the test's stamina, not about the map.
+// One test per NPC, each walking from the spawn, rather than one test chaining all three: the
+// carpenter-to-Powhatan leg would be a 30-tile traverse across the whole settlement, and three
+// separate walks say the same thing about three separate landings.
 //
-// Serial, because these are the three most walking-heavy tests in the suite and running them
-// alongside each other tripled peak concurrency. The field-movement spec still measures one hold
-// in milliseconds rather than in distance, so it covers less ground on a CPU-starved worker and
-// starts failing on a load its own comments predicted. Keeping these three in single file costs a
-// few seconds and leaves that spec the headroom it was written against.
+// Serial, because these are the three most walking-heavy tests in the suite. The field-movement spec
+// still measures one hold in milliseconds rather than in distance, so it covers less ground on a
+// CPU-starved worker; keeping these three in single file leaves it the headroom it was written
+// against. Cheap now — Phase 94's walker takes the shortest route rather than sliding along walls,
+// and all three land in under a minute together.
 test.describe.configure({ mode: "serial" });
 for (const [id, line] of [
   ["settlement-carpenter", "Every board in that barn"],
@@ -193,10 +193,9 @@ for (const [id, line] of [
   ["powhatan-woman", "grew in our fields"],
 ]) {
   test(`${id} is reachable on foot and talks`, async ({ page }) => {
-    // The Powhatan landing sits eighteen tiles from the settlement spawn, right across the map,
-    // which is more ground than walkToNpc's default budget covers. Longer walk, longer budget — and
-    // a test timeout that can accommodate it rather than one that truncates the walk and reports the
-    // map as unreachable.
+    // The Powhatan landing sits eighteen tiles from the settlement spawn, right across the map. A
+    // test timeout that can accommodate that rather than one that truncates the walk and reports the
+    // map as unreachable — the walk itself is inside walkTo's own 20s default now that it routes.
     test.setTimeout(60_000);
     await seedProgress(page, {
       currentScreen: "field",
@@ -206,10 +205,7 @@ for (const [id, line] of [
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    expect(
-      await walkToNpc(page, id, { burstMs: 400, timeoutMs: 40_000 }),
-      `${id} is reachable`
-    ).toBe(true);
+    expect(await walkToNpc(page, id), `${id} is reachable`).toBe(true);
     await page.keyboard.press("e");
     const bubble = page.locator(".field-speech-bubble");
     await expect(bubble).toBeVisible();

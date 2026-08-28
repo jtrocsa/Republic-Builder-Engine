@@ -5331,6 +5331,54 @@ const DEV_WARPS = {
     ...WARP_TOUR_DONE,
   },
 };
+/**
+ * A collision snapshot of the surface the player is standing on, for the e2e walker. Dev-only, and
+ * gated exactly as `applyDevWarp()` below is.
+ *
+ * Why this exists. `tests/e2e/helpers/progress-seed.js`'s `walkTo` steered greedily — down whichever
+ * axis had the larger gap, sliding sideways for a few bursts whenever a burst was blocked — because
+ * a test helper had no way to see the walls. Phase 93 measured what that costs: once the suite ran
+ * fast enough for the player to reach an obstacle at full speed instead of a third of it, the
+ * longest diagonal in the suite ran out of stall budget on *every* attempt, and the obvious repairs
+ * were all worse — decision log `0092` §5 has the four of them, including one that fixed that walk
+ * and broke five other specs. A slider has no fix; the shape was wrong.
+ *
+ * So the walker is given the walls. `isFieldBlocked` and `isHubBlocked` already are the game's own
+ * answer — the same predicates the movement loops ask every frame — and this samples one of them
+ * across the active grid on a half-tile lattice, fine enough to find the gaps a 0.68-tile foot box
+ * actually fits through. The helper breadth-firsts over the result. **The engine keeps its one
+ * collision rule**: nothing here re-implements it, and a wall that moves moves here too.
+ *
+ * The sample includes the other bodies, because both predicates do. That makes it a *snapshot* — an
+ * NPC on patrol invalidates it by walking — so the helper treats a blocked leg as a cue to ask
+ * again rather than as a failure.
+ */
+function installDevNavProbe() {
+  if (!import.meta.env.DEV) return;
+  window.__chronicleNav = (surface) => {
+    const field = surface === "field";
+    const grid = field ? activeFieldGrid() : activeHubGrid();
+    const blocked = field ? isFieldBlocked : isHubBlocked;
+    const at = field ? fieldMovement : instituteMovement;
+    const step = 0.5;
+    const cols = Math.round(grid.columns / step);
+    const rows = Math.round(grid.rows / step);
+    const cells = new Uint8Array(cols * rows);
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        cells[row * cols + col] = blocked(col * step, row * step) ? 1 : 0;
+      }
+    }
+    return {
+      step,
+      cols,
+      rows,
+      tile: grid.tile,
+      cells: Array.from(cells),
+      at: { x: at.x, y: at.y },
+    };
+  };
+}
 function applyDevWarp() {
   if (!import.meta.env.DEV) return;
   const name = new URLSearchParams(window.location.search).get("warp");
@@ -16359,6 +16407,7 @@ if (app) {
   // down this file — running it from up there is the same temporal-dead-zone throw a field interior
   // gets for being attached inside the FIELD_MAPS literal.
   applyDevWarp();
+  installDevNavProbe();
   // Before the first render, so a player who finished missions before the Codex existed opens it
   // to their own work rather than to an empty archive. A no-op on every boot after the first.
   backfillCodex();

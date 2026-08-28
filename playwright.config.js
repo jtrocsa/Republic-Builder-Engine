@@ -11,25 +11,25 @@ export default defineConfig({
   fullyParallel: true,
   reporter: "list",
 
-  // **Left unset, and that is a decision with a measurement behind it.** Phase 93 set out to cap
-  // this and found the cap is not the trade everyone assumed: two workers are *faster* than six
-  // (67-70s against 90s on a fixed 26-test subset, a U-shaped curve with its minimum at two),
-  // because the contended resource is **one single-threaded Vite dev server** rather than the twelve
-  // cores. A cold `goto("/")` takes 2.2s at one worker and 11.6s at six — 5.3x latency for 6x the
-  // demand, which is what a serialized resource looks like.
+  // **Two, and it is faster than the default as well as steadier.** Phase 93 measured the whole
+  // curve on a fixed 26-test subset and it is U-shaped with its minimum here: 67-70s at two against
+  // 90s at six and 95s at one. The contended resource was never the twelve cores — it is **one
+  // single-threaded Vite dev server**, and a cold `goto("/")` taking 2.2s at one worker and 11.6s at
+  // six is 5.3x the latency for 6x the demand, which is what a serialized resource looks like. Six
+  // workers only lengthened its queue. The repo had half-noticed for four phases: decision logs
+  // `0084` through `0087` each record their verification run as `--workers=2`, by hand.
   //
-  // It is still not shipped, because making the suite fast breaks specs that had been calibrated to
-  // a slow one. At two workers the page runs at 40+fps instead of 4-13, the player reaches obstacles
-  // at full speed rather than a third of it, and `powhatan-man is reachable on foot` and one
-  // `field-movement-dialogue` case fail **every attempt** under full-suite load — deterministically,
-  // through four retries. Two green tests turning permanently red is worse than the flakiness the
-  // cap fixes.
+  // Phase 93 measured all of that and still could not ship it, because a fast page broke two specs
+  // that had been calibrated to a slow one — at 40+fps instead of 4-13 the player reaches an
+  // obstacle at full speed instead of drifting round it at a third of it, and the suite's longest
+  // walk then failed *every* attempt, deterministically, through four retries. Phase 94 fixed that
+  // at the cause: `walkTo` reads the room's walls out of the running game and breadth-firsts a route
+  // through them, instead of steering greedily and sliding when blocked. See `0093`.
   //
-  // So the cap is blocked on hardening the long walks, not on the decision. See decision log `0092`
-  // §5 for what was tried: teaching `walkTo` to reverse out of a blocked slide fixes those walks and
-  // breaks five other specs, longer slides and shorter bursts are both worse, and per-call stall
-  // budgets hold in isolation but not under load. The real fix is a walker that paths rather than
-  // slides.
+  // **What this buys is not only wall clock.** Both of the latent races Phase 93 found — a camera
+  // read racing its own first write, and the walks above — were invisible for as long as this suite
+  // has existed, because it was never fast enough to reach them. A slow suite is not a safe one.
+  workers: 2,
 
   // Kept at 60s after the cap above, deliberately, though most of what it was covering for is
   // gone. It was raised from the 30s default when six workers were queueing behind one dev server

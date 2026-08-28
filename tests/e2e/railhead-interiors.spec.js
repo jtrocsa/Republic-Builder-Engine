@@ -32,8 +32,10 @@ import {
 //                                       anywhere.
 //
 // Each test starts inside its room and walks out, for the reason field-interiors.spec.js documents
-// at length: walkTo() steers and shoves, it does not pathfind, and reaching either door from the
-// spawn on the street apron means crossing the grade and the length of Front Street.
+// at length — reaching either door from the spawn on the street apron means crossing the grade and
+// the length of Front Street, which is a long walk to prove nothing extra. Since Phase 94 the walker
+// can make it; this file simply does not have to, and the coordinates it used to steer through the
+// two counter gates are gone with it.
 
 const BASE_SEED = {
   currentScreen: "field",
@@ -53,30 +55,6 @@ const playerAt = (page) =>
     x: Number.parseFloat(el.style.left) / 48,
     y: Number.parseFloat(el.style.top) / 48,
   }));
-
-/**
- * Steers the field player to a bare coordinate, one axis at a time.
- *
- * walkTo() cannot be used for the two walks in this file and the reason is the design of the rooms.
- * It moves along whichever axis has the larger gap and commits to the other when it is blocked,
- * which is enough to get round a building — but both of these rooms are one long counter with a
- * two-tile gate in it, and in both the gate is on the far side of the room from the person behind
- * it. Steering toward the register walks west into the counter and then keeps trying west. A player
- * does not have that problem, because a player can see the gap; this is that.
- *
- * Reads the position out of the DOM each step and presses in short bursts, same as walkTo, so it
- * survives a loaded machine and six parallel workers.
- */
-async function nudgeTo(page, target, key) {
-  const axis = key === "ArrowLeft" || key === "ArrowRight" ? "x" : "y";
-  const done = (at) =>
-    key === "ArrowRight" || key === "ArrowDown" ? at[axis] >= target : at[axis] <= target;
-  for (let step = 0; step < 60; step += 1) {
-    if (done(await playerAt(page))) return true;
-    await holdKey(page, key, 120);
-  }
-  return done(await playerAt(page));
-}
 
 test.describe("Cottonwood Junction interiors", () => {
   test.use({ viewport: { width: 1366, height: 768 } });
@@ -142,11 +120,10 @@ test.describe("Cottonwood Junction interiors", () => {
     await expect(bubble).toHaveCount(0);
 
     // And the register is reachable only by going round. The gate at cols 11-12 is the one join
-    // between the two halves of this room: east along the public floor, north through the gap, then
-    // west to the desk. If a later edit closes that pair of columns, this walk stops at the counter
-    // and the room becomes two rooms.
-    expect(await nudgeTo(page, 12.0, "ArrowRight"), "east to the gate's columns").toBe(true);
-    expect(await nudgeTo(page, 5.6, "ArrowUp"), "north through the gate").toBe(true);
+    // between the two halves of this room, and this walk is what asserts it: since Phase 94 walkTo()
+    // breadth-firsts the room's real collision, so it finds the gap by itself and returns false if a
+    // later edit closes it. The three hand-measured coordinates this used to steer through said the
+    // same thing and had to be re-measured every time the counter moved.
     expect(
       await walkTo(page, '[data-npc="land-office-register"]', "caseFieldPlayer"),
       "the register is reachable once the counter is behind you"
@@ -163,8 +140,6 @@ test.describe("Cottonwood Junction interiors", () => {
 
     // Out through the threshold, back onto Front Street where the save said they were standing —
     // and back through the same gate, because a counter is a wall in both directions.
-    expect(await nudgeTo(page, 12.0, "ArrowRight"), "east to the gate again").toBe(true);
-    expect(await nudgeTo(page, 9.0, "ArrowDown"), "south through it").toBe(true);
     expect(
       await walkTo(page, ".field-door--exit", "caseFieldPlayer"),
       "the way out is reachable from the public side"
@@ -260,8 +235,6 @@ test.describe("Cottonwood Junction interiors", () => {
     // which this room puts one step from its own door, where the land office puts it at the far end.
     // The two rooms are not doing the same thing to the people in them and the gate is where that
     // is said.
-    expect(await nudgeTo(page, 10.0, "ArrowRight"), "east to the gate's columns").toBe(true);
-    expect(await nudgeTo(page, 5.6, "ArrowUp"), "north through the gate").toBe(true);
     expect(
       await walkTo(page, '[data-npc="telegraph-operator"]', "caseFieldPlayer"),
       "the operator is reachable once the rail is behind you"
@@ -276,8 +249,6 @@ test.describe("Cottonwood Junction interiors", () => {
 
     // Out, and back in — and the door four tiles west stays shut, because a doorstep answers only
     // for its own building.
-    expect(await nudgeTo(page, 10.0, "ArrowRight"), "east to the gate again").toBe(true);
-    expect(await nudgeTo(page, 9.0, "ArrowDown"), "south through it").toBe(true);
     expect(
       await walkTo(page, ".field-door--exit", "caseFieldPlayer"),
       "the way out is reachable from the public side"

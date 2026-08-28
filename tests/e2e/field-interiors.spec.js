@@ -17,13 +17,14 @@ import {
 //
 // **Each test starts inside the room and walks out**, rather than starting at the map spawn and
 // walking in. That is not a shortcut around the hard part — the exit, the return position and the
-// re-entry are all exercised — it is a limit of the test walker. walkTo() steers at its target and,
-// when blocked, commits to the perpendicular axis for a few bursts; it is explicitly not a
-// pathfinder. Reaching the printing office from the towpath spawn means crossing the canal, which
-// can only be done at the lock eleven tiles west or the plank bridge twenty east, and reaching the
-// boardinghouse door means rounding a building to its far face. Both are walks the helper cannot
-// make, and writing a pathfinder into a test helper to prove a door works would be the tail wagging
-// the dog. `fieldReturn` is a persisted field, so seeding it puts the player on the doorstep the
+// re-entry are all exercised. It used to be a limit of the test walker: reaching the printing office
+// from the towpath spawn means crossing the canal, which can only be done at the lock eleven tiles
+// west or the plank bridge twenty east, and reaching the boardinghouse door means rounding a
+// building to its far face, and a walker that slid past obstacles rather than pathing could not make
+// either walk. Phase 94 gave it the walls — walkTo() breadth-firsts the game's own collision now, so
+// it could. The shape stays anyway, because those two traverses would add half a minute of walking
+// to every test in this file and prove nothing the door assertions do not already prove. What was a
+// limitation is now a choice. `fieldReturn` is a persisted field, so seeding it puts the player on the doorstep the
 // moment they step out, and the outdoor half of the flow is tested from there.
 //
 // What this covers, and why each one needs a browser:

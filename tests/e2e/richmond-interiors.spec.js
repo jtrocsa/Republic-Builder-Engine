@@ -31,8 +31,9 @@ import { seedProgress, loadSeededSave, readProgress, walkTo } from "./helpers/pr
 //                                        stays shut.
 //
 // Each test starts inside its room and walks out, for the reason field-interiors.spec.js documents
-// at length: walkTo() steers and shoves, it does not pathfind, and reaching either of these doors
-// from the Franklin Street spawn means crossing the bluff at one of its two descents.
+// at length — reaching either of these doors from the Franklin Street spawn means crossing the bluff
+// at one of its two descents, which is a long walk to prove nothing extra. Since Phase 94 the walker
+// can make it; this file simply does not have to.
 
 const BASE_SEED = {
   currentScreen: "field",

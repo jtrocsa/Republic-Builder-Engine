@@ -77,10 +77,10 @@ test.describe("the Field Liaison at the Institute", () => {
     expect(await walkToHubTarget(page, "archiveDoor")).toBe(true);
   });
 
-  // From the foyer, not from Voss. The route from the cross-aisle to the dais has to go back west
-  // to the cols 9-12 lane, south, then east — two turns around the Navigation Table's own footprint,
-  // which is more than the walk helper's slide heuristic is (or should be) able to do. The claim
-  // worth making is that the table is still reachable at all with a fourth body in the room.
+  // From the foyer, not from Voss. The route from the cross-aisle to the dais has to go back west to
+  // the cols 9-12 lane, south, then east — two turns around the Navigation Table's own footprint,
+  // which the old sliding walker could not do and Phase 94's pathing one can. The claim worth making
+  // is unchanged: the table is still reachable at all with a fourth body in the room.
   test("leaves the Navigation Table reachable", async ({ page }) => {
     await enterMainHall(page);
 

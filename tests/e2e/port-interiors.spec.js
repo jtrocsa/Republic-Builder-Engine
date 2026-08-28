@@ -36,8 +36,10 @@ import {
 //                                        from anywhere.
 //
 // Each test starts inside its room and walks out, for the reason field-interiors.spec.js documents
-// at length: walkTo() steers and shoves, it does not pathfind, and reaching either door from the
-// spawn on the barge landing means crossing the whole wharf and the rail's one gate.
+// at length — reaching either door from the spawn on the barge landing means crossing the whole
+// wharf and the rail's one gate, which is a long walk to prove nothing extra. Since Phase 94 the
+// walker can make it; this file simply does not have to, and the four hand-measured coordinates it
+// used to steer the switchback through are gone with it.
 
 const BASE_SEED = {
   currentScreen: "field",
@@ -64,25 +66,6 @@ const cameraAt = (page) =>
     const [x, y] = el.style.transform.match(/-?[\d.]+/g).map(Number);
     return { x, y };
   });
-
-/**
- * Steers the field player to a bare coordinate, one axis at a time.
- *
- * Same helper and same reason as railhead-interiors.spec.js: walkTo() commits to one axis when the
- * other is blocked, which is enough to get round a building and is not enough to find a gate on the
- * far side of a barrier. It matters more here than anywhere, because this room has two gates and
- * they are at opposite ends. A player does not have that problem, because a player can see the gap.
- */
-async function nudgeTo(page, target, key) {
-  const axis = key === "ArrowLeft" || key === "ArrowRight" ? "x" : "y";
-  const done = (at) =>
-    key === "ArrowRight" || key === "ArrowDown" ? at[axis] >= target : at[axis] <= target;
-  for (let step = 0; step < 80; step += 1) {
-    if (done(await playerAt(page))) return true;
-    await holdKey(page, key, 120);
-  }
-  return done(await playerAt(page));
-}
 
 test.describe("Ellis Island interiors", () => {
   test.use({ viewport: { width: 1366, height: 768 } });
@@ -162,13 +145,16 @@ test.describe("Ellis Island interiors", () => {
     await page.keyboard.press("e");
     await expect(bubble).toHaveCount(0);
 
-    // Now the switchback. East to the first gate at cols 19-20, north through it, west the length of
-    // the room to the second gate at cols 1-2, north through that, and only then the desks. If a
-    // later edit closes either pair of columns this walk stops dead and the hall becomes three rooms.
-    expect(await nudgeTo(page, 19.8, "ArrowRight"), "east to the first gate").toBe(true);
-    expect(await nudgeTo(page, 9.5, "ArrowUp"), "north through it, into the second pen").toBe(true);
-    expect(await nudgeTo(page, 1.6, "ArrowLeft"), "west the length of the second pen").toBe(true);
-    expect(await nudgeTo(page, 5.4, "ArrowUp"), "north through the second gate").toBe(true);
+    // Now the switchback: east to the first gate at cols 19-20, north through it, west the length
+    // of the room to the second gate at cols 1-2, north through that, and only then the desks. That
+    // is one call now: walkTo() breadth-firsts the room's real collision, so it finds both gates by
+    // itself, and if a later edit closes either pair of columns it returns false and the hall has
+    // become three rooms. The four coordinates this used to steer through said exactly that, one
+    // axis at a time, for whichever route somebody had measured.
+    expect(
+      await walkTo(page, '[data-npc="port-immigrant-inspector"]', "caseFieldPlayer"),
+      "the desks are reachable, which means both gates are open"
+    ).toBe(true);
     const behind = await playerAt(page);
     expect(behind.y, "which means ending up north of both rails").toBeLessThan(6.5);
 
@@ -181,11 +167,8 @@ test.describe("Ellis Island interiors", () => {
     );
     expect(camAtDesks.y, "and taller than the frame, vertically").not.toBeCloseTo(camOnEntry.y, 0);
 
-    // The matron was passed in the middle pen; the inspector is at the first desk.
-    expect(
-      await walkTo(page, '[data-npc="port-immigrant-inspector"]', "caseFieldPlayer"),
-      "the inspector is reachable once both rails are behind you"
-    ).toBe(true);
+    // The matron was passed in the middle pen; the inspector is at the first desk, which is where
+    // the switchback above ended.
     await page.keyboard.press("e");
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText("Twenty-nine questions");
@@ -208,10 +191,6 @@ test.describe("Ellis Island interiors", () => {
 
     // Out through the threshold, back onto the forecourt where the save said they were standing —
     // and back down the switchback, because a rail is a wall in both directions.
-    expect(await nudgeTo(page, 1.6, "ArrowLeft"), "west to the second gate again").toBe(true);
-    expect(await nudgeTo(page, 9.5, "ArrowDown"), "south through it").toBe(true);
-    expect(await nudgeTo(page, 19.8, "ArrowRight"), "east to the first gate again").toBe(true);
-    expect(await nudgeTo(page, 12.6, "ArrowDown"), "south through it").toBe(true);
     expect(
       await walkTo(page, ".field-door--exit", "caseFieldPlayer"),
       "the way out is reachable from the head of the line"

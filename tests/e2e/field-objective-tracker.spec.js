@@ -128,9 +128,9 @@ test.describe("Field objective tracker", () => {
     // hard-coded `case-001` literal. Six maps declared the gate in content and none applied it.
     //
     // This is that presentation pinned on the map it was wrong on. The refusal itself is a unit
-    // test (`field-record-gate.test.js`) rather than a walk: the record has no marker to walk to,
-    // and reaching its cell from the Franklin Street spawn means crossing the bluff, which
-    // walkTo() steers and shoves at rather than pathfinds.
+    // test (`field-record-gate.test.js`) rather than a walk, for a reason Phase 94's pathfinding
+    // walker does not change: **the record has no marker to walk to**. A gated record draws nothing
+    // on the surface, so there is no `.is-near` for a walk to wait on.
     await seedProgress(page, {
       currentScreen: "field",
       activeCaseId: "case-013",

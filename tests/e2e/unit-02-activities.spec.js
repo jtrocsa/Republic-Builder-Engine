@@ -205,10 +205,10 @@ test.describe("TRACE, on its first mission", () => {
 test.describe("Riverbend's one gate", () => {
   // Read through the Mission Tracker rather than by walking to the servant. He works the east plot,
   // and the only way into it is east along the high street, around the barn at (37-40, 16-19), then
-  // north between the farm stores and the row-14 fence — a path walkTo()'s slide heuristic does not
-  // find, and the assertion here is about availability, not about pathfinding. The tracker and the
-  // world markers read the same sourceAvailability(), which is the whole reason that function was
-  // pulled out of fieldSourceSignal() in Phase 56.
+  // north between the farm stores and the row-14 fence. Since Phase 94 walkTo() would find that, but
+  // the assertion here was never about pathfinding — it is about availability, and the tracker and
+  // the world markers read the same sourceAvailability(), which is the whole reason that function
+  // was pulled out of fieldSourceSignal() in Phase 56.
   test("the letter stays locked until the charter is secured", async ({ page }) => {
     await seedProgress(page, { ...CASE_004, currentScreen: "field" });
     await loadSeededSave(page);

@@ -58,13 +58,29 @@ These patterns recurred as bugs across many hotfix milestones (3.4.5 through 3.4
   from the camera-purity regression those tests exist to catch. They are `expect.poll` now, which
   is what reading a value written asynchronously after mount requires; waiting for "non-zero" is
   not available, because one room's legitimate centred value is 10. **And the suite's longest walks
-  are calibrated to a slow page**: `walkTo` slides past obstacles rather than pathing round them,
-  and at full speed the player reaches those obstacles and runs out of stall budget. **Fix that at
-  the call site, never in the helper** — teaching the slide to reverse fixed the one walk it was
-  built for and broke five others, because a walker that steps one way and then the other resets
-  `stalls` every burst and burns the clock instead of stalling out. **Before tuning a walk that
-  started failing, check whether the machine got faster rather than the map changing.** See `0092`
-  §5.
+  were calibrated to a slow page**: `walkTo` slid past obstacles rather than pathing round them, and
+  at full speed the player reaches those obstacles and runs out of stall budget. Four repairs to the
+  slide were measured and all failed — teaching it to reverse fixed the one walk it was built for and
+  **broke five others**, because a walker that steps one way and then the other resets `stalls` every
+  burst and burns the clock instead of stalling out. **There is no tuning of a blind walker that is
+  not that trade**, so Phase 94 stopped tuning it and gave it the walls: `window.__chronicleNav`
+  samples the game's own `isFieldBlocked`/`isHubBlocked` and `walkTo` breadth-firsts the result. Both
+  `nudgeTo` workarounds went with it, and `workers: 2` shipped. **Before tuning a walk that started
+  failing, check whether the machine got faster rather than the map changing.** See `0092` §5 and
+  `0093`.
+- **A test helper may read the game's state; it must not restate the game's rules.** The walker's
+  route comes from `isFieldBlocked`/`isHubBlocked` through a dev-only probe, not from a second reading
+  of the `.blocks.js` modules — so a wall that moves moves for the walker too, and there is no second
+  collision rule to keep in step. The lattice is **half a tile**, because the foot box is 0.68 wide
+  and a full-tile lattice cannot reliably see a one-tile gate. The probe is gated on
+  `import.meta.env.DEV`, exactly as `?warp=` is, and is verified absent from `dist/`. Two properties
+  the first version lacked, both found by running it rather than reading it: **a route is a snapshot,
+  not a promise** — it includes the other bodies, because both predicates do, so a leg that stops
+  making progress re-plans rather than shoves — and **a route is not a tracker**. The old walker
+  re-read its target every burst and followed a patrol for free; a route is planned once, and
+  `settlement-carpenter` walks the length of the settlement, so the first version arrived perfectly
+  at where he had been standing. The route carries the goal it was drawn against and re-plans when
+  the target leaves it. See `0093` §2.
 - **A per-frame path patches the DOM; it does not render.** `updateFieldNpcs()` and `updateFieldProximityUi()` say so, and Phase 90E paid to learn it applies to state changes too. Walking away from a conversation clears `activeFieldNpc`, and the bubble that state drew has to go with it — but making the movement loop `render()` (what every deliberate exit does) repaints the map canvases on the frame a player starts walking, and turned **four unrelated e2e specs red under parallel workers while they stayed green at `--workers=1`**. `closeFieldDialogueOnMove()` removes the one node instead. The general lesson was recorded as **an e2e suite can only report a performance regression as a correctness failure**, so several specs failing at once in an area nobody touched is one cause, not several flakes — still true of the _diagnosis_, and Phase 93 found it false as a _design_. A walk that parks short fires just as readily for a busy laptop, and the suite spent every run since reporting 2-8 red tests for that reason while claiming to watch for this one. `tests/e2e/frame-budget.spec.js` measures the claim itself instead: `render()` assigns `app.innerHTML` wholesale and so removes every direct child of `#app`, while the per-frame path patches attributes and single nested nodes and never does — so a `childList` MutationObserver on `#app`, without `subtree`, counts renders and **does not care how fast the machine is** (verified at 4-9fps: 0 for a walk, 1 for a deliberate exit). Re-adding `render()` to either movement loop reds it 100% of the time at any worker count. **The third assertion is what keeps the other two honest** — a deliberate exit must still count 1, or a broken observer reads as a passing test. See `0092`.
 - **NPC movement respects the same collision as the player** (`FIELD_BLOCKS`/`HUB_BLOCK_RECTS`, land checks via `isCaribbeanLand`) and swaps sprite sheets by facing direction rather than sliding a front-facing sprite sideways. Since Phase 60 that means four real directions — `down`/`up`/`left`/`right`, each its own horizontal walk strip on the shared 48×56 canvas (`engine/sprite-animation.js`, `CHARACTER_SHEETS` in `main.js`). There is no mirroring and no `side` sheet: `up` used to be the south sprite tinted darker and `left` used to be east flipped, and both are real art now. Column 0 of every strip is a standing pose for that direction, which is how a character keeps facing the way it last walked. **The 48×56 canvas is pinned, not derived** (Phase 64): `canonicalCanvas()` in `scripts/assets/build-character-sheets.js` clamps to `SPRITE_CANVAS` rather than sizing itself from the widest cast member, so adding a character with a long prop clips that prop instead of silently resizing all 140 committed PNGs and invalidating the CSS tokens and visual baselines with them. Change `SPRITE_CANVAS` deliberately if the canvas must ever move; don't let a new character decide it.
 - **An NPC has a job** (Phase 62, decision log `0045`). `FIELD_NPC_BEHAVIOURS`/`UNIT2_*`/`UNIT3_*`/`HUB_NPC_BEHAVIOURS` map an id to one of three kinds, defined in `engine/npc-behaviour.js`: `station` (stands at `at`, turns to look around), `route` (walks a circuit of `stops`), `wander` (a disc around `home`, Phase 61's behaviour). All seeded per NPC id, so a character behaves the same way across reloads.

@@ -156,108 +156,279 @@ export async function walkToHubNpc(page, npcId, options = {}) {
   return walkTo(page, `[data-hub-npc="${npcId}"]`, "institutePlayer", options);
 }
 
+// Both grids are 48px, and the walker only ever divides by it to talk in tiles.
+const TILE_PX = 48;
+// FIELD_SPEED and HUB_SPEED, which are the same number.
+const TILES_PER_SECOND = 3.65;
+// Close enough to a corner to turn at it. Under a third of a tile, well inside every reach radius.
+const ARRIVE_TILES = 0.3;
+
 /**
- * Shared body of the walkers above. See walkToNpc's comment for why it works this way.
+ * Shared body of the walkers above. It reads the room's walls out of the running game and walks a
+ * breadth-first route through them.
  *
- * Two things were wrong here, and both were measured rather than guessed at — this walk failed
- * intermittently four times across separate runs, and reproduces every time at six workers.
+ * **This used to steer greedily, and that was the bug** rather than a tuning problem. The old rule
+ * moved along whichever axis had the larger gap and, when a burst was blocked, committed to the
+ * perpendicular axis for a few bursts — enough to get round a building, never enough to find a gate
+ * on the far side of a barrier. Two spec files still carry their own `nudgeTo` because of it.
  *
- * 1. **A step budget is the wrong bound.** Movement is time-based, so a 320ms burst ought to cover
- *    the same ground every time — except `runFieldMovementLoop()` clamps its frame delta with
- *    `Math.min(48, ...)`, deliberately, so a tab switch or a stalled frame cannot teleport the player
- *    through a wall. Under parallel workers a page rendering at 10fps therefore advances 48ms of
- *    movement per 100ms of wall clock. Traced bursts covered 20-40px against the 56px they should:
- *    between a third and two thirds throughput, so a fixed 44 bursts stopped reaching the elder. The
- *    game code is right; the bound was wrong. It is wall-clock and real progress now.
+ * Phase 93 measured what that cost. The clamp in `runFieldMovementLoop()` — `Math.min(48, …)`,
+ * deliberate, so a stalled frame cannot teleport the player through a wall — makes in-game progress
+ * frame-denominated while every deadline here is wall-clock-denominated, so under six parallel
+ * workers a 320ms burst covered between a third and two thirds of its ground. That slowness was
+ * *hiding* this: a player crawling into an obstacle drifts round it, and a player arriving at full
+ * speed stops dead against it. The moment the suite got fast enough to be worth capping the workers
+ * at two, the longest walk in it failed every attempt, deterministically, through four retries — and
+ * the four repairs tried on the slide are recorded in decision log `0092` §5, including the one that
+ * fixed that walk and broke five other specs by burning the clock instead of stalling out.
  *
- * 2. **One burst is not enough to slide past anything.** The Caribbean walk passes an obstacle
- *    around (28,18) where north is blocked, and the old rule — on a blocked burst, try the other axis
- *    *once* — jiggles rather than slides: one burst sideways, then straight back into the same wall.
- *    At full speed a single sideways burst happened to clear it most of the time, which is why this
- *    only ever failed under load. Committing to the perpendicular axis for `slideBursts` in a row is
- *    what actually gets around a building, and is still nowhere near a pathfinder.
+ * So the walker is given the walls. `window.__chronicleNav` — dev-only in `main.js`, gated exactly as
+ * `?warp=` is — samples the game's own `isFieldBlocked` / `isHubBlocked` across the active grid on a
+ * half-tile lattice. This floods that breadth-first from the player, picks the reachable cell closest
+ * to the target (the target's own cell is usually solid, because a body is solid), and walks the
+ * corners of the route. **The route is only a snapshot**: it includes the other bodies, because both
+ * predicates do, so a patrolling NPC can invalidate it by walking. A leg that stops making progress
+ * therefore re-plans rather than shoves, up to `maxReplans`.
  *
- * `maxStalls` then means what it says: that many bursts in a row that moved nothing on either axis,
- * which is genuinely stuck rather than slowly working around something. `timeoutMs` is the backstop
- * that makes a broken walk fail the spec instead of hanging it.
+ * What did not change: it still stops the moment the game's own `.is-near` appears, so it survives
+ * the map moving underneath it, and it still returns whether it got there rather than asserting.
+ *
+ * The probe is required, not optional. If it goes missing every walking spec fails at once with the
+ * same message naming the cause — far better than twenty specs each timing out somewhere different.
+ * The e2e webServer is the Vite dev server, since nine spec files use `?warp=`, so it is there.
  */
 export async function walkTo(
   page,
   selector,
   playerId,
-  { burstMs = 320, timeoutMs = 20_000, maxStalls = 10, slideBursts = 3 } = {}
+  { burstMs = 700, timeoutMs = 20_000, maxReplans = 8 } = {}
 ) {
+  const surface = playerId === "caseFieldPlayer" ? "field" : "hub";
   const target = page.locator(selector);
   const isNear = () => target.evaluate((el) => el.classList.contains("is-near"));
-  const gap = () =>
+  const deadline = Date.now() + timeoutMs;
+
+  // One round trip per burst rather than three: whether we have arrived and where we are are the
+  // same question, asked of the same frame.
+  const step = () =>
     page.evaluate(
-      ([sel, id]) => {
-        // Where to steer for. Most world nodes (NPCs, the player) are positioned by a centre point,
-        // so their inline left/top *is* the point. A hub object marker is different: since Phase 59
-        // it is a rect laid over the object's own tiles, positioned by its top-left corner and sized
-        // in px, so its centre has to be derived — steering at its corner walked the player off to
-        // the side of the Archive Room's doorway and into the wall.
-        const point = (el) => {
-          const left = Number.parseFloat(el.style.left);
-          const top = Number.parseFloat(el.style.top);
-          const width = Number.parseFloat(el.style.width);
-          const height = Number.parseFloat(el.style.height);
-          return {
-            x: Number.isFinite(width) ? left + width / 2 : left,
-            y: Number.isFinite(height) ? top + height / 2 : top,
-          };
-        };
-        const to = document.querySelector(sel);
+      ([sel, id, tile]) => {
+        const el = document.querySelector(sel);
         const player = document.getElementById(id);
-        if (!to || !player) return null;
-        const toPoint = point(to);
-        const playerPoint = point(player);
+        if (!el || !player) return null;
+        // Sized or not, told apart per axis, and derived the same way planRoute() derives the goal
+        // — a marker is a rect positioned by its top-left corner, a body is a point.
+        const number = (value) => {
+          const parsed = Number.parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+        const left = number(el.style.left) ?? el.offsetLeft;
+        const top = number(el.style.top) ?? el.offsetTop;
+        const width = number(el.style.width);
+        const height = number(el.style.height);
         return {
-          dx: toPoint.x - playerPoint.x,
-          dy: toPoint.y - playerPoint.y,
-          x: playerPoint.x,
-          y: playerPoint.y,
+          near: el.classList.contains("is-near"),
+          x: (number(player.style.left) ?? 0) / tile,
+          y: (number(player.style.top) ?? 0) / tile,
+          // Where the target is *now*, which for a patrolling NPC is not where it was planned.
+          tx: (width === null ? left : left + width / 2) / tile,
+          ty: (height === null ? top : top + height / 2) / tile,
         };
       },
-      [selector, playerId]
+      [selector, playerId, TILE_PX]
     );
 
-  // Which axis the next burst must use, when the last one was blocked. Both directions have to be
-  // forcible: a single `preferVertical` flag only unsticks a blocked *horizontal* burst, because
-  // clearing it hands the choice straight back to the "larger gap wins" rule, which picks the blocked
-  // axis again whenever that axis is also the longer one. The Preservation Case walk deadlocked on
-  // exactly that — pushing north into the west reading nook forever with 1.7 tiles left to go east.
-  let forced = null;
-  let forcedLeft = 0;
-  let stalls = 0;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline && stalls < maxStalls) {
+  for (let replan = 0; replan <= maxReplans; replan += 1) {
+    if (Date.now() > deadline) return isNear();
     if (await isNear()) return true;
-    const before = await gap();
-    if (!before) return false;
-    const vertical = forced ? forced === "vertical" : Math.abs(before.dy) > Math.abs(before.dx);
-    const key = vertical
-      ? before.dy > 0
-        ? "ArrowDown"
-        : "ArrowUp"
-      : before.dx > 0
-        ? "ArrowRight"
-        : "ArrowLeft";
-    await holdKey(page, key, burstMs);
-    const after = await gap();
-    // Blocked: that burst moved the player less than a pixel.
-    const moved = Math.abs(after.x - before.x) + Math.abs(after.y - before.y) > 1;
-    stalls = moved ? 0 : stalls + 1;
-    if (!moved) {
-      // Commit to the perpendicular axis for a few bursts, long enough to get past whatever is in
-      // the way. One burst only jiggles: it steps aside and then walks straight back into the same
-      // wall, because "larger gap wins" picks the blocked axis again the moment the force is lifted.
-      forced = vertical ? "horizontal" : "vertical";
-      forcedLeft = slideBursts;
-    } else if (forcedLeft > 0) {
-      forcedLeft -= 1;
-      if (forcedLeft === 0) forced = null;
+    const route = await planRoute(page, surface, selector);
+    if (route.error === "no-probe") {
+      throw new Error(
+        "walkTo needs window.__chronicleNav, which main.js installs behind import.meta.env.DEV. " +
+          "The e2e webServer must be the Vite dev server."
+      );
     }
+    // No target, no position, or the player sealed inside something: nothing to walk toward.
+    if (route.error) return false;
+
+    // Re-plan, rather than walk on, once the target has left the position the route was drawn
+    // against. The old walker re-read the target every burst and so tracked a patrol for free; a
+    // route is planned once, and `settlement-carpenter` walks half a map between plans. Generous,
+    // because a route is not wrong until the target is properly elsewhere — and cheap either way,
+    // since `.is-near` ends the walk the moment it fires.
+    const drifted = (at) =>
+      route.goal && Math.hypot(at.tx - route.goal.x, at.ty - route.goal.y) > 1.2;
+
+    let stranded = false;
+    for (const waypoint of route.waypoints) {
+      let blocked = 0;
+      for (;;) {
+        if (Date.now() > deadline) return isNear();
+        const at = await step();
+        if (!at) return false;
+        if (at.near) return true;
+        if (drifted(at)) {
+          stranded = true;
+          break;
+        }
+        const dx = waypoint.x - at.x;
+        const dy = waypoint.y - at.y;
+        // Legs are axis-aligned by construction, so in practice this is one axis. It is written as a
+        // choice anyway because the player starts mid-cell, off the lattice the route is drawn on.
+        const horizontal = Math.abs(dx) >= Math.abs(dy);
+        const delta = horizontal ? dx : dy;
+        if (Math.abs(delta) <= ARRIVE_TILES) break;
+        const key = horizontal
+          ? delta > 0
+            ? "ArrowRight"
+            : "ArrowLeft"
+          : delta > 0
+            ? "ArrowDown"
+            : "ArrowUp";
+        // Sized to the distance left, then capped. A leg runs through cells the probe said were
+        // free, so a long hold is safe here in a way it never was for the old slide, and it cannot
+        // overshoot: FIELD_SPEED is a ceiling and the frame clamp only ever makes a burst cover less.
+        await holdKey(
+          page,
+          key,
+          Math.max(70, Math.min(burstMs, Math.round((Math.abs(delta) / TILES_PER_SECOND) * 1000)))
+        );
+        const after = await step();
+        if (!after) return false;
+        if (after.near) return true;
+        const moved = Math.abs(after.x - at.x) + Math.abs(after.y - at.y) > 0.03;
+        blocked = moved ? 0 : blocked + 1;
+        // Something is standing where the snapshot said floor. Ask again rather than shove.
+        if (blocked >= 2) {
+          stranded = true;
+          break;
+        }
+      }
+      if (stranded) break;
+    }
+    // Walking the whole route without `.is-near` firing is not a failure either: the closest
+    // reachable cell to a target standing behind a rail can be outside its reach, and by the time we
+    // arrive the target may have moved. Ask again, until the replan budget or the clock says stop.
+    if (await isNear()) return true;
   }
   return isNear();
+}
+
+/**
+ * Breadth-first over the collision snapshot, run entirely inside the page so the 8,000-cell sample
+ * never crosses the wire — what comes back is a handful of corners.
+ *
+ * The goal is derived exactly the way the old walker derived it, and for the same reason: most world
+ * nodes are positioned by a centre point, so their inline `left`/`top` *is* the point, while a hub
+ * object marker is a rect laid over the object's own tiles and positioned by its top-left corner, so
+ * its centre has to be worked out. Steering at the corner walked the player off to the side of the
+ * Archive Room's doorway and into the wall.
+ */
+async function planRoute(page, surface, selector) {
+  return page.evaluate(
+    ([surf, sel]) => {
+      const probe = window.__chronicleNav;
+      if (typeof probe !== "function") return { error: "no-probe" };
+      const el = document.querySelector(sel);
+      if (!el) return { error: "no-target" };
+      const nav = probe(surf);
+      const num = (value) => {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+      const left = num(el.style.left) ?? el.offsetLeft;
+      const top = num(el.style.top) ?? el.offsetTop;
+      const width = num(el.style.width);
+      const height = num(el.style.height);
+      const goal = {
+        x: (width === null ? left : left + width / 2) / nav.tile,
+        y: (height === null ? top : top + height / 2) / nav.tile,
+      };
+
+      const { step, cols, rows, cells } = nav;
+      const index = (col, row) => row * cols + col;
+      const clampCol = (col) => Math.max(0, Math.min(cols - 1, col));
+      const clampRow = (row) => Math.max(0, Math.min(rows - 1, row));
+      let startCol = clampCol(Math.round(nav.at.x / step));
+      let startRow = clampRow(Math.round(nav.at.y / step));
+      // The player's own cell can read blocked: the lattice rounds, and both predicates ask about a
+      // foot box rather than a point. Start from the nearest cell that does not, within two tiles.
+      if (cells[index(startCol, startRow)]) {
+        const span = Math.round(2 / step);
+        let best = null;
+        for (let dr = -span; dr <= span; dr += 1) {
+          for (let dc = -span; dc <= span; dc += 1) {
+            const col = clampCol(startCol + dc);
+            const row = clampRow(startRow + dr);
+            if (cells[index(col, row)]) continue;
+            const distance = dc * dc + dr * dr;
+            if (!best || distance < best.distance) best = { col, row, distance };
+          }
+        }
+        if (!best) return { error: "boxed-in" };
+        startCol = best.col;
+        startRow = best.row;
+      }
+
+      const start = index(startCol, startRow);
+      const previous = new Int32Array(cols * rows).fill(-1);
+      const seen = new Uint8Array(cols * rows);
+      const queue = [start];
+      seen[start] = 1;
+      const score = (col, row) => {
+        const dx = col * step - goal.x;
+        const dy = row * step - goal.y;
+        return dx * dx + dy * dy;
+      };
+      let bestCell = start;
+      let bestScore = score(startCol, startRow);
+      for (let head = 0; head < queue.length; head += 1) {
+        const cell = queue[head];
+        const col = cell % cols;
+        const row = (cell - col) / cols;
+        const distance = score(col, row);
+        if (distance < bestScore) {
+          bestScore = distance;
+          bestCell = cell;
+        }
+        const neighbours = [
+          [col + 1, row],
+          [col - 1, row],
+          [col, row + 1],
+          [col, row - 1],
+        ];
+        for (const [nextCol, nextRow] of neighbours) {
+          if (nextCol < 0 || nextRow < 0 || nextCol >= cols || nextRow >= rows) continue;
+          const next = index(nextCol, nextRow);
+          if (seen[next] || cells[next]) continue;
+          seen[next] = 1;
+          previous[next] = cell;
+          queue.push(next);
+        }
+      }
+
+      const path = [];
+      for (let cell = bestCell; cell !== -1; cell = previous[cell]) path.push(cell);
+      path.reverse();
+      const points = path.map((cell) => {
+        const col = cell % cols;
+        return { x: col * step, y: ((cell - col) / cols) * step };
+      });
+      // Only the corners are worth walking to; the cells between two of them are a straight line.
+      const waypoints = [];
+      for (let i = 1; i < points.length; i += 1) {
+        const ahead = points[i + 1];
+        if (!ahead) {
+          waypoints.push(points[i]);
+          break;
+        }
+        const turned =
+          Math.sign(points[i].x - points[i - 1].x) !== Math.sign(ahead.x - points[i].x) ||
+          Math.sign(points[i].y - points[i - 1].y) !== Math.sign(ahead.y - points[i].y);
+        if (turned) waypoints.push(points[i]);
+      }
+      return { waypoints, goal };
+    },
+    [surface, selector]
+  );
 }
