@@ -31,6 +31,7 @@ import * as unit04Campaign from "../content/unit-04-campaign.js";
 import * as unit05Campaign from "../content/unit-05-campaign.js";
 import * as unit06Campaign from "../content/unit-06-campaign.js";
 import * as unit07Campaign from "../content/unit-07-campaign.js";
+import * as unit08Campaign from "../content/unit-08-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
@@ -38,6 +39,7 @@ import * as unit04Quests from "../content/quests/unit-04-quests.js";
 import * as unit05Quests from "../content/quests/unit-05-quests.js";
 import * as unit06Quests from "../content/quests/unit-06-quests.js";
 import * as unit07Quests from "../content/quests/unit-07-quests.js";
+import * as unit08Quests from "../content/quests/unit-08-quests.js";
 import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js";
@@ -68,6 +70,10 @@ const UNIT_MODULES = {
   "unit-05": { campaign: unit05Campaign, quests: unit05Quests, activities: UNIT_05_ACTIVITIES },
   "unit-06": { campaign: unit06Campaign, quests: unit06Quests, activities: UNIT_06_ACTIVITIES },
   "unit-07": { campaign: unit07Campaign, quests: unit07Quests, activities: UNIT_07_ACTIVITIES },
+  // Unit 8 has content and no map yet, which is the state Units 3-7 each sat in for a phase. Its
+  // three activities arrive with the map they are played on, and until then the literal below is
+  // the honest value rather than a stub file somebody has to open to discover is empty.
+  "unit-08": { campaign: unit08Campaign, quests: unit08Quests, activities: {} },
 };
 
 /**

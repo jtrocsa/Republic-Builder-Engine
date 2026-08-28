@@ -71,6 +71,10 @@ export const UNIT_MAP_VIEW = {
   "unit-05": "north-america",
   "unit-06": "north-america-wide",
   "unit-07": "world",
+  // Unit 8's three cases are a Delaware Valley subdivision (40.2N, 74.9W), the Senate chamber
+  // (38.9N, 77.0W) and Selma (32.4N, 87.0W). All three fall well inside the existing
+  // north-america box, so this unit adds no view of its own — the first unit since Unit 5 not to.
+  "unit-08": "north-america",
 };
 
 export const DEFAULT_MAP_VIEW = "atlantic-wide";

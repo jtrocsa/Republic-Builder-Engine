@@ -18,8 +18,8 @@
 // immigrant port, the postwar suburb and the 1990s campus arrived as one commission with the six
 // that shipped, and sat in apps/web/src/assets/plates/ unreferenced until the unit that opens on
 // them was real — because wiring one early would mean naming a unit id that does not exist.
-// **Unit 7 collected its line in Phase 89** and cost exactly the four lines below, which is what
-// the early commission was for. Units 8 and 9 are still queued.
+// **Unit 7 collected its line in Phase 89 and Unit 8 in Phase 95**, each costing exactly the four
+// lines below, which is what the early commission was for. Unit 9 is still queued.
 // `tests/unit/chronotravel-plates.test.js` holds every end of that: every unit must have a plate,
 // no plate may name a unit that is not shipped, every plate file must exist, and the two files
 // still waiting must not be deleted as "unused".
@@ -63,6 +63,11 @@ export const CHRONOTRAVEL_PLATES = {
     image: new URL("../assets/plates/unit-07-immigrant-port.webp", import.meta.url).href,
     alt: "A harbour wharf at first light: a black-hulled liner made fast at the quay with people crowding her rails, families waiting on the wet stone among trunks and bundles, a long brick reception hall with domes and an iron canopy down the right-hand side, and a city of towers across the water.",
     note: "Anchor holds. Everyone on this quay was written down in Europe before anyone here looked at them.",
+  },
+  "unit-08": {
+    image: new URL("../assets/plates/unit-08-postwar-suburb.webp", import.meta.url).href,
+    alt: "A wide new boulevard running downhill into a valley on a summer afternoon: low ranch houses behind white picket fences and clipped front lawns along the left-hand side, a service station and a strip of shopfronts on the right, chrome-heavy cars in both directions, telephone poles and a long line of hills beyond.",
+    note: "Anchor holds. New houses, a new road, and every term of who may live on it already written and recorded.",
   },
   institute: {
     image: new URL("../assets/plates/institute-archive.webp", import.meta.url).href,

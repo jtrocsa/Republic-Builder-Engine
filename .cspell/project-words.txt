@@ -62,6 +62,7 @@ Endo
 Equiano
 Equiano's
 FOIA
+Fairmeadow
 Farmwife
 Fong
 Freesound
@@ -88,12 +89,15 @@ Jozef
 Kahegah
 Kansa
 Kanza
+Katzenbach
+Katznelson
 Kaws
 Kell
 Keppler
 Keppler's
 Korematsu
 Krajewska
+Kushner
 Labratory
 Lanczos
 Leitner
@@ -116,6 +120,7 @@ McInnis
 Mcpjson
 Meehan
 Midori
+Milliken
 Motolinía
 Motolinía's
 Mousedown

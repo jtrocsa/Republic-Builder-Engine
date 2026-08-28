@@ -33,6 +33,7 @@ export const UNIT_IDS = Object.freeze([
   "unit-05",
   "unit-06",
   "unit-07",
+  "unit-08",
 ]);
 
 /**

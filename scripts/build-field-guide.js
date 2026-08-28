@@ -271,23 +271,30 @@ const MAIN_JS_LITERALS = {
 
 function extractFromMainJs(laneArrays) {
   const source = readFileSync(path.join(SRC, "main.js"), "utf8");
-  // Guard the other direction too. A missing *name* throws below, but the likelier mistake is a
-  // sixth unit whose constants exist in main.js and were never added to the manifest above — which
-  // would otherwise ship a five-unit guide for a six-unit game without a word of complaint.
+  const out = { npcs: {}, behaviours: {}, sourcePoints: {}, hubTargets: {} };
+  out.fieldMaps = readNamed(source, "FIELD_MAPS");
+  // **The guide documents maps, and the content list is a superset of the playable list.** A unit
+  // is registered in unit-registry.js one phase before its map exists — that is the state Units 3-7
+  // each sat in, and Unit 8 sits in now — so iterating UNIT_IDS here throws on a unit that has
+  // content and nothing to draw. The set this file walks is therefore the units main.js has a field
+  // map for, in curriculum order.
+  const guideUnits = UNIT_IDS.filter((unitId) => out.fieldMaps[unitId]);
+  // The guard the other way round is the one worth keeping, and it is unchanged in substance: a
+  // unit whose map and constants exist in main.js but was never added to the manifest above would
+  // otherwise ship a six-unit guide for a seven-unit game without a word of complaint.
   for (const group of ["npcs", "behaviours", "sourcePoints"]) {
-    for (const unitId of UNIT_IDS) {
+    for (const unitId of guideUnits) {
       if (!MAIN_JS_LITERALS[group][unitId]) {
         throw new Error(`MAIN_JS_LITERALS.${group} has no entry for ${unitId}`);
       }
     }
   }
-  const out = { npcs: {}, behaviours: {}, sourcePoints: {}, hubTargets: {} };
+  out.guideUnits = guideUnits;
   for (const group of Object.keys(MAIN_JS_LITERALS)) {
     for (const [key, name] of Object.entries(MAIN_JS_LITERALS[group])) {
       out[group][key] = readNamed(source, name);
     }
   }
-  out.fieldMaps = readNamed(source, "FIELD_MAPS");
   out.fieldCopy = readNamed(source, "FIELD_COPY");
   out.lanes = readNamed(source, "RECONSTRUCTION_LANES", laneArrays);
   // Discovered, not listed. An interior is attached after the FIELD_MAPS literal rather than inside
@@ -1124,7 +1131,7 @@ async function main() {
   }
 
   const unitData = {};
-  for (const unitId of UNIT_IDS) {
+  for (const unitId of mainJs.guideUnits) {
     const unit = campaigns[unitId];
     const fieldCase = unit.cases.find((entry) => entry.route === "field");
     const outdoorId = must(OUTDOOR_TMJ, unitId, "OUTDOOR_TMJ");
@@ -1222,12 +1229,14 @@ async function main() {
     archiveChallenges: await snapshotImage("archive-challenges", 900, 70),
   };
 
-  const railUnits = UNIT_IDS.map((unitId, index) => {
-    const unit = campaigns[unitId];
-    return `<li><a href="#unit-${index + 1}"><span class="n">${index + 1}</span>${esc(unit.title)}</a></li>`;
-  }).join("");
+  const railUnits = mainJs.guideUnits
+    .map((unitId, index) => {
+      const unit = campaigns[unitId];
+      return `<li><a href="#unit-${index + 1}"><span class="n">${index + 1}</span>${esc(unit.title)}</a></li>`;
+    })
+    .join("");
 
-  const totalCases = UNIT_IDS.reduce((sum, id) => sum + campaigns[id].cases.length, 0);
+  const totalCases = mainJs.guideUnits.reduce((sum, id) => sum + campaigns[id].cases.length, 0);
   const totalSurfaces = Object.values(unitData).reduce(
     (sum, data) => sum + data.surfaces.length,
     3
@@ -1260,24 +1269,24 @@ ${styles()}
       <li class="sub"><a href="#archive">Archive Room</a></li>
       <li class="sub"><a href="#nav-table">Navigation Table</a></li>
       ${railUnits}
-      <li><a href="#quest-types"><span class="n">6</span>Task types</a></li>
-      <li><a href="#progression"><span class="n">7</span>Progression</a></li>
+      <li><a href="#quest-types"><span class="n">${mainJs.guideUnits.length + 1}</span>Task types</a></li>
+      <li><a href="#progression"><span class="n">${mainJs.guideUnits.length + 2}</span>Progression</a></li>
       <li><a href="#open"><span class="n">—</span>Open items</a></li>
     </ol></nav>
     <p class="rail-foot">Every name, coordinate and prompt on this page is read out of the content modules, <code>main.js</code> and the <code>.tmj</code> maps at build time — nothing here is transcribed by hand. Rebuild with <code>npm run docs:field-guide</code>.<br><br>Built ${esc(buildStamp)} · commit <code>${esc(buildCommit)}</code></p>
   </aside>
   <main>
     <header class="masthead">
-      <p class="eyebrow">An AP U.S. History RPG · CED Periods 1–5 of 9</p>
+      <p class="eyebrow">An AP U.S. History RPG · CED Periods 1–${mainJs.guideUnits.length} of 9</p>
       <h1>Every map, every mission, and what each one asks of you</h1>
-      <p class="lede">The whole of Chronicle in one place: the Institute you work from, the five periods you travel to, every walkable surface with its records pinned and its cast named, and the task waiting at the end of each of the fifteen cases.</p>
+      <p class="lede">The whole of Chronicle in one place: the Institute you work from, the ${mainJs.guideUnits.length} periods you travel to, every walkable surface with its records pinned and its cast named, and the task waiting at the end of each of the ${totalCases} cases.</p>
       <div class="fact-row">
-        <span><b>5</b> units</span><span><b>${totalCases}</b> cases</span><span><b>${totalSurfaces}</b> walkable surfaces</span><span><b>${totalCast}</b> named characters on the maps</span><span><b>6</b> kinds of task</span>
+        <span><b>${mainJs.guideUnits.length}</b> units</span><span><b>${totalCases}</b> cases</span><span><b>${totalSurfaces}</b> walkable surfaces</span><span><b>${totalCast}</b> named characters on the maps</span><span><b>6</b> kinds of task</span>
       </div>
     </header>
     ${navDefs(MAP_VIEWS)}
     ${part0(rooms, shots)}
-    ${UNIT_IDS.map((unitId, index) => unitSection(campaigns[unitId], index, unitData[unitId])).join("")}
+    ${mainJs.guideUnits.map((unitId, index) => unitSection(campaigns[unitId], index, unitData[unitId])).join("")}
     ${part6(shots)}
     ${part7()}
     ${appendix()}

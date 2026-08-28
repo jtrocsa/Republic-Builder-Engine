@@ -273,6 +273,24 @@ useful answer is rarely the willing one.
 Period 8 is the library's genuinely under-served period (Phase 81A), and `streetscape.midCentury` is
 its registered gap.
 
+**The content shipped in Phase 95** (decision log `0094`), one phase ahead of the map as Units 3
+through 7 each did. The unit is **Grounds for Refusal**, and the three briefed records are the three
+the slate lands on: the deed carrying the covenant takes the INTERVIEW, the neighbourhood appraisal
+the DISCREPANCY, the guaranteed-loan file the TRACE. Four more open in the reader — the model house's
+terms sheet, the lending office's underwriting checklist, a township minimum-lot amendment and a
+neighbours' handbill.
+
+Two things about that authoring worth carrying to Unit 9. **The place had to be composite where Ellis
+Island was real**, and the interview is what decided it: eight invented people saying on the record
+what they will and will not say, about a real named town, is an accusation against a real address.
+And **the map's central finding is a rating rather than a slur.** The 1938 Underwriting Manual said
+outright that a neighbourhood holds its value when properties "continue to be occupied by the same
+social and racial classes"; that sentence came out between 1947 and 1950 and the ratings it produced
+did not change. So the audit cannot work by finding a word. It works by reading forty years of
+remaining economic life on one side of a new highway and fifteen on the other — which is harder than
+any other map's central finding, and is the reason this one is called the strongest documentary-form
+map in the program.
+
 ### Unit 9 — the campus archive. 1998. Slate C.
 
 The closing unit, and the one place the game's own thesis is the subject. Interiors: a **reading

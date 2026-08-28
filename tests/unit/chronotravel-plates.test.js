@@ -59,16 +59,15 @@ describe("Chronotravel plates", () => {
     }
   });
 
-  it("keeps the plates their units have not arrived for yet", () => {
+  it("keeps the plate its unit has not arrived for yet", () => {
     // Painted with the six that shipped, and the whole point of committing them early is that a
-    // unit collects a table line rather than a commission — which is what Unit 7 did in Phase 89,
-    // and why its file is no longer on this list. Deleting one of the remaining two as "unused"
-    // is the failure this guards; the "names no unit that does not exist" case above is the other
-    // half, and it is what stops either being wired before its unit is real.
-    for (const queued of ["unit-08-postwar-suburb.webp", "unit-09-college-campus.webp"]) {
+    // unit collects a table line rather than a commission — which is what Unit 7 did in Phase 89
+    // and Unit 8 in Phase 95, and why neither file is on this list any more. Deleting the last one
+    // as "unused" is the failure this guards; the "names no unit that does not exist" case above
+    // is the other half, and it is what stops it being wired before its unit is real.
+    for (const queued of ["unit-09-college-campus.webp"]) {
       expect(existsSync(path.join(PLATES_DIR, queued)), `queued plate gone: ${queued}`).toBe(true);
     }
-    expect(unitPlateKeys).not.toContain("unit-08");
     expect(unitPlateKeys).not.toContain("unit-09");
   });
 
