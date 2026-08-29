@@ -104,7 +104,10 @@ test.describe("Part 5 · the Archive Room and the Navigation Table", () => {
     await expect(page.locator(".archive-layout")).toBeVisible();
 
     const tabs = page.locator(".unit-tab");
-    await expect(tabs).toHaveCount(7);
+    // One per unit in main.js’s UNITS. Written out rather than derived because the whole point of
+    // this case is that the strip has to hold every tab without the page growing a scrollbar, and a
+    // count read from the same source as the tabs could never notice a unit being added.
+    await expect(tabs).toHaveCount(8);
 
     const report = await page.evaluate(() => ({
       vh: window.innerHeight,

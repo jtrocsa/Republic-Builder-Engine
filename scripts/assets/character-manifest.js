@@ -1279,6 +1279,141 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "detained-walk",
   },
+  // ---- Unit 8 · Fairmeadow, Pennsylvania, August 1957 (Phase 97) ---------------------------------
+  //
+  // Eight, and **all eight are outdoors** — the exact inverse of Unit 7, where half the cast worked
+  // behind doors. That is the two places stating their own shapes: at an immigrant station you are
+  // sorted indoors and the wharf is where you wait, and in a subdivision every decision is taken in
+  // an office nobody is invited into and the street is all there is to walk.
+  //
+  // Unit 7's cast was positions relative to a question. This one is **positions relative to a line
+  // nobody can see**: two people who wrote it (the appraiser, the township secretary), two it was
+  // written about (the veteran, the borough resident), two who live inside it without having been
+  // told (the householder, the committee man), one building it (the foreman), and one selling
+  // inside it (the shopkeeper, on the wrong side).
+  //
+  // Five of `unit-08-campaign.js`'s seven records are carried by five of these eight, so the map's
+  // interview has a body for every question it can ask. The other two records are on a card table
+  // and a desk, and land with the two rooms.
+  //
+  // **The person the map is about is on it.** The loan file is deliberately silent on the
+  // applicant — its own feedback says the document "establishes the mechanism precisely and
+  // establishes nothing at all about the applicant" — and that silence is the finding. It is also
+  // exactly why he cannot be absent from the map: a unit about a house refused to a Black veteran,
+  // drawn without one, turns a mechanism that ran on real people into a diagram. The paper says
+  // nothing; he says the thing the paper could not hold. That is the same structure the steerage
+  // passengers give Ellis Island.
+  //
+  // No props, per the standing finding from Unit 6 onward: a clipboard, a handbill and a shop
+  // ledger would all have failed rotation, and the 48x56 canvas clips rather than resizes. Costume
+  // carries the office, which on this map means a straw fedora, a shop apron and a cloth cap doing
+  // the work three held objects would have done.
+  //
+  // **Zero teal across all eight, on all four cardinals, first roll — and no re-rolls at all.**
+  // Every brief banned teal, turquoise, cyan and blue-green by name and named its own garment
+  // colour positively where that garment was blue or green, which is the rule Phase 89B arrived at
+  // after three phases had each lost a character to Meridian's reserved accent. Two people here
+  // wear navy and olive and both were named as such.
+  {
+    key: "suburb-appraiser",
+    stem: "chronicle-sprites/field/npc-suburb-appraiser",
+    name: "Fee appraiser",
+    // White short-sleeved shirt, narrow maroon tie, charcoal trousers, pale straw fedora with a
+    // dark band, wire spectacles. **He is the only person on this map who has seen both sides of it
+    // written down**, and the costume is deliberately the least remarkable thing in the cast: a
+    // contractor in shirtsleeves on a hot afternoon. The hat and the tie are what separate him from
+    // the veteran, who is the other man out here in a white short-sleeved shirt.
+    id: "4d95dc46-9a72-4b48-9169-4d162bf44d65",
+    frames: 8,
+    walkGroup: "appraiser-walk",
+  },
+  {
+    key: "suburb-veteran",
+    stem: "chronicle-sprites/field/npc-suburb-veteran",
+    name: "Applicant, file 4,118",
+    // Black man of about thirty-two, white short-sleeved shirt, olive-drab work trousers,
+    // bareheaded, squared shoulders. Nine years at one plant and an unused entitlement, declined at
+    // step five on somebody else's opinion of a neighbourhood. **Upright and unhurried in the art,
+    // deliberately** — the same rule `port-detained-woman` runs under and for the same reason: a
+    // figure drawn as a victim lets a student conclude this was an unusually cruel case, and the
+    // whole finding is that it was the ordinary one, decided by a committee in a morning.
+    id: "f3f153ae-1fae-421d-ac04-3cfde4303930",
+    frames: 8,
+    walkGroup: "veteran-walk",
+  },
+  {
+    key: "suburb-householder",
+    stem: "chronicle-sprites/field/npc-suburb-householder",
+    name: "Fairmeadow householder",
+    // Pale butter-yellow shirtwaist dress with a narrow white belt and a full skirt, short dark
+    // hair set in a wave, flat white shoes. First section, settled 1953, and the deed with all six
+    // restrictions on it is in a tin box in her kitchen. She is not concealing anything and has
+    // never been asked.
+    id: "b8894d4c-0598-401b-82ff-19f2524d40d2",
+    frames: 8,
+    walkGroup: "householder-walk",
+  },
+  {
+    key: "suburb-committee-man",
+    stem: "chronicle-sprites/field/npc-suburb-committee-man",
+    name: "Citizens' committee man",
+    // Red-and-cream check short-sleeved shirt, tan khaki trousers, thinning sandy hair, no hat. He
+    // put the handbill through every letter slot in the section this morning and will tell you so.
+    // The loudest shirt in the cast on the man whose document is the most careful, which is the
+    // joke the costume is making and the only one on this map.
+    id: "20d7a790-95d2-4759-b322-890aa7506e31",
+    frames: 8,
+    walkGroup: "committee-walk",
+  },
+  {
+    key: "suburb-township-clerk",
+    stem: "chronicle-sprites/field/npc-suburb-township-clerk",
+    name: "Township secretary",
+    // Navy blue skirt suit over a white blouse, grey hair pinned back, round spectacles. Twenty-two
+    // years secretary to the board of supervisors, and the ordinance that sets a minimum lot at
+    // forty thousand square feet went up on her board the day it was advertised. **The suit is navy
+    // and the brief said so twice** — the reserved-accent rule, and the reason it is stated
+    // positively rather than only as a ban.
+    id: "43a761c2-192b-4c1c-9b29-580462d1efa5",
+    frames: 8,
+    walkGroup: "clerk-walk",
+  },
+  {
+    key: "suburb-borough-woman",
+    stem: "chronicle-sprites/field/npc-suburb-borough-woman",
+    name: "Broad Street resident",
+    // Dark plum housecoat open over a printed cotton dress, white apron, grey hair in a bun. Her
+    // grandfather laid the brick in the pavement she is standing on and the appraisal gives her
+    // block fifteen years. **She is the counterweight the whole southern half of the map exists
+    // for**: without somebody standing on the rated-down ground, the rating is an abstraction.
+    id: "5f054f3e-66fc-469f-a4f3-53c9908c7764",
+    frames: 8,
+    walkGroup: "boroughwoman-walk",
+  },
+  {
+    key: "suburb-borough-shopkeeper",
+    stem: "chronicle-sprites/field/npc-suburb-borough-shopkeeper",
+    name: "Broad Street shopkeeper",
+    // Long tan shop apron over a white shirt with the sleeves rolled, dark trousers, bald with a
+    // fringe of grey. Four doors from the building & loan his father opened beside in 1926, and
+    // three men on his street can no longer borrow to repair a shopfront. The apron is doing the
+    // work a held ledger would have done and cannot.
+    id: "74a7f3d1-8685-41c1-8484-b33412d7bfd1",
+    frames: 8,
+    walkGroup: "shopkeeper-walk",
+  },
+  {
+    key: "suburb-road-foreman",
+    stem: "chronicle-sprites/field/npc-suburb-road-foreman",
+    name: "Highway foreman",
+    // Olive-drab twill work shirt and trousers, wide brown belt, grey herringbone cloth cap,
+    // sunburnt. He is building the boundary, and he is the only person on this map who knows the
+    // date it starts to matter: when the southbound is surfaced the road everybody crosses at comes
+    // out and the nearest way over goes in three miles east.
+    id: "b827ef8f-3ad4-4714-bea5-9490c990c267",
+    frames: 8,
+    walkGroup: "foreman-walk",
+  },
 ];
 
 /**

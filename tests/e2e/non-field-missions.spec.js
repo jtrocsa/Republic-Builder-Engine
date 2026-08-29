@@ -27,8 +27,8 @@ import {
   seedProgress,
 } from "./helpers/progress-seed.js";
 
-// Every case whose route is "mission". Fourteen, not the ten this part was named for — Units 6 and
-// 7 added four after the row was written.
+// Every case whose route is "mission". Sixteen, not the ten this part was named for — Units 6 and 7
+// added four after the row was written and Unit 8 added two more in Phase 97.
 const MISSIONS = [
   "case-002",
   "case-003",
@@ -44,7 +44,21 @@ const MISSIONS = [
   "case-018",
   "case-020",
   "case-021",
+  "case-023",
+  "case-024",
 ];
+
+// **A page stalls on its fourteenth navigation against the dev server, and this is measured.**
+// Thirteen consecutive reloads of "/" run at 1.0-1.3s each and the fourteenth never fires `load`,
+// with its module requests left outstanding — reproduced on a bare Playwright script with no test
+// framework in it, on this commit and on the one before it. It is a property of one page, not of the
+// context or the server: opening a fresh page every six navigations runs twenty of them at a
+// constant 1.1s.
+//
+// So the loop below works in batches. This test was one navigation under the cliff at fourteen
+// missions and went over it at sixteen — but it was already failing at fourteen when Phase 97 found
+// it, which is worth knowing before anybody reads the batch size as a workaround for Unit 8.
+const NAVIGATIONS_PER_PAGE = 6;
 
 const BANK_WAR = "case-011-mission-bank-war-chronology";
 const BANK_WAR_SOLVED = [
@@ -79,19 +93,30 @@ test.describe("every non-field mission", () => {
 
   test("renders a real quest, and says its place and date once (P10-3)", async ({ page }) => {
     test.setTimeout(180_000);
-    for (const caseId of MISSIONS) {
-      await openMission(page, caseId);
+    // The fixture's own page is never closed — Playwright owns its teardown. Later batches get
+    // pages of their own, seeded the way beforeEach seeds this one, and are closed at the end.
+    const opened = [];
+    let sheet = page;
+    for (const [index, caseId] of MISSIONS.entries()) {
+      if (index > 0 && index % NAVIGATIONS_PER_PAGE === 0) {
+        sheet = await page.context().newPage();
+        opened.push(sheet);
+        await seedProgress(sheet, { currentScreen: "archive" });
+        await loadSeededSave(sheet);
+      }
+      await openMission(sheet, caseId);
       // One card with something to answer on it. A mission whose quest failed to resolve renders an
       // empty board rather than throwing, which is the shape worth checking across all fourteen.
-      await expect(page.locator(".archive-challenge-item"), caseId).toHaveCount(1);
+      await expect(sheet.locator(".archive-challenge-item"), caseId).toHaveCount(1);
 
-      const meta = await page.locator(".mission-meta span").allTextContents();
+      const meta = await sheet.locator(".mission-meta span").allTextContents();
       expect(meta.length, `${caseId} meta chips`).toBe(1);
       // The duplication this replaced: "Washington, D.C. · 1816–1837" and then "1816–1837" beside
       // it, on twelve of the fourteen.
       const years = meta[0].match(/\d{4}/g) || [];
       expect(new Set(years).size, `${caseId} repeats a year in "${meta[0]}"`).toBe(years.length);
     }
+    for (const extraPage of opened) await extraPage.close();
   });
 
   test("calls itself a Mission on completion, and names what opened (P10-1, P10-6)", async ({

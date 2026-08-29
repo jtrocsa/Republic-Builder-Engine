@@ -78,7 +78,14 @@ describe("a unit's Archive Review is its own or none (P12-1)", () => {
   // `closeUnit()` is now the shared end of both paths — this pins that every unit has one of them.
   it("leaves every unit with a way to close — a review of its own, or the record button", () => {
     const withoutReview = UNITS.filter((unit) => !unitReviewFor(unit)).map((unit) => unit.id);
-    expect(withoutReview).toEqual(["unit-03", "unit-04", "unit-05", "unit-06", "unit-07"]);
+    expect(withoutReview).toEqual([
+      "unit-03",
+      "unit-04",
+      "unit-05",
+      "unit-06",
+      "unit-07",
+      "unit-08",
+    ]);
   });
 });
 

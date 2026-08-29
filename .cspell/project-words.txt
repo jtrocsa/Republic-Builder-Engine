@@ -29,9 +29,12 @@ Benavente
 Bernal
 Bidwell
 Blondheim
+Bocelli
 Bohío
+boroughwoman
 Bosman
 Bosman's
+Boyko
 Bregman
 Bundlephobia
 Cady
@@ -61,6 +64,7 @@ Ellsberg
 Endo
 Equiano
 Equiano's
+Fahy
 FOIA
 Fairmeadow
 Farmwife
@@ -100,6 +104,7 @@ Krajewska
 Kushner
 Labratory
 Lanczos
+Ledbetter
 Leitner
 León
 Lindqvist
@@ -154,6 +159,7 @@ Postgrest
 Powderly
 Powderly's
 Publius
+Pucci
 Puebloan
 QUICKREF
 Rathke
@@ -169,6 +175,7 @@ Rubios
 SMIL
 SNCC
 SPRITESHEET
+subgrade
 SUPABASE
 Sahagún
 Salusa

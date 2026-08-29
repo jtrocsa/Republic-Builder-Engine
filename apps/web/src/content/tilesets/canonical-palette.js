@@ -112,6 +112,14 @@ export const CANONICAL = {
   "grass.colonial": tile("Medieval Fantasy Town/1.png", 12, 14),
   /** Colonial grass as used outside the Philadelphia plaza. [live: common-cause-field ground] */
   "grass.colonial.plaza": tile("Medieval Fantasy Town/2.png", 0, 6),
+  /**
+   * Mown lawn: one even tone, no tufting, edge to edge. The twentieth-century surface, and the
+   * first entry here that is a *maintenance regime* rather than a landform — this is grass seeded
+   * in spring and cut every Saturday since, which is why it is flat where every other grass in this
+   * file is textured. `fairmeadow-field` runs the contrast between this and `grass.colonial`'s
+   * successor on `farm/6` as the loudest argument on the map. [labeled]
+   */
+  "grass.lawn.mown": tile("Modern Park/tile-B-01.png", 0, 0),
 
   // ---------------------------------------------------------------------------------------
   // DIRT & PATHS
@@ -154,6 +162,24 @@ export const CANONICAL = {
   /** Loose gravel. [labeled] */
   "path.gravel": tile("19th Centruy European Dock/tile-B-06.png", 12, 13),
 
+  // Modern made ground. Registered in Phase 97 with fairmeadow-field, the first map in the game
+  // set after 1907, and kept here rather than in that map's palette because a second modern map
+  // wants exactly these four and re-deciding them is what this file exists to prevent. All four
+  // are full-bleed and tile by parity, so any of them runs in any direction.
+  /**
+   * Black-top, unstriped. **The library has no east-west lane marking** — `Highway Rest Area`'s
+   * double yellow is a north-south run at cols 5-6 of the same sheet — so an east-west road is
+   * either unstriped or impossible. Reading an unstriped carriageway as a road that has not opened
+   * costs nothing and is what a new road looks like the month before it does. [labeled]
+   */
+  "path.asphalt.plain": tile("Highway Rest Area/tile-B-01.png", 9, 0),
+  /** Poured concrete: sidewalk, front walk, driveway apron. Large slabs, lightly cracked. [labeled] */
+  "path.concrete.walk": tile("Highway Rest Area/tile-B-01.png", 4, 2),
+  /** Scraped subgrade — cracked bare earth, the surface a machine leaves. [labeled] */
+  "path.earth.graded": tile("Highway Rest Area/tile-B-01.png", 8, 8),
+  /** Crushed stone, loose. Material yards and unmade shoulders. [labeled] */
+  "path.stone.crushed": tile("Highway Rest Area/tile-B-01.png", 8, 10),
+
   // Cultivation used to be listed here as two `farm/3.png` entries tagged
   // `[live: riverbend-field]`. Both claims were stale: Phase 52 dropped farm/3 from the map, and
   // Phase 53 rebuilt Riverbend's fields from `farm/6`'s authored 2x2 planted blocks, which are
@@ -172,6 +198,12 @@ export const CANONICAL = {
   "stone.city.brick.red": tile("19th Century European City/tile-B-05.png", 0, 0),
   /** 19th-century city street: grey running-bond brick. [labeled] */
   "stone.city.brick.grey": tile("19th Century European City/tile-B-05.png", 0, 4),
+  /**
+   * Street brick, running bond, laid flat. Distinct from the two above: those are a 19th-century
+   * European city's, drawn small and dark, and this is the flat American paver a Delaware Valley
+   * river town laid when the trolley came and had not repaved since. [labeled]
+   */
+  "stone.paver.brick": tile("Modern Park/tile-B-01.png", 0, 4),
   /** 19th-century city street: cream flagstone. [labeled] */
   "stone.city.flagstone": tile("19th Century European City/tile-B-05.png", 0, 8),
   /** 19th-century city street: large pale stone slab. [labeled] */

@@ -11,6 +11,7 @@ import { UNIT_04, CASE_010_SOURCES, CASE_010_LANES } from "./content/unit-04-cam
 import { UNIT_05, CASE_013_SOURCES, CASE_013_LANES } from "./content/unit-05-campaign.js";
 import { UNIT_06, CASE_016_SOURCES, CASE_016_LANES } from "./content/unit-06-campaign.js";
 import { UNIT_07, CASE_019_SOURCES, CASE_019_LANES } from "./content/unit-07-campaign.js";
+import { UNIT_08, CASE_022_SOURCES, CASE_022_LANES } from "./content/unit-08-campaign.js";
 import { CED_THEME_LABEL } from "./content/ced-taxonomy.js";
 import { skillsForQuestSlots } from "./engine/ced-alignment.js";
 import {
@@ -126,6 +127,19 @@ import {
   UNIT_07_ARCHIVE_SAQ_QUESTS,
   UNIT_07_ARCHIVE_DBQ_QUESTS,
 } from "./content/quests/unit-07-quests.js";
+// Unit 8's two non-field missions are a hipp and an mcq, which is the second unit to spend both
+// slots on the thin types — see the header of content/quests/unit-08-quests.js for why the content
+// wanted them and what the ledger across Units 1-7 said about it.
+import {
+  UNIT_08_MCQ_QUESTS,
+  UNIT_08_SEQUENCING_QUESTS,
+  UNIT_08_EVIDENCE_ORGANIZING_QUESTS,
+  UNIT_08_SOURCE_ANALYSIS_QUESTS,
+  UNIT_08_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+  UNIT_08_ARCHIVE_MCQ_QUESTS,
+  UNIT_08_ARCHIVE_SAQ_QUESTS,
+  UNIT_08_ARCHIVE_DBQ_QUESTS,
+} from "./content/quests/unit-08-quests.js";
 import { INSTITUTE_PLATE, plateForUnit } from "./content/chronotravel-plates.js";
 import { renderTiledMap, createTilesetImageResolver } from "./engine/tiled-map-loader.js";
 // The activity engines (Phase 68, decision log 0051). These four replaced the three
@@ -200,6 +214,7 @@ import richmondCountingRoomTmjRaw from "./content/maps/richmond-counting-room.tm
 import richmondHospitalWardTmjRaw from "./content/maps/richmond-hospital-ward.tmj?raw";
 import railheadTmjRaw from "./content/maps/railhead-field.tmj?raw";
 import immigrantPortTmjRaw from "./content/maps/immigrant-port-field.tmj?raw";
+import fairmeadowTmjRaw from "./content/maps/fairmeadow-field.tmj?raw";
 import railheadLandOfficeTmjRaw from "./content/maps/railhead-land-office.tmj?raw";
 import railheadTelegraphOfficeTmjRaw from "./content/maps/railhead-telegraph-office.tmj?raw";
 import immigrantPortInspectionHallTmjRaw from "./content/maps/immigrant-port-inspection-hall.tmj?raw";
@@ -239,6 +254,10 @@ import {
   IMMIGRANT_PORT_FIELD_BLOCKS,
   IMMIGRANT_PORT_FIELD_ROADS,
 } from "./content/maps/immigrant-port-field.blocks.js";
+import {
+  FAIRMEADOW_FIELD_BLOCKS,
+  FAIRMEADOW_FIELD_ROADS,
+} from "./content/maps/fairmeadow-field.blocks.js";
 // The two rooms that map opens into. No `*_ROADS` companion: a route is pathfound over road cells
 // discounted 4:1, and nothing in a twenty-tile room is far enough from anything for a road to mean
 // what it means outdoors.
@@ -924,6 +943,66 @@ function renderImmigrantPortTiledMap() {
   );
 }
 
+// Fairmeadow, Pennsylvania, August 1957 — Unit 8's suburban corridor. Ten sheets, and five of them
+// are new work for the bundle: this is the first map in the game set after 1907, so the modern
+// packs that carry its ground and its plant have never been loaded before. Four of the ten are
+// derived sheets this repository packed itself, and `suburban-tract` — three house plans and three
+// cars, commissioned in Phase 96 — has no other consumer.
+//
+// Every glob is an exact file, never a `/**`, for the reason recorded on every resolver above it:
+// an unscoped one shipped 117 MB of unused art once already.
+const fairmeadowTmj = JSON.parse(fairmeadowTmjRaw);
+const resolveFairmeadowTilesetImage = createTilesetImageResolver(
+  // The three house plans and the three cars. Nothing else in 250 sheets is either.
+  import.meta.glob("./assets/tilesets/derived/suburban-tract.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The black-top, the sidewalk slabs, the graded subgrade, the crushed stone, the residential
+  // street band, the guard rail and the township's notice boards. This pack's forty vehicles and
+  // all of its vending machines, ATMs and branded storefronts are excluded by the map, not by the
+  // glob — a tileset is loaded whole.
+  import.meta.glob("./assets/tilesets/Highway Rest Area/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The mown lawn and Broad Street's brick.
+  import.meta.glob("./assets/tilesets/Modern Park/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The street lamps, which are the same standard on both sides of the highway.
+  import.meta.glob("./assets/tilesets/Modern Park/tile-B-02.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The contractor's yard and the highway plant — one contractor, so one sheet.
+  import.meta.glob("./assets/tilesets/Construction/2.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The borough's rough grass, its picket and rail fencing, its churchyard wall, and the chain link
+  // round the unsold lots.
+  import.meta.glob("./assets/tilesets/farm/6.png", { eager: true, import: "default" }),
+  // The borough's frame houses and the township building.
+  import.meta.glob("./assets/tilesets/derived/farm-buildings.png", {
+    eager: true,
+    import: "default",
+  }),
+  // Two centuries of growth on one side of the highway and this June's whips on the other.
+  import.meta.glob("./assets/tilesets/derived/farm-trees.png", { eager: true, import: "default" }),
+  // The steeple, and the tallest thing on the map is on the side rated at fifteen years.
+  import.meta.glob("./assets/tilesets/derived/town-civic.png", { eager: true, import: "default" }),
+  // The building & loan and the commercial terraces either side of it.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderFairmeadowTiledMap() {
+  renderTiledMapWithOverlay("fairmeadowTiledCanvas", fairmeadowTmj, resolveFairmeadowTilesetImage);
+}
+
 // Cottonwood Junction's two rooms. One resolver serves both, as at Canal Crossroads and Richmond:
 // they name five sheets between them and every one is shared, so a resolver per room would only
 // duplicate globs.
@@ -1081,6 +1160,7 @@ const SURFACE_TILESETS = {
   "unit-05": () => richmondTmj.tilesets.map(resolveRichmondTilesetImage),
   "unit-06": () => railheadTmj.tilesets.map(resolveRailheadTilesetImage),
   "unit-07": () => immigrantPortTmj.tilesets.map(resolveImmigrantPortTilesetImage),
+  "unit-08": () => fairmeadowTmj.tilesets.map(resolveFairmeadowTilesetImage),
   "institute-hall": () => instituteHallTmj.tilesets.map(resolveInstituteHallTilesetImage),
 };
 
@@ -1330,6 +1410,18 @@ const CHARACTER_SHEETS = {
   "port-exchange-clerk": characterSheet(`${FIELD}/npc-port-exchange-clerk`, 9),
   "port-board-clerk": characterSheet(`${FIELD}/npc-port-board-clerk`, 9),
   "port-detained-woman": characterSheet(`${FIELD}/npc-port-detained-woman`, 9),
+  // Unit 8, Fairmeadow, August 1957. Eight, imported in Phase 97, and all eight are outdoors —
+  // the inverse of Unit 7, where half the cast worked behind doors. This map has two doors and the
+  // people behind them arrive with the rooms. What is out here is a street, and a street is where
+  // the interview happens.
+  "suburb-appraiser": characterSheet(`${FIELD}/npc-suburb-appraiser`, 9),
+  "suburb-veteran": characterSheet(`${FIELD}/npc-suburb-veteran`, 9),
+  "suburb-householder": characterSheet(`${FIELD}/npc-suburb-householder`, 9),
+  "suburb-committee-man": characterSheet(`${FIELD}/npc-suburb-committee-man`, 9),
+  "suburb-township-clerk": characterSheet(`${FIELD}/npc-suburb-township-clerk`, 9),
+  "suburb-borough-woman": characterSheet(`${FIELD}/npc-suburb-borough-woman`, 9),
+  "suburb-borough-shopkeeper": characterSheet(`${FIELD}/npc-suburb-borough-shopkeeper`, 9),
+  "suburb-road-foreman": characterSheet(`${FIELD}/npc-suburb-road-foreman`, 9),
 };
 /**
  * The sheet for a character key, falling back to the Director rather than throwing on a typo.
@@ -3556,6 +3648,188 @@ const UNIT7_FIELD_SOURCE_POINTS = {
   },
 };
 
+// ---- Fairmeadow's cast ---------------------------------------------------------------------------
+// Nine on the map, and the composition is the argument. Unit 7's wharf was positions relative to a
+// question — who asks it, who answers it, who writes it down. This one is **positions relative to a
+// line nobody can see**: two people who wrote it, two people it was written about, two people who
+// live on the wrong side of it, one who is building it, and one who has been sent to watch.
+//
+// Five of the seven records are carried out here and two are behind the map's two doors, which is
+// the inverse of Ellis Island and is this place stating its own shape: at a station you are sorted
+// indoors, and in a subdivision everything that matters is decided in an office you never see.
+//
+// THE-MAP-PROGRAM.md §5 fixes this map's interview as **what a neighbour will say on the record**,
+// and that is why the two people with the least to say are on it at all. The useful answer here is
+// rarely the willing one.
+const UNIT8_FIELD_NPCS = [
+  {
+    // On the south verge of Fairmeadow Drive, off the walk and off the drive — a stationed body is
+    // furniture to the nav grid, and one standing in either would re-plan every route that used it.
+    // Facing the corridor rather than the houses, which is where she has been looking.
+    id: "liaison",
+    x: 30.5,
+    y: 13.0,
+    group: "chronicle",
+    name: "Emery Voss",
+    label: "Emery Voss",
+    sprite: "liaison",
+    // No `revealedText`, and that is the rule rather than an omission: Unit 6's railhead is the top
+    // of the reveal ladder and the only map that carries one (tests/unit/field-liaison.test.js
+    // fails if a second grows one). THE-FIELD-LIAISON.md §4 puts Units 7-8 at "reluctant alliance",
+    // which is Scene E and a canon decision of its own — not something to fold into a unit build.
+    text: "I have walked this from the top of the tract to the far end of the borough and I cannot find the place where it happens. That is what I want you to notice. There is no gate here, no rail, no man with a list — you can stand on that road and walk from one side to the other and nobody will even look up. And yet somebody has decided which of these two places has forty years left in it and which has fifteen, and they did it on a form, in an office, weeks ago, and everybody out here is living inside that decision without having been told it was made. Find the paper. The paper is the only place any of this is written down.",
+  },
+  {
+    // On the corridor's north shoulder, two tiles west of the crossing, looking south across the
+    // ground he has already rated. **This is the placement the whole map is built around**: the man
+    // whose sheet decides both sides is standing on the line between them, and the line is dirt.
+    id: "suburb-appraiser",
+    x: 24.5,
+    y: 14.0,
+    group: "trade",
+    name: "Howard Renfrew",
+    label: "Fee appraiser",
+    sprite: "suburb-appraiser",
+    text: "Fee appraiser, under contract, and before you ask me what I think of anybody: I do not put what I think on the form. There is no line for it. There are eight features and I rate each one, and Feature 8 is what the neighbourhood is likely to be in twenty years, which is a question about people that I answer with a number about buildings. Forty years of remaining economic life up here. Fifteen down there. Same brick, some of it — that row on Broad Street is better built than anything on this street and I will say so. But better built is not what I am scoring, and the manual is quite clear on that, and I follow the manual.",
+  },
+  {
+    // On the old road where it crosses the unbuilt carriageway, one tile east of it so he is on the
+    // line without standing in the only route across it. He is looking north, at the tract.
+    id: "suburb-veteran",
+    x: 28.5,
+    y: 19.2,
+    group: "applicant",
+    name: "Curtis Ledbetter",
+    label: "Applicant, file 4,118",
+    sprite: "suburb-veteran",
+    text: "Nine years at the same plant, four thousand eight hundred and sixty a year, credit rated satisfactory, entitlement never used. Every one of those is on the sheet and every one of them cleared. It went to the committee on the fifteenth and came back declined on the sixteenth, and the reason given me was that the property offered does not meet the association's requirements as security. I asked the officer what that meant. He is a decent man and he told me straight — the objection is to the location and not to the applicant. So the house is the problem. Not me. The house I was going to buy is the reason I cannot buy the house.",
+  },
+  {
+    // On her own front lawn, at the west end of the street, beside the first house built. Not the
+    // model house: the deed the player wants is the one somebody has actually signed.
+    id: "suburb-householder",
+    x: 5.5,
+    y: 7.4,
+    group: "tract",
+    name: "Eileen Fahy",
+    label: "Fairmeadow householder",
+    sprite: "suburb-householder",
+    text: "We settled in March of fifty-three, first section, and the deed is in the tin box with the insurance. I read it once, at the table, the night we got it. Six things you cannot do — no second house on the lot, nothing temporary lived in, no trade carried on, no fence over four feet in front, nothing built under nine thousand dollars. And the sixth. I remember thinking it was an odd thing to find between a fence and a price, and then I remember thinking that the man from the title company had said every deed in the section says the same, and then I signed it, because we had two weeks to be out of my mother's.",
+  },
+  {
+    // Working the street with the handbill — a route along the sidewalk between two blocks, because
+    // door to door is a route and standing still is not.
+    id: "suburb-committee-man",
+    x: 13.0,
+    y: 9.0,
+    group: "tract",
+    name: "Ray Bocelli",
+    label: "Fairmeadow Citizens' Committee",
+    sprite: "suburb-committee-man",
+    text: "Committee's a dozen of us off this street and the next one over. I put one of these through every slot in the section this morning and I will tell you exactly what is in it, because there is nothing in it I would not say to your face. It does not say a word about anybody. It says property values, it says the character of the neighbourhood, it says we ask our neighbours to stand together — and every man who reads it knows what it is about, which is the point of writing it that way. You want to know what I would say on the record. That is the record. I mimeographed it.",
+  },
+  {
+    // On the walk outside the township building, below the notice board, which is hers to keep. Down
+    // on row 9 rather than up in the setback because the setback at this end of the street is a
+    // driveway with a station wagon parked on it, and her first coordinates stood her inside it.
+    id: "suburb-township-clerk",
+    x: 43.5,
+    y: 9.6,
+    group: "township",
+    name: "Margaret Kohl",
+    label: "Township secretary",
+    sprite: "suburb-township-clerk",
+    text: "Secretary to the board of supervisors, twenty-two years, and this building was here before any of it. Ordinance one-eighteen went up on that board the day it was advertised and it is up there still — you may read it, it is a public record, that is what the board is for. It takes the minimum lot in the north sections from seven thousand five hundred square feet to forty thousand. A shade under an acre. The board's finding is that it promotes health and the general welfare, which is the language the enabling act gives us and the language every township in this county uses. What it does is decide what a house here can cost. Nobody said that at the meeting and nobody had to.",
+  },
+  {
+    // On Broad Street's south walk, in the borough, where the pavement is brick and older than the
+    // township. She is the counterweight the map needs: the rated-down side, standing on it.
+    id: "suburb-borough-woman",
+    x: 19.0,
+    y: 29.5,
+    group: "borough",
+    name: "Verna Pilch",
+    label: "Broad Street resident",
+    sprite: "suburb-borough-woman",
+    text: "Ninety-one years this house has been in the family and my grandfather laid the brick in that pavement you are standing on. Now a man comes through in May with a clipboard and by all accounts we have got fifteen years left in us. Fifteen. That roof is slate and it will see me out and my daughter after me. What I would like explained is how the houses they are throwing up on the other side of that road in nine days apiece have got forty. But he did not come and ask me and he was not going to, and there is nowhere on his paper for me to have said it.",
+  },
+  {
+    // Outside his own shopfronts, on the borough's north walk, four tiles clear of the building &
+    // loan's door so the wrong one cannot answer.
+    id: "suburb-borough-shopkeeper",
+    x: 31.5,
+    y: 26.6,
+    group: "borough",
+    name: "Aldo Pucci",
+    label: "Broad Street shopkeeper",
+    sprite: "suburb-borough-shopkeeper",
+    text: "Father opened in twenty-six, four doors down from the association, and for thirty years everybody in this borough walked past both. Now they announce the expressway and the first thing that happens is not the road — it is that three men on this street cannot borrow to fix a front. Same association. Same manager. He is not a hard man; he showed me the rating and shrugged at it. The road has not been opened yet and it has already done it. That is the part I keep chewing on. They have not poured the second half and it is finished with us.",
+  },
+  {
+    // On the unbuilt carriageway, in the middle of the works. He is building the boundary, and he is
+    // the only person on the map who knows the date it starts to matter.
+    id: "suburb-road-foreman",
+    x: 20.5,
+    y: 18.5,
+    group: "works",
+    name: "Stan Boyko",
+    label: "Highway foreman",
+    sprite: "suburb-road-foreman",
+    text: "Northbound is paved and it is not open — no stripe on it, so no traffic on it, and the state will not sign it off until the southbound is bound and surfaced. Autumn, if the weather holds. And when it opens, that road you walked down here on closes: it comes out, the whole crossing, and the nearest way over goes in three miles east where the interchange is going. Nobody on either side of me believes that yet. They have crossed here their whole lives and they think a road is a thing you cross.",
+  },
+];
+
+const UNIT8_FIELD_NPC_BEHAVIOURS = {
+  liaison: { kind: "station", at: { x: 30.5, y: 13.0 }, facing: "down" },
+  "suburb-appraiser": { kind: "station", at: { x: 24.5, y: 14.0 }, facing: "down" },
+  "suburb-veteran": { kind: "station", at: { x: 28.5, y: 19.2 }, facing: "up" },
+  "suburb-householder": { kind: "station", at: { x: 5.5, y: 7.4 }, facing: "down" },
+  // Door to door, which is a route: two blocks of the same sidewalk, west and back.
+  "suburb-committee-man": {
+    kind: "route",
+    stops: [
+      { x: 13.0, y: 9.0 },
+      { x: 34.0, y: 9.0 },
+    ],
+  },
+  "suburb-township-clerk": { kind: "station", at: { x: 43.5, y: 9.6 }, facing: "down" },
+  "suburb-borough-woman": { kind: "station", at: { x: 19.0, y: 29.5 }, facing: "up" },
+  "suburb-borough-shopkeeper": { kind: "station", at: { x: 31.5, y: 26.6 }, facing: "down" },
+  // Pacing his own works rather than posted at them, and kept off the old road's two columns.
+  "suburb-road-foreman": { kind: "wander", home: { x: 20.5, y: 18.5 }, radius: 1.3 },
+};
+
+// Five records out here and two behind the map's two doors — the inverse of Ellis Island's split,
+// for the reason the cast note above gives. The terms sheet is on a card table in the model house
+// and the underwriting checklist is on a desk in the building & loan; both land with those rooms.
+const UNIT8_FIELD_SOURCE_POINTS = {
+  "suburb-covenant-deed": {
+    anchor: { npc: "suburb-householder" },
+    label: "Deed, Lot 214",
+    kind: "Source",
+  },
+  "suburb-neighborhood-appraisal": {
+    anchor: { npc: "suburb-appraiser" },
+    label: "Valuation report",
+    kind: "Source",
+  },
+  "suburb-gi-bill-loan-file": {
+    anchor: { npc: "suburb-veteran" },
+    label: "Application file 4,118",
+    kind: "Source",
+  },
+  "suburb-zoning-amendment": {
+    anchor: { npc: "suburb-township-clerk" },
+    label: "Ordinance No. 118",
+    kind: "Source",
+  },
+  "suburb-citizens-committee-handbill": {
+    anchor: { npc: "suburb-committee-man" },
+    label: "Committee handbill",
+    kind: "Source",
+  },
+};
+
 // ---- Ellis Island's two interiors ----------------------------------------------------------------
 //
 // Attached to FIELD_MAPS["unit-07"] further down the file, not inline in the literal — see the
@@ -3759,6 +4033,17 @@ function immigrantPortWorldMarkup() {
   return `<canvas class="field-world-art" id="immigrantPortTiledCanvas" role="img" aria-label="The wharf of an immigration station on a made island in 1907: a long red-brick frontage with a pale stone entrance pavilion and clock tower running the whole north side, a paved forecourt of gas lamps, iron benches and bay trees in tubs, a wrought-iron rail across the middle of the wharf with a single gate in it, and below the rail a cobbled quay of baggage, sheds, a derrick and a steamship line's booth, ending at a seawall with two timber landing stages reaching out into open water"></canvas><canvas class="field-world-overlay" id="immigrantPortTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
 
+// Fairmeadow's mask is a rectangle, and that is the honest shape: this map has no water and no
+// cliff. What frames it is what is painted beyond the rectangle — scraped earth going north, where
+// the tract is about to continue, and two hundred years of trees going south. Must stay in lockstep
+// with scripts/generate-fairmeadow-tmj.js's copy of this function.
+export function isFairmeadowLand(x, y) {
+  return x >= 3.5 && x <= 52.5 && y >= 2.0 && y <= 34.0;
+}
+function fairmeadowWorldMarkup() {
+  return `<canvas class="field-world-art" id="fairmeadowTiledCanvas" role="img" aria-label="A new suburban subdivision and an old river borough on either side of an unfinished expressway in 1957: at the top, scraped lots with a contractor's materials behind chain link, then a street of six single-storey houses with open lawns, poured walks, cars on the drives and newly planted saplings, with an older township building at its east end; across the middle, one paved carriageway with no lane markings on it and beside it a second carriageway still graded dirt with plant and survey stakes on it, guard rail along the finished side only; and at the bottom a two-hundred-year-old borough of frame houses, a church steeple, a brick commercial row with a pale stone building and loan association in the middle of it, a brick street, picket-fenced back yards and heavy mature trees over all of it. An old township road crosses the whole map from top to bottom, over the unfinished highway, and is the only thing joining the two halves"></canvas><canvas class="field-world-overlay" id="fairmeadowTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
 function railheadWorldMarkup() {
   return `<canvas class="field-world-art" id="railheadTiledCanvas" role="img" aria-label="A top-down Kansas railhead town in 1873: a single rail line running east to west across open prairie with a station and a covered platform on it, a street of unsigned false-front buildings on the north side including a land office and a telegraph office, a homestead claim of fenced wheat and sunflowers in the north-east, and on the south side a Kanza village of bark lodges and stone agency huts beside a creek, a hide shed, a graders' camp of wall tents, and empty cattle pens at a loading chute"></canvas><canvas class="field-world-overlay" id="railheadTiledCanvasOverlay" aria-hidden="true"></canvas>`;
 }
@@ -3865,6 +4150,23 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT7_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: immigrantPortWorldMarkup,
+  },
+  "unit-08": {
+    id: "unit-08",
+    // On the old township road where it meets Fairmeadow Drive, which is the one cell on this map
+    // that belongs to both halves of it. The opening frame is the whole question: a street of new
+    // houses behind, and ahead of it a four-lane road with no stripe on it that nobody is driving on
+    // yet, and past that, out of shot, a borough somebody has already given fifteen years.
+    spawn: { x: 26.5, y: 12.6 },
+    recall: { x: 28.5, y: 12.6 },
+    isLand: isFairmeadowLand,
+    blocks: FAIRMEADOW_FIELD_BLOCKS,
+    roads: FAIRMEADOW_FIELD_ROADS,
+    npcs: UNIT8_FIELD_NPCS,
+    behaviours: UNIT8_FIELD_NPC_BEHAVIOURS,
+    sourcePoints: UNIT8_FIELD_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: fairmeadowWorldMarkup,
   },
 };
 /** The unit's outdoor map, whatever room the player is currently standing in. */
@@ -5498,7 +5800,7 @@ function sceneForMusic() {
   if (progress.currentScreen === "return-warp") return "quiet";
   return "quiet";
 }
-export const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06, UNIT_07];
+export const UNITS = [UNIT_01, UNIT_02, UNIT_03, UNIT_04, UNIT_05, UNIT_06, UNIT_07, UNIT_08];
 const UNIT_SOURCES = {
   "case-001": CASE_001_SOURCES,
   "case-004": CASE_004_SOURCES,
@@ -5507,6 +5809,7 @@ const UNIT_SOURCES = {
   "case-013": CASE_013_SOURCES,
   "case-016": CASE_016_SOURCES,
   "case-019": CASE_019_SOURCES,
+  "case-022": CASE_022_SOURCES,
 };
 const PRACTICE_CHECK_QUESTS = {
   "case-001": {
@@ -5551,6 +5854,12 @@ const PRACTICE_CHECK_QUESTS = {
     evidenceOrganizing: UNIT_07_EVIDENCE_ORGANIZING_QUESTS,
     hipp: UNIT_07_SOURCE_ANALYSIS_QUESTS,
   },
+  "case-022": {
+    mcq: UNIT_08_MCQ_QUESTS,
+    sequencing: UNIT_08_SEQUENCING_QUESTS,
+    evidenceOrganizing: UNIT_08_EVIDENCE_ORGANIZING_QUESTS,
+    hipp: UNIT_08_SOURCE_ANALYSIS_QUESTS,
+  },
 };
 // Quest content for both kinds of authored challenge, resolved by
 // (questType, questId): a case's own `archiveChallenge` pointer — which
@@ -5580,6 +5889,7 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_02_ARCHIVE_STRONGEST_EVIDENCE_QUESTS,
     ...UNIT_03_ARCHIVE_MCQ_QUESTS,
     ...UNIT_06_ARCHIVE_MCQ_QUESTS,
+    ...UNIT_08_ARCHIVE_MCQ_QUESTS,
   ],
   saq: [
     ...UNIT_01_ARCHIVE_SAQ_QUESTS,
@@ -5589,6 +5899,7 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_05_ARCHIVE_SAQ_QUESTS,
     ...UNIT_06_ARCHIVE_SAQ_QUESTS,
     ...UNIT_07_ARCHIVE_SAQ_QUESTS,
+    ...UNIT_08_ARCHIVE_SAQ_QUESTS,
   ],
   dbq: [
     ...UNIT_03_ARCHIVE_DBQ_QUESTS,
@@ -5596,11 +5907,16 @@ const ARCHIVE_CHALLENGE_QUESTS_BY_TYPE = {
     ...UNIT_05_ARCHIVE_DBQ_QUESTS,
     ...UNIT_06_ARCHIVE_DBQ_QUESTS,
     ...UNIT_07_ARCHIVE_DBQ_QUESTS,
+    ...UNIT_08_ARCHIVE_DBQ_QUESTS,
   ],
   // Unit 4's case-012 is the first mission in the game whose quest is a hipp — see the header of
   // content/quests/unit-04-quests.js. Missions resolve through this same table, so the type needed
   // a key here as well as in INVESTIGATION_QUESTS_BY_TYPE below.
-  hipp: [...UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS, ...UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS],
+  hipp: [
+    ...UNIT_04_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+    ...UNIT_06_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+    ...UNIT_08_ARCHIVE_SOURCE_ANALYSIS_QUESTS,
+  ],
 };
 // Returns {questType, quest} rather than just the content — a published
 // teacher-authored replacement can be a genuinely different quest type than
@@ -12670,6 +12986,10 @@ const FIELD_COPY = {
     intro:
       "You arrive at the head of a landing stage on a made island in the Upper Bay, on the busiest day this station ever had. Everything north of the iron rail across the wharf is the government's ground; everything south of it is where eleven thousand seven hundred and forty-seven people came off the barges today and waited to be read back to themselves off a sheet filled in for them in Europe. Seven records: two are out here, four are on the registry floor through the main doors, and the last is in the board of special inquiry room twelve bays east — which cannot be read until you hold the manifest it is a hearing about.",
   },
+  "unit-08": {
+    intro:
+      "You arrive on the old township road, at the corner of a subdivision two weeks old. North of you are the new houses; south of you is a four-lane expressway with no lane markings on it, because it has not opened; past that is a borough two hundred years older than any of this. Five records are out here — a family's deed, an appraiser's rating sheet, a declined loan file, the township's notice board and a handbill going door to door — and two more are behind doors: the model house on the drive, and the building and loan on Broad Street.",
+  },
 };
 function fieldScreen() {
   const map = activeFieldMap();
@@ -13818,6 +14138,21 @@ const RECONSTRUCTION_LANES = {
         "A record of what the sorting takes to run, or of what it takes from the people being sorted — in money, in days, or in a name.",
     }[lane.id],
   })),
+  // Unit 8's three are the three halves of one sentence a salesman says and a lender hears. Every
+  // record on this map is a promise, a price or a protection, and several are two of the three —
+  // the deed's fifth restriction is a price and its sixth is a protection, on the same page, in the
+  // same register.
+  "case-022": CASE_022_LANES.map((lane) => ({
+    ...lane,
+    hint: {
+      "what-is-being-promised":
+        "A record that offers something — a house, a rate, a guarantee, a neighbourhood — and states the terms on which it is offered.",
+      "what-is-being-priced":
+        "A record where a number settles something that is not about money: a rating, a minimum, a term of years.",
+      "who-is-being-protected":
+        "A record that says whose interest is being defended, and which is careful about how it names the people it is being defended from.",
+    }[lane.id],
+  })),
 };
 function reconstructionScreen() {
   const caseId = activeFieldCaseId();
@@ -14087,6 +14422,7 @@ function render() {
       if (activeFieldMap().id === "unit-05") renderRichmondTiledMap();
       if (activeFieldMap().id === "unit-06") renderRailheadTiledMap();
       if (activeFieldMap().id === "unit-07") renderImmigrantPortTiledMap();
+      if (activeFieldMap().id === "unit-08") renderFairmeadowTiledMap();
       if (activeFieldMap().id === "canal-print-shop") renderCanalPrintShopTiledMap();
       if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
       if (activeFieldMap().id === "richmond-counting-room") renderRichmondCountingRoomTiledMap();

@@ -219,6 +219,7 @@ const MAIN_JS_LITERALS = {
     "unit-05": "UNIT5_FIELD_NPCS",
     "unit-06": "UNIT6_FIELD_NPCS",
     "unit-07": "UNIT7_FIELD_NPCS",
+    "unit-08": "UNIT8_FIELD_NPCS",
     "canal-print-shop": "UNIT4_PRINT_SHOP_NPCS",
     "canal-boarding-house": "UNIT4_BOARDING_HOUSE_NPCS",
     "richmond-counting-room": "UNIT5_COUNTING_ROOM_NPCS",
@@ -236,6 +237,7 @@ const MAIN_JS_LITERALS = {
     "unit-05": "UNIT5_FIELD_NPC_BEHAVIOURS",
     "unit-06": "UNIT6_FIELD_NPC_BEHAVIOURS",
     "unit-07": "UNIT7_FIELD_NPC_BEHAVIOURS",
+    "unit-08": "UNIT8_FIELD_NPC_BEHAVIOURS",
     "canal-print-shop": "UNIT4_PRINT_SHOP_BEHAVIOURS",
     "canal-boarding-house": "UNIT4_BOARDING_HOUSE_BEHAVIOURS",
     "richmond-counting-room": "UNIT5_COUNTING_ROOM_BEHAVIOURS",
@@ -253,6 +255,7 @@ const MAIN_JS_LITERALS = {
     "unit-05": "UNIT5_FIELD_SOURCE_POINTS",
     "unit-06": "UNIT6_FIELD_SOURCE_POINTS",
     "unit-07": "UNIT7_FIELD_SOURCE_POINTS",
+    "unit-08": "UNIT8_FIELD_SOURCE_POINTS",
     "canal-print-shop": "UNIT4_PRINT_SHOP_SOURCE_POINTS",
     "canal-boarding-house": "UNIT4_BOARDING_HOUSE_SOURCE_POINTS",
     "richmond-counting-room": "UNIT5_COUNTING_ROOM_SOURCE_POINTS",
@@ -359,6 +362,7 @@ const OUTDOOR_TMJ = {
   "unit-05": "richmond-field",
   "unit-06": "railhead-field",
   "unit-07": "immigrant-port-field",
+  "unit-08": "fairmeadow-field",
 };
 
 /** Human names for the surfaces, since a .tmj id is not a place. */
@@ -378,6 +382,7 @@ const SURFACE_NAMES = {
   "immigrant-port-field": "The wharf at Ellis Island",
   "immigrant-port-inspection-hall": "The inspection hall",
   "immigrant-port-inquiry-room": "Board of special inquiry room",
+  "fairmeadow-field": "Fairmeadow and the borough",
 };
 
 /**

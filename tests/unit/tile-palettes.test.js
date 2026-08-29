@@ -38,6 +38,7 @@ import railheadTelegraphOffice from "../../apps/web/src/content/tilesets/maps/ra
 import immigrantPort from "../../apps/web/src/content/tilesets/maps/immigrant-port-field.palette.js";
 import immigrantPortInspectionHall from "../../apps/web/src/content/tilesets/maps/immigrant-port-inspection-hall.palette.js";
 import immigrantPortInquiryRoom from "../../apps/web/src/content/tilesets/maps/immigrant-port-inquiry-room.palette.js";
+import fairmeadow from "../../apps/web/src/content/tilesets/maps/fairmeadow-field.palette.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../..");
@@ -60,6 +61,7 @@ const MAP_PALETTES = [
   immigrantPort,
   immigrantPortInspectionHall,
   immigrantPortInquiryRoom,
+  fairmeadow,
   archiveRoom,
   hallway,
   instituteHall,

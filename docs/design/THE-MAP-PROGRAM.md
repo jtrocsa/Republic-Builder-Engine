@@ -280,6 +280,14 @@ the DISCREPANCY, the guaranteed-loan file the TRACE. Four more open in the reade
 terms sheet, the lending office's underwriting checklist, a township minimum-lot amendment and a
 neighbours' handbill.
 
+**The map shipped in Phase 97** (decision log `0096`), with a cast of eight, and Unit 8 is walkable.
+Two decisions on it are worth carrying to Unit 9. **The composition inverts its neighbour's**, which
+is the same rule as the engine slate one section up: Ellis Island was built around a line the player
+cannot cross and this one is built around a line nothing stops them at, because that is what the unit
+is about. And **the old road still crosses the expressway at grade** — grade separation arrives with
+the interchange and the interchange arrives later — which is why the two halves are one map at all.
+Owed: two interiors and three activities.
+
 **The art shipped in Phase 96** (decision log `0095`), which is the slice between the content and
 the map. `p8-suburb` is unblocked: its houses and cars are commissioned, and its road, kerbs,
 sidewalk, driveways, lawn, planting and both interiors come out of packs the old gap entry had

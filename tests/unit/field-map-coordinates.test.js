@@ -218,6 +218,7 @@ const TMJ_BY_UNIT = {
   "unit-05": "richmond-field.tmj",
   "unit-06": "railhead-field.tmj",
   "unit-07": "immigrant-port-field.tmj",
+  "unit-08": "fairmeadow-field.tmj",
 };
 
 // FIELD_COPY is not exported — it is a template-literal table deep inside a browser entry point —

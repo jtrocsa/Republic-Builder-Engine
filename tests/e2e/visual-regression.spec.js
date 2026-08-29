@@ -709,6 +709,32 @@ test.describe("Gameplay visual-regression baselines", () => {
     await expect(page).toHaveScreenshot(snap("field-immigrant-port-inquiry-room"));
   });
 
+  // Unit 8's suburban corridor, and this baseline is watching three things no other map has. The
+  // residential street is a **two-row band with kerbs baked into its edges**, laid by absolute
+  // parity, so a one-row shift anywhere would flip the kerbs inward and grow a hard line down the
+  // middle of the street — visible here and invisible to every collision test. The guard rail along
+  // the highway shoulder is stamped `base` in broken runs, so the gaps in it are load-bearing: they
+  // are how the player crosses, and the whole map argues that nothing stops them. And the planting
+  // is the map's argument — mature trees over the borough, whips over the tract — which is exactly
+  // the kind of thing a palette edit could quietly reverse.
+  //
+  // No interiors yet: the model house and the building & loan land in the next slice, and their
+  // shots with them.
+  test("field: Fairmeadow and the borough (Unit 8)", async ({ page }) => {
+    const seed = {
+      currentScreen: "field",
+      activeCaseId: "case-022",
+      unlocked: ["case-001", "case-022"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+    };
+    await seedProgress(page, seed);
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await waitForTiledCanvas(page, "fairmeadowTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-fairmeadow"));
+  });
+
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({
     page,
   }) => {

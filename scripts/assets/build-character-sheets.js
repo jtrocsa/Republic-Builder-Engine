@@ -231,9 +231,9 @@ async function fetchBulk(character, kinds = cyclesOf(character).map(([kind]) => 
   }
 }
 
-async function fetchAll() {
+async function fetchAll(cast = CHARACTERS) {
   const waiting = [];
-  for (const character of CHARACTERS) {
+  for (const character of cast) {
     // A character whose jobs are still running is reported and skipped rather than aborting the
     // run. Importing a cast is incremental by nature — several are always still generating — and a
     // throw here would discard every download that came after it in the list.
@@ -378,9 +378,34 @@ async function measure(character) {
 const BODY_TOLERANCE = 0.06;
 const TARGET_BODY = 45;
 
-async function measureAll() {
+/**
+ * Which characters this run touches. `--only=key,key` narrows it; without the flag it is the whole
+ * cast, which is what a first import wants.
+ *
+ * **Safe to narrow because the canvas is pinned, not derived** — canonicalCanvas() returns
+ * SPRITE_CANVAS and only warns when the measured cast wants more, so a subset cannot quietly
+ * resize the shared 48x56 grid the rest of the cast is already built on. That is the whole reason
+ * this flag can exist at all.
+ *
+ * Added in Phase 97, for a reason worth writing down: PixelLab's bulk archive for two characters
+ * built in earlier phases had lost one frame of one direction each by the time this cast was
+ * imported, so a full run threw ENOENT on art nobody was changing and blocked eight new characters
+ * on two old ones. Their committed sheets are correct and their sources upstream are now short;
+ * rebuilding them is a separate decision from importing a unit.
+ */
+function selectedCharacters(args) {
+  const flag = args.find((arg) => arg.startsWith("--only="));
+  if (!flag) return CHARACTERS;
+  const keys = new Set(flag.slice("--only=".length).split(",").filter(Boolean));
+  const chosen = CHARACTERS.filter((character) => keys.has(character.key));
+  const unknown = [...keys].filter((key) => !CHARACTERS.some((c) => c.key === key));
+  if (unknown.length) throw new Error(`--only names no such character: ${unknown.join(", ")}`);
+  return chosen;
+}
+
+async function measureAll(cast = CHARACTERS) {
   const measured = [];
-  for (const character of CHARACTERS) measured.push(await measure(character));
+  for (const character of cast) measured.push(await measure(character));
 
   for (const entry of measured) {
     const ratio = TARGET_BODY / entry.body;
@@ -631,11 +656,12 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.includes("--fetch")) {
-    await fetchAll();
+    await fetchAll(selectedCharacters(args));
     return;
   }
 
-  const measured = await measureAll();
+  const cast = selectedCharacters(args);
+  const measured = await measureAll(cast);
   const canvas = canonicalCanvas(measured);
 
   if (args.includes("--measure")) {
