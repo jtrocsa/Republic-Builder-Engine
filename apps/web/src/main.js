@@ -164,6 +164,7 @@ import { UNIT_04_ACTIVITIES } from "./content/activities/unit-04-activities.js";
 import { UNIT_05_ACTIVITIES } from "./content/activities/unit-05-activities.js";
 import { UNIT_06_ACTIVITIES } from "./content/activities/unit-06-activities.js";
 import { UNIT_07_ACTIVITIES } from "./content/activities/unit-07-activities.js";
+import { UNIT_08_ACTIVITIES } from "./content/activities/unit-08-activities.js";
 // The Codex's own arithmetic, kept pure and out here: what a filed record looks like, and how two
 // of them relate. main.js keeps the wiring and the screen.
 import {
@@ -12364,6 +12365,7 @@ const ACTIVITIES_BY_SOURCE = {
   ...UNIT_05_ACTIVITIES,
   ...UNIT_06_ACTIVITIES,
   ...UNIT_07_ACTIVITIES,
+  ...UNIT_08_ACTIVITIES,
 };
 
 function activityFor(sourceId) {

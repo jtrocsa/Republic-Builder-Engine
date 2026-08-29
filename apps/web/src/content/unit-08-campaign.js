@@ -189,7 +189,7 @@ export const CASE_022_SOURCES = [
     date: "March 1953",
     record: "The folded deed a family keeps in a drawer, and the six restrictions printed on it",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "interview",
     excerpt:
       "THIS INDENTURE, made the ninth day of March, one thousand nine hundred and fifty-three… GRANTS AND CONVEYS unto the said Grantees, their heirs and assigns, ALL THAT CERTAIN lot or piece of ground situate in the Township aforesaid, known and designated as Lot No. 214 in Section F upon the plan of lots entitled FAIRMEADOW, recorded in the office for the recording of deeds in and for the said County… UNDER AND SUBJECT, nevertheless, to the following restrictions and covenants, which shall run with the land: FIRST. No building shall be erected upon any lot other than one detached single-family dwelling not exceeding two stories in height, with a private garage for not more than two cars. SECOND. No structure of a temporary character, trailer, basement, tent, shack or barn shall be used on any lot at any time as a residence. THIRD. No noxious or offensive trade or activity shall be carried on upon any lot, nor shall anything be done thereon which may be or become an annoyance or nuisance to the neighborhood. FOURTH. No fence, wall or hedge exceeding four feet in height shall be erected or maintained forward of the front building line. FIFTH. No dwelling shall be permitted upon any lot at a cost of less than nine thousand dollars, exclusive of the lot. SIXTH. No persons of any race other than the Caucasian race shall use or occupy any building or any lot, except that this covenant shall not prevent occupancy by domestic servants of a different race domiciled with an owner or tenant. THESE COVENANTS are to run with the land and shall be binding upon all parties and all persons claiming under them until the first day of January, nineteen hundred and eighty, at which time the said covenants shall be automatically extended for successive periods of ten years unless by a vote of a majority of the then owners of the lots it is agreed to change the same in whole or in part.",
     prompt:
@@ -209,7 +209,7 @@ export const CASE_022_SOURCES = [
     date: "May 1957",
     record: "The eight-line rating sheet a lender reads before it reads the application",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "discrepancy",
     // Gated behind the deed for the reason Unit 7's board minute is gated behind the manifest: the
     // audit's evidence column is minted from the interview's logged answers, and the interview
     // opens from the deed. Without the gate the audit can open with nothing in its column.
@@ -234,7 +234,7 @@ export const CASE_022_SOURCES = [
     date: "June–August 1957",
     record: "A manila jacket with seven sheets in it, read in the order they were filed",
     visual: "context",
-    activityRoute: null,
+    activityRoute: "trace",
     excerpt:
       "ROUTING AND ACTION — APPLICATION No. 4,118. 1. Application taken at the counter, 11 June. Applicant a veteran, honourable discharge, certificate of eligibility attached, entitlement unused. 2. Credit report ordered 11 June; returned 17 June, rated satisfactory, no derogatory information, two accounts paid as agreed. 3. Verification of employment returned 19 June: nine years' continuous service, four thousand eight hundred and sixty dollars per annum, prospects reported steady. 4. Ratio of proposed monthly payment to verified income computed at 21 per centum; within the association's limits. 5. Appraisal ordered 20 June upon the property described; report returned 8 July; location rating and remarks noted and filed herewith. 6. Submitted to the committee 15 July. ACTION: DECLINED. Reason to be stated to the applicant: that the property offered does not meet the association's requirements as security. 7. Applicant advised by letter 16 July. Guaranty not called upon. File closed 2 August. — MEMORANDUM, mortgage officer to file: the guaranty was available and the credit is good. The objection is to the location and not to the applicant, and I have said so to him in those words. Nothing further is required to be stated to an applicant and nothing further has been.",
     prompt:

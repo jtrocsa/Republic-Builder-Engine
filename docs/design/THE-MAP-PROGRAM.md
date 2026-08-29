@@ -44,7 +44,7 @@ Four engines, three per unit, four legal slates:
 | 5    | Richmond, 1864                | **A** | testimony given to a regime that is writing it down        |
 | 6    | Railhead, Kansas plains, 1873 | **C** | who is entitled to be here, and on whose paper             |
 | 7    | Immigrant port, 1907          | **A** | what the official question fails to ask                    |
-| 8    | Suburban corridor, 1957       | **B** | what a neighbour will say on the record                    |
+| 8    | Suburban corridor, 1957       | **B** | _shipped_ — what a neighbour will say on the record        |
 | 9    | Campus archive, 1998          | **C** | who is allowed to hold the record                          |
 
 **Adjacency holds throughout** — no unit repeats its neighbour's three.
@@ -280,8 +280,17 @@ the DISCREPANCY, the guaranteed-loan file the TRACE. Four more open in the reade
 terms sheet, the lending office's underwriting checklist, a township minimum-lot amendment and a
 neighbours' handbill.
 
-**Both interiors shipped in Phase 98** (decision log `0097`), and Unit 8 owes only its three
-activities. One rule from them generalises to every future room and nothing in the repo had needed it
+**The three missions shipped in Phase 99** (decision log `0098`), and **Unit 8 is complete** — all
+eight units at parity, twenty-four missions on eight maps. One thing from it is worth carrying to
+Unit 9, and it is about the right-hand column of §2's table rather than the engine list. Unit 8's
+interview and Unit 7's are the two closest questions in the program: _what the official question
+fails to ask_ and _what a neighbour will say on the record_. They are distinct, and the difference
+had to be **written down rather than assumed** — the first is about a form that gets somebody wrong,
+the second about a form that has no field for the thing everybody agrees on. When two units'
+questions are that close, say in the content file how they differ, or the next author reads the
+engine list and thinks the rule is satisfied.
+
+**Both interiors shipped in Phase 98** (decision log `0097`). One rule from them generalises to every future room and nothing in the repo had needed it
 before, because the model house is the first interior anywhere with **interior walls**: **a doorway is
 a column, not a gap.** A hole in a partition is only a door if the whole column above it is clear to
 the far wall of the room it serves — an opening under a wall stub opens onto the stub, and an opening

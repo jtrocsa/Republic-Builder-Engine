@@ -34,7 +34,9 @@ import { CASE_013_SOURCES } from "../../apps/web/src/content/unit-05-campaign.js
 import { UNIT_06_ACTIVITIES } from "../../apps/web/src/content/activities/unit-06-activities.js";
 import { CASE_016_SOURCES } from "../../apps/web/src/content/unit-06-campaign.js";
 import { UNIT_07_ACTIVITIES } from "../../apps/web/src/content/activities/unit-07-activities.js";
+import { UNIT_08_ACTIVITIES } from "../../apps/web/src/content/activities/unit-08-activities.js";
 import { CASE_019_SOURCES } from "../../apps/web/src/content/unit-07-campaign.js";
+import { CASE_022_SOURCES } from "../../apps/web/src/content/unit-08-campaign.js";
 
 // `sources` rides along because one rule below is about the *order* a case can be finished in, and
 // that lives on the record (`requiresSourceId`) rather than on the activity.
@@ -46,6 +48,7 @@ const AUTHORED_UNITS = [
   { unitId: "unit-05", activities: UNIT_05_ACTIVITIES, sources: CASE_013_SOURCES },
   { unitId: "unit-06", activities: UNIT_06_ACTIVITIES, sources: CASE_016_SOURCES },
   { unitId: "unit-07", activities: UNIT_07_ACTIVITIES, sources: CASE_019_SOURCES },
+  { unitId: "unit-08", activities: UNIT_08_ACTIVITIES, sources: CASE_022_SOURCES },
 ];
 
 /**
