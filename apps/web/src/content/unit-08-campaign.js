@@ -275,6 +275,16 @@ export const CASE_022_SOURCES = [
     record: "A clipped-together checklist kept on the mortgage officer's desk, not in any file",
     visual: "context",
     activityRoute: null,
+    // Gated behind the appraisal, and the prompt below is why: it asks the player to *read the
+    // appraisal's remarks on Feature 2 again*, which is not a question that can be answered by
+    // somebody who has not read them once. That makes the unit's records a chain of three — the
+    // deed, then the appraisal, then this — and the chain is the argument. A covenant recorded in
+    // 1953, an appraiser crediting the tract for restrictions he is forbidden to recite, and the
+    // note on this checklist that forbids it. Any one of the three alone is a curiosity.
+    //
+    // Added in Phase 98, when this record became reachable: it sits on a desk in the lending office,
+    // which did not exist until that room did.
+    requiresSourceId: "suburb-neighborhood-appraisal",
     excerpt:
       "PART THREE — THE LOCATION. 3(a) Is the neighbourhood established, or in course of development, or in course of change? State which and give the evidence. 3(b) What is the present and probable future use of the surrounding land? Note any use likely to become adverse. 3(c) Is the neighbourhood protected from adverse influences? Consider: recorded restrictions and their unexpired term; zoning and its likely stability; natural or artificial barriers, including watercourses, park land and limited-access highway right-of-way; the presence and activity of a property owners' association. 3(d) Is occupancy homogeneous as to economic background, and is that condition likely to continue? 3(e) State the estimated remaining economic life of improvements in the neighbourhood, and give the reason for the estimate. — NOTE APPENDED TO 3(c) UPON THE LAST REVISION: restrictions purporting to limit occupancy on the basis of race, colour or creed which were recorded on or after the fifteenth day of February, nineteen hundred and fifty, are not acceptable, are not to be given weight in the rating, and are not to be recited in the report. This note does not alter the treatment of any other restriction. — PART FOUR — THE APPLICANT. 4(a) Credit. 4(b) Income and its stability. 4(c) Ratio of payment to income. NOTE: no property may be rated higher than its location, and no strength under Part Four may be substituted for a deficiency under Part Three.",
     prompt:

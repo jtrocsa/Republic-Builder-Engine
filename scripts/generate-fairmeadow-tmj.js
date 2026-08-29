@@ -263,8 +263,18 @@ for (const [col, car] of [
 // Against the house line rather than out at the kerb, and that is a collision decision rather than a
 // planting one: `saplingLilac` is three rows tall, and one row lower it puts its foot on the
 // sidewalk and cuts the walk in two places.
+//
+// **The third whip is at col 19 rather than col 22, and that is the model house's front door.**
+// Phase 97 planted one per lot on a regular-looking spacing and put this one squarely on the only
+// door cell on this street — `doorCellOf()` gives (22,6) and a whip is two wide and three tall, so
+// it covered cols 22-23 for rows 6 to 8 and left no way to stand in front of the door at all. The
+// door still worked, because a player could reach it side-on from the gap at cols 20-21, which is
+// exactly the kind of half-broken that ships. Nothing in the suite catches it: the visual-regression
+// shots enter a room by setting `currentFieldRoom` and never touch a doorstep, and CLAUDE.md says
+// so in as many words. **Check a new interior's door cell against the outdoor furniture as well as
+// against the cast** — the cast was checked in Phase 97 and the furniture was not.
 const WHIPS = [T.saplingApple, T.saplingBlossom, T.saplingLilac];
-for (const [index, col] of [7, 14, 22, 31, 39, 46, 51].entries()) {
+for (const [index, col] of [7, 14, 19, 31, 39, 46, 51].entries()) {
   map.stamp(col, FAIR_SETBACK_ROW - 2, WHIPS[index % WHIPS.length], "solid", "street tree");
 }
 

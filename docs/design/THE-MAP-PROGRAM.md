@@ -280,6 +280,21 @@ the DISCREPANCY, the guaranteed-loan file the TRACE. Four more open in the reade
 terms sheet, the lending office's underwriting checklist, a township minimum-lot amendment and a
 neighbours' handbill.
 
+**Both interiors shipped in Phase 98** (decision log `0097`), and Unit 8 owes only its three
+activities. One rule from them generalises to every future room and nothing in the repo had needed it
+before, because the model house is the first interior anywhere with **interior walls**: **a doorway is
+a column, not a gap.** A hole in a partition is only a door if the whole column above it is clear to
+the far wall of the room it serves — an opening under a wall stub opens onto the stub, and an opening
+with a bathtub or a bookcase in the column above it opens onto furniture. Three passes, none caught by
+eye, all three caught by a breadth-first flood from the entry cell. **Flood-fill a room with interior
+walls after every furniture move**, which is a cost only rooms of this shape pay.
+
+The pair's other lesson is about the two rooms rather than one: **when a unit's argument is a date,
+put it in the tilesets.** The model house is the `Living room` pack and the lending office is the
+nineteenth-century sheets every other interior uses, and the fifty-year gap between two rooms two
+miles apart is the finding — the newest room contains nothing but a price and the oldest is where the
+price is decided.
+
 **The map shipped in Phase 97** (decision log `0096`), with a cast of eight, and Unit 8 is walkable.
 Two decisions on it are worth carrying to Unit 9. **The composition inverts its neighbour's**, which
 is the same rule as the engine slate one section up: Ellis Island was built around a line the player

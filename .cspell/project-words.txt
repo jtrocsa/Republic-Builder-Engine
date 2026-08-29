@@ -25,6 +25,7 @@ Aseprite
 Autry
 Bartolomé
 Baselined
+basketweave
 Benavente
 Bernal
 Bidwell
@@ -53,6 +54,7 @@ Consolas
 Cordell
 Cortés
 Cortés's
+counterclerk
 Culloch
 Cuthbert
 Dijkstras
@@ -111,6 +113,8 @@ Lindqvist
 Lucayan
 Lyria
 López
+modelvisitor
+mortgageofficer
 MULT
 Malolos
 Mancuso
@@ -142,9 +146,11 @@ Odysso
 Odysso's
 Olaudah
 Osawatomie
+Osterhout
 Otho
 Ozawa
 PATCO
+Petrofsky
 PRNG
 Padraic
 Pahonka
@@ -172,6 +178,7 @@ Riverbend
 Riverbend's
 Rozalia
 Rubios
+salesagent
 SMIL
 SNCC
 SPRITESHEET
@@ -195,6 +202,7 @@ Taíno
 Taínos
 Tenskwatawa
 Thayendanegea
+tileable
 Tilemap
 Tilemaps
 Topo
@@ -215,6 +223,7 @@ Wayfinding
 Wieniawski
 Wirt
 Wirt's
+Wnuk
 Workstream
 Wrangel
 Württemberg

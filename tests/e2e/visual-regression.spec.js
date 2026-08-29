@@ -718,9 +718,13 @@ test.describe("Gameplay visual-regression baselines", () => {
   // is the map's argument — mature trees over the borough, whips over the tract — which is exactly
   // the kind of thing a palette edit could quietly reverse.
   //
-  // No interiors yet: the model house and the building & loan land in the next slice, and their
-  // shots with them.
-  test("field: Fairmeadow and the borough (Unit 8)", async ({ page }) => {
+  // Its two rooms are here too, and each is watching one thing nothing else in the suite can see.
+  // The model house is **the only interior in the game with interior walls**, so its partitions and
+  // the four doorways through them are a picture and nothing else: the flood-fill test proves the
+  // rooms connect, and only this shot proves a doorway is where the plan says it is. The lending
+  // office is watching its counter — two runs, a locked press closing the east end, and one gap on
+  // the door's own axis — which is the room's whole argument and is three separate stamps.
+  test("field: Fairmeadow and both of its rooms (Unit 8)", async ({ page }) => {
     const seed = {
       currentScreen: "field",
       activeCaseId: "case-022",
@@ -733,6 +737,16 @@ test.describe("Gameplay visual-regression baselines", () => {
     await waitForTiledCanvas(page, "fairmeadowTiledCanvas");
     await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
     await expect(page).toHaveScreenshot(snap("field-fairmeadow"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "fairmeadow-model-house" });
+    await waitForTiledCanvas(page, "fairmeadowModelHouseTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-fairmeadow-model-house"));
+
+    await setScreen(page, { ...seed, currentFieldRoom: "fairmeadow-building-and-loan" });
+    await waitForTiledCanvas(page, "fairmeadowBuildingAndLoanTiledCanvas");
+    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await expect(page).toHaveScreenshot(snap("field-fairmeadow-building-and-loan"));
   });
 
   test("practice check: unanswered and fully-graded states (all 4 quest types)", async ({

@@ -228,6 +228,8 @@ const MAIN_JS_LITERALS = {
     "railhead-telegraph-office": "UNIT6_TELEGRAPH_OFFICE_NPCS",
     "immigrant-port-inspection-hall": "UNIT7_INSPECTION_HALL_NPCS",
     "immigrant-port-inquiry-room": "UNIT7_INQUIRY_ROOM_NPCS",
+    "fairmeadow-model-house": "UNIT8_MODEL_HOUSE_NPCS",
+    "fairmeadow-building-and-loan": "UNIT8_BUILDING_AND_LOAN_NPCS",
   },
   behaviours: {
     "unit-01": "FIELD_NPC_BEHAVIOURS",
@@ -246,6 +248,8 @@ const MAIN_JS_LITERALS = {
     "railhead-telegraph-office": "UNIT6_TELEGRAPH_OFFICE_BEHAVIOURS",
     "immigrant-port-inspection-hall": "UNIT7_INSPECTION_HALL_BEHAVIOURS",
     "immigrant-port-inquiry-room": "UNIT7_INQUIRY_ROOM_BEHAVIOURS",
+    "fairmeadow-model-house": "UNIT8_MODEL_HOUSE_BEHAVIOURS",
+    "fairmeadow-building-and-loan": "UNIT8_BUILDING_AND_LOAN_BEHAVIOURS",
   },
   sourcePoints: {
     "unit-01": "FIELD_SOURCE_POINTS",
@@ -264,6 +268,8 @@ const MAIN_JS_LITERALS = {
     "railhead-telegraph-office": "UNIT6_TELEGRAPH_OFFICE_SOURCE_POINTS",
     "immigrant-port-inspection-hall": "UNIT7_INSPECTION_HALL_SOURCE_POINTS",
     "immigrant-port-inquiry-room": "UNIT7_INQUIRY_ROOM_SOURCE_POINTS",
+    "fairmeadow-model-house": "UNIT8_MODEL_HOUSE_SOURCE_POINTS",
+    "fairmeadow-building-and-loan": "UNIT8_BUILDING_AND_LOAN_SOURCE_POINTS",
   },
   hubTargets: {
     hallway: "HALLWAY_TARGETS",
@@ -383,6 +389,8 @@ const SURFACE_NAMES = {
   "immigrant-port-inspection-hall": "The inspection hall",
   "immigrant-port-inquiry-room": "Board of special inquiry room",
   "fairmeadow-field": "Fairmeadow and the borough",
+  "fairmeadow-model-house": "The model house",
+  "fairmeadow-building-and-loan": "The building & loan association",
 };
 
 /**

@@ -1414,6 +1414,82 @@ export const CHARACTERS = [
     frames: 8,
     walkGroup: "foreman-walk",
   },
+  // ---- Unit 8 · Fairmeadow's two interiors (Phase 98) --------------------------------------------
+  //
+  // Four, two to a room, and **not one of them is holding anything** — which is the whole reason
+  // this block is separate from the eight above it rather than folded into them.
+  //
+  // Unit 8's other five records are carried by five of the eight people standing outdoors. These
+  // two rooms hold the remaining two records and neither is anchored to a person: the terms sheet is
+  // a printed stack on a card table and the checklist is a loose clip of paper on a desk. So the
+  // four people here are not carriers. They are the two who are selling and the two who are
+  // deciding, and each of them is standing beside a document that would say the same thing if they
+  // went home.
+  //
+  // The pairing is the same shape in each room and it is the unit's argument twice. In the model
+  // house, a man whose job stops at taking the application and a woman doing arithmetic he did not
+  // ask her to do. In the lending office, the man who applies the rule and the woman who hands over
+  // the letter it produces. Nobody in either room is a villain and nobody is confused. All four know
+  // exactly what they are doing and none of them can see the whole of it, which is what a mechanism
+  // that ran on ordinary competence actually looked like from inside.
+  //
+  // No props, per the standing finding from Unit 6 onward. The clerk's brief named a pencil behind
+  // the ear and it was cut before the job was queued: at 40px a pencil is three pixels on a head
+  // silhouette and it fails rotation on the two directions that matter.
+  //
+  // **Zero teal across all four, on all four cardinals, first roll, no re-rolls.** Every brief
+  // banned teal, turquoise, cyan and blue-green by name and named its own garment colour positively
+  // where that garment was blue — the counter clerk's navy skirt and cardigan are the only blue in
+  // the four and both were named as navy. That is the Phase 89B rule, now nineteen characters and
+  // three phases without a loss.
+  {
+    key: "suburb-sales-agent",
+    stem: `chronicle-sprites/field/npc-suburb-sales-agent`,
+    name: "Sales agent, model house",
+    // Dove-grey lightweight summer suit, white shirt, a narrow maroon-and-cream striped tie, dark
+    // hair combed back, bare-headed. Indoors on a Sunday in August with his jacket on, which is the
+    // costume telling you he is working and the visitors are not. He and the mortgage officer are
+    // the only two men in suits in this unit and they are never in the same room; the officer is
+    // grey-haired and in charcoal three-piece, which separates them anywhere they were.
+    id: "a75d97a9-57e0-4e89-a194-3d39a6065fac",
+    frames: 8,
+    walkGroup: "salesagent-walk",
+  },
+  {
+    key: "suburb-model-visitor",
+    stem: `chronicle-sprites/field/npc-suburb-model-visitor`,
+    name: "Walking the model house",
+    // Coral-and-cream printed cotton day dress with a narrow cream belt, short auburn hair set in a
+    // wave, flat white shoes, nothing in her hands. She is the buyer the sheet is addressed to
+    // second — *TO OTHERS* — and the six dollars seventy a month between the two lines is the only
+    // part of this map's mechanism a person on the invited side of it ever sees.
+    id: "28d6f93d-c3db-403e-800c-e8f335d81552",
+    frames: 8,
+    walkGroup: "modelvisitor-walk",
+  },
+  {
+    key: "suburb-mortgage-officer",
+    stem: `chronicle-sprites/field/npc-suburb-mortgage-officer`,
+    name: "Mortgage officer",
+    // Charcoal worsted three-piece worn buttoned in August, dark maroon tie, thinning grey hair,
+    // rimless spectacles. Fifty-five, careful, and reciting a manual he did not write — the costume
+    // is a man dressed for a room that was furnished in 1900, which is exactly the room he is in.
+    id: "c4af1259-aa90-4d8c-84d7-0dfb9a04befd",
+    frames: 8,
+    walkGroup: "mortgageofficer-walk",
+  },
+  {
+    key: "suburb-counter-clerk",
+    stem: `chronicle-sprites/field/npc-suburb-counter-clerk`,
+    name: "Counter clerk",
+    // Deep navy skirt and cardigan over a plain white short-sleeved blouse, dark hair pinned up.
+    // **Named as navy in the brief on purpose** — the only blue garment in these four, and the
+    // reserved-accent rule says a blue or green garment must be named positively rather than left
+    // for the model to choose. It came back navy on all eight directions.
+    id: "df77da44-5d5b-48e8-9d16-4d3a6a3ee780",
+    frames: 8,
+    walkGroup: "counterclerk-walk",
+  },
 ];
 
 /**

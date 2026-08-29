@@ -219,6 +219,8 @@ import railheadLandOfficeTmjRaw from "./content/maps/railhead-land-office.tmj?ra
 import railheadTelegraphOfficeTmjRaw from "./content/maps/railhead-telegraph-office.tmj?raw";
 import immigrantPortInspectionHallTmjRaw from "./content/maps/immigrant-port-inspection-hall.tmj?raw";
 import immigrantPortInquiryRoomTmjRaw from "./content/maps/immigrant-port-inquiry-room.tmj?raw";
+import fairmeadowModelHouseTmjRaw from "./content/maps/fairmeadow-model-house.tmj?raw";
+import fairmeadowBuildingAndLoanTmjRaw from "./content/maps/fairmeadow-building-and-loan.tmj?raw";
 // Field collision, generated alongside each .tmj from the same stamps that painted it — see
 // scripts/lib/map-builder.js and docs/decision-log/0036. These replace three hand-maintained rect
 // arrays that had to be kept in sync with the generators by eye, and that gave every building a
@@ -269,6 +271,8 @@ import { RAILHEAD_TELEGRAPH_OFFICE_BLOCKS } from "./content/maps/railhead-telegr
 import { RICHMOND_HOSPITAL_WARD_BLOCKS } from "./content/maps/richmond-hospital-ward.blocks.js";
 import { IMMIGRANT_PORT_INSPECTION_HALL_BLOCKS } from "./content/maps/immigrant-port-inspection-hall.blocks.js";
 import { IMMIGRANT_PORT_INQUIRY_ROOM_BLOCKS } from "./content/maps/immigrant-port-inquiry-room.blocks.js";
+import { FAIRMEADOW_MODEL_HOUSE_BLOCKS } from "./content/maps/fairmeadow-model-house.blocks.js";
+import { FAIRMEADOW_BUILDING_AND_LOAN_BLOCKS } from "./content/maps/fairmeadow-building-and-loan.blocks.js";
 import { INSTITUTE_HALL_BLOCKS } from "./content/maps/institute-hall.blocks.js";
 import { ARCHIVE_ROOM_BLOCKS } from "./content/maps/archive-room.blocks.js";
 import { HALLWAY_BLOCKS } from "./content/maps/hallway.blocks.js";
@@ -1101,6 +1105,59 @@ function renderImmigrantPortInquiryRoomTiledMap() {
   );
 }
 
+// Fairmeadow's two rooms, and **the only interior pair in the game that does not share a resolver**.
+//
+// Everywhere else one resolver serves a unit's two rooms because the two rooms are the same kind of
+// place. These two are deliberately not: the model house is three `Living room` sheets and the
+// lending office is the two nineteenth-century City sheets, and the fifty-year gap between them is
+// the pair's whole argument — see either palette header. Merging the resolvers would work and would
+// hand every one of the model house's 1.49 MB to a player who only ever opens the office door.
+//
+// The office's own cost is zero: both its sheets arrive with Canal Crossroads' and Richmond's four
+// rooms and Ellis Island's two.
+const fairmeadowModelHouseTmj = JSON.parse(fairmeadowModelHouseTmjRaw);
+const resolveFairmeadowModelHouseTilesetImage = createTilesetImageResolver(
+  // Ivory paint between two trim bands, and the bathroom's glazed tile.
+  import.meta.glob("./assets/tilesets/Living room/Auto-tile-A4-walls-3.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The floors — parquet and two vinyls — and the kitchen: mint range, mint refrigerator, sink,
+  // wall cabinets.
+  import.meta.glob("./assets/tilesets/Living room/4.png", { eager: true, import: "default" }),
+  // Everything a person sits on, sleeps in or walks through, and the card table the terms sheets
+  // are stacked on.
+  import.meta.glob("./assets/tilesets/Living room/1.png", { eager: true, import: "default" })
+);
+const fairmeadowBuildingAndLoanTmj = JSON.parse(fairmeadowBuildingAndLoanTmjRaw);
+const resolveFairmeadowBuildingAndLoanTilesetImage = createTilesetImageResolver(
+  // Wainscot, board and parquet floors, the street door, the sash windows, the ledger presses, the
+  // safe, the clock, the officer's desk and the rug.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The counter, the writing slopes and the press cupboard.
+  import.meta.glob("./assets/tilesets/19th Century European City/tile-B-02.png", {
+    eager: true,
+    import: "default",
+  })
+);
+function renderFairmeadowModelHouseTiledMap() {
+  renderTiledMapWithOverlay(
+    "fairmeadowModelHouseTiledCanvas",
+    fairmeadowModelHouseTmj,
+    resolveFairmeadowModelHouseTilesetImage
+  );
+}
+function renderFairmeadowBuildingAndLoanTiledMap() {
+  renderTiledMapWithOverlay(
+    "fairmeadowBuildingAndLoanTiledCanvas",
+    fairmeadowBuildingAndLoanTmj,
+    resolveFairmeadowBuildingAndLoanTilesetImage
+  );
+}
+
 // Richmond's two rooms. One resolver serves both, as at Canal Crossroads, and every sheet either
 // room names is already in the bundle: the two `19th Century European City` interior sheets come in
 // with the printing office and the boardinghouse, and derived/civil-war-works.png with the outdoor
@@ -1422,6 +1479,10 @@ const CHARACTER_SHEETS = {
   "suburb-borough-woman": characterSheet(`${FIELD}/npc-suburb-borough-woman`, 9),
   "suburb-borough-shopkeeper": characterSheet(`${FIELD}/npc-suburb-borough-shopkeeper`, 9),
   "suburb-road-foreman": characterSheet(`${FIELD}/npc-suburb-road-foreman`, 9),
+  "suburb-sales-agent": characterSheet(`${FIELD}/npc-suburb-sales-agent`, 9),
+  "suburb-model-visitor": characterSheet(`${FIELD}/npc-suburb-model-visitor`, 9),
+  "suburb-mortgage-officer": characterSheet(`${FIELD}/npc-suburb-mortgage-officer`, 9),
+  "suburb-counter-clerk": characterSheet(`${FIELD}/npc-suburb-counter-clerk`, 9),
 };
 /**
  * The sheet for a character key, falling back to the Director rather than throwing on a typo.
@@ -3830,6 +3891,125 @@ const UNIT8_FIELD_SOURCE_POINTS = {
   },
 };
 
+// ---- Fairmeadow's two interiors ------------------------------------------------------------------
+//
+// Attached to FIELD_MAPS["unit-08"] further down the file, not inline in the literal — see the
+// temporal-dead-zone note at the field-interiors block.
+//
+// Both rooms open south, because every building on this map faces south, because every building
+// elevation in the art library is drawn as a south elevation — decision log 0096 §3 records that
+// constraint deciding the whole outdoor composition, and it decides these two doors as well.
+//
+// **Four people, and neither record is carried by any of them.** That is the only pair of rooms in
+// the game where that is true. Unit 8's other five records are held by the five people standing
+// outdoors; these two are on a card table and a desk, and the four people in these rooms have
+// nothing in their hands. It is not a shortage of NPCs. The terms sheet is a printed stack anybody
+// may take and the checklist is a loose clip of paper on somebody else's desk — a document you are
+// handed, and a document you were never meant to read — and anchoring either of them to a person
+// would turn both into a conversation, which is the one thing neither of them was.
+//
+// Nobody's doorstep had to be cleared. Decision log 0096 posted the outdoor cast against these two
+// door cells before either room existed: the nearest outdoor character to the model house is the
+// committee man, whose route keeps him a full row south of the walk, and the nearest to the lending
+// office is the borough shopkeeper, four frontages west of it.
+
+const UNIT8_MODEL_HOUSE_NPCS = [
+  {
+    id: "suburb-sales-agent",
+    // East of the card table and south of the suite, so he is met on the way in rather than looked
+    // for — a sales agent stands between the door and the room on purpose, and this one is doing his
+    // job. Nothing draws on the overlay layer in this house, so his pill hangs on bare parquet.
+    x: 13.5,
+    y: 12.5,
+    group: "suburb",
+    name: "Vince Kearsley",
+    label: "Sales office, Fairmeadow",
+    sprite: "suburb-sales-agent",
+    text: "Take a sheet, they're free, and walk it yourself — that's the whole idea. Sunday's our biggest day. Now, the figure everybody stops at is the seventy-nine fifty, and I want you to notice what's inside it, because folks compare it against a rent and it isn't the same animal: that's your principal, your interest, your township and school taxes and your fire insurance, all four, one payment, thirty years. Nothing down if you served. Ten dollars with the application, ninety at settlement. Ninety days from signing and you have the key. Do I sell to everybody who walks in? I take the application from everybody who walks in. What happens to it after that is the association's business, and they're two miles up the road in the borough.",
+  },
+  {
+    id: "suburb-model-visitor",
+    // In the kitchen north-east of the dinette, six and a half tiles from the agent — she has walked
+    // away from him to do the arithmetic, which is the staging as much as it is the spacing. Two
+    // earlier positions put her inside the dinette table's rect, which runs x5-7 y11-13; her foot
+    // box is 0.68 wide and sits 0.4 to 0.78 below her anchor, so 7.0 was not far enough east of it.
+    x: 7.5,
+    y: 10.0,
+    group: "suburb",
+    name: "Dolores Wnuk",
+    label: "Walking the house",
+    sprite: "suburb-model-visitor",
+    text: "Eighty-six twenty is what we would pay, and seventy-nine fifty is what the man ahead of us in the line pays, and I have been standing in this kitchen working out what the difference buys over thirty years. It is two thousand four hundred dollars. That is a car. Ed was nineteen in 1945 and the war ended in August and they sent him home in October without ever putting him on a ship, so he is not a veteran for this, and I have never once minded that until this afternoon. And I want the house. That is the part I cannot get round. I have measured this window for curtains twice.",
+  },
+];
+const UNIT8_MODEL_HOUSE_BEHAVIOURS = {
+  "suburb-sales-agent": { kind: "station", at: { x: 13.5, y: 12.5 }, facing: "left" },
+  "suburb-model-visitor": { kind: "station", at: { x: 7.5, y: 10.0 }, facing: "down" },
+};
+// The sixth record. It is on the card table two tiles inside the front door, `anchor: { object }`
+// rather than `{ npc }` — see the block header for why neither of this pair's records is carried.
+const UNIT8_MODEL_HOUSE_SOURCE_POINTS = {
+  "suburb-model-home-terms-sheet": {
+    x: 12.0,
+    y: 13.0,
+    anchor: { object: "Card table" },
+    label: "Card table",
+    kind: "Source",
+  },
+};
+function fairmeadowModelHouseWorldMarkup() {
+  return `<canvas class="field-world-art" id="fairmeadowModelHouseTiledCanvas" role="img" aria-label="Interior of a brand-new three-bedroom ranch house furnished as a builder's model home in 1957: three bedrooms and a tiled bathroom across the back off a cross-hall, and an open kitchen and living room across the front — the kitchen on patterned vinyl with a mint-green electric range and refrigerator, the living room on parquet with a cream three-piece suite facing a picture window, and a plain card table stacked with printed sheets just inside the front door. Nothing hangs on any wall"></canvas><canvas class="field-world-overlay" id="fairmeadowModelHouseTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
+const UNIT8_BUILDING_AND_LOAN_NPCS = [
+  {
+    id: "suburb-mortgage-officer",
+    // Behind the counter, west of the rug and clear of his own chair, facing the way in. He is the
+    // first thing seen through the gap in the counter, and the checklist is on the desk behind him.
+    x: 4.5,
+    y: 4.6,
+    group: "suburb",
+    name: "Wendell Osterhout",
+    label: "Mortgage officer",
+    sprite: "suburb-mortgage-officer",
+    text: "We are a mutual association. Our depositors' money is lent on the security of the property offered, and the manual we underwrite by is the insuring agency's, not one we wrote. Part Three is the location and Part Four is the applicant, and there is a sentence at the end of Part Four that people do not read carefully: no strength under Part Four may be substituted for a deficiency under Part Three. Do you follow what that does? A man's credit, his income, his nine years at the one plant, his federal guaranty — all Part Four. If the location is rated down, none of it reaches. I have declined applications from men I would lend my own money to. That is not a thing I say to excuse it. It is what the sentence means.",
+  },
+  {
+    id: "suburb-counter-clerk",
+    // Behind the counter's west run, two tiles from him and clear of the counter's own rect. She is
+    // the one who takes an application across it and the one who sees which ones come back. (3.0,
+    // 5.5) was tried first and stood her inside the press cupboard, which has since moved anyway.
+    x: 2.5,
+    y: 5.0,
+    group: "suburb",
+    name: "Arlene Petrofsky",
+    label: "Counter clerk",
+    sprite: "suburb-counter-clerk",
+    text: "Everything starts here on this counter and everything comes back here too, so I am the one who knows the shape of it although I decide nothing. An application goes out to the fee appraiser and comes back with a rating and a page of remarks. Then it goes to the committee, Tuesday mornings. If it is approved you get a letter. If it is not, you get a different letter, and the sentence in that letter is that the property offered does not meet the association's requirements as security. The property. Not you. I have handed that letter across this counter to men standing where you are standing, and it does not tell them what to fix, because there is nothing on their side of it to fix.",
+  },
+];
+const UNIT8_BUILDING_AND_LOAN_BEHAVIOURS = {
+  "suburb-mortgage-officer": { kind: "station", at: { x: 4.5, y: 4.6 }, facing: "down" },
+  "suburb-counter-clerk": { kind: "station", at: { x: 2.5, y: 5.0 }, facing: "down" },
+};
+// The seventh record, and the last of the case. It carries `requiresSourceId:
+// "suburb-neighborhood-appraisal"` in the content, so the checklist cannot be opened until the
+// appraisal it silently contradicts has been secured out on the map — which is also the only order
+// in which its prompt can be answered, since that prompt asks the player to read the appraiser's
+// remarks on Feature 2 again.
+const UNIT8_BUILDING_AND_LOAN_SOURCE_POINTS = {
+  "suburb-underwriting-checklist": {
+    x: 6.0,
+    y: 4.0,
+    anchor: { object: "The mortgage officer's desk" },
+    label: "The mortgage officer's desk",
+    kind: "Source",
+  },
+};
+function fairmeadowBuildingAndLoanWorldMarkup() {
+  return `<canvas class="field-world-art" id="fairmeadowBuildingAndLoanTiledCanvas" role="img" aria-label="Interior of a small borough savings and loan association office in 1957: a panelled room fifty years older than the subdivision it lends on, with a long wooden counter across the middle broken by one gap, plain board floor on the public side and herringbone parquet behind it, bound ledgers and a locked press cupboard along the far wall, a floor safe and a long-case clock, and a writing desk on a carpet with a clip of loose printed sheets on it"></canvas><canvas class="field-world-overlay" id="fairmeadowBuildingAndLoanTiledCanvasOverlay" aria-hidden="true"></canvas>`;
+}
+
 // ---- Ellis Island's two interiors ----------------------------------------------------------------
 //
 // Attached to FIELD_MAPS["unit-07"] further down the file, not inline in the literal — see the
@@ -4587,6 +4767,65 @@ FIELD_MAPS["unit-07"].interiors = {
     // of the main doors, which is where the detention wing was and as close to the truth as a flat
     // door graph gets — see decision log 0076 §4.
     door: { x: 38.0, y: 4.0, label: "Board of special inquiry" },
+  },
+};
+
+// Fairmeadow's two rooms. `musicScene` is `settlement` on both, matching the map outside them, for
+// the reason Canal Crossroads recorded first: an interior is a room in that place, not a change of
+// place, and walking through a door should not restart the score.
+//
+// The two grids are deliberately different sizes, and that is the pair's argument again. The model
+// house is 20x16 — **the only interior in the game with interior walls**, because the thing being
+// sold is a plan and a visitor walked the partitions. The lending office is 16x14, the same as Ellis
+// Island's hearing room, because the thing that matters in it is a counter and the eight tiles of
+// bare board in front of it.
+//
+// Both entries sit at `SOUTH - 0.9` for the reason the Canal Crossroads block records at length:
+// footBoxFor() runs 0.78 tiles below a character's anchor and each room's south wall rect starts two
+// rows from its own bottom edge, so a player spawned any lower arrives already blocked and the room
+// reads as frozen on entry.
+const FAIRMEADOW_MODEL_HOUSE_GRID = { columns: 20, rows: 16, tile: 48 };
+const FAIRMEADOW_BUILDING_AND_LOAN_GRID = { columns: 16, rows: 14, tile: 48 };
+FIELD_MAPS["unit-08"].interiors = {
+  "fairmeadow-model-house": {
+    id: "fairmeadow-model-house",
+    grid: FAIRMEADOW_MODEL_HOUSE_GRID,
+    isLand: interiorGround(FAIRMEADOW_MODEL_HOUSE_GRID),
+    blocks: FAIRMEADOW_MODEL_HOUSE_BLOCKS,
+    roads: [],
+    npcs: UNIT8_MODEL_HOUSE_NPCS,
+    behaviours: UNIT8_MODEL_HOUSE_BEHAVIOURS,
+    sourcePoints: UNIT8_MODEL_HOUSE_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: fairmeadowModelHouseWorldMarkup,
+    entry: { x: 10.0, y: 13.1, facing: "up" },
+    exit: { x: 10.0, y: 14.1 },
+    // The doorstep on Fairmeadow Drive. generate-fairmeadow-tmj.js stamps the third house along at
+    // MODEL_HOUSE_COL = 20 on FAIR_FRONT_ROW - 3, four wide, so doorCellOf() puts its door cell at
+    // (22,6) — the first row of walk south of the frontage, which is the row every door on that
+    // street opens onto.
+    door: { x: 22.0, y: 6.0, label: "Model house" },
+  },
+  "fairmeadow-building-and-loan": {
+    id: "fairmeadow-building-and-loan",
+    grid: FAIRMEADOW_BUILDING_AND_LOAN_GRID,
+    isLand: interiorGround(FAIRMEADOW_BUILDING_AND_LOAN_GRID),
+    blocks: FAIRMEADOW_BUILDING_AND_LOAN_BLOCKS,
+    roads: [],
+    npcs: UNIT8_BUILDING_AND_LOAN_NPCS,
+    behaviours: UNIT8_BUILDING_AND_LOAN_BEHAVIOURS,
+    sourcePoints: UNIT8_BUILDING_AND_LOAN_SOURCE_POINTS,
+    musicScene: "settlement",
+    worldMarkup: fairmeadowBuildingAndLoanWorldMarkup,
+    entry: { x: 8.0, y: 11.1, facing: "up" },
+    exit: { x: 8.0, y: 12.1 },
+    // The doorstep on Broad Street. The association is stamped at (35,22) and is four tiles square,
+    // so doorCellOf() puts its door cell at **(37,26)** — BOROUGH_WALK_ROW, the borough's own north
+    // walk, four frontages east of the shop. Declared at row 25 first, which is the building's own
+    // last row: the visual-regression shots enter a room by setting `currentFieldRoom` directly and
+    // never touch the door, so nothing in the suite would have caught it. The generated
+    // `FAIRMEADOW_FIELD_DOORS` is the authority and it should be read, not recomputed by hand.
+    door: { x: 37.0, y: 26.0, label: "Building & loan association" },
   },
 };
 
@@ -14434,6 +14673,9 @@ function render() {
         renderImmigrantPortInspectionHallTiledMap();
       if (activeFieldMap().id === "immigrant-port-inquiry-room")
         renderImmigrantPortInquiryRoomTiledMap();
+      if (activeFieldMap().id === "fairmeadow-model-house") renderFairmeadowModelHouseTiledMap();
+      if (activeFieldMap().id === "fairmeadow-building-and-loan")
+        renderFairmeadowBuildingAndLoanTiledMap();
     });
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {

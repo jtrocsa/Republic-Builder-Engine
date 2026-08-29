@@ -39,6 +39,8 @@ import immigrantPort from "../../apps/web/src/content/tilesets/maps/immigrant-po
 import immigrantPortInspectionHall from "../../apps/web/src/content/tilesets/maps/immigrant-port-inspection-hall.palette.js";
 import immigrantPortInquiryRoom from "../../apps/web/src/content/tilesets/maps/immigrant-port-inquiry-room.palette.js";
 import fairmeadow from "../../apps/web/src/content/tilesets/maps/fairmeadow-field.palette.js";
+import fairmeadowModelHouse from "../../apps/web/src/content/tilesets/maps/fairmeadow-model-house.palette.js";
+import fairmeadowBuildingAndLoan from "../../apps/web/src/content/tilesets/maps/fairmeadow-building-and-loan.palette.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../..");
@@ -62,6 +64,8 @@ const MAP_PALETTES = [
   immigrantPortInspectionHall,
   immigrantPortInquiryRoom,
   fairmeadow,
+  fairmeadowModelHouse,
+  fairmeadowBuildingAndLoan,
   archiveRoom,
   hallway,
   instituteHall,
