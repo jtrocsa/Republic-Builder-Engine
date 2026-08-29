@@ -251,6 +251,7 @@ chrono
 chronotravel
 cleanroom
 collidable
+commissionable
 commoncause
 componentized
 compressionlevel

@@ -101,3 +101,13 @@ export const IndigenousVillage = {
   dryingRack: tile("derived/indigenous-village.png", 0, 12, { h: 2, w: 2 }),
   hideStretcher: tile("derived/indigenous-village.png", 0, 14, { h: 2, w: 2 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const SuburbanTract = {
+  houseCarport: tile("derived/suburban-tract.png", 0, 0, { h: 2, w: 5 }),
+  houseGarage: tile("derived/suburban-tract.png", 0, 5, { h: 2, w: 4 }),
+  houseDriveway: tile("derived/suburban-tract.png", 0, 9, { h: 3, w: 4 }),
+  sedanTwoTone: tile("derived/suburban-tract.png", 0, 13, { h: 3, w: 2 }),
+  sedanDarkGreen: tile("derived/suburban-tract.png", 3, 0, { h: 3, w: 2 }),
+  stationWagon: tile("derived/suburban-tract.png", 3, 2, { h: 4, w: 2 }),
+};

@@ -248,14 +248,14 @@ Elements with no acceptable tile anywhere in the library. Recorded so a map auth
 rather than forcing a bad fit. Mirrored in `canonical-palette.js`'s `GAPS` export, and the palette
 test fails if a planned map claims a gap that is not registered there.
 
-| Gap                                       | Detail                                                                                                                                                                                                                                                                                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Haudenosaunee longhouse**               | Elm-bark clad, sixty to two hundred feet, with the repeated interior bays that make it a longhouse rather than a long hut. `derived/indigenous-village.png`'s `barkLodge` is the same cladding at a twelfth the length and is **not** a substitute.                                                                                  |
-| **Puebloan adobe**                        | Ancestral Puebloan and Rio Grande: stacked storeys, roof-ladder access between them, vigas projecting through the wall face. Nothing in 250 sheets is masonry of this kind, and the desert packs are landform — buttes and canyons with no architecture in them.                                                                     |
-| **Antebellum plantation great house**     | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                                                                           |
-| **Mid-century streetscape**               | 1950s-specific. Highway Rest Area / Modern Park / Living room read contemporary. Partial; acceptable stand-in, flagged.                                                                                                                                                                                                              |
-| **Range cattle**                          | The library has no cattle sprite of any kind. `Wild West` draws a corral as a finished enclosure and the one animal on its sheets is a horse inside a stable frontage. So `railhead-field`s stock pens are empty in the shipping season, which is a real loss on a map about the industry a land sale was for. Not partial — absent. |
-| **Antebellum American commercial street** | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged.                                                    |
+| Gap                                             | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Haudenosaunee longhouse**                     | Elm-bark clad, sixty to two hundred feet, with the repeated interior bays that make it a longhouse rather than a long hut. `derived/indigenous-village.png`'s `barkLodge` is the same cladding at a twelfth the length and is **not** a substitute.                                                                                                                                                                                                    |
+| **Puebloan adobe**                              | Ancestral Puebloan and Rio Grande: stacked storeys, roof-ladder access between them, vigas projecting through the wall face. Nothing in 250 sheets is masonry of this kind, and the desert packs are landform — buttes and canyons with no architecture in them.                                                                                                                                                                                       |
+| **Antebellum plantation great house**           | Greek Revival columned house. Fields and quarters are well covered (`farm/1`, `farm/2`, `farm/6`, `Wild West/tile-B-08`); the great house is not. Partial.                                                                                                                                                                                                                                                                                             |
+| **Twentieth-century American commercial block** | The flat-parapet commercial block of roughly 1890–1960: one or two storeys, a plate-glass shopfront under a signboard fascia, no ornament above the cornice. `19th Century European City/tile-B-01` is Second Empire and `Highway Rest Area/tile-B-02` is a strip mall with modern glazing and branding; the library holds nothing between them. Partial; the strip mall's brick units serve at a distance with the branded frontages kept off camera. |
+| **Range cattle**                                | The library has no cattle sprite of any kind. `Wild West` draws a corral as a finished enclosure and the one animal on its sheets is a horse inside a stable frontage. So `railhead-field`s stock pens are empty in the shipping season, which is a real loss on a map about the industry a land sale was for. Not partial — absent.                                                                                                                   |
+| **Antebellum American commercial street**       | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged.                                                                                                                                                                      |
 
 **The Second Empire substitution, as used a second time on `immigrant-port-field`, where it is not a
 substitution at all.** The Ellis Island Main Building is red brick with limestone trim and a taller
@@ -372,6 +372,53 @@ keeping its Medieval Tavern warmth is the point now, not the compromise** decisi
 recorded it as — so do not re-propose the hub restyle without re-opening `0062`. Building the
 Meridian room is still a visual redesign needing its own sign-off; naming the tiles does not
 authorise doing it.
+
+The **mid-century streetscape** gap is **gone, split, and half of it closed** — Phase 96, decision
+log `0095`. It read "1950s-specific. Highway Rest Area / Modern Park / Living room read
+contemporary," which is the same defect as the Indigenous row above wearing different clothes: it
+names three packs and a decade instead of naming a thing, so no commission could ever have satisfied
+it. **Tone is not commissionable.** A register entry has to name a building, an object or an animal,
+or it will still be sitting there when the project ends and the register will call that accuracy.
+
+Read against a real map — Unit 8's subdivision, 1957 — it turned out to be two objects and a long
+list that was never missing at all.
+
+**Absent, and now commissioned into `derived/suburban-tract.png`:**
+
+- **The tract house.** The library's entire residential stock is 17th–19th-century clapboard
+  (`farm/7`), Second Empire terraces, frontier false-fronts and ruined concrete apartment blocks.
+  There is **no house of the twentieth century** anywhere in 250 sheets, and a subdivision without
+  houses is not a subdivision — this was the one thing genuinely blocking the map. Three plans, and
+  what varies between them is where the car goes: a carport, an attached garage, or neither. Levitt's
+  Bucks County models of 1952–58 were one house sold as several and that is the difference a buyer
+  chose between, so a street of three is what the record looked like; one plan stamped eight times
+  reads as a rendering fault rather than as a tract.
+- **The car.** `Highway Rest Area` carries about forty vehicles and every one is contemporary;
+  `Steampunk/1`'s is a brass-era runabout. Between roughly 1910 and the present **the library had no
+  automobile at all**, so Periods 7 and 8 both drove nothing. Three bodies at one scale — two saloons
+  and an estate.
+
+**Never missing, and to stop being filed as if it were:** asphalt, kerbs, sidewalk slabs, driveway
+concrete, mown lawn, street trees, hedges, picket fencing (`farm/6`), utility poles with wires
+(`war ruins/25`), construction materials (`Construction/2`), and both interiors — `Living room/1`
+for the model house, `office/4` for the lending office. Those packs do read contemporary in their
+**furniture**, and the correct response to that is an exclusion list, which `p8-suburb` now carries:
+no vending machines, no ATMs, no wheelie bins, no branded storefronts, and none of the vehicles.
+
+What survives is one honest row in the table above, and it belongs to **two** periods rather than
+one: `p7-depression-street` had been pointing at the mid-century entry for a 1930s main street,
+which was wrong by twenty years, and what it actually lacks is the same American commercial block
+that Fairmeadow's lending office lacks.
+
+**The scale error is the part worth carrying forward, because it was invisible in the preview.**
+Asked for a "long low" house on a wide canvas, the generator returns a 195×55 slab: correct
+proportions, and a roof ridge level with a 45px body's head. It only shows up when the sprite is
+dropped on real library ground beside a real character. The library's own small one-storey buildings
+measure 93×96 and 89×144, which is the number to check a new building against. And every early car
+came back a **show car** — pinched waist, separate fenders, open cabin — because "chrome", "fins" and
+"seen from directly above" together are a hot-rod render whatever decade is named. What worked was
+asking for the plainness: matte, few highlights, a flat rectangular roof panel between a windscreen
+band and a rear-window band. **Name the construction, never the thing** — a third time.
 
 Three **Meridian props** are newly registered gaps, because those four sheets cannot supply them.
 Sizes and prompt guidance live in [`../art/MERIDIAN-ASSET-BRIEF.md`](../art/MERIDIAN-ASSET-BRIEF.md)

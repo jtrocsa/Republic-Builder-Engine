@@ -289,10 +289,16 @@ export const PLANNED_MAPS = [
       "19th Century European City/tile-B-05.png", // street surfaces
       "war ruins/20.png", // cracked pavement and decay
     ],
-    gap: "streetscape.midCentury",
+    gap: "architecture.twentiethCentury.commercialBlock",
     notes:
       "Partial gap. The result reads late-19th-century rather than 1930s. Acceptable stand-in; " +
-      "strictly exclude war ruins' modern cars and graffiti tiles.",
+      "strictly exclude war ruins' modern cars and graffiti tiles. This entry named " +
+      "`streetscape.midCentury` until Phase 96 split it, which was wrong by twenty years in any " +
+      "case: what a 1930s main street lacks is not a 1950s look, it is American commercial " +
+      "architecture of any twentieth-century decade — the same thing p8-suburb's lending office " +
+      "lacks, which is why the split gave the two of them one honest entry to share. No car here " +
+      "either: derived/suburban-tract.png's saloons are a decade late for a breadline but they " +
+      "are two decades closer than Highway Rest Area's, and they are the only choice.",
   },
   {
     id: "p7-wwii-europe-ruins",
@@ -332,17 +338,32 @@ export const PLANNED_MAPS = [
     id: "p8-suburb",
     period: 8,
     status: "planned",
-    intent: "Postwar suburbia.",
+    intent:
+      "A subdivision two summers old: new houses on new lots either side of a new road, a model " +
+      "house open to visitors, and a lending office on the corner.",
     sheets: [
-      "Highway Rest Area/tile-B-01.png", // asphalt, sidewalk, driveways
-      "Modern Park/tile-B-05.png", // trees and planting
-      "Living room/1.png", // domestic interior
+      "derived/suburban-tract.png", // three house plans and three cars — commissioned, Phase 96
+      "Highway Rest Area/tile-B-01.png", // asphalt, kerbs, sidewalk slabs, driveway concrete
+      "Modern Park/tile-B-01.png", // mown lawn, concrete slab, hedging
+      "Modern Park/tile-B-05.png", // street trees, foundation planting, flowering shrubs
+      "Construction/2.png", // lumber, brick pallets, cement, gravel — the lots still being built
+      "Living room/1.png", // the model house's interior
+      "office/4.png", // the lending office's interior: panelled walls, filing runs, binders
     ],
-    gap: "streetscape.midCentury",
+    gap: "architecture.twentiethCentury.commercialBlock",
     notes:
-      "Reads contemporary, not 1950s. Flagged, acceptable. Was `p9-suburb` until Phase 81; " +
-      "postwar suburbia is 1945-1980, and the covenants, FHA appraisals and GI Bill files that " +
-      "make it a documentary-rich map are all Period 8.",
+      "UNBLOCKED in Phase 96. Was `p9-suburb` until Phase 81; postwar suburbia is 1945-1980, and " +
+      "the covenants, FHA appraisals and GI Bill files that make it a documentary-rich map are all " +
+      "Period 8. It carried `streetscape.midCentury` from the library's first catalogue until the " +
+      "art reconnaissance split that entry — see canonical-palette.js's GAPS, and decision log " +
+      "0095. What was actually missing was houses and cars, and both are commissioned. What was " +
+      "never missing is the ground: this map's road, kerbs, sidewalk, driveways, lawn and planting " +
+      "all come out of the two packs the old entry named as failures. Exclusions are the real " +
+      "discipline here, and they are all in Highway Rest Area: no vending machines, no ATMs, no " +
+      "wheelie bins, no branded storefronts, and above all none of tile-B-01's or tile-B-06's " +
+      "vehicles, which are the reason the cars were commissioned. The remaining gap is the corner " +
+      "building — the lending office takes tile-B-02's brick strip units with the modern glazing " +
+      "and signage kept off camera, flagged, the same substitution p7-depression-street makes.",
   },
   {
     id: "p8-campus",

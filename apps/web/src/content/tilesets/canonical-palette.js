@@ -307,7 +307,29 @@ export const GAPS = [
   "livestock.cattle",
   "architecture.plantation.greatHouse", // Greek Revival columned house. Fields and quarters are
   // covered (farm + Wild West tile-B-08); the great house is not.
-  "streetscape.midCentury", // 1950s-specific. Highway Rest Area / Modern Park read contemporary.
+  // `streetscape.midCentury` was here, and is GONE — split and closed in Phase 96. It read
+  // "1950s-specific. Highway Rest Area / Modern Park read contemporary", which names three packs
+  // and a decade rather than naming a thing, so no commission could ever have closed it; that is
+  // the same defect `architecture.indigenous.northAmerican` had, one entry above. Read against a
+  // real map it turned out to be two absent objects and a long list that was never missing:
+  //   architecture.suburban.tractHouse   CLOSED — derived/suburban-tract.png, three plans that
+  //                                      differ by where the car goes. The library had no house of
+  //                                      the twentieth century at all.
+  //   vehicle.midCentury.automobile      CLOSED — same sheet, two saloons and an estate. Highway
+  //                                      Rest Area's forty vehicles are all contemporary and
+  //                                      Steampunk's is brass-era, so Periods 7 and 8 drove nothing.
+  // Not missing, and no longer to be filed as if it were: asphalt, kerbs, sidewalk slabs, driveway
+  // concrete, mown lawn, trees, hedges, picket fencing (farm/6), utility poles with wires (war
+  // ruins/25), construction materials, and the domestic and office interiors. Those packs read
+  // contemporary in their *furniture*, which is an exclusion list, not a gap.
+  "architecture.twentiethCentury.commercialBlock", // The flat-parapet American commercial block of
+  // roughly 1890-1960: one or two storeys, a plate-glass shopfront under a signboard fascia, no
+  // ornament above the cornice. 19th Century European City/tile-B-01 is Second Empire and Highway
+  // Rest Area/tile-B-02 is a strip mall with modern glazing and branding; the library holds nothing
+  // between them. Partial — the strip mall's brick units serve at a distance with the branded
+  // frontages excluded, which is what p8-suburb's lending office and p7-depression-street both do.
+  // Registered in Phase 96, when the mid-century entry above was split and the half that was real
+  // turned out to belong to two periods rather than one.
   "architecture.antebellum.commercialStreet", // Greek Revival storefronts and vernacular brick
   // blocks, c. 1820-1850. 19th Century European City/tile-B-01 is the library's only masonry
   // commercial street, and its mansard roofs and railed terraces are Second Empire — twenty years

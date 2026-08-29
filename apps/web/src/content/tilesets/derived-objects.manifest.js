@@ -317,4 +317,64 @@ export const DERIVED_OBJECTS = [
       { name: "hideStretcher", box: [614, 39, 693, 122] },
     ],
   },
+  {
+    // Unit 8's commission, and the one that came out of an art reconnaissance rather than out of a
+    // map build. `streetscape.midCentury` had been in the gap register since the library was first
+    // catalogued, reading "1950s-specific — Highway Rest Area / Modern Park / Living room read
+    // contemporary." That is a statement about *tone*, and tone is not commissionable: it named
+    // three packs and a decade instead of naming a thing, so no job could ever close it. Reading it
+    // against a real map turned it into two objects that are genuinely absent and a long list that
+    // was never missing at all — see decision log 0095 for the split.
+    //
+    // **The tract house is the one that blocked the map.** The library's whole residential stock is
+    // 17th-19th-century clapboard (farm/7), Second Empire terraces (19th Century European City),
+    // frontier false-fronts (Wild West) and ruined concrete apartment blocks (war ruins). There is
+    // no house of the twentieth century anywhere in 250 sheets, and a subdivision without houses is
+    // not a subdivision.
+    //
+    // **Three plans, and what varies between them is where the car goes.** That is not decoration.
+    // Levitt's Bucks County models of 1952-58 were one house sold as several, and the difference a
+    // buyer chose between was a carport, an attached garage, or neither — so a street of these three
+    // is what the record actually looked like, and one plan stamped eight times would read as a
+    // rendering fault rather than as a tract.
+    //
+    // **The cars close the other half.** Highway Rest Area carries about forty vehicles and every
+    // one of them is contemporary; Steampunk's is a brass-era runabout. Between roughly 1910 and the
+    // present the library had no automobile at all, so Periods 7 and 8 both drove nothing. Three
+    // bodies at one scale: two saloons and an estate.
+    //
+    // Scale is the thing this commission got wrong twice before it got it right, and the record is
+    // worth keeping because the failure was invisible in the preview. Asked for a "long low" house
+    // on a wide canvas, the generator returns a 195x55 slab — correct proportions, and a roof ridge
+    // level with a 45px body's head. It only shows up when the sprite is dropped on real library
+    // ground beside a real character, which is what reports/_recon/scene.mjs was written to do. The
+    // library's own small one-storey buildings measure 93x96 and 89x144, so the houses here sit at
+    // 85-100px and read as buildings. The cars at 128-147px are shorter than the library's 144px
+    // contemporary sedan on purpose: none of that fleet may appear on this map, so the cars are
+    // scaled to the houses they park at rather than to a fleet that is excluded by era.
+    //
+    // Two misses, and they rhyme with the chevaux-de-frise. "L-shaped" fetched a steep-roofed
+    // cottage with a chimney twice running, because the generator answers the plan shape with a
+    // house-shaped prior and ignores the adjective. And every early car came back a **show car** —
+    // pinched waists, separate fenders, open cabins — because "chrome", "fins" and "seen from
+    // directly above" together are a hot-rod render, whatever decade is named. What worked was
+    // asking for the *plainness*: matte, few highlights, a flat rectangular roof panel between a
+    // windscreen band and a rear-window band. Name the construction, never the thing.
+    //
+    // The foundation shrubs baked into all three houses are kept deliberately. They trim as part of
+    // the sprite, and a 1957 house without foundation planting is the odd one — but note that they
+    // are grass-green, so these three belong on lawn and nowhere else.
+    //
+    // Cut by explicit box, printed by reports/_recon/compose-commission.mjs.
+    from: "Chronicle Commissions/suburban-tract.png",
+    out: "suburban-tract.png",
+    objects: [
+      { name: "houseCarport", box: [0, 62, 194, 146] },
+      { name: "houseGarage", box: [203, 61, 384, 146] },
+      { name: "houseDriveway", box: [393, 47, 584, 146] },
+      { name: "sedanTwoTone", box: [593, 19, 644, 146] },
+      { name: "sedanDarkGreen", box: [653, 15, 704, 146] },
+      { name: "stationWagon", box: [713, 0, 766, 146] },
+    ],
+  },
 ];

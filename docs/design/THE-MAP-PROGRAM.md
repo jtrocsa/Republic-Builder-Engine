@@ -280,6 +280,13 @@ the DISCREPANCY, the guaranteed-loan file the TRACE. Four more open in the reade
 terms sheet, the lending office's underwriting checklist, a township minimum-lot amendment and a
 neighbours' handbill.
 
+**The art shipped in Phase 96** (decision log `0095`), which is the slice between the content and
+the map. `p8-suburb` is unblocked: its houses and cars are commissioned, and its road, kerbs,
+sidewalk, driveways, lawn, planting and both interiors come out of packs the old gap entry had
+listed as failures. One flagged substitution remains and it is the corner building — the lending
+office takes `Highway Rest Area/tile-B-02`'s brick strip units with the modern glazing and signage
+kept off camera, which is the same stand-in `p7-depression-street` makes.
+
 Two things about that authoring worth carrying to Unit 9. **The place had to be composite where Ellis
 Island was real**, and the interview is what decided it: eight invented people saying on the record
 what they will and will not say, about a real named town, is an accusation against a real address.
@@ -324,7 +331,16 @@ sheets across 28 packs, and the `derived-objects` packing pipeline.
    object serves both, and **Phase 84 built Riverbend's Powhatan landing** — empty ground since
    Phase 62 for exactly this reason.
 3. **Unit 6's cast** — the railhead's people.
-4. **`streetscape.midCentury`** — unblocks Unit 8.
+4. ~~**`streetscape.midCentury`**~~ — **Shipped in Phase 96, and the entry it was written
+   against no longer exists.** It named three packs and a decade rather than a thing, which is the
+   same defect `architecture.indigenous.northAmerican` had at #2 above and the same fix: an entry
+   that describes a _tone_ can never close. Split by reconnaissance into two objects that were
+   genuinely absent — **the twentieth-century house**, of which the library had none at all, and
+   **the automobile**, of which it had none between about 1910 and the present — and a long list of
+   ground, planting, fencing, poles and interiors that was never missing. Six objects into
+   `derived/suburban-tract.png`: three house plans that differ by where the car goes, two saloons
+   and an estate. What survives is one honest row, the twentieth-century American commercial block,
+   and it belongs to Period 7 as much as Period 8.
 5. ~~**`liaison-meridian`**~~ — Voss's revealed costume. **Built in Phase 88**, by editing the
    shipped character into a second _state_ rather than generating a second character; see
    `MERIDIAN-VISUAL-IDENTITY.md` §6 for why that distinction is the whole job.

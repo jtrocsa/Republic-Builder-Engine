@@ -180,6 +180,8 @@
 
 - Phase 95 — **The word is not on the form.** Decision log `0094`, and the first slice of **Candidate B**: Unit 8's content, registered for validation and deliberately unreachable, which is the state Units 3-7 each sat in first. "Grounds for Refusal" — Period 8, 1945-1980 — spends its three cases on three refusals: a lender's, where the grounds are written down in a form that never says what they are; a loyalty board's, where the accuser is not produced; and a registrar's, on a test he sets, gives and grades himself. The arc is a refusal getting harder to see and then, once, **answered in its own medium**, because §4(b)'s coverage formula is arithmetic written to do what a decade of case-by-case litigation could not. The field case is a **composite** where Ellis Island was real and named, and the interview is what settled it: `THE-MAP-PROGRAM.md` §5 fixes it as _what a neighbour will say on the record_, and eight invented people saying that about a real named town is an accusation against a real address. **The finding is a rating, not a slur** — the 1938 Underwriting Manual said outright that a neighbourhood holds its value when properties "continue to be occupied by the same social and racial classes", that language came out between 1947 and 1950, and the ratings did not change; so the audit works by reading forty years of remaining economic life on one side of a highway and fifteen on the other. Slate B (`interview` · `discrepancy` · `trace`) **read off §2's own table** rather than a prose summary, per `0081` §5; every `activityRoute` is `null`, and the appraisal already carries `requiresSourceId` pointing at the deed because a DISCREPANCY's evidence column is minted from the INTERVIEW's answers. Missions are `hipp` and `mcq`, chosen by a ledger running 5/5/2/2 across Units 1-7 and wanted by the content anyway. **Registration cost one thing Phase 90J did not predict**: `build-field-guide.js` threw, because 90J replaced its hand-written unit list with the registry import — right in four other places, wrong here, since the guide documents _maps_ and the registry's own header says the content list is a superset of the playable list. It happened not to fail then because the two lists were equal at that moment. The guide derives its set from `FIELD_MAPS` now, and **three hand-written counts beside it had gone stale by two units** ("Periods 1-5 of 9", "5 units", "fifteen cases") — the same per-unit-table shape, in a generated document that tells the reader nothing on it is transcribed by hand. 157 validate:content groups (145 before), 1,920 unit tests, build clean, and `Fairmeadow` appears nowhere in `dist/` — **this phase cannot move a player-visible pixel by construction**.
 
+- Phase 96 — **Tone is not commissionable.** Decision log `0095`, and Candidate B's second slice: Unit 8's art reconnaissance, ranked fourth in `THE-MAP-PROGRAM.md` §6 and the last thing blocking its map. `streetscape.midCentury` had been in the gap register since the library was first catalogued, reading "1950s-specific — Highway Rest Area / Modern Park / Living room read contemporary," which names **three packs and a decade** rather than a building, an object or an animal. **It could never have closed**: "make the 1950s exist" is not a commission, it is a mood. Same disease as `architecture.indigenous.northAmerican` in `0067`, opposite symptom — that entry named three things at once, this one named none — and the same test catches both: read the entry and ask what would arrive in the parcel. Reconnaissance against the real map found **two absent objects and a long list that was never missing.** Absent: **a house of the twentieth century** (the library's whole residential stock is 17th-19th-century clapboard, Second Empire terraces, frontier false-fronts and ruined concrete blocks — nothing after about 1890 that a family lives in, and a subdivision with no houses is not a subdivision) and **a car** (`Highway Rest Area` holds ~40 vehicles, all contemporary; `Steampunk/1`'s is brass-era, so **Periods 7 and 8 both drove nothing**). Not missing: asphalt, kerbs, sidewalk, driveway concrete, lawn, street trees, hedges, picket fence (`farm/6`), utility poles (`war ruins/25`), construction materials, and both interiors — those packs read contemporary in their **furniture**, which is an exclusion list in a palette header, not a gap in a register. All 25 `war ruins` content sheets were swept too, since `0049` found two unopened ones to be a different pack; every one is damaged, and Fairmeadow's premise is that nothing on it is. Six objects into `derived/suburban-tract.png` — three house plans and three cars — and **what varies between the houses is where the car goes** (carport, attached garage, neither), because Levitt's Bucks County models were one house sold as several and that is the difference a buyer chose. One honest row survives and belongs to **two** periods: the twentieth-century American commercial block, which `p7-depression-street` repoints to (it had been naming the mid-century entry for a 1930s main street, wrong by twenty years) and which `p8-suburb`'s lending office takes as a flagged strip-mall stand-in. **The scale error is the carry-forward and it was invisible in the preview**: asked for a "long low" house on a wide canvas the generator returns a 195×55 slab whose roof ridge is level with a 45px body's head, and only compositing it onto the map's real ground beside a real character says so — the library's own small one-storey buildings measure 93×96 and 89×144. Cars are deliberately **shorter** than the library's 144px contemporary sedan, because none of that fleet may appear here. Misses rhymed with the chevaux-de-frise a third time: "L-shaped" fetched a steep-roofed cottage twice, and every early car came back a **show car** until the prompt asked for the plainness rather than the chrome. `main.js` untouched, no map built, and the sheet's `import.meta.glob` is deliberately **not** registered yet — that belongs to the map build, where a missing one renders the whole map as an empty frame.
+
 ## 5. Current active phase
 
 **Phase 81** is a six-part program (81A–81F) running from an approved plan: (A) reconcile the rules, (B) rewrite the opening lore against the canon, (C) build the cutscene system and make Emery Voss a character rather than a body, (D) decide Units 3–9's engine slates, places and plot beats as one solve, (E) station Voss on Units 3–5's maps, (F) author activities for Philadelphia, Canal Crossroads and Richmond. **The whole program is closed** — 81A, 81B, 81D, 81E and 81F in sequence, and 81C's remainder folded onto the general scene runner by 81G. See the phase index above and decision log `0064`. The ordering was the point: each pass made the next cheaper, and 81F is the one that could not have been authored first — it needed the slates from 81D and the givers from 81E.
@@ -299,20 +301,34 @@ the measurement kept beside it: 44 passed / 0 failed at two workers with retries
 walk-heaviest spec files. Both `nudgeTo` workarounds are gone with it. **Nothing is left over from
 Candidate C**, and §5's harness questions are closed.
 
-**Candidate B — Unit 8, the suburban corridor, 1957. Started, and its content shipped as Phase 95**
-(decision log `0094`). The next unit, and the first one whose whole build is a known quantity:
-content, cast, map, interiors, activities, in that order, which is what Phases 89 through 89E did for
-Unit 7 and Phases 85–87 for Unit 6.
+**Candidate B — Unit 8, the suburban corridor, 1957. Under way: content shipped as Phase 95, art as
+Phase 96** (decision logs `0094` and `0095`). The next unit, and the first one whose whole build is a
+known quantity: content, art, map, interiors, activities, in that order, which is what Phases 89
+through 89E did for Unit 7 and Phases 85–87 for Unit 6.
 
-**Phase 95 is the first of those and it is done.** `unit-08-campaign.js` and `unit-08-quests.js` are
-authored, validated and registered; the unit is **deliberately absent from `main.js`'s `UNITS`**, for
-the reason `0075` gives and Units 3-7 each demonstrated. Three cases: the composite subdivision
+**Phase 95, the content, is done.** `unit-08-campaign.js` and `unit-08-quests.js` are authored,
+validated and registered; the unit is **deliberately absent from `main.js`'s `UNITS`**, for the
+reason `0075` gives and Units 3-7 each demonstrated. Three cases: the composite subdivision
 (case-022, slate B, seven cited records, all `activityRoute: null`), the federal loyalty program read
 through Margaret Chase Smith's Declaration of Conscience (case-023, `hipp`), and the Voting Rights
 Act's coverage formula (case-024, `mcq`), plus a unit SAQ and a seven-document DBQ running from
-Executive Order 9981 to Milliken v. Bradley. **The next slice is the art reconnaissance** —
-`streetscape.midCentury` — followed by the map, its two interiors (a model home and a lending
-office) and its three activities.
+Executive Order 9981 to Milliken v. Bradley.
+
+**Phase 96, the art, is done, and it deleted the gap rather than filling it.**
+`streetscape.midCentury` named three packs and a decade, so nothing could ever have closed it;
+reconnaissance split it into two objects that were genuinely absent — the twentieth-century house and
+the automobile, neither of which existed anywhere in 250 sheets — and a long list of ground, planting,
+fencing, poles and interiors that was never missing. Six objects into `derived/suburban-tract.png`.
+One row survives, the twentieth-century American commercial block, shared with `p7-depression-street`
+and taken by this map's lending office as a flagged strip-mall stand-in.
+
+**The next slice is the map**, followed by its two interiors (a model home and a lending office) and
+its three activities. Two things the map build owes and neither is optional: `derived/suburban-tract.png`
+needs its `import.meta.glob` line in `main.js` — a missing one renders the whole map as an empty
+frame, which `MERIDIAN-ASSET-BRIEF.md` §4 says has happened twice — and `p8-suburb` carries an
+exclusion list (no vending machines, no ATMs, no wheelie bins, no branded storefronts, and **none of
+Highway Rest Area's vehicles**, which are the reason the cars were commissioned).
+
 `THE-MAP-PROGRAM.md` §5 briefs it and `MERIDIAN-VISUAL-IDENTITY.md` does not need to. Three things
 are already fixed and should not be re-argued:
 
@@ -323,9 +339,11 @@ are already fixed and should not be re-argued:
   the Phase 88A pass and a new unit is one line in `content/chronotravel-plates.js`, which is what
   Unit 8's registration cost; `tests/unit/chronotravel-plates.test.js` fails if a shipped unit has no
   plate and if Unit 9's remaining queued file is deleted as unused.
-- **Period 8 is the library's genuinely under-served period** (Phase 81A) and
-  `streetscape.midCentury` is its registered tile gap — so the art reconnaissance is the first
-  step of that build rather than a surprise in the middle of it.
+- **~~Period 8 is the library's genuinely under-served period and `streetscape.midCentury` is its
+  registered tile gap~~ — closed in Phase 96, and the entry is gone.** The under-served claim was
+  true; the gap that recorded it was unclosable by construction. See `0095`, and note the
+  generalisable half: **a register entry has to name a building, an object or an animal.** One that
+  describes a tone will still be sitting there when the project ends.
 
 And one standing decision that survives whichever is picked: **the reveal ladder's next rung stays
 deferred.** `THE-FIELD-LIAISON.md` §4 puts Units 7–8 at "reluctant alliance", which is Scene E
