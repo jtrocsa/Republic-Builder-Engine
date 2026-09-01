@@ -29,11 +29,16 @@ test.describe("Unit 5 missions and Archive Challenges", () => {
     });
     await loadSeededSave(page);
     await expect(page.locator(".mission-shell")).toBeVisible();
-    // The mission is framed as itself: the mission's name in the heading, the unit's period in the
-    // eyebrow. Unit 5 follows Units 2-4 in dropping the "Case N.NN — " prefix from case titles, so
-    // caseNumberLabel() is empty here and the kicker is the period alone.
+    // The mission is framed as itself: the mission's name in the heading, its number and the unit's
+    // period in the eyebrow. This assertion used to read "Period 5 · 1844–1877" and carried a
+    // comment explaining that Unit 5 drops the "Case N.NN — " prefix from its case titles so
+    // caseNumberLabel() comes back empty — a spec pinning the defect in place. Phase 105 derives the
+    // number from the case's position instead of reading it off the title, so all twenty-seven have
+    // one. See decision log 0104 and Spine Review P10-5.
     await expect(page.locator(".mission-shell h1")).toHaveText("The Road to Disunion");
-    await expect(page.locator(".mission-shell .kicker").first()).toHaveText("Period 5 · 1844–1877");
+    await expect(page.locator(".mission-shell .kicker").first()).toHaveText(
+      "Case 5.02 · Period 5 · 1844–1877"
+    );
 
     const quest = page.locator('[data-quest-type="sequencing"]');
     await expect(quest).toBeVisible();

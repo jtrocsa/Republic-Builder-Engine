@@ -30,12 +30,20 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed** | 2026-08-23 | —                                                |
 | [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed** | 2026-08-23 | —                                                |
 | [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed** | 2026-08-23 | 1 S3 _(P12-7, carried — see `0088` §5)_          |
-| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | 1 S3 _(P10-5 → content queue)_                   |
+| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | 1 S3 _(P10-6 → ADR)_                             |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
 history — no sha column to go stale.
 
-**One routed S3 has since been taken.** Part 10's P10-4 — a finished mission's own work saved and
+**Two routed S3s have since been taken.** Part 10's P10-5 — twenty-four of the twenty-seven
+missions with no case number on any screen that shows one — was routed to the content queue as a
+choice between numbering twenty-four case titles by hand and dropping the eyebrow. Both of those are
+content decisions and that is why it sat for eleven phases; neither was necessary. A case's number is
+its unit's number and its position in that unit, and `caseNumberLabel()` now derives it, so no
+content changed at all. Phase 105, decision log `0104`. **When a defect is routed as a decision,
+check that the options it was routed with are the only options.**
+
+Part 10's P10-4 — a finished mission's own work saved and
 shown nowhere — went to an ADR because it needed a read-only render mode across the quest types, and
 the program fixes behaviour rather than shape. It shipped as Phase 92; decision log `0091`. What is
 still open above is what is still open.

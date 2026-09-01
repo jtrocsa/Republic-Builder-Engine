@@ -18,15 +18,15 @@ a comment. Both are corrected here.
 All `A` (static audit), and four of the seven measured in a browser across all fourteen missions
 rather than read off the source. No owner pass was run.
 
-| №     | S   | Category       | What                                                                                                                     | Outcome                                                            |
-| ----- | --- | -------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| P10-1 | S2  | `inconsistent` | **All fourteen missions announce themselves as "Archive Challenge complete"** — the one distinction that is load-bearing | Fixed. The card is told which of the two it is rendering.          |
-| P10-2 | S2  | `broken`       | A mission you finished yourself re-opens with the message written for a save that never answered it                      | Fixed. Two states, told apart by whether there is an answer.       |
-| P10-3 | S2  | `rough`        | Twelve of the fourteen print the date twice, side by side                                                                | Fixed. `caseWhereAndWhen()`, the helper Phase 90K already added.   |
-| P10-4 | S3  | `hollow`       | A finished mission's own work is saved and then shown nowhere                                                            | Routed → ADR `0091`. **Shipped in Phase 92**, read-only mode.      |
-| P10-5 | S3  | `unclear`      | The case number is missing from the kicker on twelve of the fourteen                                                     | Routed → the content queue. Known-outstanding; a content decision. |
-| P10-6 | S3  | `inconsistent` | The game cannot decide whether a non-field mission is a place you travel to or work you do at the Archive                | Routed → ADR. Its cheap half — naming what unlocked — fixed here.  |
-| P10-7 | S3  | `rough`        | Two places still say "ten of the twenty-one"                                                                             | Fixed in passing.                                                  |
+| №     | S   | Category       | What                                                                                                                     | Outcome                                                           |
+| ----- | --- | -------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| P10-1 | S2  | `inconsistent` | **All fourteen missions announce themselves as "Archive Challenge complete"** — the one distinction that is load-bearing | Fixed. The card is told which of the two it is rendering.         |
+| P10-2 | S2  | `broken`       | A mission you finished yourself re-opens with the message written for a save that never answered it                      | Fixed. Two states, told apart by whether there is an answer.      |
+| P10-3 | S2  | `rough`        | Twelve of the fourteen print the date twice, side by side                                                                | Fixed. `caseWhereAndWhen()`, the helper Phase 90K already added.  |
+| P10-4 | S3  | `hollow`       | A finished mission's own work is saved and then shown nowhere                                                            | Routed → ADR `0091`. **Shipped in Phase 92**, read-only mode.     |
+| P10-5 | S3  | `unclear`      | The case number is missing from the kicker on twelve of the fourteen                                                     | **Fixed in Phase 105**, ADR `0104` — derived, no content changed. |
+| P10-6 | S3  | `inconsistent` | The game cannot decide whether a non-field mission is a place you travel to or work you do at the Archive                | Routed → ADR. Its cheap half — naming what unlocked — fixed here. |
+| P10-7 | S3  | `rough`        | Two places still say "ten of the twenty-one"                                                                             | Fixed in passing.                                                 |
 
 ---
 
@@ -79,6 +79,14 @@ Unit 1's cases carry one — so twelve kickers read "Period 4 · 1800–1848" wh
 "Case 1.02 · Period 1 · 1491–1607". Already on the quickref's known-outstanding list as an activity
 eyebrow problem; the same root cause, now measured on the mission screen too. The fix is to number
 Units 2–7's case titles or to stop the eyebrow trying, and both are content decisions.
+
+**Taken in Phase 105 (decision log `0104`), and the routing above is the part worth keeping.** Those
+two options are the only options if the number has to be authored, and it does not: a case's number
+is its unit's number and its own position within that unit, both of which `caseNumberLabel()` already
+had in reach. It derives the number now, all twenty-seven missions have one, and **no content was
+edited**. The same empty string was reaching five other surfaces, each with a different fallback —
+the activity eyebrow, two Codex listings and two teacher headers — so this closed the quickref's
+known-outstanding activity-eyebrow item at the same time.
 
 **P10-6.** Every case goes through `goToCase()`, so a non-field mission plays the full Chronotravel
 warp onto its unit's painted plate, announcing a place and a date. The Codex, one screen away, says

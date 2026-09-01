@@ -6426,12 +6426,32 @@ function resolvedCaseTitle(kase) {
 function resolvedCaseName(kase) {
   return resolveTeacherOverride(kase.id, "title", splitCaseTitle(kase).name);
 }
-// "Case 1.02" — the numbered half, with the trailing em dash trimmed. Empty for a case whose title
-// carries no number (units 2 and 3 drop the numbering), so every call site needs a fallback.
-function caseNumberLabel(kase) {
-  return splitCaseTitle(kase)
-    .prefix.replace(/\s*—\s*$/, "")
-    .trim();
+// "Case 4.02" — a mission's number, derived from where the case sits rather than read off its title.
+//
+// It used to be read off the "Case N.NN — " prefix, and only Unit 1's three titles carry one, so it
+// returned an empty string for twenty-four of the twenty-seven cases. Six call sites, each with a
+// sensible fallback of its own, so the empty string never looked like one bug — it looked like six
+// slightly different screens. A mission kicker reading "Period 4 · 1800–1848" where Unit 1's reads
+// "Case 1.02 · Period 1 · 1491–1607". An activity eyebrow carrying the engine's name with nothing in
+// front of it. A Codex entry labelled with the mission's name in one unit and its number in another.
+// **A per-unit convention with a sane fallback and no test**, which is the failure this repository
+// keeps paying for.
+//
+// Spine Review P10-5 routed it to the content queue as a choice between numbering twenty-four titles
+// by hand and giving up on the eyebrow. That is a real choice only if the number has to be authored,
+// and it does not: a case's number is its unit's number and its own position within that unit, and
+// both are already known here. Nothing about it was ever a content decision.
+//
+// Unit 1 keeps its prefix. splitCaseTitle() still has to strip it so the *name* comes out clean,
+// rewriting three shipped titles buys nothing, and leaving it buys something — the derived number
+// must equal the authored one, which is what main-case-numbering.test.js holds it to.
+//
+// Empty only for a case in no registered unit, which is a case no screen can reach.
+export function caseNumberLabel(kase) {
+  const unit = unitForCase(kase.id);
+  const index = unit ? unit.cases.findIndex((c) => c.id === kase.id) : -1;
+  if (index < 0) return "";
+  return `Case ${Number(unit.id.slice("unit-".length))}.${String(index + 1).padStart(2, "0")}`;
 }
 
 /**
