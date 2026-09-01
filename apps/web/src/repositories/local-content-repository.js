@@ -32,6 +32,7 @@ import * as unit05Campaign from "../content/unit-05-campaign.js";
 import * as unit06Campaign from "../content/unit-06-campaign.js";
 import * as unit07Campaign from "../content/unit-07-campaign.js";
 import * as unit08Campaign from "../content/unit-08-campaign.js";
+import * as unit09Campaign from "../content/unit-09-campaign.js";
 import * as unit01Quests from "../content/quests/unit-01-quests.js";
 import * as unit02Quests from "../content/quests/unit-02-quests.js";
 import * as unit03Quests from "../content/quests/unit-03-quests.js";
@@ -40,6 +41,7 @@ import * as unit05Quests from "../content/quests/unit-05-quests.js";
 import * as unit06Quests from "../content/quests/unit-06-quests.js";
 import * as unit07Quests from "../content/quests/unit-07-quests.js";
 import * as unit08Quests from "../content/quests/unit-08-quests.js";
+import * as unit09Quests from "../content/quests/unit-09-quests.js";
 import { UNIT_01_ACTIVITIES } from "../content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "../content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "../content/activities/unit-03-activities.js";
@@ -79,6 +81,10 @@ const UNIT_MODULES = {
   "unit-06": { campaign: unit06Campaign, quests: unit06Quests, activities: UNIT_06_ACTIVITIES },
   "unit-07": { campaign: unit07Campaign, quests: unit07Quests, activities: UNIT_07_ACTIVITIES },
   "unit-08": { campaign: unit08Campaign, quests: unit08Quests, activities: UNIT_08_ACTIVITIES },
+  // Unit 9 has content and no map yet, which is the state Units 3-8 each sat in for a phase.
+  // The `{}` above is the placeholder its three activities replace, and the comment on
+  // UNIT_MODULES says what happens if that replacement is forgotten.
+  "unit-09": { campaign: unit09Campaign, quests: unit09Quests, activities: {} },
 };
 
 /**

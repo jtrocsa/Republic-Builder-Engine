@@ -106,6 +106,11 @@ describe("the case arc close survives whichever mission ends the case (P12-4)", 
   );
 
   it("finds units to check at all (guard against a vacuous pass)", () => {
+    // Unit 1 is absent on purpose — its three missions predate `arcClose`. Unit 8 joined this list
+    // in Phase 100 rather than in Phase 99, when its activities were authored, because they were
+    // never wired into `local-content-repository.js` and `missionsOf()` reads them through it. The
+    // list was right about the repository and wrong about the repo, which is what a guard against a
+    // vacuous pass is for and is why it is spelled out rather than derived.
     expect(unitsWithAnArc.map(([id]) => id)).toEqual([
       "unit-02",
       "unit-03",
@@ -113,6 +118,7 @@ describe("the case arc close survives whichever mission ends the case (P12-4)", 
       "unit-05",
       "unit-06",
       "unit-07",
+      "unit-08",
     ]);
   });
 

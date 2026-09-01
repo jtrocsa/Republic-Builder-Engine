@@ -45,7 +45,7 @@ Four engines, three per unit, four legal slates:
 | 6    | Railhead, Kansas plains, 1873 | **C** | who is entitled to be here, and on whose paper             |
 | 7    | Immigrant port, 1907          | **A** | what the official question fails to ask                    |
 | 8    | Suburban corridor, 1957       | **B** | _shipped_ — what a neighbour will say on the record        |
-| 9    | Campus archive, 1998          | **C** | who is allowed to hold the record                          |
+| 9    | Campus archive, 1998          | **C** | _content shipped_ — who is allowed to hold the record      |
 
 **Adjacency holds throughout** — no unit repeats its neighbour's three.
 
@@ -338,6 +338,26 @@ room** and a **processing room**.
 Records: a **FOIA response with redactions**; a **deed of gift restricting access to a donated
 collection**; and a **digitised scan that differs from the original it claims to reproduce**. The
 interview asks who is allowed to hold the record.
+
+**The content shipped in Phase 100** (decision log `0099`) as "What Is Kept", set at a composite
+state university in a north-eastern Ohio valley city twenty years after its steelworks closed. One
+thing about the brief above is worth recording, because it was decided by writing the records rather
+than by planning them: **the three named records rank, and they rank in the order nobody expects.**
+The FOIA response is the _weakest_ of the three — a numbered exemption, an obligation since 1996 to
+state which one at the place in the record, thirty days to appeal, and a judge who may read the
+withheld pages in chambers. The deed of gift is the strongest, because it needs no number and no
+reason and binds successors. And the bad scan beats both, because nobody decided anything: an edition
+reset, a publisher's file copy, a discard policy and a scanner setting. Whoever builds the map should
+keep that ranking legible in the geography — the thing with an appeals procedure is the thing
+everybody blames.
+
+Two further decisions carried from Unit 8's build and worth keeping. The place is **composite**, for
+`0094` §2's reason and more sharply here: eight invented people saying on the record what a stranger
+is entitled to see would be an accusation against a real named university. And the two missions are
+`sequencing` and `evidence-organizing` — the thick pair, which balances the quest-type ledger at
+6/6/3/3 across the nine units and was what the content wanted anyway.
+
+Owed: art reconnaissance, the map and the cast, two interiors, three activities.
 
 This is where the final decision belongs — controlled, destroyed, selectively released, or preserved
 openly — because by then the player has spent nine units learning that the answer is not obvious.

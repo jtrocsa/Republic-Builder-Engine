@@ -76,7 +76,9 @@ Frethorne
 Frethorne's
 Gast
 Genericity
+Gennadi
 Gerardus
+Gerasimov
 Ginés
 Gowrie
 Grasso
@@ -110,6 +112,7 @@ Ledbetter
 Leitner
 León
 Lindqvist
+Linkon
 Lucayan
 Lyria
 López
@@ -179,9 +182,11 @@ Riverbend's
 Rozalia
 Rubios
 salesagent
+Singlejack
 SMIL
 SNCC
 SPRITESHEET
+Steeltown
 subgrade
 SUPABASE
 Sahagún

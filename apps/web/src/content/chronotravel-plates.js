@@ -18,11 +18,12 @@
 // immigrant port, the postwar suburb and the 1990s campus arrived as one commission with the six
 // that shipped, and sat in apps/web/src/assets/plates/ unreferenced until the unit that opens on
 // them was real — because wiring one early would mean naming a unit id that does not exist.
-// **Unit 7 collected its line in Phase 89 and Unit 8 in Phase 95**, each costing exactly the four
-// lines below, which is what the early commission was for. Unit 9 is still queued.
-// `tests/unit/chronotravel-plates.test.js` holds every end of that: every unit must have a plate,
-// no plate may name a unit that is not shipped, every plate file must exist, and the two files
-// still waiting must not be deleted as "unused".
+// **Unit 7 collected its line in Phase 89, Unit 8 in Phase 95 and Unit 9 in Phase 100**, each
+// costing exactly the four lines below, which is what the early commission was for. **The queue
+// is now empty and there are no unwired plates left**, which retires the guard in
+// `tests/unit/chronotravel-plates.test.js` that kept the last of them from being deleted as
+// "unused". The rest of that file still holds: every unit must have a plate, no plate may name a
+// unit that is not shipped, and every plate must point at a file that is actually there.
 
 // Written out one by one rather than through a `plate(file)` helper, which is what this was first:
 // a template literal inside `new URL()` makes Vite treat the folder as a glob and emit all ten
@@ -68,6 +69,11 @@ export const CHRONOTRAVEL_PLATES = {
     image: new URL("../assets/plates/unit-08-postwar-suburb.webp", import.meta.url).href,
     alt: "A wide new boulevard running downhill into a valley on a summer afternoon: low ranch houses behind white picket fences and clipped front lawns along the left-hand side, a service station and a strip of shopfronts on the right, chrome-heavy cars in both directions, telephone poles and a long line of hills beyond.",
     note: "Anchor holds. New houses, a new road, and every term of who may live on it already written and recorded.",
+  },
+  "unit-09": {
+    image: new URL("../assets/plates/unit-09-college-campus.webp", import.meta.url).href,
+    alt: "A university quadrangle on a bright autumn afternoon: a red-brick library with a white columned portico across the far side of the lawn, an older gabled hall among yellowing trees, students crossing the paved paths with backpacks, cars parked along a service road, and a kiosk on the near corner papered over with layers of printed notices.",
+    note: "Anchor holds. Everything this valley still remembers about itself is in one building, and it opens by appointment.",
   },
   institute: {
     image: new URL("../assets/plates/institute-archive.webp", import.meta.url).href,

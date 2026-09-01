@@ -8,11 +8,12 @@
 //      reason a missing entry would ship unnoticed. This is the thing that notices.
 //   2. **Every plate needs its file.** The images resolve through `new URL(..., import.meta.url)`,
 //      so a rename or a deletion is a 404 in the browser and nothing at all in the bundler.
-//   3. **Units 7-9's plates are painted but unwired, deliberately.** Both halves matter: the files
-//      have to still be there when Phase 89 wants them, and the table must not name a unit that
-//      does not exist yet.
+//   3. **The queue is empty as of Phase 100.** Units 7-9's plates were painted ahead of their
+//      units and each collected its table line when its unit became real. What is guarded now is
+//      that the directory and the table agree exactly — an unwired painting is a decision
+//      somebody has to make, not a file to be found later by a cleanup pass.
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -59,16 +60,20 @@ describe("Chronotravel plates", () => {
     }
   });
 
-  it("keeps the plate its unit has not arrived for yet", () => {
-    // Painted with the six that shipped, and the whole point of committing them early is that a
-    // unit collects a table line rather than a commission — which is what Unit 7 did in Phase 89
-    // and Unit 8 in Phase 95, and why neither file is on this list any more. Deleting the last one
-    // as "unused" is the failure this guards; the "names no unit that does not exist" case above
-    // is the other half, and it is what stops it being wired before its unit is real.
-    for (const queued of ["unit-09-college-campus.webp"]) {
-      expect(existsSync(path.join(PLATES_DIR, queued)), `queued plate gone: ${queued}`).toBe(true);
-    }
-    expect(unitPlateKeys).not.toContain("unit-09");
+  it("has emptied the queue — every painted plate is wired to a unit", () => {
+    // This case used to name the plates painted ahead of their units and assert both halves: that
+    // the file was still on disk, and that the table did not yet name it. Unit 7 collected its line
+    // in Phase 89, Unit 8 in Phase 95 and Unit 9 in Phase 100, so the queue is empty and the guard
+    // has nothing left to protect. It is kept, pointing the other way: the directory and the table
+    // must now agree exactly, so a painting committed for a future unit shows up here as a decision
+    // to make rather than as a file nobody notices.
+    const painted = readdirSync(PLATES_DIR)
+      .filter((file) => /^unit-\d\d-.+\.webp$/.test(file))
+      .sort();
+    const wired = unitPlateKeys
+      .map((key) => CHRONOTRAVEL_PLATES[key].image.split("/").pop())
+      .sort();
+    expect(painted).toEqual(wired);
   });
 
   it("writes alt text on every plate, because it is the whole screen", () => {

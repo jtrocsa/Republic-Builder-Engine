@@ -144,10 +144,17 @@ describe("the slate table is a table, not a suggestion", () => {
     // The guard on SHIPPED above. A hand-written per-unit list with a sane fallback and no test is
     // how a whole unit ships unchecked, and this file is a governance test — one that quietly
     // stops covering a unit is worse than none, because the run still says green.
+    // The regex is the load-bearing part and it shipped broken once already, in the commit that
+    // added this case: the escapes were eaten in transit, it matched nothing, and the assertion
+    // passed on an empty list — a guard that reads nothing and reports green, which is the exact
+    // failure it exists to catch. Hence the length check below.
     const modules = readdirSync(join(process.cwd(), "apps/web/src/content/activities"))
-      .map((file) => file.match(/^unit-0(d)-activities.js$/))
+      .map((file) => file.match(/^unit-0(\d)-activities\.js$/))
       .filter(Boolean)
       .map((match) => Number(match[1]));
+    expect(modules.length, "no activities modules matched — the filter is broken").toBeGreaterThan(
+      0
+    );
     const unlisted = modules.filter((unit) => !SHIPPED[unit]);
     expect(
       unlisted,

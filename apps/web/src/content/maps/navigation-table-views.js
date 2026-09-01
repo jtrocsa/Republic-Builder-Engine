@@ -75,6 +75,12 @@ export const UNIT_MAP_VIEW = {
   // (38.9N, 77.0W) and Selma (32.4N, 87.0W). All three fall well inside the existing
   // north-america box, so this unit adds no view of its own — the first unit since Unit 5 not to.
   "unit-08": "north-america",
+  // Unit 9's three cases are a valley city in north-eastern Ohio (41.1N, 81.0W), the Cow Palace
+  // at Daly City (37.7N, 122.5W) and Moscow (55.8N, 37.6E). No box that does not cross the
+  // antimeridian is needed, but none of the North American framings reaches 37 degrees east, so
+  // the closing unit reuses Unit 7's world view — which is also the right framing for a unit
+  // whose last case is the end of a confrontation that had been organising the whole board.
+  "unit-09": "world",
 };
 
 export const DEFAULT_MAP_VIEW = "atlantic-wide";
