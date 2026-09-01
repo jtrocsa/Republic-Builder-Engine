@@ -363,6 +363,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("IMMIGRANT_PORT_FIELD_BLOCKS", "scripts/generate-immigrant-port-tmj.js", {
+    isLand: isImmigrantPortLand,
     doors,
     roads: roads.cells,
   })

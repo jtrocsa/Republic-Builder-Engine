@@ -304,6 +304,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("COMMON_CAUSE_FIELD_BLOCKS", "scripts/generate-common-cause-tmj.js", {
+    isLand: isCommonCauseLand,
     doors,
     roads: roads.cells,
   })

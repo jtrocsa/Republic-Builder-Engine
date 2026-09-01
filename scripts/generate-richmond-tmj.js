@@ -544,6 +544,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("RICHMOND_FIELD_BLOCKS", "scripts/generate-richmond-tmj.js", {
+    isLand: isRichmondLand,
     doors,
     roads: roads.cells,
   })

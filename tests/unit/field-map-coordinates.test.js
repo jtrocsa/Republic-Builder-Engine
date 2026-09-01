@@ -485,8 +485,8 @@ const COMMITTED_BLOCKS = Object.fromEntries(
           path.join(REPO_ROOT, "apps/web/src/content/maps", file.replace(/.tmj$/, ".blocks.js"))
         ).href
       );
-      const exportName = Object.keys(module).find((name) => name.endsWith("_FIELD_BLOCKS"));
-      return [file, module[exportName]];
+      const named = (suffix) => module[Object.keys(module).find((name) => name.endsWith(suffix))];
+      return [file, { blocks: named("_FIELD_BLOCKS"), land: named("_FIELD_LAND") }];
     })
   )
 );
@@ -519,7 +519,7 @@ describe("every committed field map, whether or not its unit is playable", () =>
   });
 
   it.each(OUTDOOR_MAP_FILES)("%s keeps every rect in bounds (edge case)", (file) => {
-    const bad = COMMITTED_BLOCKS[file]
+    const bad = COMMITTED_BLOCKS[file].blocks
       .filter(
         (b) =>
           b.x1 >= b.x2 ||
@@ -537,7 +537,7 @@ describe("every committed field map, whether or not its unit is playable", () =>
     const tmj = loadTmj(file);
     const structures = tmj.layers.find((layer) => layer.name === "structures");
     if (!structures) return;
-    const empty = COMMITTED_BLOCKS[file]
+    const empty = COMMITTED_BLOCKS[file].blocks
       .filter((block) =>
         cellsUnder(block).every(([col, row]) => structures.data[row * tmj.width + col] === 0)
       )
@@ -780,6 +780,40 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
       )
       .map((block) => block.kind);
     expect(empty).toEqual([]);
+  });
+
+  it("agrees with the generator's own land mask, cell for cell (normal case)", () => {
+    // **Every outdoor map's land mask is written twice**, and on purpose: main.js is a browser
+    // bundle entry and cannot import a build script, so decision log 0036 duplicated the mask
+    // rather than reaching across that line. Deliberate duplication is fine. Unchecked
+    // duplication is not, and until Phase 104 the only pair anything compared was Richmond's,
+    // through a bespoke suite that goes at it sideways through the bridges.
+    //
+    // The generator now writes its own mask into the .blocks.js module beside the map, sampled at
+    // every cell centre, so the two copies can be held against each other directly. A cell open in
+    // one and closed in the other is either painted ground the player cannot reach or ground the
+    // player can reach that was never painted, and both are silent: the map renders, the walk
+    // works, and the defect is a patch of the world behaving as though it were somewhere else.
+    //
+    // This one keys off FIELD_MAPS deliberately — unlike the block above it, whose lesson was the
+    // opposite. The question here is whether *main.js's copy* is right, and main.js only has a
+    // copy for a unit it can play. A map committed ahead of its unit has one mask, not two, and
+    // nothing to disagree with.
+    const land = COMMITTED_BLOCKS[TMJ_BY_UNIT[unitId]].land;
+    expect(land, `${unitId}'s blocks module exports no _FIELD_LAND — regenerate it`).toBeTruthy();
+    const disagree = [];
+    for (let row = 0; row < FIELD_GRID.rows; row += 1) {
+      for (let col = 0; col < FIELD_GRID.columns; col += 1) {
+        const painted = land[row][col] === "#";
+        const walked = Boolean(map.isLand(col + 0.5, row + 0.5));
+        if (painted !== walked)
+          disagree.push(`${col},${row} ${painted ? "painted" : "walked"}-only`);
+      }
+    }
+    expect(
+      disagree.slice(0, 8),
+      `${disagree.length} cells where main.js's ${unitId} mask and the generator's disagree`
+    ).toEqual([]);
   });
 
   it("stands every collision rect on land, not out at sea (edge case)", () => {
@@ -1026,6 +1060,24 @@ describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
       expect(grid.tile).toBe(FIELD_GRID.tile);
       expect(grid.columns).toBeGreaterThan(0);
       expect(grid.rows).toBeGreaterThan(0);
+    });
+
+    it("declares the size it was painted at (normal case)", () => {
+      // An interior is the one surface that does NOT share FIELD_GRID, so its size is written down
+      // twice: WIDTH/HEIGHT in its generator, and this `grid` by hand in main.js. Nothing compared
+      // them until Phase 104. `room.grid` is what collision, the camera and interiorGround()'s land
+      // mask all read; the .tmj is what gets painted. If they disagree the room is walkable where
+      // there is no floor, or walled where there is one, and neither shows up in a screenshot of a
+      // room whose furniture all still renders.
+      //
+      // Same defect as 0102, one surface down — there the guard was keyed to the wrong table, here
+      // the number simply had no second reader.
+      const tmj = loadTmj(`${room.id}.tmj`);
+      expect(
+        [tmj.width, tmj.height, tmj.tilewidth, tmj.tileheight],
+        `${room.id} declares ${grid.columns}x${grid.rows} in main.js and is painted ` +
+          `${tmj.width}x${tmj.height}`
+      ).toEqual([grid.columns, grid.rows, grid.tile, grid.tile]);
     });
 
     // Added after both of the first two interiors shipped without one. isFieldBlocked() and

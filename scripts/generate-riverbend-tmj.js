@@ -342,6 +342,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("RIVERBEND_FIELD_BLOCKS", "scripts/generate-riverbend-tmj.js", {
+    isLand: isRiverbendLand,
     doors,
     roads: roads.cells,
   })

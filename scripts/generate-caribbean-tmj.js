@@ -277,6 +277,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("CARIBBEAN_FIELD_BLOCKS", "scripts/generate-caribbean-tmj.js", {
+    isLand: isCaribbeanLand,
     doors,
     roads: roads.cells,
   })

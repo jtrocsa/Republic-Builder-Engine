@@ -403,6 +403,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("CANAL_CROSSROADS_FIELD_BLOCKS", "scripts/generate-canal-crossroads-tmj.js", {
+    isLand: isCanalCrossroadsLand,
     doors,
     roads: roads.cells,
   })

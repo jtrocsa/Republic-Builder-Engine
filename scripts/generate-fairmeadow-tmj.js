@@ -518,6 +518,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("FAIRMEADOW_FIELD_BLOCKS", "scripts/generate-fairmeadow-tmj.js", {
+    isLand: isFairmeadowLand,
     doors,
     roads: roads.cells,
   })

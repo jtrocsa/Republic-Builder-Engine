@@ -384,6 +384,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("RAILHEAD_FIELD_BLOCKS", "scripts/generate-railhead-tmj.js", {
+    isLand: isRailheadLand,
     doors,
     roads: roads.cells,
   })

@@ -417,6 +417,7 @@ writeFileSync(MAP_OUT, JSON.stringify(map.toTmj()));
 writeFileSync(
   BLOCKS_OUT,
   map.toBlocksModule("FURNACE_BEND_FIELD_BLOCKS", "scripts/generate-furnace-bend-tmj.js", {
+    isLand: isFurnaceBendLand,
     doors,
     roads: roads.cells,
   })

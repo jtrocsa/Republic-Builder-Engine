@@ -294,7 +294,7 @@ export class MapBuilder {
    * roads in the same shore sand as its riverbank, so reading it back off the tiles would file the
    * whole beach as road. RoadNetwork was already keeping that record for the spur router.
    */
-  toBlocksModule(mapId, generatorPath, { doors, roads } = {}) {
+  toBlocksModule(mapId, generatorPath, { doors, roads, isLand } = {}) {
     const sorted = [...this.blocks].sort(
       (a, b) => a.y1 - b.y1 || a.x1 - b.x1 || a.kind.localeCompare(b.kind)
     );
@@ -319,6 +319,39 @@ export class MapBuilder {
       );
     }
     lines.push("];");
+    if (isLand) {
+      // The generator's own land mask, sampled at every cell centre and drawn as a picture.
+      //
+      // main.js keeps a second, hand-written copy of every outdoor map's mask, deliberately —
+      // decision log 0036: it is a browser bundle entry, and the one thing that must never
+      // silently diverge is the ground the player collides with versus the ground that got
+      // painted. Deliberate duplication is fine. **Unchecked duplication is not**, and until
+      // Phase 104 the only pair anything compared was Richmond's, through a bespoke suite.
+      //
+      // So the mask travels with the artifact now, and field-map-coordinates.test.js holds
+      // main.js's copy against it. Rows rather than base64 because a coastline should be legible
+      // in a diff: move a treeline and this block shows you the treeline moving.
+      lines.push("");
+      lines.push(
+        "// Where this generator's own mask says the player may stand: '#' land, '.' not,"
+      );
+      lines.push(
+        "// one string per row, sampled at cell centres. main.js keeps a hand-written copy"
+      );
+      lines.push("// of the same mask (decision log 0036) and the test named above holds the two");
+      lines.push(
+        "// together — a cell open here and closed there is painted ground nobody can reach."
+      );
+      lines.push(`export const ${mapId.replace(/_BLOCKS$/, "_LAND")} = [`);
+      for (let row = 0; row < this.height; row += 1) {
+        let line = "";
+        for (let col = 0; col < this.width; col += 1) {
+          line += isLand(col + 0.5, row + 0.5) ? "#" : ".";
+        }
+        lines.push(`  "${line}",`);
+      }
+      lines.push("];");
+    }
     if (doors) {
       const sortedDoors = [...doors].sort((a, b) => a.row - b.row || a.col - b.col);
       lines.push("");
