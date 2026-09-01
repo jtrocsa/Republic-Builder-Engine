@@ -19,7 +19,7 @@
 // break this test loudly, which is the correct outcome for a governance document: somebody should
 // look.
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { UNIT_01_ACTIVITIES } from "../../apps/web/src/content/activities/unit-01-activities.js";
@@ -29,8 +29,17 @@ import { UNIT_04_ACTIVITIES } from "../../apps/web/src/content/activities/unit-0
 import { UNIT_05_ACTIVITIES } from "../../apps/web/src/content/activities/unit-05-activities.js";
 import { UNIT_06_ACTIVITIES } from "../../apps/web/src/content/activities/unit-06-activities.js";
 import { UNIT_07_ACTIVITIES } from "../../apps/web/src/content/activities/unit-07-activities.js";
+import { UNIT_08_ACTIVITIES } from "../../apps/web/src/content/activities/unit-08-activities.js";
 
-/** Every unit that has authored activities, by its number in the map program's table. */
+/**
+ * Every unit that has authored activities, by its number in the map program's table.
+ *
+ * **Hand-written, and therefore guarded below.** It stopped at 7 for the whole of Phase 99, so
+ * Unit 8's three missions were never checked against the slate they were built on — the same
+ * stale-per-unit-table shape that let `checkActivityRoutes()` skip that unit entirely. The slate
+ * happened to be right; nothing here would have said so if it had not been. The last case in this
+ * file reads the activities directory and fails when a module exists with no line here.
+ */
 const SHIPPED = {
   1: UNIT_01_ACTIVITIES,
   2: UNIT_02_ACTIVITIES,
@@ -39,6 +48,7 @@ const SHIPPED = {
   5: UNIT_05_ACTIVITIES,
   6: UNIT_06_ACTIVITIES,
   7: UNIT_07_ACTIVITIES,
+  8: UNIT_08_ACTIVITIES,
 };
 
 // Resolved off the repo root rather than import.meta.url, for the reason activity-content.test.js
@@ -128,5 +138,20 @@ describe("the slate table is a table, not a suggestion", () => {
       }
       expect(new Set(engines).size, `slate ${letter} repeats an engine`).toBe(3);
     }
+  });
+
+  it("checks every unit that has activities, not every unit somebody remembered to list", () => {
+    // The guard on SHIPPED above. A hand-written per-unit list with a sane fallback and no test is
+    // how a whole unit ships unchecked, and this file is a governance test — one that quietly
+    // stops covering a unit is worse than none, because the run still says green.
+    const modules = readdirSync(join(process.cwd(), "apps/web/src/content/activities"))
+      .map((file) => file.match(/^unit-0(d)-activities.js$/))
+      .filter(Boolean)
+      .map((match) => Number(match[1]));
+    const unlisted = modules.filter((unit) => !SHIPPED[unit]);
+    expect(
+      unlisted,
+      `activities modules with no line in SHIPPED: ${unlisted.map((n) => `unit-0${n}`).join(", ")}`
+    ).toEqual([]);
   });
 });
