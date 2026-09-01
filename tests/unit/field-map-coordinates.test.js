@@ -13,9 +13,9 @@
 // makes them cheap insurance against a change to the generator itself.
 
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   ARCHIVE_ROOM_BLOCK_RECTS,
@@ -452,6 +452,99 @@ function cellsPainted(tmj, entry) {
   }
   return cells;
 }
+
+// --- every committed field map, playable or not ----------------------------------------------------
+//
+// Everything below this block iterates FIELD_MAPS, which is the table of units a student can walk.
+// That is the right key for a question about NPCs or spawns — those only exist for a playable unit.
+// It is the wrong key for a question about the map file itself, and Phase 102 is how that was found.
+//
+// Unit 9's field map was generated, verified, rendered four times and committed while the unit was
+// deliberately kept out of FIELD_MAPS, because it has no cast and a FIELD_MAPS entry with an empty
+// npc list is scaffolding (decision log 0101 §7). Every geometry assertion in this file therefore
+// skipped it, including the first and cheapest one — and it had been painted 52x34 against a
+// FIELD_GRID of 56x36. The single most basic property of a field map was wrong for a phase, and
+// there was no run in this repository that could have said so.
+//
+// So these three key off the committed artifacts instead: the .tmj files on disk and the .blocks.js
+// modules beside them. A map that exists is checked whether or not anybody can walk on it yet, which
+// is what makes it safe to commit a map ahead of its unit — and that is now a documented order of
+// work, not an accident.
+//
+// The convention that makes the derivation possible — an outdoor field map is `<place>-field.tmj`,
+// and nothing else is — is asserted in the other direction below, so it cannot quietly stop holding.
+const OUTDOOR_MAP_FILES = readdirSync(path.join(REPO_ROOT, "apps/web/src/content/maps"))
+  .filter((file) => file.endsWith("-field.tmj"))
+  .sort();
+
+const COMMITTED_BLOCKS = Object.fromEntries(
+  await Promise.all(
+    OUTDOOR_MAP_FILES.map(async (file) => {
+      const module = await import(
+        pathToFileURL(
+          path.join(REPO_ROOT, "apps/web/src/content/maps", file.replace(/.tmj$/, ".blocks.js"))
+        ).href
+      );
+      const exportName = Object.keys(module).find((name) => name.endsWith("_FIELD_BLOCKS"));
+      return [file, module[exportName]];
+    })
+  )
+);
+
+describe("every committed field map, whether or not its unit is playable", () => {
+  it("finds at least as many maps on disk as there are playable units (normal case)", () => {
+    // Guards the derivation itself: if the glob ever matched nothing, every it.each below would
+    // vacuously pass and this file would go quiet in exactly the way it went quiet on Unit 9.
+    expect(OUTDOOR_MAP_FILES.length).toBeGreaterThanOrEqual(Object.keys(FIELD_MAPS).length);
+  });
+
+  it.each(Object.keys(FIELD_MAPS))("%s's map is named by the convention (edge case)", (unitId) => {
+    expect(
+      OUTDOOR_MAP_FILES,
+      `${unitId}'s .tmj is not a *-field.tmj, so the checks in this block no longer cover every ` +
+        `outdoor map — either rename it or stop deriving the list from the filename`
+    ).toContain(TMJ_BY_UNIT[unitId]);
+  });
+
+  it.each(OUTDOOR_MAP_FILES)("%s is painted at FIELD_GRID's size (normal case)", (file) => {
+    const tmj = loadTmj(file);
+    expect(
+      [tmj.width, tmj.height, tmj.tilewidth, tmj.tileheight],
+      `${file} is ${tmj.width}x${tmj.height} and FIELD_GRID is ${FIELD_GRID.columns}x` +
+        `${FIELD_GRID.rows}. FIELD_GRID is the collision and camera world every outdoor map is ` +
+        `played in — only an interior declares a size of its own — so a map painted at any other ` +
+        `size is stretched to fit and every coordinate on it means something different on screen ` +
+        `than it does in the physics`
+    ).toEqual([FIELD_GRID.columns, FIELD_GRID.rows, FIELD_GRID.tile, FIELD_GRID.tile]);
+  });
+
+  it.each(OUTDOOR_MAP_FILES)("%s keeps every rect in bounds (edge case)", (file) => {
+    const bad = COMMITTED_BLOCKS[file]
+      .filter(
+        (b) =>
+          b.x1 >= b.x2 ||
+          b.y1 >= b.y2 ||
+          b.x1 < 0 ||
+          b.y1 < 0 ||
+          b.x2 > FIELD_GRID.columns ||
+          b.y2 > FIELD_GRID.rows
+      )
+      .map((b) => b.kind);
+    expect(bad).toEqual([]);
+  });
+
+  it.each(OUTDOOR_MAP_FILES)("%s backs every rect with drawn art (normal case)", (file) => {
+    const tmj = loadTmj(file);
+    const structures = tmj.layers.find((layer) => layer.name === "structures");
+    if (!structures) return;
+    const empty = COMMITTED_BLOCKS[file]
+      .filter((block) =>
+        cellsUnder(block).every(([col, row]) => structures.data[row * tmj.width + col] === 0)
+      )
+      .map((block) => block.kind);
+    expect(empty).toEqual([]);
+  });
+});
 
 describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, map) => {
   const tmj = loadTmj(TMJ_BY_UNIT[unitId]);

@@ -48,10 +48,11 @@
 // visible, and the argument is that it is not: what the player can see of the thing everybody here
 // is fighting over is nothing whatever, and the only evidence it happened is indoors in boxes.
 //
-// **No cars**, because the library has no automobile between about 1910 and the present — Phase 96
-// commissioned a 1950s fleet for exactly this reason and `Highway Rest Area`'s forty vehicles are
-// contemporary to the last one. The lot is drawn empty with its bays marked, which is also what a
-// university car park looks like at four in the afternoon.
+// **No cars, and therefore no car park at all.** The library has no automobile between about 1910
+// and the present — Phase 96 commissioned a 1950s fleet for exactly this reason and `Highway Rest
+// Area`'s forty vehicles are contemporary to the last one. A lot here could only have been a grey
+// rectangle with nothing in it, which does not read as a Tuesday afternoon; it reads as unfinished
+// ground. The campus road keeps a grass verge instead and every vehicle on this map is off-camera.
 //
 // **Nothing from tile-B-04's modern glass block or its sports track** — see the exclusion list in
 // the palette header.
@@ -68,13 +69,26 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const MAP_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/furnace-bend-field.tmj");
 const BLOCKS_OUT = path.join(REPO_ROOT, "apps/web/src/content/maps/furnace-bend-field.blocks.js");
 
-const WIDTH = 52;
-const HEIGHT = 34;
+// **56x36, and this is not a free choice.** `FIELD_GRID` in main.js is a single constant —
+// `{ columns: 56, rows: 36, tile: 48 }` — and it is the collision and camera world that every
+// outdoor field map is played in; only an interior declares a size of its own. A map painted at
+// any other size is silently stretched to fit it, and every coordinate placed on it then means
+// something on screen that it does not mean in the physics.
+//
+// This map shipped at 52x34 in Phase 102 and nothing said so, because the check that catches it
+// runs `describe.each(Object.entries(FIELD_MAPS))` and this unit is deliberately not in
+// FIELD_MAPS until it has a cast. See decision log 0102.
+const WIDTH = 56;
+const HEIGHT = 36;
+
+// The east end of every band. The map is framed by four columns of more-of-the-same either side,
+// so the walks, the road and the forecourt all run 4 to 51 and the building ranges stop there too.
+const EAST_END = WIDTH - 5;
 
 // The rows everything is placed against, so they are constants rather than literals repeated down
 // the file. Read the file top to bottom and this is the section through the map.
 const BUILD_ROW = 2; // the building row, rows 2-3; ground contact on 3, doors open onto 4
-const APRON_ROW = 4; // red brick at the library's own front, rows 4-5
+const APRON_ROW = 4; // the poured forecourt along the whole building row, rows 4-5
 const FRONT_WALK_ROW = 6; // the poured walk along the whole building row — trunk 1
 const QUAD_ROW = 7; // the quad begins
 const AXIS_ROW = 12; // the paved cross-axis, rows 12-13
@@ -82,7 +96,7 @@ const SOUTH_WALK_ROW = 18; // the quad's south walk — trunk 2
 const ROAD_ROW = 19; // the campus road, rows 19-20; rows 21-22 are grass verge
 const STEPS_ROW = 23; // the retaining wall at the head of the slope, rows 23-24
 const SLOPE_ROW = 25; // rough grass below the steps
-const TREELINE_ROW = 30; // the mask's south limit
+const TREELINE_ROW = 32; // the mask's south limit
 
 // The main axis: the library's own door, straight down the quad to the south walk. Two tiles wide,
 // because it is the one route on this map that was designed rather than worn.
@@ -105,7 +119,7 @@ const STEPS_GAP_COL = 32;
 // Cutting the mask at 29.5 leaves the slope's last row walkable while every tree on it reads as
 // afloat, which is what field-map-coordinates.test.js reported eighteen times on Fairmeadow.
 function isFurnaceBendLand(x, y) {
-  return x >= 3.5 && x <= 48.5 && y >= BUILD_ROW && y <= TREELINE_ROW;
+  return x >= 3.5 && x <= 52.5 && y >= BUILD_ROW && y <= TREELINE_ROW;
 }
 
 const { tilesets, gid, gidRect } = resolvePalette(palette);
@@ -134,7 +148,7 @@ for (let row = 0; row < HEIGHT; row += 1) {
 // a field** rather than as buildings on a campus. A made surface at the foot of a building is what
 // tells the eye the building is founded.
 for (let row = APRON_ROW; row < FRONT_WALK_ROW; row += 1) {
-  for (let col = 4; col <= 47; col += 1) map.groundBlock(col, row, T.walk);
+  for (let col = 4; col <= EAST_END; col += 1) map.groundBlock(col, row, T.walk);
 }
 
 // The campus road. Painted before the footpath network so its gids can be handed over as
@@ -142,13 +156,13 @@ for (let row = APRON_ROW; row < FRONT_WALK_ROW; row += 1) {
 // it.
 //
 // **Two rows, and there is no car park.** The first render gave the road four rows and put an empty
-// lot under it, and four rows of unbroken black-top across a fifty-two-tile map is an arterial
+// lot under it, and four rows of unbroken black-top across a fifty-six-tile map is an arterial
 // highway — it read as Fairmeadow's expressway, which is the one composition this map exists not to
 // repeat. The lot went with it for a simpler reason: there is no 1990s automobile in the library
 // (`0100` §4), so a car park here could only ever have been a grey rectangle with nothing in it,
 // and a grey rectangle with nothing in it is not a fact about 1998, it is a hole.
 for (let row = ROAD_ROW; row <= ROAD_ROW + 1; row += 1) {
-  for (let col = 4; col <= 47; col += 1) map.groundBlock(col, row, T.asphalt);
+  for (let col = 4; col <= EAST_END; col += 1) map.groundBlock(col, row, T.asphalt);
 }
 
 // The service turning area east of the library, where a truck backs twice a week. **Black-top,
@@ -159,8 +173,13 @@ for (let row = ROAD_ROW; row <= ROAD_ROW + 1; row += 1) {
 // was worse: a hard-edged brown rectangle set into a poured forecourt reads as **a hole in the
 // campus**, not as a yard. Asphalt is what a library actually backs a truck onto, it is one shade
 // off the concrete either side of it rather than four, and it says "service" without shouting.
+// **It fills the alley exactly** — the library's east wing ends at column 25 and the
+// administration block begins at 32, so the yard is 26 to 31 and its ends are two buildings. The
+// resize render found it four columns adrift of the door it serves, with lawn behind half of it,
+// reading as a strip of road stopping in the middle of a quadrangle. A service yard is a gap
+// between two buildings or it is nothing.
 for (let row = APRON_ROW; row <= FRONT_WALK_ROW - 1; row += 1) {
-  for (let col = 28; col <= 33; col += 1) map.groundBlock(col, row, T.asphalt);
+  for (let col = 26; col <= 31; col += 1) map.groundBlock(col, row, T.asphalt);
 }
 
 // --- the footpath network's authored trunk ---------------------------------------------------------
@@ -170,8 +189,8 @@ for (let row = APRON_ROW; row <= FRONT_WALK_ROW - 1; row += 1) {
 const HARDER = new Set([...blockGids(map, T.asphalt), ...blockGids(map, T.paver)]);
 const [SPUR_MATERIAL] = palette.road;
 const roads = new RoadNetwork(map, T[SPUR_MATERIAL], { harder: HARDER });
-roads.run(4, FRONT_WALK_ROW, 47, FRONT_WALK_ROW); // along the building row
-roads.run(4, SOUTH_WALK_ROW, 47, SOUTH_WALK_ROW); // the quad's south side
+roads.run(4, FRONT_WALK_ROW, EAST_END, FRONT_WALK_ROW); // along the building row
+roads.run(4, SOUTH_WALK_ROW, EAST_END, SOUTH_WALK_ROW); // the quad's south side
 
 // The paved axis and the cross-axis, in `paver` rather than concrete: these two were designed at
 // the same time as the quad and the rest of the walks were poured later, one at a time, wherever
@@ -184,7 +203,7 @@ for (let row = FRONT_WALK_ROW; row <= SOUTH_WALK_ROW; row += 1) {
   }
 }
 for (let row = AXIS_ROW; row <= AXIS_ROW + 1; row += 1) {
-  for (let col = 8; col <= 43; col += 1) {
+  for (let col = 8; col <= EAST_END - 4; col += 1) {
     map.groundBlock(col, row, T.paver);
     roads.paint(col, row);
   }
@@ -206,7 +225,7 @@ const withDoor = (col, row, entry, label) =>
 // concrete — this campus grew while the works were running, which is the quiet joke underneath the
 // map: the library was paid for by the company whose records it now cannot let you read.
 // **Two continuous ranges rather than four models on a lawn.** The first render put four
-// four-tile buildings on a fifty-two-tile row with the lawn showing between all of them, and a
+// four-tile buildings on a fifty-six-tile row with the lawn showing between all of them, and a
 // quadrangle whose sides are gaps is not a quadrangle — the enclosure is the whole reason the word
 // exists. The blocks abut in ranges now, west and east, with the library standing clear between
 // them, which is also what a campus that grew in one funded decade looks like.
@@ -223,6 +242,11 @@ map.stamp(32, BUILD_ROW, T.hallLong, "solid", "administration block");
 map.stamp(36, BUILD_ROW, T.hallBrick, "solid", "registrar's block");
 map.stamp(40, BUILD_ROW, T.hallLong, "solid", "engineering block");
 map.stamp(44, BUILD_ROW, T.hallBrick, "solid", "student union");
+// The fifth block is what 56x36 bought. Widening the map moved the east range four columns east
+// instead, and the render came back with a ten-column hole in the building row and the service
+// yard stranded in the middle of it — a quadrangle whose east side is a gap is not a quadrangle,
+// which is the finding the very first render of this map already made once.
+map.stamp(48, BUILD_ROW, T.hallLong, "solid", "field house");
 
 // --- the quad's trees -------------------------------------------------------------------------------
 // Autumn, and every crown here was already in the library — Phase 101 (`0100` §5) found five of them
@@ -262,11 +286,13 @@ for (const [index, [col, row]] of [
   [30, QUAD_ROW + 3],
   [36, QUAD_ROW + 1],
   [42, QUAD_ROW + 3],
+  [48, QUAD_ROW + 1],
   [7, AXIS_ROW + 4],
   [12, AXIS_ROW + 2],
   [29, AXIS_ROW + 2],
   [35, AXIS_ROW + 4],
   [42, AXIS_ROW + 2],
+  [48, AXIS_ROW + 4],
 ].entries()) {
   map.stamp(col, row, QUAD_CANOPY[index % QUAD_CANOPY.length], "base", "quad tree");
 }
@@ -280,9 +306,10 @@ for (const [index, [col, row]] of [
 for (const [col1, col2, row] of [
   [5, 7, APRON_ROW - 1],
   [12, 14, APRON_ROW - 1],
-  [26, 27, APRON_ROW],
-  [33, 35, APRON_ROW - 1],
+  [26, 27, APRON_ROW - 1],
+  [34, 36, APRON_ROW - 1],
   [42, 44, APRON_ROW - 1],
+  [49, 51, APRON_ROW - 1],
 ]) {
   for (let col = col1; col <= col2; col += 1) {
     map.stamp(col, row, col % 2 === 0 ? T.shrub : T.shrubAlt, "base", "foundation planting");
@@ -296,7 +323,7 @@ for (const [col1, col2, row] of [
 // along the top, which is a better object for the head of a bank than the one that was asked for.
 // It is kept under the name the render earned — the same call `0095` §5 records for the abatis.
 // One gap, and the gap is the only way down.
-for (let col = 5; col <= 46; col += 2) {
+for (let col = 5; col <= EAST_END - 1; col += 2) {
   if (col >= STEPS_GAP_COL - 1 && col <= STEPS_GAP_COL + 2) continue;
   map.stamp(col, STEPS_ROW, T.quadWall, "base", "quad retaining wall");
 }
@@ -304,6 +331,9 @@ for (let col = 5; col <= 46; col += 2) {
 // --- the slope ------------------------------------------------------------------------------------
 // Older, heavier, and half-turned rather than turned: these trees were here before the campus and
 // nobody planted them in a row.
+// The two rows the map gained at 56x36 went here rather than anywhere else, because depth is what
+// this composition is made of: the slope is now seven rows deep against the quad's eleven, and the
+// growth thickens going down it instead of stopping in a line four rows below the wall.
 const SLOPE_CANOPY = [T.treeOlive, T.treeGreen, T.treeOlive, T.treeTan];
 for (const [index, [col, row]] of [
   [7, SLOPE_ROW + 1],
@@ -313,6 +343,12 @@ for (const [index, [col, row]] of [
   [29, SLOPE_ROW + 2],
   [37, SLOPE_ROW + 1],
   [42, SLOPE_ROW + 3],
+  [46, SLOPE_ROW + 2],
+  // the deep row: contact on SLOPE_ROW + 6, one clear row above the treeline's own stamp
+  [9, SLOPE_ROW + 5],
+  [20, SLOPE_ROW + 5],
+  [33, SLOPE_ROW + 5],
+  [49, SLOPE_ROW + 4],
 ].entries()) {
   map.stamp(col, row, SLOPE_CANOPY[index % SLOPE_CANOPY.length], "base", "slope tree");
 }
@@ -321,7 +357,7 @@ for (const [index, [col, row]] of [
 // continuing rather than the row the tiles stop on. `decor` — the whole footprint is outside the
 // walkable rectangle, and field-map-coordinates.test.js reads an unreachable rect on non-land as a
 // building standing in the sea.
-for (let col = 2; col <= 49; col += 4) {
+for (let col = 2; col <= EAST_END + 2; col += 4) {
   map.stamp(col, TREELINE_ROW, SLOPE_CANOPY[col % SLOPE_CANOPY.length], "decor", "treeline");
 }
 
@@ -336,13 +372,13 @@ for (let col = 2; col <= 49; col += 4) {
 // This is that eye, written down. It runs against the authored trunk only — the runs painted above,
 // not the spurs, because a spur is generated to reach a door and is allowed to end at one.
 const TRUNK = [];
-for (let col = 4; col <= 47; col += 1) {
+for (let col = 4; col <= EAST_END; col += 1) {
   TRUNK.push([col, FRONT_WALK_ROW], [col, SOUTH_WALK_ROW]);
 }
 for (let row = FRONT_WALK_ROW; row <= SOUTH_WALK_ROW; row += 1) {
   TRUNK.push([AXIS_COL, row], [AXIS_COL + 1, row]);
 }
-for (let col = 8; col <= 43; col += 1) {
+for (let col = 8; col <= EAST_END - 4; col += 1) {
   TRUNK.push([col, AXIS_ROW], [col, AXIS_ROW + 1]);
 }
 const blocked = TRUNK.filter(([col, row]) =>
@@ -370,7 +406,7 @@ const spurs = connectAll(roads, { doors, isLand: isFurnaceBendLand });
 // growth on it is not a mown quadrangle, and the contrast between the two halves is the one thing
 // on this map a student can read before anybody speaks.
 for (let row = SLOPE_ROW; row < TREELINE_ROW; row += 1) {
-  for (let col = 5; col < 47; col += 1) {
+  for (let col = 5; col < EAST_END; col += 1) {
     if (map.occupied(col, row) || roads.has(col, row)) continue;
     if (hash01(col, row, 11) >= 0.05) continue;
     map.stamp(col, row, pick([T.shrub, T.shrubAlt], col, row, 7), "solid", "slope scrub");

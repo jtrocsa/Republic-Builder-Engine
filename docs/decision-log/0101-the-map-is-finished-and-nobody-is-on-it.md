@@ -1,6 +1,9 @@
 # 0101 — The map is finished and nobody is on it
 
-**Phase 102 · 2026-08-31 · Accepted**
+**Phase 102 · 2026-08-31 · Accepted** — **superseded on one fact by `0102`:** this map was
+committed at 52×34 and every outdoor field map must be `FIELD_GRID`'s 56×36. It is 56×36 as of
+Phase 103, which also explains why nothing in the repository could say so. Everything else below
+stands.
 
 Unit 9's field map: `furnace-bend-field.tmj`, 52×34, five sheets, 79 collision rects, two doors both
 routed. **No cast, no `FIELD_MAPS` entry, no line in `UNITS`**, and §7 is about why those three are

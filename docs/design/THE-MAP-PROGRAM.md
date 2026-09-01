@@ -375,8 +375,9 @@ microfilm reader, without which the middle step of the TRACE's paper → film �
 object in the room. Neither blocks the map; both block a faithful room. **Neither is commissioned** —
 the PixelLab balance is nearly out, and that is a spend decision rather than a build step.
 
-**The map's ground shipped in Phase 102** (decision log `0101`) — `furnace-bend-field.tmj`, 52×34,
-79 collision rects, both doors routed — **and it has no cast, because there is no 1990s body in 140
+**The map's ground shipped in Phase 102** (decision log `0101`) — `furnace-bend-field.tmj`, 56×36,
+95 collision rects, both doors routed; it was committed at 52×34 and resized in Phase 103, see
+`0102` — **and it has no cast, because there is no 1990s body in 140
 character sheets.** The unit is still absent from `UNITS` and from `FIELD_MAPS`, and those are one
 decision rather than three omissions: with no cast there are no source points, and a `UNITS` line
 would put a player on an empty quadrangle with seven records nobody is holding.
