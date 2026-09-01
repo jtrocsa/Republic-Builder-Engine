@@ -62,10 +62,19 @@ const ACTIVITY_ROUTE_GROUP = "cross-reference: activity routes match activity ki
  *
  * Also checks the reverse direction: an activity keyed to a source id that does not exist is
  * content nobody can ever reach.
+ *
+ * **The unit list is derived, and it is derived because the hand-written one went stale.** It read
+ * `["unit01" … "unit07"]` and stopped there, so when Unit 8 shipped its three activities in Phase
+ * 99 neither direction of this check ran on them — and what it would have caught was real: the new
+ * activities module was never added to `local-content-repository.js`'s `UNIT_MODULES`, so the unit
+ * reached the validator carrying three routed sources and an empty activity map, and the run said
+ * 0 errors. That is the per-unit-table-with-a-sane-fallback-and-no-test shape CLAUDE.md names, in
+ * the one file whose whole job is to notice it. Walk whatever `loadChronicleContent()` returns
+ * instead — which is already what the main schema loop below walks.
  */
 function checkActivityRoutes(content) {
   const errors = [];
-  ["unit01", "unit02", "unit03", "unit04", "unit05", "unit06", "unit07"].forEach((key) => {
+  Object.keys(content).forEach((key) => {
     const unit = content[key] || {};
     const activities = unit.activities || {};
     const sources = unit.sources || [];

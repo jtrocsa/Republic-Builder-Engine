@@ -47,6 +47,7 @@ import { UNIT_04_ACTIVITIES } from "../content/activities/unit-04-activities.js"
 import { UNIT_05_ACTIVITIES } from "../content/activities/unit-05-activities.js";
 import { UNIT_06_ACTIVITIES } from "../content/activities/unit-06-activities.js";
 import { UNIT_07_ACTIVITIES } from "../content/activities/unit-07-activities.js";
+import { UNIT_08_ACTIVITIES } from "../content/activities/unit-08-activities.js";
 import { CASE_001_SOURCE_ALTERNATES } from "../content/case-001-source-alternates.js";
 import { CASE_001_MCQ_ALTERNATES } from "../content/quests/case-001-mcq-alternates.js";
 import { CASE_001_SEQUENCING_ALTERNATES } from "../content/quests/case-001-sequencing-alternates.js";
@@ -61,6 +62,13 @@ import { CASE_006_EVIDENCE_ORGANIZING_ALTERNATES } from "../content/quests/case-
  *
  * Activity content is keyed by the source id each activity opens from, for the four engines in
  * engine/activities/. Every authored field map has three.
+ *
+ * **A unit whose map has not been built yet takes `activities: {}` here, and that placeholder has
+ * to be replaced in the same commit the activities ship in.** Unit 8's was not: its three shipped in
+ * Phase 99 and this line still said `{}` afterwards, so the whole slate reached the validator as an
+ * empty map. Nothing failed, because `checkActivityRoutes()` was iterating a hand-written unit list
+ * that stopped at Unit 7 — see the comment on that function, which now derives its list from this
+ * one. A stale `{}` here is a hard error at `npm run validate:content` from that fix onward.
  */
 const UNIT_MODULES = {
   "unit-01": { campaign: unit01Campaign, quests: unit01Quests, activities: UNIT_01_ACTIVITIES },
@@ -70,10 +78,7 @@ const UNIT_MODULES = {
   "unit-05": { campaign: unit05Campaign, quests: unit05Quests, activities: UNIT_05_ACTIVITIES },
   "unit-06": { campaign: unit06Campaign, quests: unit06Quests, activities: UNIT_06_ACTIVITIES },
   "unit-07": { campaign: unit07Campaign, quests: unit07Quests, activities: UNIT_07_ACTIVITIES },
-  // Unit 8 has content and no map yet, which is the state Units 3-7 each sat in for a phase. Its
-  // three activities arrive with the map they are played on, and until then the literal below is
-  // the honest value rather than a stub file somebody has to open to discover is empty.
-  "unit-08": { campaign: unit08Campaign, quests: unit08Quests, activities: {} },
+  "unit-08": { campaign: unit08Campaign, quests: unit08Quests, activities: UNIT_08_ACTIVITIES },
 };
 
 /**
