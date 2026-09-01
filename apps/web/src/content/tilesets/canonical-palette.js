@@ -370,6 +370,29 @@ export const GAPS = [
   // rest. Registered here in Phase 81: the Gap Register in art-and-map-style-guide.md has carried
   // this row since Canal Crossroads shipped, but it was never mirrored into this array, so the
   // two sources of truth disagreed on how many gaps exist.
+  // --- The campus archive (Phase 101, decision log 0100) ---------------------------------------
+  // Unit 9's reading room and the processing room beneath it. Everything else those two rooms
+  // need is already in the library and is named in `p9-reading-room` and `p9-processing-room`:
+  // reading tables, double-sided stacks, panelled walls, binder shelves, counter runs, copiers,
+  // filing cabinets, and a workstation of the right decade. These two are what the office packs
+  // cannot supply, and both are named by records the player is sent into those rooms to read.
+  "prop.archive.recordCarton", // The grey flip-top document box: singly, stacked, and in a
+  // shelved run, with manila folders standing in it. `campus-two-editions` cites BOX 3, FOLDER
+  // 11 and the processing room's whole job is boxing, foldering and describing. The library's
+  // storage furniture is filing cabinets and bookcases, and the filing cabinet is not a near
+  // miss — it is the wrong object, because a drawer of hanging files says "current business
+  // records", which is precisely what an archive is not. This is the object that makes a room
+  // read as an archive rather than as an office, which is the sentence the chart case below is
+  // already carrying for Meridian.
+  "prop.archive.microfilmReader", // Beige console; a large screen raked back at roughly thirty
+  // degrees; a film carriage under the screen; two spool arms, one either side. Registered
+  // because `campus-two-editions` names REEL 47 and the target frame preceding it, and the TRACE
+  // it feeds is the chain paper -> film -> scan: without the reader the middle step of that
+  // chain has no object anywhere in the room. Partial, and the substitute is worth naming so
+  // nobody re-derives it — `University/tile-B-05`'s AV lecterns at (4,4) and (4,10) are grey
+  // consoles with raked screens and will pass at map scale. Neither has reels, and the reels are
+  // the entire difference between a microfilm reader and a control panel. Describe the geometry,
+  // never the object: this is the third register entry in a row to say so.
   // --- Meridian Institute props (Phase 79, decision log 0062) ---------------------------------
   // The rival institute's interior is covered by office/3, office/4, 19thC tile-B-04 and
   // Steampunk/5 — see `meridian-interior` in maps/planned-maps.js. These three props are what

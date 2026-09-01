@@ -256,6 +256,8 @@ test fails if a planned map claims a gap that is not registered there.
 | **Twentieth-century American commercial block** | The flat-parapet commercial block of roughly 1890–1960: one or two storeys, a plate-glass shopfront under a signboard fascia, no ornament above the cornice. `19th Century European City/tile-B-01` is Second Empire and `Highway Rest Area/tile-B-02` is a strip mall with modern glazing and branding; the library holds nothing between them. Partial; the strip mall's brick units serve at a distance with the branded frontages kept off camera. |
 | **Range cattle**                                | The library has no cattle sprite of any kind. `Wild West` draws a corral as a finished enclosure and the one animal on its sheets is a horse inside a stable frontage. So `railhead-field`s stock pens are empty in the shipping season, which is a real loss on a map about the industry a land sale was for. Not partial — absent.                                                                                                                   |
 | **Antebellum American commercial street**       | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged.                                                                                                                                                                      |
+| **Archival record carton**                      | The grey flip-top document box — singly, stacked, and in a shelved run, with manila folders standing in it. The library's storage furniture is filing cabinets and bookcases. The filing cabinet is not a near miss but the **wrong object**: a drawer of hanging files says _current business records_, which is exactly what an archive is not. Absent. This is what makes a room read as an archive rather than an office.                          |
+| **Microfilm reader**                            | Beige console; a large screen raked back about thirty degrees; a film carriage beneath it; two spool arms. Partial — `University/tile-B-05`'s AV lecterns at (4,4) and (4,10) are grey consoles with raked screens and pass at map scale, but neither has reels, and the reels are the whole difference between a microfilm reader and a control panel.                                                                                                |
 
 **The Second Empire substitution, as used a second time on `immigrant-port-field`, where it is not a
 substitution at all.** The Ellis Island Main Building is red brick with limestone trim and a taller
@@ -419,6 +421,44 @@ came back a **show car** — pinched waist, separate fenders, open cabin — bec
 "seen from directly above" together are a hot-rod render whatever decade is named. What worked was
 asking for the plainness: matte, few highlights, a flat rectangular roof panel between a windscreen
 band and a rear-window band. **Name the construction, never the thing** — a third time.
+
+The **campus archive** was surveyed in Phase 101, decision log `0100`, against Unit 9's authored
+records rather than against a room somebody imagined. It is the first survey in the programme where
+the honest answer was **mostly yes**, and that is worth stating as plainly as the misses, because a
+reconnaissance that only ever reports gaps stops being believed.
+
+**Not missing, and comprehensively so.** `University/tile-B-04` is the strongest single exterior
+sheet in the library for an American state university — brick and concrete blocks of the 1960s and
+70s at map scale, a porticoed administration building, running tracks, bike shelters. The reading
+room's tables, chairs, double-sided stacks, panelled walls and binder shelves are all in `office/3`
+and `office/4`; the processing room's work counter is `office/2`'s cabinet-and-counter run and its
+filing cabinets and tall storage cupboards are `office/1`'s. **And the month came free.**
+`Modern Park/tile-B-05` carries five autumn crowns, three of them with fallen leaves at the base, so
+an October map needs no commission to be October — which the catalog had already recorded, in the
+words "summer and autumn dress", and which is worth noticing because it is the case where the prose
+was right and nobody had checked.
+
+**The one thing the catalog could not settle, and the pixels could.** The three `office` sheets
+disagree about what year it is. `office/1`'s four workstations are beige CRTs — deep chassis, thick
+bezel, a vent grille under a small screen — and are correct for 1998; `office/2`'s and `office/3`'s
+are flat panels, 2005 at the earliest. The catalog said "desks with computers" for the first and
+nothing about monitors for the other two, so it could not be used to choose, and a room furnished
+out of all three would have put twenty years on one desk. This is an **exclusion list, not a gap** —
+the same discipline `p8-suburb` applies to Highway Rest Area, and the second time running that the
+real discipline of a survey turned out to be what to leave out.
+
+**Absent, and both named by records the player is sent to read.** The **record carton** and the
+**microfilm reader**, in the table above. Neither blocks the map, which is a campus quadrangle and is
+fully dressed; both block a faithful _room_. The reader is the sharper of the two, because
+`campus-two-editions` names REEL 47 and the target frame before it, and the mission it feeds is the
+chain paper → film → scan: without a reader the middle step of that chain has no object anywhere in
+the room the mission is set in.
+
+**And one thing was deliberately not registered.** A modern card catalogue — the oak cabinet of small
+drawers — is absent from the library too, in any idiom later than `Steampunk/5`'s Victorian brass. It
+is not a gap, because no record in the unit names one: the finding aid is a bound thirty-page guide
+on a table, not a drawer of cards. Registering it would be registering the furniture of a room from
+a photograph rather than from the content, which is how a shopping list becomes a mood board.
 
 Three **Meridian props** are newly registered gaps, because those four sheets cannot supply them.
 Sizes and prompt guidance live in [`../art/MERIDIAN-ASSET-BRIEF.md`](../art/MERIDIAN-ASSET-BRIEF.md)

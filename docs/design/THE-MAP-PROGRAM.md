@@ -357,7 +357,25 @@ is entitled to see would be an accusation against a real named university. And t
 `sequencing` and `evidence-organizing` — the thick pair, which balances the quest-type ledger at
 6/6/3/3 across the nine units and was what the content wanted anyway.
 
-Owed: art reconnaissance, the map and the cast, two interiors, three activities.
+**The art reconnaissance ran in Phase 101** (decision log `0100`), and its result is the one the
+programme had not had yet: **mostly yes.** `p8-campus` has sat in the forward slate since Phase 81
+with no gap declared, and checking it against the pixels found the entry was right — `University/
+tile-B-04` is the library's strongest American state-university exterior, and the two interiors'
+tables, stacks, panelled walls, counter runs, cabinets and copiers are all in the four `office`
+sheets. **The month came free too**: `Modern Park/tile-B-05` carries five autumn crowns, three with
+fallen leaves at the base.
+
+Two things from it bind whoever builds the map. **Every screen on this map comes from `office/1`** —
+its workstations are beige CRTs and correct for 1998, where `office/2`'s and `office/3`'s are flat
+panels and are 2005 at the earliest. The catalog says "desks with computers" and cannot settle it;
+only the sheets can, and a room furnished out of all three puts twenty years on it. That is an
+exclusion list, not a gap. And **two objects are genuinely absent and both are registered**: the
+archival record carton, without which a processing room is an office with a photocopier, and the
+microfilm reader, without which the middle step of the TRACE's paper → film → scan chain has no
+object in the room. Neither blocks the map; both block a faithful room. **Neither is commissioned** —
+the PixelLab balance is nearly out, and that is a spend decision rather than a build step.
+
+Owed: the map and the cast, two interiors, three activities.
 
 This is where the final decision belongs — controlled, destroyed, selectively released, or preserved
 openly — because by then the player has spent nine units learning that the answer is not obvious.

@@ -379,7 +379,16 @@ export const PLANNED_MAPS = [
       "Was `p9-campus` until Phase 81. Assigned to Period 8 because the campus is one of that " +
       "period's defining settings — sit-ins, SNCC, the Free Speech Movement, Kent State — and " +
       "because Period 8 needed the coverage. The sheets are era-agnostic and serve a Period 9 " +
-      "campus unchanged, so this is an assignment rather than an exclusion.",
+      "campus unchanged, so this is an assignment rather than an exclusion. CONFIRMED against " +
+      "the pixels in Phase 101, when Unit 9's quadrangle was surveyed off this entry: tile-B-04 " +
+      "is the strongest single exterior sheet in the library for an American state university — " +
+      "brick and concrete blocks of the 1960s and 70s at map scale, a porticoed administration " +
+      "building at (4,0), running tracks, bike shelters at (13,12). Two notes for whoever builds " +
+      "it. Take the month off Modern Park/tile-B-05, which carries five autumn crowns and three " +
+      "of them with fallen leaves at the base — an October map does not need a commission to be " +
+      "October. And exclude the modern glass-and-HVAC block at (8,8)-(11,15), which reads 2010s " +
+      "against everything else on the sheet. Nothing here is a gap; the two Unit 9 gaps are " +
+      "indoors, in the two entries under Period 9.",
   },
 
   // ---------------------------------------------------------------------------- Period 9
@@ -388,6 +397,55 @@ export const PLANNED_MAPS = [
   // Period 8's heavily — `p8-campus` and `p8-suburb` both serve a present-day map with no sheet
   // changes. Add here only when a Period 9 map needs something the two above cannot dress.
   //
+  {
+    id: "p9-reading-room",
+    period: 9,
+    status: "planned",
+    intent:
+      "A university special-collections reading room in 1998: supervised tables in sight of a " +
+      "desk, the stacks behind them, a shelf of finding aids, and one machine for reading film.",
+    sheets: [
+      "office/4.png", // dark panelled walls (rows 2-4); bookcases of binders (12,4)-(13,7)
+      "office/3.png", // double-sided stacks (3,3)-(5,4); low bookcases; chairs
+      "University/tile-B-05.png", // long tables and benches; the AV lectern stands in for the reader
+      "office/1.png", // the workstation — and ONLY office/1's, see below
+    ],
+    gap: "prop.archive.microfilmReader",
+    notes:
+      "Surveyed against the pixels in Phase 101 rather than against the catalog's prose, and the " +
+      "survey turned up one rule that binds both of Unit 9's rooms: THE OFFICE PACKS DISAGREE " +
+      "ABOUT WHAT YEAR IT IS, AND ONLY ONE OF THEM IS RIGHT FOR THIS MAP. office/1's four " +
+      "workstations are beige CRTs — deep chassis, thick bezel, a vent grille under a small " +
+      "screen — and are correct for 1998. office/2's and office/3's are flat panels, which are " +
+      "2005 at the earliest. The catalog says 'desks with computers' for office/1 and nothing " +
+      "about monitors for the other two, so it cannot be used to choose between them; only the " +
+      "sheets can. Draw every screen on this map from office/1 and exclude office/2's and " +
+      "office/3's desks, which is an exclusion list rather than a gap — the same discipline " +
+      "p8-suburb applies to Highway Rest Area. Everything else this room needs is already here. " +
+      "The gap is the reader, and it is the object the third mission is about.",
+  },
+  {
+    id: "p9-processing-room",
+    period: 9,
+    status: "planned",
+    intent:
+      "The workroom beneath the reading room, where a collection is boxed, foldered and " +
+      "described before anybody is permitted to ask for it.",
+    sheets: [
+      "office/2.png", // overhead cabinet and counter runs (3,8)-(5,11) — the work counter
+      "office/1.png", // grey filing cabinets (0,8); tall double-door storage (0,10); copiers
+      "office/3.png", // copiers, trolleys, the water cooler
+    ],
+    gap: "prop.archive.recordCarton",
+    notes:
+      "Basement, and windowless — the summary in unit-09-campaign.js puts it under the reading " +
+      "room. The furniture is all present: office/2's counter runs are exactly a processing " +
+      "bench, and office/1 supplies the filing cabinets and the tall double-door storage " +
+      "cupboards. What is absent is the thing the room exists to make. A processing room with no " +
+      "record cartons in it is not an archive workroom, it is an office with a photocopier, and " +
+      "the sheets here will furnish the second and cannot furnish the first. Same monitor " +
+      "exclusion as the reading room above: office/1's screens only.",
+  },
   {
     id: "p9-modern-city",
     period: 9,

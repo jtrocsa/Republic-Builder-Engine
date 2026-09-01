@@ -309,6 +309,8 @@ extname
 firstgid
 firstgids
 flipbook
+foldered
+foldering
 footgun
 freedmens
 freedpeople
