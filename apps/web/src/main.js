@@ -216,6 +216,7 @@ import richmondHospitalWardTmjRaw from "./content/maps/richmond-hospital-ward.tm
 import railheadTmjRaw from "./content/maps/railhead-field.tmj?raw";
 import immigrantPortTmjRaw from "./content/maps/immigrant-port-field.tmj?raw";
 import fairmeadowTmjRaw from "./content/maps/fairmeadow-field.tmj?raw";
+import furnaceBendTmjRaw from "./content/maps/furnace-bend-field.tmj?raw";
 import railheadLandOfficeTmjRaw from "./content/maps/railhead-land-office.tmj?raw";
 import railheadTelegraphOfficeTmjRaw from "./content/maps/railhead-telegraph-office.tmj?raw";
 import immigrantPortInspectionHallTmjRaw from "./content/maps/immigrant-port-inspection-hall.tmj?raw";
@@ -1008,6 +1009,53 @@ function renderFairmeadowTiledMap() {
   renderTiledMapWithOverlay("fairmeadowTiledCanvas", fairmeadowTmj, resolveFairmeadowTilesetImage);
 }
 
+// Furnace Bend's campus quadrangle — Unit 9's field map, built in Phase 102.
+//
+// **This map has no cast, is absent from `FIELD_MAPS` and absent from `UNITS`, and all three of
+// those are deliberate.** The ground is finished and verified; the eight people who stand on it are
+// not, because there is no 1990s body anywhere in 140 character sheets and commissioning one is a
+// spend rather than a build step (decision log `0100` §6, `0101` §7). What is wired here is exactly
+// what the map's own sheets need in order to be reachable — no `FIELD_MAPS` entry with an empty
+// npc list, no placeholder source points, no stub `worldMarkup`. An entry standing in for work that
+// has not happened is the scaffolding `CLAUDE.md` tells you not to build, and a future reader
+// cannot tell it from the real thing.
+//
+// The consumer below is `SURFACE_TILESETS`, which warms a unit's sheets when the player travels to
+// it. Keyed by unit, so it is simply never called until unit-09 is playable, and correct when it is.
+//
+// Five sheets and not one of them derived, which no other field map in this programme can say — the
+// Phase 101 reconnaissance found the campus already covered and commissioned nothing (`0100` §1).
+const furnaceBendTmj = JSON.parse(furnaceBendTmjRaw);
+const resolveFurnaceBendTilesetImage = createTilesetImageResolver(
+  // The buildings: 1960s and 70s brick and concrete blocks at map scale, and the library's portico.
+  // This sheet's modern glass block and its sports track are excluded by the map, not by the glob —
+  // a tileset is loaded whole.
+  import.meta.glob("./assets/tilesets/University/tile-B-04.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The mown quad, the paved axis, and the retaining wall at the head of the slope.
+  import.meta.glob("./assets/tilesets/Modern Park/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  }),
+  // October. Five autumn crowns, three of them with fallen leaves drawn at the base, and the reason
+  // this map's month cost nothing.
+  import.meta.glob("./assets/tilesets/Modern Park/tile-B-05.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The poured concrete, the campus road and the service apron. None of this pack's forty vehicles
+  // appears on the map: they are contemporary to the last one and there is no 1990s car anywhere in
+  // the library, which is why the map has no car park at all.
+  import.meta.glob("./assets/tilesets/Highway Rest Area/tile-B-01.png", {
+    eager: true,
+    import: "default",
+  }),
+  // The rough grass below the steps, where the campus stops mowing.
+  import.meta.glob("./assets/tilesets/farm/6.png", { eager: true, import: "default" })
+);
+
 // Cottonwood Junction's two rooms. One resolver serves both, as at Canal Crossroads and Richmond:
 // they name five sheets between them and every one is shared, so a resolver per room would only
 // duplicate globs.
@@ -1219,6 +1267,9 @@ const SURFACE_TILESETS = {
   "unit-06": () => railheadTmj.tilesets.map(resolveRailheadTilesetImage),
   "unit-07": () => immigrantPortTmj.tilesets.map(resolveImmigrantPortTilesetImage),
   "unit-08": () => fairmeadowTmj.tilesets.map(resolveFairmeadowTilesetImage),
+  // Unit 9's ground exists and its cast does not — see the note above the resolver. This line is
+  // correct now and inert until the unit is playable, because the table is keyed by unit.
+  "unit-09": () => furnaceBendTmj.tilesets.map(resolveFurnaceBendTilesetImage),
   "institute-hall": () => instituteHallTmj.tilesets.map(resolveInstituteHallTilesetImage),
 };
 

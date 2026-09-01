@@ -375,7 +375,22 @@ microfilm reader, without which the middle step of the TRACE's paper → film �
 object in the room. Neither blocks the map; both block a faithful room. **Neither is commissioned** —
 the PixelLab balance is nearly out, and that is a spend decision rather than a build step.
 
-Owed: the map and the cast, two interiors, three activities.
+**The map's ground shipped in Phase 102** (decision log `0101`) — `furnace-bend-field.tmj`, 52×34,
+79 collision rects, both doors routed — **and it has no cast, because there is no 1990s body in 140
+character sheets.** The unit is still absent from `UNITS` and from `FIELD_MAPS`, and those are one
+decision rather than three omissions: with no cast there are no source points, and a `UNITS` line
+would put a player on an empty quadrangle with seven records nobody is holding.
+
+Three things from it bind whoever finishes the unit. **The composition is depth, not a line** — a
+third map built around a line would repeat both its neighbours, so this one is three thresholds in
+sequence and the ranking runs backwards against the walk: the bad scan, which is the worst of the
+three locks, is on a screen in the open before any threshold at all. **The library has two doors four
+tiles apart**, the public one at the head of the axis and the service one off a strip of black-top
+with nothing pointing at it, and the two interiors attach to those two cells. And **the works are not
+drawn** — a mill twenty years closed here was scrapped and the ground cleared, so what is at the
+bottom of the hill is a flat green field, and the only evidence it happened is indoors in boxes.
+
+Owed: the cast, then two interiors, then three activities.
 
 This is where the final decision belongs — controlled, destroyed, selectively released, or preserved
 openly — because by then the player has spent nine units learning that the answer is not obvious.
