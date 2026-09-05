@@ -17,7 +17,9 @@ import {
   defaultInterviewState,
   interviewAnswer,
   interviewCoverage,
+  interviewFindings,
   interviewGoals,
+  interviewLogReceipt,
   interviewOutcome,
   interviewSummary,
   isInterviewComplete,
@@ -408,6 +410,62 @@ describe("rendering", () => {
     const after = renderInterviewInline(activity(), logged, "elder");
     expect(after).toContain("In your Field Notebook");
     expect(after).not.toContain('data-activity-action="log"');
+  });
+
+  // Spine Review P0-3, the program's one S2 and its longest-open finding. `log` has three
+  // outcomes and the receipt claimed the same one for all of them. Two thirds of every authored
+  // answer in the shipped game is flat on purpose — one useful answer per speaker, two flat ones —
+  // so the outcome it was wrong about is the common one, and it lands on the first interaction of
+  // the first mission. The mechanic was never the problem; the sentence was.
+  const withFlatAnswer = () => {
+    const content = activity();
+    content.speakers[0].answers.gold = {
+      text: "She has heard the question before.",
+      useful: false,
+    };
+    return content;
+  };
+
+  it("does not claim the notebook for a flat answer (edge case)", () => {
+    const content = withFlatAnswer();
+    const logged = askAndLog(defaultInterviewState(), "elder", "gold", content);
+    const markup = renderInterviewInline(content, logged, "elder");
+    expect(markup).toContain("is-flat");
+    expect(markup).not.toContain("In your Field Notebook");
+    // And it really is absent, which is the half the old string was wrong about rather than vague.
+    expect(interviewFindings(content, logged)).toEqual([]);
+  });
+
+  it("calls a useful answer a candidate when the notebook is rationed (edge case)", () => {
+    // A capacity means keeping is a second, separate press in the panel. Both shipped capacity
+    // interviews ask for eight useful answers and hold three, so five of what the player logs will
+    // not end up in the notebook at all.
+    const content = { ...activity(), notebook: { capacity: 1 } };
+    const logged = askAndLog(defaultInterviewState(), "elder", "grows", content);
+    const markup = renderInterviewInline(content, logged, "elder");
+    expect(markup).toContain("is-candidate");
+    expect(markup).toContain("Available in your Field Notebook");
+    expect(interviewOutcome(content, logged).evidence).toEqual([]);
+  });
+
+  it("offers the same words under a flat answer as under a useful one (edge case)", () => {
+    // The receipt tells the truth; the offer must not. Which answers carry something is what an
+    // interview is for, and a button that changed its words would give it away before the press.
+    const content = withFlatAnswer();
+    const ask = (question) =>
+      actInterview(content, defaultInterviewState(), { type: "ask", speaker: "elder", question });
+    const label = (markup) => markup.match(/class="field-interview__log"[^>]*>([^<]+)</)?.[1];
+    const flat = label(renderInterviewInline(content, ask("gold"), "elder"));
+    expect(flat).toBe("Add to Field Notebook");
+    expect(flat).toBe(label(renderInterviewInline(content, ask("grows"), "elder")));
+  });
+
+  it("reports the three log outcomes apart (normal case)", () => {
+    const rationed = { ...activity(), notebook: { capacity: 1 } };
+    expect(interviewLogReceipt(activity(), { useful: false }).tone).toBe("flat");
+    expect(interviewLogReceipt(rationed, { useful: false }).tone).toBe("flat");
+    expect(interviewLogReceipt(rationed, { useful: true }).tone).toBe("candidate");
+    expect(interviewLogReceipt(activity(), { useful: true }).tone).toBe("kept");
   });
 
   it("groups the notebook into one panel per authored group (normal case)", () => {

@@ -148,6 +148,82 @@ test.describe("INTERVIEW, out on the map", () => {
     expect(fits).toBe(true);
   });
 
+  // Spine Review P0-3, banked on the exact path it was found on: the first person on the first map
+  // of the first mission, asked the first question a new player asks. `taino-elder:gold` is
+  // authored flat on purpose — she notices you asked about gold before anything else — and until
+  // Phase 106 logging it printed "✓ In your Field Notebook" while the tracker did not move.
+  test("logging a flat answer says what it did, and does not claim the notebook", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await seedProgress(page, {
+      ...CASE_001,
+      currentScreen: "field",
+      sourceActivities: LOGGED_TWO,
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    await expect(page.locator(".field-tracker__progress b")).toHaveText("2/7");
+
+    expect(await walkToNpc(page, "taino-elder")).toBe(true);
+    await page.locator('[data-npc="taino-elder"]').click();
+
+    const bubble = page.locator(".field-speech-bubble");
+    await expect(bubble).toBeVisible();
+    await bubble.locator('[data-question="gold"]').click();
+    await expect(bubble.locator(".field-interview__answer")).toContainText("We beat it thin");
+    // Unmarked, which is the signal that this one carries nothing — and the offer beneath it is
+    // the same offer a gold-bordered answer gets, deliberately.
+    await expect(bubble.locator(".field-interview__answer")).not.toHaveClass(/is-useful/);
+    await expect(bubble.locator(".field-interview__log")).toHaveText("Add to Field Notebook");
+
+    const offerHeight = await bubble
+      .locator(".field-interview__log")
+      .evaluate((el) => el.getBoundingClientRect().height);
+
+    await bubble.locator(".field-interview__log").click();
+    const receipt = bubble.locator(".field-interview__logged");
+    await expect(receipt).toHaveClass(/is-flat/);
+    await expect(receipt).toContainText("nothing here to carry");
+    await expect(receipt).not.toContainText("In your Field Notebook");
+
+    // The half that made the old string a lie rather than a quibble: it is genuinely not in the
+    // notebook and the bar does not move, and the player had just been told otherwise.
+    await expect(page.locator(".field-tracker__progress b")).toHaveText("2/7");
+    const progress = await readProgress(page);
+    expect(progress.sourceActivities["taino-context"].state.logged["taino-elder"]).toEqual([
+      "gold",
+    ]);
+
+    // One line replacing another in the same slot. All three receipts are longer than the offer
+    // they replace, and the bubble is already at the limit of what fits above a speaker, so a
+    // receipt that wrapped would grow it on the press — which is what the CSS comment above these
+    // two rules has been asking someone to check since Phase 69. The longest of the three belongs
+    // to the rationed-notebook interviews in Units 7 and 8; no spec walks to a speaker on either of
+    // those maps, so it is measured here by substitution rather than left to a guess. It was two
+    // lines when this test was first written, which is why the string is the one it is.
+    const heights = await page.evaluate(() => {
+      const el = document.querySelector(".field-interview__logged");
+      const line = parseFloat(window.getComputedStyle(el).lineHeight);
+      const shown = el.getBoundingClientRect().height;
+      el.textContent = "✓ Available in your Field Notebook";
+      const longest = el.getBoundingClientRect().height;
+      const box = document.querySelector(".field-speech-bubble").getBoundingClientRect();
+      const frame = document.getElementById("caseFieldMap").getBoundingClientRect();
+      return {
+        line,
+        shown,
+        longest,
+        fits: box.top >= frame.top - 1 && box.bottom <= frame.bottom + 1,
+      };
+    });
+    expect(heights.longest).toBe(heights.shown);
+    // Against a line rather than exact equality: a `<p>` and a `<button>` carrying the same rules
+    // land 1.6px apart and always have. What must not happen is the slot gaining a whole line.
+    expect(heights.shown - offerHeight).toBeLessThan(heights.line);
+    expect(heights.fits).toBe(true);
+  });
+
   test("someone outside the cast gets their line and no chips", async ({ page }) => {
     test.setTimeout(90_000);
     await seedProgress(page, {

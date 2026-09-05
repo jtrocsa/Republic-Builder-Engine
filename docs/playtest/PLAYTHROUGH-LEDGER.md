@@ -15,25 +15,37 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 
 ## Status
 
-| №                                                    | Part                                        | Status     | Closed     | Open                                             |
-| ---------------------------------------------------- | ------------------------------------------- | ---------- | ---------- | ------------------------------------------------ |
-| [0](./part-00-unblock.md)                            | Unblock and instrument                      | **closed** | 2026-08-03 | 1 S2 _(P0-3, awaiting an owner decision)_ · 1 S3 |
-| [1](./part-01-04-the-intro.md)                       | Cold boot and landing                       | **closed** | 2026-08-22 | —                                                |
-| [2](./part-01-04-the-intro.md)                       | The Director and identity                   | **closed** | 2026-08-22 | —                                                |
-| [3](./part-01-04-the-intro.md)                       | The Entrance Hall                           | **closed** | 2026-08-22 | —                                                |
-| [4](./part-01-04-the-intro.md)                       | Main Hall and the tutorial tour             | **closed** | 2026-08-22 | —                                                |
-| [5](./part-05-archive-and-navigation-table.md)       | Archive Room and the Navigation Table       | **closed** | 2026-08-22 | —                                                |
-| [6A](./part-06-the-field-runtime.md)                 | The field runtime — the world               | **closed** | 2026-08-22 | —                                                |
-| [6B](./part-06-the-field-runtime.md)                 | The field runtime — the mission surface     | **closed** | 2026-08-23 | —                                                |
-| [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed** | 2026-08-23 | —                                                |
-| [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed** | 2026-08-23 | —                                                |
-| [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed** | 2026-08-23 | —                                                |
-| [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed** | 2026-08-23 | —                                                |
-| [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed** | 2026-08-23 | 1 S3 _(P12-7, carried — see `0088` §5)_          |
-| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | 1 S3 _(P10-6 → ADR)_                             |
+| №                                                    | Part                                        | Status     | Closed     | Open                                    |
+| ---------------------------------------------------- | ------------------------------------------- | ---------- | ---------- | --------------------------------------- |
+| [0](./part-00-unblock.md)                            | Unblock and instrument                      | **closed** | 2026-08-03 | 1 S3                                    |
+| [1](./part-01-04-the-intro.md)                       | Cold boot and landing                       | **closed** | 2026-08-22 | —                                       |
+| [2](./part-01-04-the-intro.md)                       | The Director and identity                   | **closed** | 2026-08-22 | —                                       |
+| [3](./part-01-04-the-intro.md)                       | The Entrance Hall                           | **closed** | 2026-08-22 | —                                       |
+| [4](./part-01-04-the-intro.md)                       | Main Hall and the tutorial tour             | **closed** | 2026-08-22 | —                                       |
+| [5](./part-05-archive-and-navigation-table.md)       | Archive Room and the Navigation Table       | **closed** | 2026-08-22 | —                                       |
+| [6A](./part-06-the-field-runtime.md)                 | The field runtime — the world               | **closed** | 2026-08-22 | —                                       |
+| [6B](./part-06-the-field-runtime.md)                 | The field runtime — the mission surface     | **closed** | 2026-08-23 | —                                       |
+| [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed** | 2026-08-23 | —                                       |
+| [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed** | 2026-08-23 | —                                       |
+| [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed** | 2026-08-23 | —                                       |
+| [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed** | 2026-08-23 | —                                       |
+| [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed** | 2026-08-23 | 1 S3 _(P12-7, carried — see `0088` §5)_ |
+| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | 1 S3 _(P10-6 → ADR)_                    |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
 history — no sha column to go stale.
+
+**The program's one S2 is closed.** Part 0's P0-3 — logging an interview answer that carries
+nothing printed "✓ In your Field Notebook" and put it nowhere — sat from 2026-08-03 as an owner
+decision between four options, three of which rewrite a working mechanic. It is the fourth, "fix
+only the words", which was listed last with no case made for it. Every speaker in every shipped
+interview has one useful answer and two flat ones, so **104 of the game's 156 authored interview
+answers are flat on purpose**, and five surfaces already said so correctly. One control out on the map did not. Phase
+106, decision log `0105`; no content changed. **It had also got worse while it sat** — Units 7 and 8
+did not exist when it was filed, and both ration their notebook, so the claim was false for every
+answer on those two rather than two thirds of them. Note also where it went: **routed to Part 8,
+which closed without taking it.** Naming a destination is the rule; nothing checks that the
+destination arrives.
 
 **Two routed S3s have since been taken.** Part 10's P10-5 — twenty-four of the twenty-seven
 missions with no case number on any screen that shows one — was routed to the content queue as a

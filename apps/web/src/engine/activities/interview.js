@@ -404,6 +404,40 @@ export function interviewAnswer(speaker, questionId) {
 }
 
 /**
+ * What the log control says once the answer is in.
+ *
+ * Three receipts, because `log` has three genuinely different outcomes and the control used to
+ * claim the same one for all of them — Spine Review P0-3. Two thirds of every authored answer in
+ * the game is flat on purpose (every shipped interview gives each speaker one useful answer and two
+ * flat ones), so the claim it got wrong was the common case, and it lands on the first interaction
+ * of the first mission.
+ *
+ * - `flat` — written into the grid above, and that is all. It is not a finding, so it never reaches
+ *   the Field Notebook and never counts toward `requires.useful`.
+ * - `candidate` — a useful answer on an activity that declares a `notebook` capacity. It becomes
+ *   *available* in the panel; keeping it is a second, separate press, and on both shipped capacity
+ *   interviews five of the eight will not survive that choice. "Available in" against the kept
+ *   receipt's "In" is the whole difference, and the word is the panel's own: its `emptyNote` reads
+ *   "Log an answer worth keeping and it becomes available here", and the control out on the map
+ *   contradicted it. It is also the longest of the three, and one line is a hard budget — the
+ *   bubble is already at the limit of what fits above a speaker, and a wrapping receipt grows it
+ *   on the press. Measured in `activity-engines.spec.js` rather than trusted.
+ * - `kept` — a useful answer with no capacity to ration, which is the one case the old string was
+ *   right about.
+ *
+ * The *offer* stays one string under every authored answer. Which answers carry something is what
+ * an interview is for, and a button that changed its words would hand that over before the press.
+ *
+ * @param {{ notebook?: { capacity: number } }} activity
+ * @param {ReturnType<typeof interviewAnswer>} answer
+ */
+export function interviewLogReceipt(activity, answer) {
+  if (!answer.useful) return { tone: "flat", text: "Written down — nothing here to carry" };
+  if (activity.notebook) return { tone: "candidate", text: "Available in your Field Notebook" };
+  return { tone: "kept", text: "In your Field Notebook" };
+}
+
+/**
  * The question chips, the current answer, and the button that keeps it —
  * rendered into the field dialogue bubble for one speaker. Returns "" for anyone
  * who is not part of this interview, which is what lets the host call it for
@@ -437,12 +471,12 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
   // The log control is the only thing on this panel that changes what the player
   // is carrying, so it says so in both states rather than disappearing once
   // taken — a control that vanishes reads as a control that failed.
-  const keep =
-    !answer || !answer.authored
-      ? ""
-      : logged.includes(showing)
-        ? `<p class="field-interview__logged">✓ In your Field Notebook</p>`
-        : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Add to Field Notebook</button>`;
+  const receipt = answer && answer.authored ? interviewLogReceipt(activity, answer) : null;
+  const keep = !receipt
+    ? ""
+    : logged.includes(showing)
+      ? `<p class="field-interview__logged is-${receipt.tone}">✓ ${escapeHtml(receipt.text)}</p>`
+      : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Add to Field Notebook</button>`;
   // A lead shows only once the answer is in the notebook. Hearing something and carrying it are two
   // moves everywhere else in this engine, and a lead handed over on the strength of a question you
   // walked away from would be the one place that rule did not hold.

@@ -7843,6 +7843,15 @@ dd {
   color: #dfffee;
   letter-spacing: 0.03em;
 }
+/* A flat answer is written down and carries nothing, and the receipt has to look like that as well
+   as say it — green reads as "secured", which is the claim Spine Review P0-3 was about. The tick
+   stays: the press did do something, and a control that reports nothing reads as one that failed.
+   Matches `.field-interview__answer`'s own unmarked treatment, and `is-flat` in the grid. */
+.field-interview__logged.is-flat {
+  border-color: var(--c-border-subtle);
+  background: rgba(var(--c-black-rgb), 0.26);
+  color: var(--c-text-secondary);
+}
 /* A lead (Phase 77) — where this answer sends you next, in the player's own voice rather than the
    speaker's. Shown only once the answer is in the notebook, so it reads as something the Chronicler
    wrote down rather than another line of dialogue. */

@@ -22,14 +22,14 @@ with NPCs visible and screenshotted each beat — `visual-regression.spec.js` hi
 
 ## Findings
 
-| id   | sev · cat         | finding                                                                                                                                 | outcome                                                         |
-| ---- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| P0-1 | S1 · broken       | The Mission Tracker's in-flight block named a case's **first** started record for the rest of the case                                  | fixed                                                           |
-| P0-2 | S1 · broken       | "Open the Field Notebook →" carried that same first record's id, so it reopened a filed mission                                         | fixed (same cause)                                              |
-| P0-3 | S2 · broken       | Logging a non-`useful` interview answer prints "✓ In your Field Notebook" and the answer never reaches the notebook                     | **→ Part 8**, needs an owner decision                           |
-| P0-4 | S3 · rough        | The Codex aside clips its text and its "Open Codex" button at a 1280px viewport; baselines are banked at 1366×768 so nothing catches it | → Part 6                                                        |
-| P0-5 | S3 · inconsistent | The chrome eyebrow still reads "REPUBLIC BUILDER ENGINE"                                                                                | → the known branding cleanup in `CLAUDE.md`; not this program's |
-| P0-6 | S1 · broken       | A click inside the dialogue bubble that missed a control closed the bubble, so the record button read as dead                           | fixed                                                           |
+| id   | sev · cat         | finding                                                                                                                                 | outcome                                                                 |
+| ---- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| P0-1 | S1 · broken       | The Mission Tracker's in-flight block named a case's **first** started record for the rest of the case                                  | fixed                                                                   |
+| P0-2 | S1 · broken       | "Open the Field Notebook →" carried that same first record's id, so it reopened a filed mission                                         | fixed (same cause)                                                      |
+| P0-3 | S2 · broken       | Logging a non-`useful` interview answer prints "✓ In your Field Notebook" and the answer never reaches the notebook                     | **Fixed in Phase 106**, ADR `0105` — three receipts, no content changed |
+| P0-4 | S3 · rough        | The Codex aside clips its text and its "Open Codex" button at a 1280px viewport; baselines are banked at 1366×768 so nothing catches it | → Part 6                                                                |
+| P0-5 | S3 · inconsistent | The chrome eyebrow still reads "REPUBLIC BUILDER ENGINE"                                                                                | → the known branding cleanup in `CLAUDE.md`; not this program's         |
+| P0-6 | S1 · broken       | A click inside the dialogue bubble that missed a control closed the bubble, so the record button read as dead                           | fixed                                                                   |
 
 ### P0-1 / P0-2 — one cause, two symptoms
 
@@ -77,6 +77,22 @@ units and the cross-activity evidence link:
 
 Option 2 is the closest fit to rules the engine already holds, but it is the owner's call.
 
+**Taken in Phase 106 (decision log `0105`), and it is option 4 — the one listed last with no case
+made for it.**
+The measurement that settles it was never taken here: every speaker in every shipped interview has
+exactly one useful answer and exactly two flat ones, so of 156 authored answers **104 are flat**.
+Option 2 therefore removes the log control from two thirds of the game's interview content and makes
+the grid's `is-flat` cell unreachable; option 3 puts those 104 into notebooks and into DISCREPANCY's
+evidence column. Both rewrite a working mechanic to fix a sentence. Five surfaces already told the
+truth — the grid, the coverage bar, the panel's `emptyNote`, all three `howItWorks` slates and
+`interviewFindings()` itself — and one control out on the map contradicted them.
+
+It had also got worse while it sat. Units 7 and 8 did not exist when this was written and both
+declare a notebook `capacity`, so on those two the string was false for **every** answer: the flat
+ones are not findings and the useful ones are only candidates. `interviewLogReceipt()` now tells the
+three apart. No content changed, and `interviewFindings()` — the cross-activity evidence link this
+note was protecting — was not touched.
+
 ### P0-6 — the record button was not dead, the bubble was being destroyed under it
 
 Reported from a real playthrough as _"the mission won't open — it just flickers and then goes away,"_
@@ -123,6 +139,12 @@ it claims would look like a defect in whatever part was being reviewed.
 
 Fixed P0-1 and P0-2 in one commit with unit and e2e guards. Built the warp. Routed P0-3 to Part 8 as
 an open owner decision, P0-4 to Part 6, and P0-5 out of the program.
+
+**P0-3 never arrived at Part 8**, which closed on 2026-08-23 with no open items and no mention of it;
+the ledger carried it on this row instead. The rule that a routed finding must name a destination
+did its job — one was named — and nothing checked that the destination took it. Recorded because it
+is the kind of thing worth knowing when the next program is designed, not because a closed one needs
+a mechanism for it.
 
 `main.js` is **13,588 lines** (`wc -l`) at close. Note for future counts: PowerShell's
 `Measure-Object -Line` under-reports this file by ~340; use `wc -l`.
