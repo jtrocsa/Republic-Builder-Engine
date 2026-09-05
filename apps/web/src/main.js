@@ -154,6 +154,7 @@ import {
   isActivityComplete,
   isActivityEngine,
   interviewHasAsked,
+  interviewSpeakerStatus,
   renderActivity,
   renderActivityInline,
 } from "./engine/activities/index.js";
@@ -13018,10 +13019,22 @@ function fieldTrackerMissionBlock(tracked) {
  * in the blue/gold material rather than part of the pixel-art world.
  */
 function fieldTrackerBar(done, total) {
-  const filled = total > 0 ? Math.max(0, Math.min(100, Math.round((done / total) * 100))) : 0;
-  return `<div class="field-tracker__bar" role="progressbar" aria-valuenow="${done}" aria-valuemin="0" aria-valuemax="${total}"><i style="width:${filled}%"></i></div>`;
+  // One pip per thing the mission wants, rather than a proportion of it.
+  //
+  // The owner's ask was for the clarity of "collect five flowers" without the screen growing more
+  // text, and this is the shape that is both: a countable list of what is left, in the space the
+  // bar already occupied, with no words added. A continuous bar answers "how far along am I" when
+  // the question a player standing on a map actually has is "how many more".
+  //
+  // The pips flex, so a four-leg trace and a thirteen-slot reconstruction both fill the same 232px
+  // panel and neither needs special-casing.
+  const pips = Array.from(
+    { length: Math.max(0, total) },
+    (_, index) => `<i${index < done ? ' class="is-done"' : ""}></i>`
+  ).join("");
+  return `<div class="field-tracker__bar" role="progressbar" aria-valuenow="${done}" aria-valuemin="0" aria-valuemax="${total}">${pips}</div>`;
 }
-function fieldNpcButton(npc) {
+function fieldNpcButton(npc, live) {
   const active = progress.activeFieldNpc === npc.id;
   const near = isNearFieldNpc(npc);
   const state = fieldNpcState(npc);
@@ -13031,13 +13044,45 @@ function fieldNpcButton(npc) {
   // which people you still need to talk to.
   const carried = npcAnchoredSource(npc.id);
   const availability = carried ? sourceAvailability(activeFieldCaseId(), carried.id) : null;
-  const badge =
-    availability && availability !== "locked"
-      ? `<em class="npc-source-badge ${availability === "secured" ? "is-secured" : ""}" aria-hidden="true">${availability === "secured" ? "✓" : "✦"}</em>`
-      : "";
-  const label = carried ? `${npc.name} — carries a record` : `Talk with ${npc.name}`;
+  const record = availability && availability !== "locked" ? availability : null;
+  // Whoever is carrying a record gets the record's mark. Failing that, whoever the open interview
+  // still wants an account from gets the same two, for exactly the reason the record badge exists:
+  // you can see across the map who you have not been to yet.
+  //
+  // Seven of the twenty-four missions are interviews, of six to eight people each, and until Phase
+  // 111 an interview's cast was indistinguishable from the scenery — the mission said "ask any
+  // person" and the map said nothing about which ones were listening. Nothing new is drawn: this is
+  // `.npc-source-badge`, already gold-and-pulsing for available and green-and-still for secured.
+  //
+  // A locked record falls through rather than winning, because a person whose record is not yet
+  // available may still be part of the interview, and the honest badge is the one about the thing
+  // the player can actually do now.
+  const mark = record || fieldInterviewSpeakerStatus(npc.id, live);
+  const badge = mark
+    ? `<em class="npc-source-badge ${mark === "secured" ? "is-secured" : ""}" aria-hidden="true">${mark === "secured" ? "✓" : "✦"}</em>`
+    : "";
+  // The badge is aria-hidden, so the state has to reach a screen reader through the row's own name.
+  const label = carried
+    ? `${npc.name} — carries a record`
+    : mark === "available"
+      ? `${npc.name} — has not been asked yet`
+      : mark === "secured"
+        ? `${npc.name} — account secured`
+        : `Talk with ${npc.name}`;
   return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * activeFieldGrid().tile).toFixed(1)}px;top:${(state.y * activeFieldGrid().tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}<span>${esc(npc.label)}</span>${badge}</button>`;
 }
+/**
+ * Where this person stands in the interview the player currently has open, or null.
+ *
+ * The interview is **passed in, not resolved here**, and that is the whole reason this function
+ * exists separately: `liveFieldInterview()` walks every source in the case and asks each one's engine
+ * whether it is complete, and `fieldNpcButton()` runs once per NPC per render — nine times on
+ * Riverbend. Resolved once by the caller instead.
+ */
+function fieldInterviewSpeakerStatus(npcId, live) {
+  return live ? interviewSpeakerStatus(live.activity, live.state, npcId) : null;
+}
+
 /**
  * An NPC's ambient line — the one that tells you a person is worth asking.
  *
@@ -13372,7 +13417,9 @@ function fieldScreen() {
   const kicker = [caseNumberLabel(activeCase), caseWhereAndWhen(activeCase)]
     .filter(Boolean)
     .join(" · ");
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseName(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
+  // Resolved once for the whole cast rather than once per body — see fieldInterviewSpeakerStatus().
+  const liveInterview = liveFieldInterview();
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseName(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map((npc) => fieldNpcButton(npc, liveInterview)).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
 }
 
 // Human-facing name for each engine, used in the activity screen's eyebrow. The engine keys

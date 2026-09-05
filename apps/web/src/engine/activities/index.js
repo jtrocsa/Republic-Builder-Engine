@@ -35,6 +35,7 @@ import {
   actInterview,
   defaultInterviewState,
   interviewHasAsked,
+  interviewSpeakerStatus,
   interviewOutcome,
   interviewSummary,
   isInterviewComplete,
@@ -42,7 +43,7 @@ import {
   renderInterviewInline,
 } from "./interview.js";
 
-export { interviewHasAsked };
+export { interviewHasAsked, interviewSpeakerStatus };
 import {
   traceSummary,
   TraceActivitySchema,

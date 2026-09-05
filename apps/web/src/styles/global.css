@@ -6020,21 +6020,27 @@ dd {
 .field-tracker__progress.is-done {
   color: #9fd8ab;
 }
+/* One pip per thing the mission wants (Phase 111), where this was a single filled proportion. The
+   pips flex rather than taking a fixed width, so four legs and thirteen slots both fill the panel
+   and a long board degrades to thin pips instead of overflowing it. */
 .field-tracker__bar {
+  display: flex;
+  gap: 2px;
   height: 6px;
   margin-top: 6px;
+}
+.field-tracker__bar i {
+  flex: 1;
+  min-width: 2px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.3);
   border-radius: var(--c-radius-pill);
   background: rgba(var(--c-black-rgb), 0.4);
-  overflow: hidden;
+  transition: background-color 0.35s ease;
 }
-.field-tracker__bar i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(var(--c-gold-rgb), 0.65), var(--c-gold));
+.field-tracker__bar i.is-done {
+  border-color: rgba(var(--c-gold-rgb), 0.75);
+  background: var(--c-gold);
   box-shadow: 0 0 6px rgba(var(--c-gold-rgb), 0.45);
-  transition: width 0.35s ease;
 }
 @media (prefers-reduced-motion: reduce) {
   .field-tracker__bar i {

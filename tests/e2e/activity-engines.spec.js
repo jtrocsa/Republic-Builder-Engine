@@ -304,6 +304,17 @@ test.describe("INTERVIEW, out on the map", () => {
     const bar = page.locator(".field-tracker__bar");
     await expect(bar).toHaveAttribute("aria-valuenow", "2");
     await expect(bar).toHaveAttribute("aria-valuemax", "7");
+    // Phase 111: one pip per thing the mission wants rather than one filled proportion, because the
+    // question a player standing on a map has is "how many more", not "how far along". Countable,
+    // and it added no words to a panel the owner had already called too wordy.
+    await expect(bar.locator("i")).toHaveCount(7);
+    await expect(bar.locator("i.is-done")).toHaveCount(2);
+    // They flex, so a four-leg trace and a thirteen-slot reconstruction both fill the same panel.
+    const widths = await bar
+      .locator("i")
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width)));
+    expect(Math.min(...widths)).toBeGreaterThan(0);
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
   });
 });
 

@@ -21,6 +21,7 @@ import {
   interviewGoals,
   interviewLogReceipt,
   interviewOutcome,
+  interviewSpeakerStatus,
   interviewSummary,
   isInterviewComplete,
   renderInterview,
@@ -592,5 +593,45 @@ describe("an answer that sends you somewhere", () => {
     const a = withLead();
     const findings = interviewOutcome(a, askAndLog(a)).findings;
     expect(findings.every((finding) => !finding.text.includes("Ask the clerk"))).toBe(true);
+  });
+
+  it("says who the interview still wants an account from (normal case)", () => {
+    // Phase 111 — the head badge out on the map. Seven of the twenty-four missions are interviews of
+    // six to eight people, and the cast was indistinguishable from the scenery until this existed.
+    const content = activity();
+    const fresh = defaultInterviewState();
+    // Null for anyone outside the cast, which is what lets the field ask about every NPC on the map.
+    expect(interviewSpeakerStatus(content, fresh, "not-in-this-mission")).toBe(null);
+    expect(interviewSpeakerStatus(content, fresh, "elder")).toBe("available");
+
+    // Heard and walked away is not secured. Everything else in this engine counts `logged`, and a
+    // green badge on a deflection would be the head-badge version of the receipt Phase 110 fixed.
+    const heard = actInterview(content, fresh, {
+      type: "ask",
+      speaker: "elder",
+      question: "grows",
+    });
+    expect(interviewSpeakerStatus(content, heard, "elder")).toBe("available");
+
+    const kept = actInterview(content, heard, {
+      type: "log",
+      speaker: "elder",
+      question: "grows",
+    });
+    expect(interviewSpeakerStatus(content, kept, "elder")).toBe("secured");
+    // And one person being done says nothing about the next.
+    expect(interviewSpeakerStatus(content, kept, "captain")).toBe("available");
+  });
+
+  it("does not call a speaker secured for logging a deflection (edge case)", () => {
+    const deflects = activity();
+    deflects.speakers[0].answers.gold = { text: "We wear it.", useful: false };
+    let state = actInterview(deflects, defaultInterviewState(), {
+      type: "ask",
+      speaker: "elder",
+      question: "gold",
+    });
+    state = actInterview(deflects, state, { type: "log", speaker: "elder", question: "gold" });
+    expect(interviewSpeakerStatus(deflects, state, "elder")).toBe("available");
   });
 });

@@ -109,4 +109,71 @@ test.describe("Field source anchors", () => {
     expect(Number.parseFloat(style.left) / 48).toBeCloseTo(26, 1);
     expect(Number.parseFloat(style.top) / 48).toBeCloseTo(18, 1);
   });
+
+  // Phase 111. Seven of the twenty-four missions are interviews of six to eight people, and until
+  // now only the person carrying the *record* wore a badge — so a mission whose whole instruction is
+  // "ask any question to any person" gave a player no way to tell which of the bodies on the map
+  // were part of it. Same two marks, same element, same meaning: ✦ still wants something from you,
+  // ✓ done.
+  //
+  // Two tests rather than one because seedProgress() writes only into an empty localStorage, so a
+  // second seed in the same page is a no-op — the before and after need their own pages.
+  const CASE_001_FIELD = {
+    currentScreen: "field",
+    activeCaseId: "case-001",
+    selectedCaseId: "case-001",
+    unlocked: ["case-001"],
+    tutorial: { step: "complete", completed: true, skipped: false },
+  };
+
+  test("Caribbean: the cast wears no badge until the interview is actually open", async ({
+    page,
+  }) => {
+    await seedProgress(page, CASE_001_FIELD);
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+    // Columbus carries the letter, so he is marked. Nobody else is: the record that briefs the
+    // questions has not been opened, and until it is the cast has nothing to be asked.
+    await expect(page.locator(".npc-source-badge")).toHaveCount(1);
+    await expect(page.locator('.field-npc[data-npc="taino-child"] .npc-source-badge')).toHaveCount(
+      0
+    );
+  });
+
+  test("Caribbean: an open interview badges its own cast, and drops each one as it is answered", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      ...CASE_001_FIELD,
+      sourceActivities: {
+        "taino-context": {
+          state: {
+            asked: { "taino-gardener": ["grows"] },
+            logged: { "taino-gardener": ["grows"] },
+            filed: null,
+          },
+          completed: false,
+          briefed: true,
+        },
+      },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    // Seven speakers stand on this map and every one of them is now marked, where one was before.
+    expect(await page.locator(".npc-source-badge").count()).toBeGreaterThan(1);
+    // Answered: green and still.
+    await expect(
+      page.locator('.field-npc[data-npc="taino-gardener"] .npc-source-badge')
+    ).toHaveClass(/is-secured/);
+    // Not yet: gold and pulsing, on somebody carrying no record at all.
+    const child = page.locator('.field-npc[data-npc="taino-child"] .npc-source-badge');
+    await expect(child).toHaveCount(1);
+    await expect(child).not.toHaveClass(/is-secured/);
+    // The badge is aria-hidden, so the state has to reach a screen reader through the button's name.
+    await expect(page.locator('.field-npc[data-npc="taino-child"]')).toHaveAttribute(
+      "aria-label",
+      /has not been asked yet/
+    );
+  });
 });

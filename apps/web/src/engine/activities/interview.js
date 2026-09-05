@@ -371,6 +371,37 @@ export function interviewHasAsked(activity, state = defaultInterviewState(), spe
 }
 
 /**
+ * Whether this person still has something this mission wants — for the badge over their head.
+ *
+ * Returns `null` for anyone outside the cast, which is what lets the field ask it about every NPC on
+ * the map without knowing who is in the interview; the same shape `renderInterviewInline()` has, for
+ * the same reason.
+ *
+ * The two strings are `sourceAvailability()`'s own, deliberately. The field already draws exactly
+ * these two marks over whoever is carrying a record, and an interview's cast answers the same
+ * question for a player ("have I been to them yet?"), so it should not get a second vocabulary to
+ * learn.
+ *
+ * "Secured" is **a useful answer logged**, not merely having been spoken to. Everything else in this
+ * engine counts `logged` rather than `asked`, and a player who heard a deflection and walked away
+ * has gathered nothing — a green badge there would be the head-badge version of the receipt Phase
+ * 110 had to fix.
+ *
+ * @param {import("zod").infer<typeof InterviewActivitySchema>} activity
+ * @param {ReturnType<typeof defaultInterviewState>} [state]
+ * @param {string} speakerId
+ */
+export function interviewSpeakerStatus(activity, state = defaultInterviewState(), speakerId = "") {
+  const speaker = activity.speakers.find((item) => item.id === speakerId);
+  if (!speaker) return null;
+  return loggedFor(state, speaker.id).some(
+    (questionId) => interviewAnswer(speaker, questionId).useful
+  )
+    ? "secured"
+    : "available";
+}
+
+/**
  * What a speaker says to a question — the authored answer, or their fallback.
  *
  * @param {import("zod").infer<typeof SpeakerSchema>} speaker

@@ -37,7 +37,7 @@ _a finding, not a failure_, and that is the pedagogy rather than a wording prefe
 | ----- | ------ | ---------------------------------------- | ----------- | ---------- | ---- |
 | 109   | `0108` | The column says it twice                 | **closed**  | 2026-09-05 | —    |
 | 110   | `0109` | Every action lands                       | **closed**  | 2026-09-05 | —    |
-| 111   | `0110` | The map says who                         | not started | —          | —    |
+| 111   | `0110` | The map says who                         | **closed**  | 2026-09-05 | —    |
 | 112   | `0111` | The field never adopted the escape hatch | not started | —          | —    |
 | 113   | `0112` | Look at the room                         | not started | —          | —    |
 
@@ -64,6 +64,18 @@ actually on screen, in a browser, rather than estimate them from the content fil
 **No ✗ was introduced** and none should be. The game's three marks are `✓` secured, `✦` available,
 `·` nothing here, taught by the Mission Tracker's own legend; a deflection is a legal move that
 returns honest nothing, not a wrong answer.
+
+### Phase 111 — what changed, counted
+
+| Surface                                      | Before                | After                        |
+| -------------------------------------------- | --------------------- | ---------------------------- |
+| Interviews whose cast is visible on the map  | 0 of 7                | **7 of 7**                   |
+| People badged on an open Caribbean interview | 1 (the record holder) | **every speaker**            |
+| Words added to the playing screen            | —                     | **none**                     |
+| Mission Tracker progress                     | one filled proportion | **one pip per thing wanted** |
+
+Both halves honour the binding constraint by construction: a badge is a graphic, and the pips
+replaced the bar in the space it already had.
 
 ---
 
