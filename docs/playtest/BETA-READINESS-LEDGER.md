@@ -1,7 +1,8 @@
 # Beta Readiness — ledger
 
 A five-phase program taking Chronicle from content-complete to something a class of students can be
-handed. Started 2026-09-05, from an owner playthrough the night before.
+handed, plus the one pass its last phase routed forward. Started and finished 2026-09-05, from an
+owner playthrough the night before.
 
 **This is the only file to read for program state.** A phase's reasoning lives in its ADR; this
 ledger holds status and counts and never finding text. Modelled on
@@ -39,7 +40,11 @@ _a finding, not a failure_, and that is the pedagogy rather than a wording prefe
 | 110   | `0109` | Every action lands                       | **closed** | 2026-09-05 | —    |
 | 111   | `0110` | The map says who                         | **closed** | 2026-09-05 | —    |
 | 112   | `0111` | The field never adopted the escape hatch | **closed** | 2026-09-05 | —    |
-| 113   | `0112` | Look at the room                         | **closed** | 2026-09-05 | 1 S3 |
+| 113   | `0112` | Look at the room                         | **closed** | 2026-09-05 | —    |
+| 114   | `0113` | The eye cannot find what is not drawn    | **closed** | 2026-09-05 | —    |
+
+Phase 114 is the routed S3 from 113 rather than a sixth phase of the programme: the outdoor half of
+the same sweep, taken up the same day. Nothing from this programme is open.
 
 ### Phase 109 — measured
 
@@ -107,11 +112,35 @@ Ten field interiors rendered **with the cast visible**, which no visual baseline
 tiles; a name pill is about 2.1 tiles wide. The two staff were posted exactly two tiles apart, on
 purpose, with a comment saying so.
 
-**Still open — 1 S3.** The eight outdoor maps were not swept with the cast visible. Both defects
-found here were interior-scale and about labels, and `0096` §5's four outdoor render defects were all
-caught by this same method one map at a time — which argues for the outdoor sweep being its own pass
-rather than the tail of this one. **Destination: a Phase 114 outdoor sweep**, or the next unit's art
-phase, whichever comes first.
+**Routed to Phase 114 and closed there.** The eight outdoor maps were not swept with the cast
+visible. Both defects found here were interior-scale and about labels, and `0096` §5's four outdoor
+render defects were all caught by this same method one map at a time — which argued for the outdoor
+sweep being its own pass rather than the tail of this one.
+
+### Phase 114 — what the eye missed
+
+Eight outdoor maps rendered **whole**, at 1:1, with the cast visible; then the same maps measured
+against the `.field-world-overlay` canvas, which is exactly the art drawn above the cast.
+
+| Finding                                                            | Outcome                                  |
+| ------------------------------------------------------------------ | ---------------------------------------- |
+| Riverbend's third watchman standing inside a maple                 | fixed — 76% of body, 98% of name, unseen |
+| Fairmeadow's Broad Street resident, both label lines cut by a pine | fixed — moved onto the brick             |
+| Common Cause opening with the player's head across a name          | fixed — wanderer's disc moved off spawn  |
+| Richmond's refugee "inside" a bush                                 | **withdrawn** — she is in front of it    |
+| Four more readings between 0.1% and 31.5%                          | observed and accepted                    |
+
+**The eye cannot find what is not drawn.** Two of Riverbend's three watchmen are labelled and
+legible; the third was not on the map at all, and the sweep listed two. An absence has no shape.
+The by-eye method fails on exactly the defects that are total.
+
+**A rule kept in a table only protects what the table contains.** Emery Voss is posted "3 tiles clear
+of the free tradesman's disc" by her own comment. The spawn got 0.74 tiles, because the player is not
+in the NPC table.
+
+Banked as `tests/e2e/cast-legibility.spec.js` — eighteen surfaces, caps set from the measured spread,
+stations asserted and movers reported. All three fixes proved by reverting each and watching it fail
+by name.
 
 ---
 
@@ -129,10 +158,11 @@ ENGINE" on 2026-08-03. Verified 2026-09-05: the string survives in two source co
 (`chronicle-opening.defaults.js`, `unit.schema.js`) and on no rendered surface. Recorded here so the
 next reader does not spend a session on it.
 
-**P0-4 is probably still open** and is Phase 113's. The Codex aside clips its text and its "Open
-Codex" button at 1280px; it was routed to Part 6 and Part 6 closed without taking it, which is the
-same way P0-3 was routed to Part 8 and never arrived. All 61 visual baselines are 1366×768, so
-nothing in the suite can see it.
+**P0-4 is stale too.** It recorded the Codex aside clipping its text and its "Open Codex" button at
+1280px, and it was routed to Part 6, which closed without taking it — the same way P0-3 was routed
+to Part 8 and never arrived. Measured by Phase 113 at 1280: `scrollHeight === clientHeight` at 561,
+`overflow-y: visible`, and the button's bottom edge 260px clear of the fold. Identical at 1366.
+Something else fixed the thing and only the finding survived.
 
 ---
 

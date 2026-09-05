@@ -2125,7 +2125,14 @@ const UNIT2_FIELD_NPCS = [
   {
     id: "settlement-watch-road",
     // A tile south of the row-6 road, watching the landward approach to the settlement.
-    x: 38.0,
+    //
+    // Two tiles east of where he was posted, in Phase 114. At (38.0,7.5) he stood *inside* the
+    // maple: 76% of his body and 98% of his name pill were painted over by its canopy, which is
+    // drawn from tiles taller than the grid and so reaches several rows up from the trunk at
+    // (36-38,9). Nothing had ever said so, and nothing could — a body nobody can see is exactly
+    // the thing a pair of eyes cannot find, because there is nothing there to look at. The
+    // overlay canvas was asked instead. See `cast-legibility.spec.js` and decision log `0113`.
+    x: 40.0,
     y: 7.5,
     group: "settlement",
     name: "Watchman on the landward road",
@@ -2272,7 +2279,7 @@ const UNIT2_FIELD_NPC_BEHAVIOURS = {
   // faces what it is there to watch: the gate south of him, the landward road north of him, the
   // river west of him.
   "settlement-watch-gate": { kind: "station", at: { x: 47.0, y: 20.6 }, facing: "down" },
-  "settlement-watch-road": { kind: "station", at: { x: 38.0, y: 7.5 }, facing: "up" },
+  "settlement-watch-road": { kind: "station", at: { x: 40.0, y: 7.5 }, facing: "up" },
   "settlement-watch-wharf": { kind: "station", at: { x: 18.5, y: 18.0 }, facing: "left" },
   // Both of these walk their own plot and nothing else, the way the indentured servant walks the
   // pumpkin bed. No road is wanted or reachable inside a fenced field, and none is needed: the two
@@ -2384,8 +2391,15 @@ const UNIT3_FIELD_NPCS = [
   },
   {
     id: "free-tradesman",
+    // Moved a tile and a half north in Phase 114, off the spawn. His disc used to reach to within
+    // 0.74 tiles of it — and a name pill is 1.6 tiles wide and hangs about three quarters of a
+    // tile below the body, so whenever he drifted to that edge his label was drawn across the
+    // player's head, on the one square the game puts the player on before they touch a key. Emery
+    // Voss's own comment below records being kept "3 tiles clear of the free tradesman's disc":
+    // every *person* on this map was given clearance from it and the player was not, because the
+    // player is not in this table. Still 4.3 tiles clear of her from here.
     x: 29.0,
-    y: 20.0,
+    y: 18.5,
     group: "commoncause",
     name: "Free Black tradesman",
     label: "Tradesman",
@@ -2437,7 +2451,7 @@ const UNIT3_FIELD_NPC_BEHAVIOURS = {
   },
   // "Muster on the green Tuesday next" — a recruiter stands at the muster point.
   "militia-recruiter": { kind: "station", at: { x: 31.0, y: 10.0 }, facing: "down" },
-  "free-tradesman": { kind: "wander", home: { x: 29.0, y: 20.0 }, radius: 1.5 },
+  "free-tradesman": { kind: "wander", home: { x: 29.0, y: 18.5 }, radius: 1.5 },
   "loyalist-merchant": { kind: "wander", home: { x: 27.0, y: 26.0 }, radius: 1.5 },
   farmwife: { kind: "wander", home: { x: 14.0, y: 23.0 }, radius: 1.6 },
 };
@@ -3858,9 +3872,15 @@ const UNIT8_FIELD_NPCS = [
   {
     // On Broad Street's south walk, in the borough, where the pavement is brick and older than the
     // township. She is the counterweight the map needs: the rated-down side, standing on it.
+    //
+    // Moved up a tile in Phase 114, which puts her on the brick rather than on the grey kerb below
+    // it — which is where her own line already said she was standing. At (19.0,29.5) her pill hung
+    // into row 30, and a pine whose trunk is three rows further south still has canopy there,
+    // because its art is drawn from tiles taller than the grid and anchored by their bottom edge.
+    // Both lines of her label were cut through. See `cast-legibility.spec.js` and `0113`.
     id: "suburb-borough-woman",
     x: 19.0,
-    y: 29.5,
+    y: 28.5,
     group: "borough",
     name: "Verna Pilch",
     label: "Broad Street resident",
@@ -3907,7 +3927,7 @@ const UNIT8_FIELD_NPC_BEHAVIOURS = {
     ],
   },
   "suburb-township-clerk": { kind: "station", at: { x: 43.5, y: 9.6 }, facing: "down" },
-  "suburb-borough-woman": { kind: "station", at: { x: 19.0, y: 29.5 }, facing: "up" },
+  "suburb-borough-woman": { kind: "station", at: { x: 19.0, y: 28.5 }, facing: "up" },
   "suburb-borough-shopkeeper": { kind: "station", at: { x: 31.5, y: 26.6 }, facing: "down" },
   // Pacing his own works rather than posted at them, and kept off the old road's two columns.
   "suburb-road-foreman": { kind: "wander", home: { x: 20.5, y: 18.5 }, radius: 1.3 },
@@ -5977,6 +5997,40 @@ function installDevNavProbe() {
       cells: Array.from(cells),
       at: { x: at.x, y: at.y },
     };
+  };
+}
+/**
+ * The active field surface's cast, as authored: id, label, and the job each one holds. Dev-only,
+ * and gated exactly as `installDevNavProbe()` above is.
+ *
+ * Why a test needs this. `cast-legibility.spec.js` measures how much of the overlay canvas is
+ * painted over each name pill — the one hazard in this area a machine can answer, and the one a
+ * pair of eyes provably cannot, because a body entirely under a tree canopy leaves nothing on
+ * screen to notice. That measurement is only meaningful for a body that stands still: a route or
+ * wander NPC crosses overlay rows by definition, so sampling one at an arbitrary frame reports
+ * where it happened to be rather than where it was posted. The spec therefore asserts on stations
+ * and reports the rest, and the only thing it cannot get from the DOM is which is which.
+ *
+ * **It reads the game's state and does not restate its rules** — the same line `0093` drew for the
+ * nav probe. The kinds come out of the surface's own `behaviours` table; nothing here decides what
+ * a station is.
+ */
+function installDevCastProbe() {
+  if (!import.meta.env.DEV) return;
+  window.__chronicleCast = () => {
+    const map = activeFieldMap();
+    return (map.npcs || []).map((npc) => {
+      const job = map.behaviours?.[npc.id];
+      return {
+        id: npc.id,
+        label: npc.label,
+        kind: job?.kind || "none",
+        at: job?.at || job?.home || { x: npc.x, y: npc.y },
+        // A wanderer's radius, so a caller can reason about the ground the job covers rather than
+        // the frame it was sampled on.
+        radius: job?.radius ?? null,
+      };
+    });
   };
 }
 function applyDevWarp() {
@@ -17291,6 +17345,7 @@ if (app) {
   // gets for being attached inside the FIELD_MAPS literal.
   applyDevWarp();
   installDevNavProbe();
+  installDevCastProbe();
   // Before the first render, so a player who finished missions before the Codex existed opens it
   // to their own work rather than to an empty archive. A no-op on every boot after the first.
   backfillCodex();
