@@ -57,7 +57,7 @@ test.describe("INTERVIEW, in a city that is writing everybody down", () => {
     await expect(page.locator("h1")).toHaveText("What the Government Writes Down");
     // The two panels are the argument the closer asks about, so a flat table would say the opposite.
     await expect(page.locator(".interview-group")).toHaveCount(2);
-    await expect(page.locator(".activity-progress")).toContainText("7");
+    await expect(page.locator(".activity-copy__objective")).toContainText("7");
     // The register rule: people are named, in the first person, not labelled by their condition.
     await expect(page.locator(".activity-board--interview")).toContainText("Peter Gowrie");
     await expect(page.locator(".activity-board--interview")).toContainText("Charlotte Vaughan");

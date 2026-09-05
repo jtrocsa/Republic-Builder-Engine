@@ -79,8 +79,8 @@ test.describe("the activity board", () => {
       sourceActivities: briefed("taino-context"),
     });
     await loadSeededSave(page);
-    await expect(page.locator(".activity-progress")).toContainText("of 7");
-    await expect(page.locator(".activity-progress")).not.toContainText("Islanders");
+    await expect(page.locator(".activity-copy__objective")).toContainText("of 7");
+    await expect(page.locator(".activity-copy__objective")).not.toContainText("Islanders");
     // The three the old label left out are on the same screen, under their own heading.
     await expect(page.locator(".interview-group h4")).toHaveText([
       "The islanders",
@@ -101,7 +101,41 @@ test.describe("the activity board", () => {
     await expect(page.locator(".mission-brief__steps h2")).toHaveText("Mission Instructions");
     await page.locator('[data-action="mission-briefed"]').click();
     await expect(page.locator(".activity-board--assembly")).toBeVisible();
-    await expect(page.locator(".activity-howto h2")).toHaveText("Mission Instructions");
+    // The heading moved from an <h2> to the reference block's <summary> in Phase 109 when the copy
+    // column was folded. The rule it guards did not move: both screens still say the same words.
+    await expect(page.locator('[data-activity-copy="howto"] > summary > b')).toHaveText(
+      "Mission Instructions"
+    );
+  });
+
+  // Phase 109. The copy column re-printed every word of the Mission Instructions screen the player
+  // had just cleared — ~226 words permanently open beside the board. They are behind three
+  // disclosures now, and the open one has to survive a press, because render() rebuilds #app
+  // wholesale and a fresh <details> is closed by construction.
+  test("folds the reference blocks and remembers which one you opened", async ({ page }) => {
+    await seedProgress(page, {
+      ...CASE_001,
+      currentScreen: "assembly",
+      activeActivitySourceId: "waldseemuller-map",
+    });
+    await loadSeededSave(page);
+    await page.locator('[data-action="mission-briefed"]').click();
+    await expect(page.locator(".activity-board--assembly")).toBeVisible();
+
+    const howto = page.locator('[data-activity-copy="howto"]');
+    await expect(howto).toHaveJSProperty("open", false);
+    await expect(page.locator(".activity-howto ol")).toBeHidden();
+    // The question and the objective are what stays open in their place.
+    await expect(page.locator(".activity-copy__question")).toBeVisible();
+    await expect(page.locator(".activity-copy__objective")).toBeVisible();
+
+    await howto.locator("summary").click();
+    await expect(howto).toHaveJSProperty("open", true);
+    await expect(page.locator(".activity-howto ol")).toBeVisible();
+
+    // A press on the board re-renders the screen. The disclosure has to come back open.
+    await page.locator(".activity-fragment").first().click();
+    await expect(page.locator('[data-activity-copy="howto"]')).toHaveJSProperty("open", true);
   });
 
   // P7-3. A finished mission's closer stayed live. `file` overwrites `state.filed` unconditionally

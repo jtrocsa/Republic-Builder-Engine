@@ -13,6 +13,7 @@
 // sourceById("waldseemuller-map"). See docs/decision-log/0051.
 import { z } from "zod";
 import {
+  assemblySummary,
   AssemblyActivitySchema,
   actAssembly,
   assemblyOutcome,
@@ -21,6 +22,7 @@ import {
   renderAssembly,
 } from "./assembly.js";
 import {
+  discrepancySummary,
   DiscrepancyActivitySchema,
   actDiscrepancy,
   defaultDiscrepancyState,
@@ -42,6 +44,7 @@ import {
 
 export { interviewHasAsked };
 import {
+  traceSummary,
   TraceActivitySchema,
   actTrace,
   defaultTraceState,
@@ -61,9 +64,15 @@ import {
 // its own screen.
 //
 // `summary` is how a panel outside the activity says how far along it is in one
-// line — the field's Mission Tracker is the only consumer. An engine whose
-// progress is not one ratio (a TRACE is a chain, not a count) simply doesn't
-// declare it, and the tracker prints the activity's name alone.
+// line. All four declare it as of Phase 109, and the two consumers are the
+// field's Mission Tracker and the activity screen's own objective line.
+//
+// Only INTERVIEW did until then, which left the tracker blank on seventeen of
+// the twenty-four missions and would have left the objective line blank there
+// too — and that line is what the copy column's folded reference blocks are
+// paid for with. This comment used to argue TRACE out of one, "a chain, not a
+// count"; true of what a trace means, and beside the point of a player wanting
+// to know how many legs are still open.
 export const ACTIVITY_ENGINES = {
   interview: {
     schema: InterviewActivitySchema,
@@ -76,6 +85,7 @@ export const ACTIVITY_ENGINES = {
     outcome: interviewOutcome,
   },
   assembly: {
+    summary: assemblySummary,
     schema: AssemblyActivitySchema,
     defaultState: defaultAssemblyState,
     render: renderAssembly,
@@ -84,6 +94,7 @@ export const ACTIVITY_ENGINES = {
     outcome: assemblyOutcome,
   },
   discrepancy: {
+    summary: discrepancySummary,
     schema: DiscrepancyActivitySchema,
     defaultState: defaultDiscrepancyState,
     render: renderDiscrepancy,
@@ -92,6 +103,7 @@ export const ACTIVITY_ENGINES = {
     outcome: discrepancyOutcome,
   },
   trace: {
+    summary: traceSummary,
     schema: TraceActivitySchema,
     defaultState: defaultTraceState,
     render: renderTrace,

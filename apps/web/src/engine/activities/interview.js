@@ -553,11 +553,6 @@ export function renderInterview(activity, state = defaultInterviewState()) {
   // rather than offering a control that does nothing. `ask` and `log` stay live and stay out on the
   // map, which is why nothing on this screen has to know about them.
   const filed = isInterviewComplete(activity, state);
-  const goals = interviewGoals(activity, state)
-    .map(
-      (goal) => `<p><span>${escapeHtml(goal.label)}</span><b>${goal.done}</b> of ${goal.total}</p>`
-    )
-    .join("");
   // Grouping is what turns the notebook into a comparison. Ungrouped, the two
   // accounts of the same island interleave by authoring order and the closer's
   // question about the difference between them has nothing on screen to answer
@@ -595,8 +590,12 @@ export function renderInterview(activity, state = defaultInterviewState()) {
   const where = unasked
     ? `<p class="activity-note activity-board__where">Nobody has been asked anything yet. The questions are put to people out in the field — walk up to someone and choose one. What they tell you collects here.</p>`
     : "";
+  // No progress row of its own. It printed "Accounts secured — 3 of 7" at the head of the board,
+  // and the copy column's objective line prints the same sentence from the same interviewSummary()
+  // — the one goal every shipped interview declares. Two copies of one count on one screen, which
+  // is what Phase 109 gave the other three engines a summary() specifically to avoid. The copy
+  // column is the single place the activity screen states progress now, for all four.
   return `<section class="activity-board activity-board--interview">
-  <div class="activity-progress">${goals}</div>
   ${where}
   ${panels}
   ${renderNotebook(activity, state, findings, { settled: filed })}

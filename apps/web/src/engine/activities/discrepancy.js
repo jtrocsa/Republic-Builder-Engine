@@ -215,6 +215,27 @@ export function discrepancySettled(activity, state = defaultDiscrepancyState()) 
 }
 
 /**
+ * How far along this board is, in the one line a panel outside the activity has room for.
+ *
+ * INTERVIEW was the only engine to declare summary() until Phase 109, so the Mission Tracker's
+ * progress line was blank on seventeen of the game's twenty-four missions — and so was the new
+ * objective line on the board, which is what the copy column's folded reference blocks are paid for
+ * with. Folding the instructions away on a screen that then says nothing about what it is waiting
+ * for is a worse screen, not a shorter one.
+ *
+ * Reuses the per-item status function this engine's own renderer already calls, so there is no
+ * second opinion on this board about what counts as done.
+ */
+export function discrepancySummary(activity, state = defaultDiscrepancyState()) {
+  const total = activity.claims.length;
+  if (!total) return null;
+  const done = activity.claims.filter(
+    (claim) => claimStatus(activity, claim, state).settled
+  ).length;
+  return { key: "claims", label: "Lines settled", done, total };
+}
+
+/**
  * @param {import("zod").infer<typeof DiscrepancyActivitySchema>} activity
  * @param {ReturnType<typeof defaultDiscrepancyState>} [state]
  * @param {{ type: string, claim?: string, verdict?: string, gap?: string, option?: string }} action

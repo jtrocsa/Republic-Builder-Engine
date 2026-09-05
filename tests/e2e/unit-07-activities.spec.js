@@ -102,7 +102,7 @@ test.describe("INTERVIEW, and the first notebook cap on one", () => {
 
     // Eight accounts gathered — the `requires.useful` bar — against three kept. Two different bars,
     // and this is the pair no other interview has.
-    await expect(page.locator(".activity-progress")).toContainText("8");
+    await expect(page.locator(".activity-copy__objective")).toContainText("8");
     await expect(page.locator(".evidence-notebook h3")).toContainText("3 of 3");
     // Full, so the remaining five findings offer a disabled Add button rather than silently evicting.
     await expect(page.locator(".evidence-notebook__full")).toBeVisible();

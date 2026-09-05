@@ -82,7 +82,11 @@ export const DEFAULT_PROGRESS = {
   story: { liaisonTrust: 0, flags: {} },
   // `trackerCollapsed`: whether the field's Mission Tracker checklist is folded to its header.
   // Persisted rather than ephemeral so collapsing it once holds across screen changes and sessions.
-  settings: { miniGamesEnabled: true, trackerCollapsed: false },
+  // `activityCopyOpen`: which of the activity copy column's collapsed reference blocks the player has
+  // opened, keyed by section id. Persisted for trackerCollapsed's reason and one more that is not
+  // optional — render() assigns app.innerHTML wholesale, so a native <details> on that screen closes
+  // itself again every time anything on the board is pressed unless its state lives out here.
+  settings: { miniGamesEnabled: true, trackerCollapsed: false, activityCopyOpen: {} },
   miniGameScores: { stormNavigationBest: 0 },
   tutorial: { step: "not-started", completed: false, skipped: false },
   // Stamped on every save — the seam progress-repository.js's

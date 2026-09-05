@@ -168,10 +168,11 @@ test.describe("TRACE, on its first mission", () => {
     await expect(page.locator(".mission-debrief")).toBeVisible();
   });
 
-  test("the tracker names a trace but reports no ratio for it", async ({ page }) => {
-    // TRACE deliberately does not implement the registry's optional `summary` slot — a chain is not
-    // a count — so the Mission Tracker shows the mission's name and its notebook button and no
-    // progress line. Regression guard on activitySummary() returning null rather than throwing.
+  test("the tracker names a trace and counts its legs", async ({ page }) => {
+    // TRACE declared no `summary` until Phase 109, on the argument that a chain is not a count. True
+    // of what a trace means, and beside the point of a player wanting to know how many legs are
+    // still open — the more so now that the copy column's instructions are folded away and the
+    // objective line is what pays for it. All four engines report a ratio.
     await seedProgress(page, {
       ...CASE_004,
       currentScreen: "field",
@@ -191,10 +192,10 @@ test.describe("TRACE, on its first mission", () => {
     // The mission's name is on its own record row now, not in a heading below it — Phase 71 merged
     // the tracker's two blocks after the panel was found printing the same name twice.
     await expect(tracker.locator(".field-tracker__row.is-tracked")).toHaveText("✦One Hogshead");
-    // And a TRACE reports no ratio, because a chain is not a count: no progress line, and therefore
-    // no bar either.
-    await expect(tracker.locator(".field-tracker__progress")).toHaveCount(0);
-    await expect(tracker.locator(".field-tracker__bar")).toHaveCount(0);
+    // One leg answered of the four this ledger has, on both the line and the bar.
+    await expect(tracker.locator(".field-tracker__progress")).toContainText("Legs accounted for");
+    await expect(tracker.locator(".field-tracker__progress b")).toHaveText("0/4");
+    await expect(tracker.locator(".field-tracker__bar")).toHaveCount(1);
 
     await tracker.locator('[data-action="open-activity-notebook"]').click();
     await expect(page.locator(".activity-board--trace")).toBeVisible();

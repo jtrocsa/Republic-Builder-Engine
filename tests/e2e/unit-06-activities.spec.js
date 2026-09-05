@@ -62,7 +62,7 @@ test.describe("INTERVIEW, and the first speakers who are indoors", () => {
     // Two panels, because the closer asks about the difference between them: people whose business
     // is the paper, and people standing on the ground it describes.
     await expect(page.locator(".interview-group")).toHaveCount(2);
-    await expect(page.locator(".activity-progress")).toContainText("8");
+    await expect(page.locator(".activity-copy__objective")).toContainText("8");
 
     const board = page.locator(".activity-board--interview");
     // The two in the land office. Nothing else in the suite would notice if a future edit narrowed

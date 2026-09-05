@@ -224,6 +224,29 @@ export function traceLogged(activity, state = defaultTraceState()) {
 }
 
 /**
+ * How far along this board is, in the one line a panel outside the activity has room for.
+ *
+ * INTERVIEW was the only engine to declare summary() until Phase 109, so the Mission Tracker's
+ * progress line was blank on seventeen of the game's twenty-four missions — and so was the new
+ * objective line on the board, which is what the copy column's folded reference blocks are paid for
+ * with. Folding the instructions away on a screen that then says nothing about what it is waiting
+ * for is a worse screen, not a shorter one.
+ *
+ * Reuses the per-item status function this engine's own renderer already calls, so there is no
+ * second opinion on this board about what counts as done.
+ *
+ * The registry used to argue TRACE out of having one — "a chain, not a count". That is true of what
+ * a trace means and beside the point of what the line is for: a player wants to know how many legs
+ * are still open, and every other route to that number was folded away in Phase 109.
+ */
+export function traceSummary(activity, state = defaultTraceState()) {
+  const total = activity.legs.length;
+  if (!total) return null;
+  const done = activity.legs.filter((leg) => legStatus(activity, leg, state).correct).length;
+  return { key: "legs", label: "Legs accounted for", done, total };
+}
+
+/**
  * @param {import("zod").infer<typeof TraceActivitySchema>} activity
  * @param {ReturnType<typeof defaultTraceState>} [state]
  * @param {{ type: string, leg?: string, effect?: string, support?: string, option?: string }} action

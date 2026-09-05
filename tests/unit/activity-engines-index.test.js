@@ -158,18 +158,29 @@ describe("ACTIVITY_ENGINES — the contract every engine owes", () => {
     expect(inline).toEqual(["interview"]);
   });
 
-  it("implements summary only where progress is one ratio (boundary case)", () => {
-    // The other optional slot, read by the field's Mission Tracker. A TRACE is a
-    // chain rather than a count, so it declares nothing and the tracker prints
-    // the activity's name alone.
+  it("gives every engine a summary, in the same shape (normal case)", () => {
+    // The other optional slot, and optional no longer in practice: its two consumers are the field's
+    // Mission Tracker and the activity screen's objective line, and that line is what the copy
+    // column's folded reference blocks are paid for with. INTERVIEW was the only implementer until
+    // Phase 109, which left both surfaces blank on seventeen of the twenty-four shipped missions.
+    //
+    // Asserted as "every engine" rather than a list, so a fifth engine has to answer the question
+    // rather than inherit an omission — which is how this slot came to be missing on three.
     const summarised = ACTIVITY_ENGINE_KEYS.filter((kind) => ACTIVITY_ENGINES[kind].summary);
-    expect(summarised).toEqual(["interview"]);
-    expect(activitySummary("assembly", SAMPLES.assembly, defaultActivityState("assembly"))).toBe(
-      null
-    );
-    expect(
-      activitySummary("interview", SAMPLES.interview, defaultActivityState("interview"))
-    ).toMatchObject({ done: 0, total: 1 });
+    expect(summarised).toEqual(ACTIVITY_ENGINE_KEYS);
+    ACTIVITY_ENGINE_KEYS.forEach((kind) => {
+      const summary = activitySummary(kind, SAMPLES[kind], defaultActivityState(kind));
+      expect(summary, kind).toMatchObject({
+        label: expect.any(String),
+        done: expect.any(Number),
+        total: expect.any(Number),
+      });
+      // Nothing is done on a default state, and a board with nothing to count would render a
+      // meaningless "0 of 0" on both consumers.
+      expect(summary.done, kind).toBe(0);
+      expect(summary.total, kind).toBeGreaterThan(0);
+      expect(summary.label.length, kind).toBeGreaterThan(0);
+    });
   });
 
   it.each(ACTIVITY_ENGINE_KEYS)(

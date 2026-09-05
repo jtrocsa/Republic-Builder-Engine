@@ -6925,9 +6925,105 @@ dd {
   flex: none;
   opacity: 0.85;
 }
-/* The line that opens an activity, in the voice of whoever says it. */
+/* The copy column's reference blocks (Phase 109).
+
+   Collapsed by default, and the argument is the one `.codex-record__record` already makes: reference,
+   not reading. This column re-printed every word of the Mission Instructions screen the player had
+   just cleared — about 226 of them, permanently open, in a column that is ~348px wide at 1366x768
+   and has no breakpoint to reflow into — so the mission's own question arrived underneath a wall of
+   things already read.
+
+   No `[data-activity-source]` scope needed here, unlike the rules on `.activity-shell` and
+   `.activity-board` above: these class names are new and `activityCopySection()` is their only
+   author. The chevron treatment is `summary.manage-content-unit-toggle`'s, which is the disclosure
+   marker the rest of the app already uses. */
+.activity-copy__section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-border-subtle);
+}
+.activity-copy__section > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  font-family: "Cinzel", serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.activity-copy__section > summary::-webkit-details-marker {
+  display: none;
+}
+.activity-copy__section > summary::before {
+  content: "▸";
+  flex: none;
+  font-size: 0.7em;
+  line-height: 1;
+  opacity: 0.8;
+}
+.activity-copy__section[open] > summary::before {
+  content: "▾";
+}
+.activity-copy__section > summary:hover,
+.activity-copy__section > summary:focus-visible {
+  color: var(--gold);
+}
+/* The count is the whole reason a collapsed block is safe to collapse: it says what is behind the
+   press, so opening it is a choice rather than a search. */
+.activity-copy__section > summary em {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 0.9em;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+}
+.activity-copy__section-body {
+  margin-top: 10px;
+}
+/* What the mission is waiting for — the one line that replaces everything folded away above it. The
+   count comes from the engine's own summary(), the same object the Mission Tracker prints. */
+p.activity-copy__objective {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 9px 14px;
+  border-radius: var(--c-radius-sm);
+  background: rgba(var(--c-white-rgb), 0.05);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--c-text-secondary);
+}
+.activity-copy__objective span {
+  flex: 1;
+}
+.activity-copy__objective b {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+}
+.activity-copy__objective.is-done {
+  background: rgba(70, 165, 124, 0.14);
+  color: #dfffee;
+}
+.activity-copy__objective.is-done::before {
+  content: "✓";
+  flex: none;
+}
+/* On the board the question is now the first thing under the title, the intro having moved inside
+   Mission Instructions, so it needs the space the intro's own margin used to provide. The brief lays
+   its body out in flow and already has it. */
+.activity-shell[data-activity-source] .activity-copy__question {
+  margin-top: 14px;
+}
+/* The line that opens an activity, in the voice of whoever says it. Inside a reference block since
+   Phase 109, which supplies its own rule and spacing above it. */
 .activity-briefing {
-  margin: 20px 0 0;
+  margin: 0;
   padding: 14px 16px;
   border-left: 3px solid var(--c-border-gold);
   border-radius: 0 var(--c-radius-md) var(--c-radius-md) 0;
@@ -6956,18 +7052,15 @@ dd {
    renders exactly as it did before they existed. */
 .activity-howto,
 .activity-terms {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--c-border-subtle);
+  margin: 0;
 }
-.activity-howto h2,
-.activity-terms h2 {
-  margin: 0 0 10px;
-  font-family: "Cinzel", serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gold-soft);
+/* The activity's own framing line. It opened the copy column until Phase 109 and opens Mission
+   Instructions still; here it is the first thing inside the block whose heading it belongs under. */
+p.activity-howto__intro {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--c-text-secondary);
 }
 .activity-howto ol {
   display: grid;
@@ -6980,7 +7073,7 @@ dd {
   line-height: 1.55;
   color: var(--c-text-secondary);
 }
-.activity-howto__note {
+p.activity-howto__note {
   margin: 12px 0 0;
   font-size: 0.86rem;
   font-style: italic;
@@ -7433,31 +7526,6 @@ dd {
   font-size: 0.86rem;
   line-height: 1.55;
   color: var(--c-text-muted);
-}
-.activity-progress {
-  display: grid;
-  gap: 4px;
-  padding: 10px 16px;
-  border: 1px solid var(--activity-edge);
-  border-radius: var(--c-radius-pill);
-  background: rgba(var(--c-black-rgb), 0.22);
-}
-/* One row per goal the activity actually sets, label left and count right. An engine that reports
-   two numbers reports them as two rows rather than one run-on sentence — "4 questions · 5 people"
-   on one line was read as a contradiction rather than as two bars. */
-.activity-progress p {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0;
-  font-size: 0.84rem;
-  letter-spacing: 0.02em;
-  color: var(--c-text-secondary);
-}
-.activity-progress b {
-  color: var(--gold-soft);
-  font-variant-numeric: tabular-nums;
 }
 /* Wide content scrolls inside its own box; the page body never moves sideways. */
 .activity-scroller {

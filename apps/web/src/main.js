@@ -13437,24 +13437,58 @@ function activityScreen(kind) {
   const board = renderActivity(kind, activity, entry.state, activityContext(activity));
   // The line that starts the activity, in the voice of whoever says it. Rendered by the host rather
   // than the engine because it belongs in the copy column, which the engine has no view of.
-  const briefing = activity.briefing
-    ? `<blockquote class="activity-briefing"><p>${esc(activity.briefing.line)}</p><cite>${esc(fieldNpcName(activity.briefing.speaker))}</cite></blockquote>`
-    : "";
+  const briefing = activityCopySection(
+    "briefing",
+    "Who handed this over",
+    "",
+    activity.briefing
+      ? `<blockquote class="activity-briefing"><p>${esc(activity.briefing.line)}</p><cite>${esc(fieldNpcName(activity.briefing.speaker))}</cite></blockquote>`
+      : ""
+  );
   // How the thing is played, and the words it plays with. Both are host-rendered for the
   // same reason as the briefing: they belong in the copy column, which no engine has a view
   // of. Both are optional, and an activity that omits them renders exactly as before.
-  const howItWorks = activity.howItWorks
-    ? `<section class="activity-howto"><h2>Mission Instructions</h2><ol>${activity.howItWorks.steps
-        .map((step) => `<li>${esc(step)}</li>`)
-        .join(
-          ""
-        )}</ol>${activity.howItWorks.note ? `<p class="activity-howto__note">${esc(activity.howItWorks.note)}</p>` : ""}</section>`
-    : "";
-  const terms = activity.terms
-    ? `<section class="activity-terms"><h2>Words in this record</h2><dl>${activity.terms
-        .map((word) => `<dt>${esc(word.term)}</dt><dd>${esc(word.definition)}</dd>`)
-        .join("")}</dl></section>`
-    : "";
+  //
+  // "Mission Instructions" is the heading the screen that gave them carries, and it stays that way.
+  // The board said "How this works" from Phase 69 to Phase 90F and the two disagreed for nineteen
+  // phases, so a student looking for what they read thirty seconds ago found something with another
+  // name. Collapsing them is not licence to rename them.
+  const howItWorks = activityCopySection(
+    "howto",
+    "Mission Instructions",
+    `${activity.howItWorks.steps.length} steps`,
+    `<section class="activity-howto"><p class="activity-howto__intro">${esc(activity.intro)}</p><ol>${activity.howItWorks.steps
+      .map((step) => `<li>${esc(step)}</li>`)
+      .join(
+        ""
+      )}</ol>${activity.howItWorks.note ? `<p class="activity-howto__note">${esc(activity.howItWorks.note)}</p>` : ""}</section>`
+  );
+  const terms = activityCopySection(
+    "terms",
+    "Words in this record",
+    activity.terms ? String(activity.terms.length) : "",
+    activity.terms
+      ? `<section class="activity-terms"><dl>${activity.terms
+          .map((word) => `<dt>${esc(word.term)}</dt><dd>${esc(word.definition)}</dd>`)
+          .join("")}</dl></section>`
+      : ""
+  );
+  // What the mission is waiting for, on the screen where the work is done.
+  //
+  // This is what the folded reference blocks are paid for with: fold the instructions away and the
+  // screen owes the player a sentence about what it is waiting for. Same defect `missionQuestion`
+  // had before Phase 90G and the same fix.
+  //
+  // It is also the activity screen's *only* progress readout. INTERVIEW printed the same sentence
+  // again at the head of its own board, from this same summary, until Phase 109. Only INTERVIEW
+  // implemented summary() until then, so writing the other three was part of this change rather
+  // than a follow-on — see decision log `0108` §5.
+  const progressSummary = activitySummary(kind, activity, entry.state);
+  const objective = complete
+    ? `<p class="activity-copy__objective is-done">Record filed.</p>`
+    : progressSummary
+      ? `<p class="activity-copy__objective"><span>${esc(progressSummary.label)}</span><b>${progressSummary.done} of ${progressSummary.total}</b></p>`
+      : "";
   const footer = complete
     ? `<p class="activity-feedback success">Record stabilized.</p><button class="btn btn-gold" data-action="open-activity-source" data-source="${esc(source.id)}">Open ${esc(source.title)} →</button>`
     : "";
@@ -13469,7 +13503,49 @@ function activityScreen(kind) {
   const question = activity.missionQuestion
     ? `<p class="activity-copy__question">${esc(activity.missionQuestion)}</p>`
     : "";
-  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p>${esc(activity.intro)}</p>${question}${briefing}${howItWorks}${terms}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
+  return `${chrome()}<main class="shell activity-shell activity-shell--${esc(kind)}" data-activity-source="${esc(source.id)}"><section class="activity-copy"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}${question}${objective}${howItWorks}${terms}${briefing}</section><div class="activity-stage">${board}${footer ? `<section class="activity-footer">${footer}</section>` : ""}</div></main>`;
+}
+
+/**
+ * One collapsed reference block in the activity screen's copy column.
+ *
+ * The column used to print every word of the Mission Instructions screen a player had cleared
+ * thirty seconds earlier — intro, question, briefing, three steps, a note and a glossary. Measured
+ * in a browser rather than estimated: 244 words permanently open, in a ~348px column that has no
+ * breakpoint to reflow into at 1366x768, and 59 after this. What
+ * stays open above these now is what the mission asks and what it is waiting for. The argument is
+ * `.codex-record__record`'s, made once already: reference, not reading.
+ *
+ * Native <details> rather than the Mission Tracker's hand-rolled toggle, and that is exactly why the
+ * open flag has to live in `progress`: render() assigns app.innerHTML wholesale, so a fresh
+ * <details> is closed again every time anything on the board is pressed. handleActivityCopyToggle()
+ * writes it back and deliberately does not re-render — the browser has already opened the panel, and
+ * rebuilding the screen underneath it is the double-toggle race the Manage Content accordion carries
+ * its own warning about.
+ *
+ * Returns "" for an empty body, so an activity with no `terms` renders exactly as it did before.
+ */
+function activityCopySection(id, label, hint, body) {
+  if (!body) return "";
+  const open = progress.settings?.activityCopyOpen?.[id] === true;
+  return `<details class="activity-copy__section" data-activity-copy="${esc(id)}"${open ? " open" : ""}><summary><b>${esc(label)}</b>${hint ? `<em>${esc(hint)}</em>` : ""}</summary><div class="activity-copy__section-body">${body}</div></details>`;
+}
+
+/**
+ * Remember which reference block a player opened.
+ *
+ * `toggle` does not bubble, so this is a capture-phase document listener for the same reason the two
+ * <dialog> close/cancel handlers are. It saves and returns: the panel the player pressed is already
+ * open, and calling render() here would rebuild the element the browser has just toggled.
+ */
+function handleActivityCopyToggle(event) {
+  const id = event.target?.dataset?.activityCopy;
+  if (!id) return;
+  progress.settings = {
+    ...progress.settings,
+    activityCopyOpen: { ...progress.settings?.activityCopyOpen, [id]: event.target.open === true },
+  };
+  save();
 }
 
 /**
@@ -17099,6 +17175,8 @@ if (app) {
   // document listeners instead (see handleManageContentDialogNativeClose()'s
   // doc comment for why this only matters for closes our own code didn't
   // already see, e.g. Escape while a dialog itself has focus).
+  // <details>'s toggle event does not bubble either — same capture-phase treatment, same reason.
+  document.addEventListener("toggle", handleActivityCopyToggle, true);
   document.addEventListener("close", handleManageContentDialogNativeClose, true);
   document.addEventListener("cancel", handleManageContentDialogNativeClose, true);
   window.addEventListener("beforeunload", handleWindowBeforeUnload);

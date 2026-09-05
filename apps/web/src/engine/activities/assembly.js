@@ -273,6 +273,25 @@ export function boardOpen(activity, board, state = defaultAssemblyState()) {
 }
 
 /**
+ * How far along this board is, in the one line a panel outside the activity has room for.
+ *
+ * INTERVIEW was the only engine to declare summary() until Phase 109, so the Mission Tracker's
+ * progress line was blank on seventeen of the game's twenty-four missions — and so was the new
+ * objective line on the board, which is what the copy column's folded reference blocks are paid for
+ * with. Folding the instructions away on a screen that then says nothing about what it is waiting
+ * for is a worse screen, not a shorter one.
+ *
+ * Reuses the per-item status function this engine's own renderer already calls, so there is no
+ * second opinion on this board about what counts as done.
+ */
+export function assemblySummary(activity, state = defaultAssemblyState()) {
+  const total = activity.boards.reduce((sum, board) => sum + board.slots.length, 0);
+  if (!total) return null;
+  const done = activity.boards.reduce((sum, board) => sum + boardStatus(board, state).correct, 0);
+  return { key: "slots", label: "Pieces in place", done, total };
+}
+
+/**
  * @param {import("zod").infer<typeof AssemblyActivitySchema>} activity
  * @param {ReturnType<typeof defaultAssemblyState>} [state]
  * @param {{ type: string, board?: string, slot?: string, fragment?: string, option?: string }} action

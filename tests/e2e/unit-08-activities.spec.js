@@ -81,7 +81,7 @@ test.describe("INTERVIEW: eight people, and two of them are indoors", () => {
     await expect(page.locator(".activity-board--interview")).toContainText("Vince Kearsley");
     await expect(page.locator(".activity-board--interview")).toContainText("Arlene Petrofsky");
 
-    await expect(page.locator(".activity-progress")).toContainText("8");
+    await expect(page.locator(".activity-copy__objective")).toContainText("8");
   });
 });
 
