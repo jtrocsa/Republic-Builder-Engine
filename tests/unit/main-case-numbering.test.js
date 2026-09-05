@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { UNITS, caseNumberLabel } from "../../apps/web/src/main.js";
+import { UNITS, caseNumberLabel, resolvedCaseName } from "../../apps/web/src/main.js";
 
 const ALL_CASES = UNITS.flatMap((unit) =>
   unit.cases.map((kase) => [`${unit.id} ${kase.id}`, kase])
@@ -55,6 +55,27 @@ describe("every mission carries a case number", () => {
       .filter(Boolean);
     expect(authored, "Unit 1's titles no longer carry their prefixes").toHaveLength(3);
     expect(UNITS[0].cases.map(caseNumberLabel)).toEqual(authored);
+  });
+
+  // Phase 107. The number is an eyebrow above the name and never inside it (INVARIANTS.md §35),
+  // and `resolvedCaseName()` is what every heading that names a mission now calls. Its sibling
+  // `resolvedCaseTitle()` joins the two, and the two differ **only on Unit 1** — so a heading built
+  // from the wrong one reads correctly on twenty-four cases and carries the number on three. That
+  // is how four student-facing headings held it: the Navigation Table, the field screen, the
+  // mission card's kicker, and the Practice Check's own prose.
+  it.each(ALL_CASES)("%s names itself without its number (normal case)", (_label, kase) => {
+    expect(
+      resolvedCaseName(kase),
+      `${kase.id}'s name carries its own number, so any heading that prints it breaks the eyebrow rule`
+    ).not.toMatch(/^Case \d/);
+  });
+
+  it("splits Unit 1's titles into exactly the number and the name (edge case)", () => {
+    // The three that prove the split, because they are the only ones with anything to split. Put
+    // back together, they have to be the authored title again — no lost em dash, no lost space.
+    for (const kase of UNITS[0].cases) {
+      expect(`${caseNumberLabel(kase)} — ${resolvedCaseName(kase)}`).toBe(kase.title);
+    }
   });
 
   it("returns nothing for a case no unit contains (edge case)", () => {

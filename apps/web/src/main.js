@@ -6413,6 +6413,18 @@ function splitCaseTitle(kase) {
     ? { prefix: m[1], name: kase.title.slice(m[1].length) }
     : { prefix: "", name: kase.title };
 }
+/**
+ * The full reference form — "Case 1.01 — The Atlantic Crossroads" on Unit 1, and the bare name
+ * everywhere else, because only Unit 1's three titles carry a `"Case N.NN — "` prefix.
+ *
+ * **Never put this in a heading.** The case number is an eyebrow above the name and never inside
+ * it (INVARIANTS.md §35), and this string is the one place in the app where the two are joined —
+ * so a heading built from it breaks the rule on Unit 1 and silently obeys it everywhere else,
+ * which is how four student-facing headings held the number until Phase 107.
+ *
+ * What is left for it is prose and labels, where a full reference is what you want: two Manage
+ * Content status banners, the breadcrumb crumb, and the atlas marker's `aria-label`.
+ */
 function resolvedCaseTitle(kase) {
   return splitCaseTitle(kase).prefix + resolvedCaseName(kase);
 }
@@ -6421,9 +6433,14 @@ function resolvedCaseTitle(kase) {
 // Before, a single mission answered to four strings on one screen — its shortTitle on the map
 // marker ("Atlantic Routes"), its title in the route panel, and its mechanic in both the chip and
 // the primary button ("Open Atlantic Route Puzzle") — while the teacher's Manage Content wizard
-// called it a fifth thing. Student-facing names now all come from here or resolvedCaseTitle();
-// `mechanic` survives only as teacher-side help text (caseKindDetail()).
-function resolvedCaseName(kase) {
+// called it a fifth thing. `mechanic` survives only as teacher-side help text (caseKindDetail()).
+//
+// **Every heading that names a mission calls this one, not resolvedCaseTitle().** That sentence
+// used to read "names now all come from here or resolvedCaseTitle()", and the "or" is what let the
+// number back into four student-facing headings — the two functions differ only on Unit 1, so the
+// wrong one of them looks right on twenty-four cases out of twenty-seven. Exported so the rule can
+// be checked against all of them.
+export function resolvedCaseName(kase) {
   return resolveTeacherOverride(kase.id, "title", splitCaseTitle(kase).name);
 }
 // "Case 4.02" — a mission's number, derived from where the case sits rather than read off its title.
@@ -7615,7 +7632,7 @@ function manageContentMissionCardMarkup(c) {
   const detail = caseKindDetail(c);
   return `<article class="manage-content-mission-card c-card c-card--interactive">
 <div class="manage-content-mission-head"><p class="kicker">${esc(caseNumberLabel(c) || c.shortTitle)}</p>${chip({ label: caseKindLabel(c), tone: "gold" })}</div>
-<h3>${esc(resolvedCaseTitle(c))}</h3>
+<h3>${esc(resolvedCaseName(c))}</h3>
 ${detail ? `<p class="c-help">${esc(detail)}</p>` : ""}
 <p class="case-summary-note">${esc(c.summary)}</p>
 ${cedAlignmentMarkup(c)}
@@ -8746,7 +8763,7 @@ function manageContentCaseScreen() {
   // "Back" buttons used to.
   if (activeCase.route === "field") {
     return `${manageContentFixedHeaderMarkup(activeCase)}<main class="shell manage-content-shell c-app"><section>
-${pageHeaderMarkup({ eyebrow: caseNumberLabel(activeCase) || activeCase.shortTitle, title: resolvedCaseTitle(activeCase) })}
+${pageHeaderMarkup({ eyebrow: caseNumberLabel(activeCase) || activeCase.shortTitle, title: resolvedCaseName(activeCase) })}
 ${missionRenameControlMarkup(activeCase)}
 <p class="locked-note">LOCKED — this mission's map, NPCs, sources, and questions are fixed and can't be edited or replaced.</p>
 </section></main>${authorPanel()}${sourceFullTextDialogMarkup()}${manageContentWarningDialogMarkup()}${manageContentHelpDrawerMarkup()}`;
@@ -8777,7 +8794,7 @@ function manageContentWizardHeaderMarkup(activeCase) {
   return `<div class="manage-content-wizard-header-top">${helpIconMarkup(MANAGE_CONTENT_WIZARD_HELP_TEXT)}</div>
 ${pageHeaderMarkup({
   eyebrow: caseNumber || activeCase.shortTitle,
-  title: resolvedCaseTitle(activeCase),
+  title: resolvedCaseName(activeCase),
   description: activeCase.summary,
 })}`;
 }
@@ -11544,8 +11561,10 @@ function missionScreen() {
   // player had to navigate to first. Spine Review Part 10, P10-6.
   const nextCase = unit.cases[unit.cases.findIndex((c) => c.id === kase.id) + 1];
   const card = archiveChallengeCard(
-    // Not escaped here: archiveChallengeQuestCard() escapes the kicker itself.
-    resolvedCaseTitle(kase),
+    // Not escaped here: archiveChallengeQuestCard() escapes the kicker itself. The name, not the
+    // title: `missionKicker` below already carries the number, and on Unit 1 the title carries it
+    // again — so this card printed "Case 1.02 — The Exchange Ledger" under "Case 1.02 · Period 1".
+    resolvedCaseName(kase),
     kase.archiveChallenge.questType,
     kase.archiveChallenge.questId,
     {
@@ -11879,7 +11898,7 @@ function archiveScreen() {
     markerPositions.get(selected.id) ||
     projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
   const { left: threadLeft, top: threadTop } = xyToPercent(threadXY, viewport);
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="hub-return">← Main Hall</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Select a marker to read its route.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc(selected.date)}</span><h2>${esc(resolvedCaseTitle(selected))}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitCloseButton}</aside></main>${authorPanel()}`;
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="hub-return">← Main Hall</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Select a marker to read its route.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc([caseNumberLabel(selected), selected.date].filter(Boolean).join(" · "))}</span><h2>${esc(resolvedCaseName(selected))}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitCloseButton}</aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the
@@ -13321,8 +13340,14 @@ function fieldScreen() {
   const remaining = Math.max(0, sources.length - countEvidence(caseId));
   const reconstructionGate = `<p class="channel-progress">${remaining} ${remaining === 1 ? "record" : "records"} still to secure. The Reconstruction Table opens when the last one is in.</p>`;
   const fieldNotice = progress.fieldNotice;
-  const kicker = caseWhereAndWhen(activeCase);
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseTitle(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
+  // Same eyebrow shape the mission screen uses — number, then where and when. The number lived
+  // *inside* the h1 below until Phase 107, on Unit 1 alone, because only Unit 1's titles carry the
+  // prefix `resolvedCaseTitle()` reads. It could not move here until Phase 105 made
+  // `caseNumberLabel()` answer for all twenty-seven cases rather than three.
+  const kicker = [caseNumberLabel(activeCase), caseWhereAndWhen(activeCase)]
+    .filter(Boolean)
+    .join(" · ");
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseName(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map(fieldNpcButton).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
 }
 
 // Human-facing name for each engine, used in the activity screen's eyebrow. The engine keys
@@ -13927,7 +13952,7 @@ function practiceCheckScreen() {
     })
     .join("");
 
-  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseName(activeCase))} · practice</p><h1>Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseTitle(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
+  return `${chrome()}<main class="shell activity-shell quest-practice-shell"><section class="activity-copy"><button class="back-link" data-action="field">← Back to ${esc(activeCase.shortTitle)} field</button><p class="kicker">${esc(resolvedCaseName(activeCase))} · practice</p><h1>Practice Check</h1><p>Practice questions grounded in ${esc(resolvedCaseName(activeCase))}'s own record, covering all four quest types now available in Chronicle. This is practice only — it does not affect your Preservation Case progress, and you can retry as many times as you like.</p><p class="quest-practice-summary">${overallComplete}/${overallTotal} practice items complete</p></section><section class="activity-board quest-practice-board"><h2 class="quest-section-heading">Multiple choice</h2>${mcqCards}<h2 class="quest-section-heading">Sequencing</h2>${sequencingCards}<h2 class="quest-section-heading">Evidence organizing</h2>${evidenceCards}<h2 class="quest-section-heading">HIPP source analysis</h2>${hippCards}</section></main>`;
 }
 
 /**
