@@ -113,8 +113,15 @@ test.describe("every non-field mission", () => {
       expect(meta.length, `${caseId} meta chips`).toBe(1);
       // The duplication this replaced: "Washington, D.C. · 1816–1837" and then "1816–1837" beside
       // it, on twelve of the fourteen.
-      const years = meta[0].match(/\d{4}/g) || [];
-      expect(new Set(years).size, `${caseId} repeats a year in "${meta[0]}"`).toBe(years.length);
+      //
+      // Counting **datelines**, not repeated years. Until Phase 108 this asked whether one year
+      // appeared twice — the same proxy `caseWhereAndWhen()` itself was using, and it misses the
+      // only shape that can still get through: a location carrying the day a document was
+      // delivered against a `date` carrying the span the case covers. Case 8.02 rendered
+      // "The United States Senate · 1 June 1950 · 1947–1954" and passed here on every run, because
+      // 1950, 1947 and 1954 are three different years. See decision log `0107`.
+      const dated = meta[0].split(" · ").filter((part) => /\d{4}/.test(part));
+      expect(dated, `${caseId} names two dates in "${meta[0]}"`).toHaveLength(1);
     }
     for (const extraPage of opened) await extraPage.close();
   });

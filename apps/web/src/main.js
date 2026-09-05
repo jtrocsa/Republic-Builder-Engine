@@ -6481,8 +6481,33 @@ export function caseNumberLabel(kase) {
  * Preservation Case needed the same line for a badge — the second consumer, which is what makes it
  * a function rather than a second copy.
  */
-function caseWhereAndWhen(kase) {
-  return kase.location.includes(kase.date) ? kase.location : `${kase.location} · ${kase.date}`;
+/**
+ * Where and when a case is set, as one dateline — the mission chip, the field kicker and the
+ * Preservation Case badge all print this and nothing else about place or time.
+ *
+ * A case’s `location` is authored in two shapes and always has been. Most carry their own date
+ * (`"Ellis Island, New York Harbor · 17 April 1907"`); two are a bare place (`"The thirteen
+ * colonies"`) and need `date` appended. Printing both unconditionally is Spine Review P10-3.
+ *
+ * The question is **“does the location already say when?”**, and until Phase 108 this asked
+ * `location.includes(date)` instead — a proxy that holds only while the two are the same string.
+ * Twenty-two of the twenty-seven cases satisfy both readings, so for eight units the proxy and the
+ * question were indistinguishable. Units 8 and 9 then authored a third shape: a location carrying
+ * the specific date a document was delivered, against a `date` carrying the span the case covers.
+ * Two different true dates, neither containing the other, run together as one line —
+ * `"The United States Senate · 1 June 1950 · 1947–1954"`.
+ *
+ * Naming a year is the whole test, because that is the only thing `date` adds. Where the location
+ * already names one, the `date` field contributes nothing to what is drawn — which is already
+ * true of twenty-two cases and is the behaviour this preserves. See decision log `0107`, and
+ * `tests/unit/case-dateline.test.js`, which reads all nine registered units rather than the eight
+ * playable ones so Unit 9’s two are held before the unit ships.
+ */
+const LOCATION_NAMES_A_YEAR = /\b\d{4}\b/;
+export function caseWhereAndWhen(kase) {
+  return LOCATION_NAMES_A_YEAR.test(kase.location)
+    ? kase.location
+    : `${kase.location} · ${kase.date}`;
 }
 
 // Per-classroom Navigation Table visibility (Phase 48C) — default visible,

@@ -206,7 +206,8 @@ function unitEntries(unitId) {
   ];
 }
 
-/** Every unit's content, keyed `unit01`...`unit07`. The shape the validator and tests read. */
+/** Every unit's content, keyed `unit01`...`unit09` off UNIT_IDS — every *registered* unit, not
+ * just the playable ones. The shape the validator and the content sweeps read. */
 export function loadChronicleContent() {
   return Object.fromEntries(
     UNIT_IDS.map((unitId) => [
