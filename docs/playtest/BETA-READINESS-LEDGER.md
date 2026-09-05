@@ -38,7 +38,7 @@ _a finding, not a failure_, and that is the pedagogy rather than a wording prefe
 | 109   | `0108` | The column says it twice                 | **closed**  | 2026-09-05 | —    |
 | 110   | `0109` | Every action lands                       | **closed**  | 2026-09-05 | —    |
 | 111   | `0110` | The map says who                         | **closed**  | 2026-09-05 | —    |
-| 112   | `0111` | The field never adopted the escape hatch | not started | —          | —    |
+| 112   | `0111` | The field never adopted the escape hatch | **closed**  | 2026-09-05 | —    |
 | 113   | `0112` | Look at the room                         | not started | —          | —    |
 
 ### Phase 109 — measured
@@ -76,6 +76,20 @@ returns honest nothing, not a wrong answer.
 
 Both halves honour the binding constraint by construction: a badge is a graphic, and the pips
 replaced the bar in the space it already had.
+
+### Phase 112 — what changed
+
+Two defects, one sentence: **the field never took something the hub already had.** Both proved by
+reverting the fix and watching the new test go red.
+
+| Defect                                                       | Was                                   | Now                         |
+| ------------------------------------------------------------ | ------------------------------------- | --------------------------- |
+| Player placed inside a body (interior exit, restored save)   | **locked** — every direction refused  | walks out                   |
+| NPC steps into the 0.06-tile band between the two foot boxes | ~3px snag on thin air                 | harmless                    |
+| Diagonal held against a wall                                 | legs at 3.65 while body moves at 2.58 | measured, 0.426s not 0.301s |
+
+**Facing before collision is deliberate and stays** — turning to face a wall without moving is how a
+player aims every proximity interaction in the game.
 
 ---
 

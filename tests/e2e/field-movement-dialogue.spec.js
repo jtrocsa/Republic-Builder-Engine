@@ -203,4 +203,117 @@ test.describe("Field movement, collision, and dialogue", () => {
     await page.locator("#caribbeanWorld").dispatchEvent("click");
     await expect(bubble).toHaveCount(0);
   });
+
+  // Phase 112. isHubBlocked() has excused a body the player is already standing inside since Phase
+  // 64 — otherwise the overlap is permanent — and isFieldBlocked() never took the same clause. Two
+  // ways to hit it. The narrow one is constant and about three pixels wide: an NPC checks itself
+  // against the player with a 0.36-wide foot box and the player is blocked by a 0.42-wide one, so
+  // between 0.70 and 0.76 tiles apart the NPC has legally stepped somewhere the player's own
+  // collision calls occupied, and walking away was refused along with everything else.
+  //
+  // The wide one is this test, because it is reachable and it is a lock rather than a snag:
+  // exitFieldInterior() restores `progress.fieldReturn` verbatim and never asks whether anybody has
+  // since walked there. Canal Crossroads' lock keeper is stationed at (24.5, 20.2).
+  test("a player put down on top of somebody can still walk away", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedProgress(page, {
+      activeCaseId: "case-010",
+      selectedCaseId: "case-010",
+      unlocked: ["case-001", "case-010"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+      currentScreen: "field",
+      currentFieldRoom: "canal-print-shop",
+      fieldReturn: { x: 24.5, y: 20.2, facing: "down" },
+    });
+    await loadSeededSave(page);
+    await page.locator(".field-door--exit").click();
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    // Standing inside the lock keeper's own foot box: his blocks x 24.08-24.92 by y 20.4-21.12, the
+    // player's is x 24.16-24.84 by y 20.6-20.98. Confirmed against the running game rather than
+    // asserted from the arithmetic alone.
+    const overlapping = await page.evaluate(() => {
+      const keeper = document.querySelector('[data-npc="canal-lock-keeper"]');
+      const player = document.getElementById("caseFieldPlayer");
+      if (!keeper || !player) return false;
+      const at = (el) => [parseFloat(el.style.left), parseFloat(el.style.top)];
+      const [kx, ky] = at(keeper);
+      const [px, py] = at(player);
+      return Math.abs(kx - px) < 24 && Math.abs(ky - py) < 24;
+    });
+    expect(overlapping).toBe(true);
+
+    // The game's own predicate, read through the dev probe: the cell the player is standing in must
+    // not report blocked, or every direction out of it is refused.
+    const ownCellClear = await page.evaluate(() => {
+      const nav = window.__chronicleNav("field");
+      const col = Math.round(nav.at.x / nav.step);
+      const row = Math.round(nav.at.y / nav.step);
+      return nav.cells[row * nav.cols + col] === 0;
+    });
+    expect(ownCellClear).toBe(true);
+
+    // And behaviourally: some way out exists. Every direction was refused before this fix, so any
+    // one of them moving is the whole claim.
+    const before = await readFieldState(page);
+    let escaped = false;
+    for (const key of ["ArrowUp", "ArrowLeft", "ArrowRight", "ArrowDown"]) {
+      await holdKey(page, key, 320);
+      const after = await readFieldState(page);
+      if (Math.abs(after.px - before.px) > 4 || Math.abs(after.py - before.py) > 4) {
+        escaped = true;
+        break;
+      }
+    }
+    expect(escaped).toBe(true);
+  });
+
+  // The other half of the same phase, and the same shape: updateInstitutePlayer() has taken a speed
+  // since Phase 63 because a scripted walk moves at 2.2 rather than 3.65, and updateFieldPlayer()
+  // passed the constant. The field's one non-constant case is the wall slide — a diagonal keeps both
+  // normalised components only while both are free, so when one is blocked the body travels at 0.707
+  // of full speed while the legs ran at full. That is the "skating" the ground-speed invariant
+  // exists to prevent, in the one place nobody had instrumented.
+  test("a diagonal held against a body runs the legs at the speed the body is actually moving", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    // One tile clear above Canal Crossroads' stationed lock keeper: the player's foot box is
+    // y 19.4-19.78 against his 20.4-21.12, so down is blocked and the sideways component is not.
+    await seedProgress(page, {
+      activeCaseId: "case-010",
+      selectedCaseId: "case-010",
+      unlocked: ["case-001", "case-010"],
+      tutorial: { step: "complete", completed: true, skipped: false },
+      currentScreen: "field",
+      currentFieldRoom: "canal-print-shop",
+      fieldReturn: { x: 24.5, y: 19.0, facing: "down" },
+    });
+    await loadSeededSave(page);
+    await page.locator(".field-door--exit").click();
+    await expect(page.locator("#caseFieldPlayer")).toBeVisible();
+
+    const cycle = () =>
+      page
+        .locator("#caseFieldPlayerSprite")
+        .evaluate((el) => Number.parseFloat(el.style.getPropertyValue("--sprite-cycle")));
+
+    // Straight along a free axis: the full 3.65 tiles/s, so 1.1 / 3.65 = 0.301s.
+    await page.keyboard.down("ArrowLeft");
+    await page.waitForTimeout(220);
+    const free = await cycle();
+    await page.keyboard.up("ArrowLeft");
+    expect(free).toBeCloseTo(0.301, 2);
+
+    // Now down-and-across, with down blocked by the keeper. The body slides at 0.707 x 3.65 = 2.58,
+    // so the legs have to run at 1.1 / 2.58 = 0.426s and not at 0.301s.
+    await page.keyboard.down("ArrowDown");
+    await page.keyboard.down("ArrowRight");
+    await page.waitForTimeout(260);
+    const slid = await cycle();
+    await page.keyboard.up("ArrowRight");
+    await page.keyboard.up("ArrowDown");
+    expect(slid).toBeGreaterThan(free);
+    expect(slid).toBeCloseTo(0.426, 1);
+  });
 });

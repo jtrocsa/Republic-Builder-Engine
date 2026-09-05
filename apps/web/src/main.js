@@ -12297,22 +12297,34 @@ function isFieldBlocked(x, y) {
   const map = activeFieldMap();
   if (!landChecks.every(([px, py]) => map.isLand(px, py))) return true;
   if (map.blocks.some((block) => rectsOverlap(foot, block))) return true;
-  return map.npcs.some((npc) => rectsOverlap(foot, npcFootBox(npc)));
+  // A body the player is *already* standing inside does not block them, or the overlap is
+  // permanent. isHubBlocked() has called isBlockedByBody() for this reason since Phase 64 and the
+  // field never took it, which left two ways to get stuck out here.
+  //
+  // The narrow one is constant: an NPC checks itself against the player with a foot box 0.36 wide
+  // (fieldNpcFootBoxAt) and the player is blocked by one 0.42 wide (npcFootBox), so between 0.70 and
+  // 0.76 tiles apart the NPC has legally stepped somewhere the player's own collision calls
+  // occupied. Six hundredths of a tile, about three pixels, in which walking away and walking
+  // sideways were both refused — a snag on thin air beside somebody standing a tile clear.
+  //
+  // The wider one is that the player can be *placed* inside a body rather than walking into one:
+  // an interior entry or exit lands them on `room.entry`, a restored `progress.fieldReturn` puts
+  // them back where they were, and neither asks whether somebody has since walked there. Without
+  // the hatch that is not a snag, it is a lock with no way out but a reload.
+  return isBlockedByBody(
+    foot,
+    footBoxFor(fieldMovement.x, fieldMovement.y),
+    map.npcs.map(npcFootBox)
+  );
 }
-function updateFieldPlayer() {
+function updateFieldPlayer(speed = FIELD_SPEED) {
   const player = document.getElementById("caseFieldPlayer");
   const sprite = document.getElementById("caseFieldPlayerSprite");
   const world = document.getElementById("caribbeanWorld");
   if (!player || !sprite) return;
   player.style.cssText = fieldPositionStyle();
   player.dataset.facing = fieldMovement.facing;
-  applyCharacterSprite(
-    sprite,
-    chroniclerKey(),
-    fieldMovement.facing,
-    fieldMovement.moving,
-    FIELD_SPEED
-  );
+  applyCharacterSprite(sprite, chroniclerKey(), fieldMovement.facing, fieldMovement.moving, speed);
   if (world) {
     const viewport = world.parentElement.getBoundingClientRect();
     const grid = activeFieldGrid();
@@ -12446,6 +12458,8 @@ function runFieldMovementLoop(now) {
     Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "up" : "down";
   const nextX = Number((fieldMovement.x + dx * distance).toFixed(3));
   const nextY = Number((fieldMovement.y + dy * distance).toFixed(3));
+  const fromX = fieldMovement.x;
+  const fromY = fieldMovement.y;
   let moved = false;
   if (!isFieldBlocked(nextX, nextY)) {
     fieldMovement.x = nextX;
@@ -12466,7 +12480,14 @@ function runFieldMovementLoop(now) {
   if (moved && progress.activeFieldNpc) closeFieldDialogueOnMove();
   fieldMovement.moving = moved;
   if (moved) fieldMovement.step = !fieldMovement.step;
-  updateFieldPlayer();
+  // "Ground speed drives the walk cycle, per body, per moment", and the slide above is the one
+  // place on this surface where the ground speed is not FIELD_SPEED: a diagonal held against a wall
+  // keeps only one of its two normalised components, so the body travels at 0.707 of full speed
+  // while the legs ran at full. updateInstitutePlayer() has taken a speed since Phase 63 for exactly
+  // this reason; the field passed the constant. Measured rather than special-cased, so any future
+  // path that moves the player some other way is covered by construction.
+  const travelled = Math.hypot(fieldMovement.x - fromX, fieldMovement.y - fromY);
+  updateFieldPlayer(elapsed > 0 && travelled > 0 ? travelled / (elapsed / 1000) : FIELD_SPEED);
   fieldMoveFrame = window.requestAnimationFrame(runFieldMovementLoop);
 }
 // Every unit's activities in one flat lookup keyed by source id, the same shape as the quest
