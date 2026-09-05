@@ -6211,7 +6211,25 @@ dd {
   left: 50%;
   top: var(--cast-label-top);
   transform: translateX(-50%);
-  white-space: nowrap;
+  /* Wraps rather than running as wide as the label wants (Phase 113). A pill is centred on its body,
+     so a long role on somebody standing near the frame's edge ran straight off it — Ellis Island's
+     "Surgeon, Public Health and Marine-Hospital Service" is 300px on one line and loses its last
+     word on entering the room. Four tiles is wide enough that no shipped label wraps to more than
+     two lines and narrow enough to halve the worst overhang.
+
+     It bounds the overhang rather than removing it, and cannot do otherwise: a pill centred on a
+     body standing at the frame edge overhangs by half its own width whatever that width is. The
+     camera brings it back as the player approaches; this is about what the room looks like on the
+     way in.
+
+     `width: max-content` is load-bearing and not tidiness: the pill is absolutely positioned inside
+     a 48px-wide NPC button, so dropping `white-space: nowrap` on its own makes it shrink-to-fit
+     against *that* rather than against the cap below, and every label in the game wraps to two or
+     three words a line. */
+  width: max-content;
+  max-width: 192px;
+  text-align: center;
+  text-wrap: balance;
   padding: 4px 6px;
   border: 1px solid rgba(var(--c-gold-rgb), 0.34);
   border-radius: 7px;

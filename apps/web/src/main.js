@@ -4029,10 +4029,16 @@ const UNIT8_BUILDING_AND_LOAN_NPCS = [
   },
   {
     id: "suburb-counter-clerk",
-    // Behind the counter's west run, two tiles from him and clear of the counter's own rect. She is
-    // the one who takes an application across it and the one who sees which ones come back. (3.0,
-    // 5.5) was tried first and stood her inside the press cupboard, which has since moved anyway.
-    x: 2.5,
+    // Behind the counter's west run, clear of the counter's own rect. She is the one who takes an
+    // application across it and the one who sees which ones come back. (3.0, 5.5) was tried first
+    // and stood her inside the press cupboard, which has since moved anyway.
+    //
+    // Moved three tiles west along her own counter in Phase 113. At (2.5, 5.0) she was two tiles from
+    // the officer and 0.4 of a row above him, which clears the 1.5-tile body rule comfortably and is not the measurement that
+    // matters here: a name pill is about 2.1 tiles wide, so "Counter clerk" and "Mortgage officer"
+    // overlapped on almost exactly the same line. **Bodies clearing does not make labels clear**,
+    // and nothing measures labels.
+    x: 1.5,
     y: 5.0,
     group: "suburb",
     name: "Arlene Petrofsky",
@@ -4043,7 +4049,7 @@ const UNIT8_BUILDING_AND_LOAN_NPCS = [
 ];
 const UNIT8_BUILDING_AND_LOAN_BEHAVIOURS = {
   "suburb-mortgage-officer": { kind: "station", at: { x: 4.5, y: 4.6 }, facing: "down" },
-  "suburb-counter-clerk": { kind: "station", at: { x: 2.5, y: 5.0 }, facing: "down" },
+  "suburb-counter-clerk": { kind: "station", at: { x: 1.5, y: 5.0 }, facing: "down" },
 };
 // The seventh record, and the last of the case. It carries `requiresSourceId:
 // "suburb-neighborhood-appraisal"` in the content, so the checklist cannot be opened until the

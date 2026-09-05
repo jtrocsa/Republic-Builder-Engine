@@ -33,13 +33,13 @@ _a finding, not a failure_, and that is the pedagogy rather than a wording prefe
 
 ## Status
 
-| Phase | ADR    | Name                                     | Status      | Closed     | Open |
-| ----- | ------ | ---------------------------------------- | ----------- | ---------- | ---- |
-| 109   | `0108` | The column says it twice                 | **closed**  | 2026-09-05 | —    |
-| 110   | `0109` | Every action lands                       | **closed**  | 2026-09-05 | —    |
-| 111   | `0110` | The map says who                         | **closed**  | 2026-09-05 | —    |
-| 112   | `0111` | The field never adopted the escape hatch | **closed**  | 2026-09-05 | —    |
-| 113   | `0112` | Look at the room                         | not started | —          | —    |
+| Phase | ADR    | Name                                     | Status     | Closed     | Open |
+| ----- | ------ | ---------------------------------------- | ---------- | ---------- | ---- |
+| 109   | `0108` | The column says it twice                 | **closed** | 2026-09-05 | —    |
+| 110   | `0109` | Every action lands                       | **closed** | 2026-09-05 | —    |
+| 111   | `0110` | The map says who                         | **closed** | 2026-09-05 | —    |
+| 112   | `0111` | The field never adopted the escape hatch | **closed** | 2026-09-05 | —    |
+| 113   | `0112` | Look at the room                         | **closed** | 2026-09-05 | 1 S3 |
 
 ### Phase 109 — measured
 
@@ -90,6 +90,28 @@ reverting the fix and watching the new test go red.
 
 **Facing before collision is deliberate and stays** — turning to face a wall without moving is how a
 player aims every proximity interaction in the game.
+
+### Phase 113 — what a pair of eyes found
+
+Ten field interiors rendered **with the cast visible**, which no visual baseline has ever shown.
+
+| Finding                                                         | Outcome                               |
+| --------------------------------------------------------------- | ------------------------------------- |
+| Two staff pills overlapping in the lending office               | fixed — clerk restaged                |
+| A 300px role running off the frame in the inspection hall       | fixed — pills wrap, capped at 4 tiles |
+| Interiors had no rect-in-bounds and no rect-backed-by-art guard | both added, **both clean on all 10**  |
+| Spine Review **P0-4** (Codex aside clips at 1280)               | **stale** — measured, does not clip   |
+| Spine Review **P0-5** (chrome says REPUBLIC BUILDER ENGINE)     | **stale** — no rendered surface       |
+
+**Bodies clearing does not make labels clear.** The coordinate suite measures NPC-versus-NPC at 1.5
+tiles; a name pill is about 2.1 tiles wide. The two staff were posted exactly two tiles apart, on
+purpose, with a comment saying so.
+
+**Still open — 1 S3.** The eight outdoor maps were not swept with the cast visible. Both defects
+found here were interior-scale and about labels, and `0096` §5's four outdoor render defects were all
+caught by this same method one map at a time — which argues for the outdoor sweep being its own pass
+rather than the tail of this one. **Destination: a Phase 114 outdoor sweep**, or the next unit's art
+phase, whichever comes first.
 
 ---
 

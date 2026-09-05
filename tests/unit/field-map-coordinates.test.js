@@ -305,17 +305,22 @@ function loadTmj(file) {
   return JSON.parse(readFileSync(path.join(REPO_ROOT, "apps/web/src/content/maps", file), "utf8"));
 }
 
-/** Cells a rect covers, clamped to the grid. Used to ask "is there actually art here?". */
-function cellsUnder(rect) {
+/**
+ * Cells a rect covers, clamped to the grid. Used to ask "is there actually art here?".
+ *
+ * Takes the grid as of Phase 113, because an interior is the one surface that does not share
+ * FIELD_GRID and the interior block needed to ask this same question about its own rooms.
+ */
+function cellsUnder(rect, grid = FIELD_GRID) {
   const cells = [];
   for (
     let row = Math.floor(rect.y1);
-    row <= Math.min(Math.ceil(rect.y2) - 1, FIELD_GRID.rows - 1);
+    row <= Math.min(Math.ceil(rect.y2) - 1, grid.rows - 1);
     row += 1
   ) {
     for (
       let col = Math.floor(rect.x1);
-      col <= Math.min(Math.ceil(rect.x2) - 1, FIELD_GRID.columns - 1);
+      col <= Math.min(Math.ceil(rect.x2) - 1, grid.columns - 1);
       col += 1
     ) {
       if (row >= 0 && col >= 0) cells.push([col, row]);
@@ -1060,6 +1065,49 @@ describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
       expect(grid.tile).toBe(FIELD_GRID.tile);
       expect(grid.columns).toBeGreaterThan(0);
       expect(grid.rows).toBeGreaterThan(0);
+    });
+
+    // Phase 113. Both of these have guarded the eight outdoor maps and both hub rooms for phases,
+    // and the ten field interiors had neither: their block was traversal-shaped only — size, mask,
+    // entry, exit, no sealed pocket, people off the furniture — which asks whether a room can be
+    // walked and never whether its walls are where its walls are drawn.
+    it("keeps every collision rect in bounds and non-degenerate (edge case)", () => {
+      const bad = room.blocks
+        .filter(
+          (b) =>
+            b.x1 >= b.x2 ||
+            b.y1 >= b.y2 ||
+            b.x1 < 0 ||
+            b.y1 < 0 ||
+            b.x2 > grid.columns ||
+            b.y2 > grid.rows
+        )
+        .map((b) => b.kind);
+      expect(bad).toEqual([]);
+    });
+
+    it("backs every collision rect with drawn art (normal case)", () => {
+      // The drift this catches is a rect left at its old coordinates after the furniture moved:
+      // a patch of bare floor the player can see straight through and cannot walk into. Invisible
+      // in a screenshot of a room whose furniture all still renders somewhere else.
+      //
+      // An interior's solid things are spread across more layers than an outdoor map's single
+      // "structures" — walls, furniture and the objects stamped on top — so this asks whether ANY
+      // tile layer has paint in the cell rather than naming one.
+      const tmj = loadTmj(`${room.id}.tmj`);
+      const painted = tmj.layers.filter((layer) => layer.type === "tilelayer" && layer.data);
+      expect(painted.length).toBeGreaterThan(0);
+      // A filter over an empty list passes, which is 0102 rule applied one surface down: a room
+      // that had somehow lost its walls would sail through both of these guards saying nothing.
+      expect(room.blocks.length).toBeGreaterThan(0);
+      const empty = room.blocks
+        .filter((block) =>
+          cellsUnder(block, grid).every((cell) =>
+            painted.every((layer) => layer.data[cell[1] * tmj.width + cell[0]] === 0)
+          )
+        )
+        .map((block) => block.kind);
+      expect(empty).toEqual([]);
     });
 
     it("declares the size it was painted at (normal case)", () => {
