@@ -323,6 +323,32 @@ describe("renderTrace", () => {
     expect((markup.match(/data-activity-action="support"/g) || []).length).toBe(3);
   });
 
+  it("says something when a leg misses, on whichever axis missed (normal case)", () => {
+    // Phase 110, and the two axes need two sentences: the ledger asks what the step does to the
+    // record, the support axis asks how far the account carries it, and "not that one" pointed at
+    // the wrong question is worse than silence.
+    const content = activity();
+    expect(renderTrace(content, defaultTraceState())).not.toContain("activity-reconsider");
+
+    const legs = content.legs;
+    const wrongEffect = content.effects.find((e) => e.id !== legs[0].effect);
+    const missed = actTrace(content, defaultTraceState(), {
+      type: "log",
+      leg: legs[0].id,
+      effect: wrongEffect.id,
+    });
+    const markup = renderTrace(content, missed);
+    expect(markup).toContain("activity-reconsider");
+    expect(markup).toContain("answer for this step alone");
+
+    const landed = actTrace(content, missed, {
+      type: "log",
+      leg: legs[0].id,
+      effect: legs[0].effect,
+    });
+    expect(renderTrace(content, landed)).not.toContain("activity-reconsider");
+  });
+
   it("draws no support control at all for a trace that declares none (regression case)", () => {
     expect(renderTrace(activity(), logged())).not.toContain("activity-leg__support");
   });

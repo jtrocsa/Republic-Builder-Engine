@@ -7527,6 +7527,30 @@ p.activity-howto__note {
   line-height: 1.55;
   color: var(--c-text-muted);
 }
+/* What a wrong choice says for itself on a DISCREPANCY or a TRACE (Phase 110). Both turned the
+   pressed button red and said nothing at all, then printed a hundred words the moment the player was
+   already right.
+
+   Pitched at ASSEMBLY's hint rung rather than at its .activity-misread paragraph — quiet, italic,
+   one line — because it names where to look rather than what the answer is, and because a board can
+   show several at once where a misread list shows one per misplaced piece. */
+.activity-reconsider {
+  margin: 8px 0 0;
+  padding-left: 13px;
+  border-left: 2px solid var(--c-error);
+  font-size: 0.82rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--c-text-secondary);
+}
+/* Emitted by practiceCheckScreen() since Phase 28 and styled by nothing until Phase 110, so a
+   partially-right answer wore the plain feedback box while right and wrong both had a colour.
+   Amber, the same third thing the closer's unsupported state uses. */
+.activity-feedback.partial {
+  background: rgba(var(--c-gold-rgb), 0.14);
+  border: 1px solid var(--c-warning);
+  color: #fbeecb;
+}
 /* Wide content scrolls inside its own box; the page body never moves sideways. */
 .activity-scroller {
   overflow-x: auto;
@@ -7911,8 +7935,24 @@ p.activity-howto__note {
   color: #dfffee;
   letter-spacing: 0.03em;
 }
+/* The mark, and it is the game's own: ✓ secured, ✦ available, · nothing here — the same three the
+   Mission Tracker's legend teaches and the world markers use. All three printed ✓ until Phase 110. */
+.field-interview__logged i {
+  margin-right: 6px;
+  font-style: normal;
+}
+/* Available, not kept. A rationed notebook makes keeping a second, separate press, so this is
+   neither the flat receipt nor the secured one — amber, from the same --c-warning the closer's
+   "defensible but unsupported" state uses for the same reason: you have not failed and you have not
+   finished. It fell through to the green base rule until Phase 110, which made Phase 106's three
+   receipts read as two on the only two missions that ration. */
+.field-interview__logged.is-candidate {
+  border-color: rgba(var(--c-gold-rgb), 0.5);
+  background: rgba(var(--c-gold-rgb), 0.14);
+  color: #fbeecb;
+}
 /* A flat answer is written down and carries nothing, and the receipt has to look like that as well
-   as say it — green reads as "secured", which is the claim Spine Review P0-3 was about. The tick
+   as say it — green reads as "secured", which is the claim Spine Review P0-3 was about. The mark
    stays: the press did do something, and a control that reports nothing reads as one that failed.
    Matches `.field-interview__answer`'s own unmarked treatment, and `is-flat` in the grid. */
 .field-interview__logged.is-flat {
@@ -8051,8 +8091,11 @@ p.activity-howto__note {
 .activity-slot.is-filled {
   border-style: solid;
 }
+/* Correct is green everywhere on this screen. This one rule said gold, alone among the four
+   engines' correct states, so a rebuilt plate looked "highlighted" where a settled claim, a logged
+   leg and a filed conclusion all looked "right". Reconciled in Phase 110. */
 .activity-slot.is-right {
-  border-color: rgba(var(--c-gold-rgb), 0.7);
+  border-color: var(--c-success);
 }
 .activity-slot.is-wrong {
   border-color: var(--c-error);

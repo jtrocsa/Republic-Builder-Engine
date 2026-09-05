@@ -13779,6 +13779,15 @@ function handleActivityAction(control, overrides = {}) {
   const activity = sourceId ? activityFor(sourceId) : null;
   if (!activity) return;
   const entry = ensureSourceActivity(sourceId);
+  // What this board is worth, before and after the press. Every engine reports { done, total } as of
+  // Phase 109, and every engine's notebook is the same { kept: [] }, so "did that count?" is one
+  // comparison rather than four engine-specific questions.
+  const scoreOf = (state) => ({
+    done: activitySummary(activity.kind, activity, state)?.done ?? 0,
+    kept: state?.notebook?.kept?.length ?? 0,
+    complete: isActivityComplete(activity.kind, activity, state),
+  });
+  const before = scoreOf(entry.state);
   // `overrides` is how the drop handler says "place" over a slot button whose own verb is "lift".
   const data = { ...control.dataset, ...overrides };
   const next = actOnActivity(activity.kind, activity, entry.state, {
@@ -13800,10 +13809,31 @@ function handleActivityAction(control, overrides = {}) {
   // Every engine's reducer returns the state object unchanged for an action it refuses (out of
   // range, gated, unknown). Re-rendering on those would flicker the screen and, on the field,
   // close the dialogue bubble the player is reading.
-  if (next === entry.state) return;
+  //
+  // It also used to return in silence, which is what makes a legitimately-gated control read as a
+  // broken one. The press did something — it was refused — and the cue says so.
+  if (next === entry.state) {
+    playSfx("flat", sourceId);
+    return;
+  }
   entry.state = next;
   recordActivityOutcomes(activity, entry.state, sourceId);
-  playQuestSfx(sourceId);
+  // Right and wrong sounded identical until Phase 110: one cue fired on every accepted verb, so
+  // logging an answer that carries nothing and logging the one that carries the mission were the
+  // same noise. Three things count as the mission moving on — the board's own ratio going up, an
+  // entry kept in the Field Notebook, and the record closing — and filing the conclusion is why the
+  // third term is needed, since no board ratio moves when the closer lands.
+  const after = scoreOf(entry.state);
+  const landed =
+    after.done > before.done || after.kept > before.kept || (after.complete && !before.complete);
+  // `ask` is the one verb not trying to gather anything, and it must stay outside the split twice
+  // over. It never moves a count — only `log` does — so it would play the flat cue on every question
+  // a player ever puts to anyone, including the good ones. And it must sound **identical** whatever
+  // comes back: the offer under an answer is deliberately one string for all of them, because which
+  // answers carry something is what an interview is for, and a cue that changed would give it away
+  // before the press exactly as a changing button label would.
+  if (data.activityAction === "ask") playSfx("dialogue", sourceId);
+  else playSfx(landed ? "secure" : "flat", sourceId);
   save();
   render();
 }

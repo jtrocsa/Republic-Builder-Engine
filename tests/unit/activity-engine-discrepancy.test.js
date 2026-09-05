@@ -320,4 +320,28 @@ describe("renderDiscrepancy — the record itself", () => {
     expect(markup).toContain("&lt;script&gt;");
     expect(markup).not.toContain("<script>");
   });
+
+  it("says something when a verdict misses, and nothing before one is given (normal case)", () => {
+    // Phase 110. A wrong verdict turned the pressed button red and said nothing at all, while the
+    // claim's own `why` waited until the player was already right — so the only feedback on the way
+    // to an answer was a colour. This engine and TRACE are eleven of the twenty-four missions.
+    const content = activity();
+    expect(renderDiscrepancy(content, defaultDiscrepancyState())).not.toContain(
+      "activity-reconsider"
+    );
+
+    const wrong = actDiscrepancy(content, defaultDiscrepancyState(), {
+      type: "verdict",
+      claim: "harbours",
+      verdict: "contradicted",
+    });
+    expect(renderDiscrepancy(content, wrong)).toContain("activity-reconsider");
+
+    const right = actDiscrepancy(content, wrong, {
+      type: "verdict",
+      claim: "harbours",
+      verdict: "supported",
+    });
+    expect(renderDiscrepancy(content, right)).not.toContain("activity-reconsider");
+  });
 });

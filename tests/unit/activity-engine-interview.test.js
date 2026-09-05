@@ -468,6 +468,36 @@ describe("rendering", () => {
     expect(interviewLogReceipt(activity(), { useful: true }).tone).toBe("kept");
   });
 
+  it("marks the three outcomes with the game's own three glyphs (normal case)", () => {
+    // Phase 110. All three printed ✓ — "secured" — including on the 104 of 156 authored answers
+    // that carry nothing. These are the marks the Mission Tracker's legend already teaches
+    // ("✦ go here · ✓ secured · · locked") and the world markers and head badges already use.
+    const rationed = { ...activity(), notebook: { capacity: 1 } };
+    expect(interviewLogReceipt(activity(), { useful: true }).mark).toBe("✓");
+    expect(interviewLogReceipt(rationed, { useful: true }).mark).toBe("✦");
+    expect(interviewLogReceipt(activity(), { useful: false }).mark).toBe("·");
+    // And the mark reaches the bubble, which is where the wrong one was printed. The shared fixture
+    // is deliberately sparse, so the elder's "gold" is an unauthored fallback offering no receipt at
+    // all — a flat answer has to be an authored one carrying nothing.
+    const deflects = activity();
+    deflects.speakers[0].answers.gold = { text: "We beat it thin and wear it.", useful: false };
+    const state = actInterview(deflects, defaultInterviewState(), {
+      type: "ask",
+      speaker: "elder",
+      question: "gold",
+    });
+    const logged = actInterview(deflects, state, {
+      type: "log",
+      speaker: "elder",
+      question: "gold",
+    });
+    const markup = renderInterviewInline(deflects, logged, "elder");
+    expect(markup).toContain("is-flat");
+    expect(markup).toContain("·");
+    // There is no ✗ anywhere in this engine and a deflection is not a wrong answer.
+    expect(markup).not.toContain("✗");
+  });
+
   it("groups the notebook into one panel per authored group (normal case)", () => {
     const markup = renderInterview(activity(), fullyLogged());
     expect(markup).toContain("The islanders");

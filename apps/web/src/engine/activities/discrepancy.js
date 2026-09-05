@@ -285,6 +285,26 @@ export function actDiscrepancy(activity, state = defaultDiscrepancyState(), acti
 }
 
 /**
+ * What a wrong choice on this board says for itself.
+ *
+ * DISCREPANCY and TRACE turned the pressed button red and said **nothing**, then printed a hundred
+ * words of `why` the moment the player was already right — eleven of the game's twenty-four missions,
+ * and the two engines with the most buttons on them. ASSEMBLY has said something since Phase 68
+ * (`fragmentNote()`'s ladder), and red-and-silent next to that reads as a control that failed rather
+ * than an answer that missed.
+ *
+ * Placeless, and that is why it lives in the engine rather than in eleven content files: it says
+ * where to look on **this kind of board**, which is a fact about the mechanic and not about the
+ * period. Same register the default `lockedNote` reached for when it lost the word "island".
+ *
+ * Deliberately **not** content-overridable yet. An optional per-claim field would be one `||` away
+ * and nothing would author it — which is the state `hints` and `supportLevels` are already in, one
+ * mission each since Phase 76. It earns the field when a second mission wants a different sentence.
+ */
+const VERDICT_RECONSIDER =
+  "Not that one. Read the line against your evidence column, not against what you already know.";
+
+/**
  * @param {import("zod").infer<typeof DiscrepancyActivitySchema>} activity
  * @param {ReturnType<typeof defaultDiscrepancyState>} [state]
  * @param {{ holds?: string[] }} [ctx]
@@ -335,9 +355,17 @@ export function renderDiscrepancy(activity, state = defaultDiscrepancyState(), c
         ? `<p class="activity-why is-correct">${escapeHtml(claim.why)}</p>`
         : "";
 
+      // Only under a claim the player has actually answered wrong, so a board opens silent and
+      // speaks only where it was asked something.
+      const reconsider =
+        status.answered && !status.verdictRight
+          ? `<p class="activity-reconsider">${escapeHtml(VERDICT_RECONSIDER)}</p>`
+          : "";
+
       return `<li class="activity-claim${status.settled ? " is-settled" : ""}">
     <blockquote>${escapeHtml(claim.text)}</blockquote>
     <div class="activity-claim__verdicts" role="group" aria-label="Verdict">${verdictButtons}</div>
+    ${reconsider}
     ${gapBlock}
     ${why}
   </li>`;

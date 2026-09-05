@@ -425,6 +425,16 @@ export function interviewAnswer(speaker, questionId) {
  * - `kept` — a useful answer with no capacity to ration, which is the one case the old string was
  *   right about.
  *
+ * **Each receipt carries its own mark, and the three are the game's own three** (Phase 110): the
+ * Mission Tracker teaches "✦ go here · ✓ secured · · locked" on every field map, the world markers
+ * and the NPC head badges use the same set, and the three outcomes here map onto it exactly — `✓`
+ * secured, `✦` available and waiting on a second press, `·` nothing here. Until Phase 110 all
+ * three printed `✓`, so the mark said "secured" on the 104 answers of 156 that carry nothing, which
+ * is the half of Spine Review P0-3 that the words were fixed for and the glyph was not.
+ *
+ * There is deliberately **no ✗**. The game has never had one, and a deflection is not a wrong
+ * answer — asking a fisherman about the assembly is a legal move that returns honest nothing.
+ *
  * The *offer* stays one string under every authored answer. Which answers carry something is what
  * an interview is for, and a button that changed its words would hand that over before the press.
  *
@@ -432,9 +442,11 @@ export function interviewAnswer(speaker, questionId) {
  * @param {ReturnType<typeof interviewAnswer>} answer
  */
 export function interviewLogReceipt(activity, answer) {
-  if (!answer.useful) return { tone: "flat", text: "Written down — nothing here to carry" };
-  if (activity.notebook) return { tone: "candidate", text: "Available in your Field Notebook" };
-  return { tone: "kept", text: "In your Field Notebook" };
+  if (!answer.useful)
+    return { tone: "flat", mark: "·", text: "Written down — nothing here to carry" };
+  if (activity.notebook)
+    return { tone: "candidate", mark: "✦", text: "Available in your Field Notebook" };
+  return { tone: "kept", mark: "✓", text: "In your Field Notebook" };
 }
 
 /**
@@ -475,7 +487,7 @@ export function renderInterviewInline(activity, state = defaultInterviewState(),
   const keep = !receipt
     ? ""
     : logged.includes(showing)
-      ? `<p class="field-interview__logged is-${receipt.tone}">✓ ${escapeHtml(receipt.text)}</p>`
+      ? `<p class="field-interview__logged is-${receipt.tone}"><i aria-hidden="true">${receipt.mark}</i>${escapeHtml(receipt.text)}</p>`
       : `<button type="button" class="field-interview__log" data-activity-action="log" data-speaker="${escapeHtml(speaker.id)}" data-question="${escapeHtml(showing)}">Add to Field Notebook</button>`;
   // A lead shows only once the answer is in the notebook. Hearing something and carrying it are two
   // moves everywhere else in this engine, and a lead handed over on the strength of a question you

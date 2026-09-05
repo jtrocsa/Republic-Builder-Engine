@@ -36,7 +36,7 @@ _a finding, not a failure_, and that is the pedagogy rather than a wording prefe
 | Phase | ADR    | Name                                     | Status      | Closed     | Open |
 | ----- | ------ | ---------------------------------------- | ----------- | ---------- | ---- |
 | 109   | `0108` | The column says it twice                 | **closed**  | 2026-09-05 | —    |
-| 110   | `0109` | Every action lands                       | not started | —          | —    |
+| 110   | `0109` | Every action lands                       | **closed**  | 2026-09-05 | —    |
 | 111   | `0110` | The map says who                         | not started | —          | —    |
 | 112   | `0111` | The field never adopted the escape hatch | not started | —          | —    |
 | 113   | `0112` | Look at the room                         | not started | —          | —    |
@@ -50,6 +50,20 @@ actually on screen, in a browser, rather than estimate them from the content fil
 | ----------------------------- | ------- | ------- |
 | Activity screen's copy column | **244** | **59**  |
 | Whole board screen            | **566** | **381** |
+
+### Phase 110 — what changed, counted
+
+| Surface                                                    | Before            | After             |
+| ---------------------------------------------------------- | ----------------- | ----------------- |
+| Interview log receipts carrying the right mark             | 0 of 3            | **3 of 3**        |
+| Authored answers whose receipt said "secured" untruthfully | **104** of 156    | 0                 |
+| Engines that say something on a wrong choice               | 1 of 4 (ASSEMBLY) | **4 of 4**        |
+| Missions where a wrong choice was red and silent           | **11** of 24      | 0                 |
+| Activity cues that distinguish landing from missing        | none — one cue    | `secure` / `flat` |
+
+**No ✗ was introduced** and none should be. The game's three marks are `✓` secured, `✦` available,
+`·` nothing here, taught by the Mission Tracker's own legend; a deflection is a legal move that
+returns honest nothing, not a wrong answer.
 
 ---
 

@@ -291,6 +291,30 @@ export function actTrace(activity, state = defaultTraceState(), action = { type:
 }
 
 /**
+ * What a wrong choice on this board says for itself.
+ *
+ * DISCREPANCY and TRACE turned the pressed button red and said **nothing**, then printed a hundred
+ * words of `why` the moment the player was already right — eleven of the game's twenty-four missions,
+ * and the two engines with the most buttons on them. ASSEMBLY has said something since Phase 68
+ * (`fragmentNote()`'s ladder), and red-and-silent next to that reads as a control that failed rather
+ * than an answer that missed.
+ *
+ * Placeless, and that is why it lives in the engine rather than in eleven content files: it says
+ * where to look on **this kind of board**, which is a fact about the mechanic and not about the
+ * period. Same register the default `lockedNote` reached for when it lost the word "island".
+ *
+ * Deliberately **not** content-overridable yet. An optional per-claim field would be one `||` away
+ * and nothing would author it — which is the state `hints` and `supportLevels` are already in, one
+ * mission each since Phase 76. It earns the field when a second mission wants a different sentence.
+ */
+const EFFECT_RECONSIDER =
+  "Not that one. Read what changes and whose hands, and answer for this step alone.";
+// The support axis asks a different question, so a miss on it needs a different sentence: the
+// levels are established / inferred / not-shown, and every one of them can sit under a true claim.
+const SUPPORT_RECONSIDER =
+  "Not that one. The question is how far this account carries it, not whether it is true.";
+
+/**
  * @param {import("zod").infer<typeof TraceActivitySchema>} activity
  * @param {ReturnType<typeof defaultTraceState>} [state]
  */
@@ -340,7 +364,9 @@ export function renderTrace(activity, state = defaultTraceState()) {
       <dt>Whose hands</dt><dd>${escapeHtml(leg.actor)}</dd>
     </dl>
     <div class="activity-leg__ledger" role="group" aria-label="Ledger entry for leg ${index + 1}">${options}</div>
+    ${status.answered && !status.effectRight ? `<p class="activity-reconsider">${escapeHtml(EFFECT_RECONSIDER)}</p>` : ""}
     ${support}
+    ${status.effectRight && status.supportAnswered && !status.supportRight ? `<p class="activity-reconsider">${escapeHtml(SUPPORT_RECONSIDER)}</p>` : ""}
     ${status.correct ? `<p class="activity-why is-correct">${escapeHtml(leg.why)}</p>` : ""}
   </li>`;
     })

@@ -130,6 +130,17 @@ export function playSfx(name, sourceId = null) {
     audioNote(784, 0.25, 0.18, "sine", 0.32);
     return;
   }
+  // The counterpart to "secure", and the whole point is that it is the same gesture pointed
+  // downward: two soft notes falling where secure's triad rises. A press that gathered nothing —
+  // a flat interview answer logged, a fragment in the wrong frame, a claim called wrongly — and a
+  // press the reducer refused outright both land here. Quiet and short on purpose: it reports, it
+  // does not scold, and a student meets it far more often than its opposite (104 of the game's 156
+  // authored interview answers carry nothing, by design).
+  if (name === "flat") {
+    audioNote(220, 0.1, 0, "sine", 0.16);
+    audioNote(196, 0.17, 0.07, "sine", 0.13);
+    return;
+  }
   if (name === "dialogue") {
     audioNote(523, 0.08, 0, "sine", 0.18);
     audioNote(659, 0.1, 0.075, "sine", 0.16);

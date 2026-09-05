@@ -186,6 +186,14 @@ test.describe("INTERVIEW, out on the map", () => {
     await expect(receipt).toHaveClass(/is-flat/);
     await expect(receipt).toContainText("nothing here to carry");
     await expect(receipt).not.toContainText("In your Field Notebook");
+    // Phase 110. The words were fixed in Phase 106 and the glyph was not: all three receipts printed
+    // ✓ — the mark the Mission Tracker's legend teaches as "secured" — including on the 104 of 156
+    // authored answers that carry nothing. `·` is that legend's own "nothing here".
+    await expect(receipt.locator("i")).toHaveText("·");
+    await expect(receipt).not.toContainText("✓");
+    // And there is no ✗ on this surface. A deflection is a legal move that returns honest nothing,
+    // not a wrong answer — CHRONICLE-VOCABULARY.md §2.
+    await expect(receipt).not.toContainText("✗");
 
     // The half that made the old string a lie rather than a quibble: it is genuinely not in the
     // notebook and the bar does not move, and the player had just been told otherwise.
@@ -206,7 +214,7 @@ test.describe("INTERVIEW, out on the map", () => {
       const el = document.querySelector(".field-interview__logged");
       const line = parseFloat(window.getComputedStyle(el).lineHeight);
       const shown = el.getBoundingClientRect().height;
-      el.textContent = "✓ Available in your Field Notebook";
+      el.textContent = "✦ Available in your Field Notebook";
       const longest = el.getBoundingClientRect().height;
       const box = document.querySelector(".field-speech-bubble").getBoundingClientRect();
       const frame = document.getElementById("caseFieldMap").getBoundingClientRect();
@@ -359,6 +367,62 @@ test.describe("ASSEMBLY", () => {
     await expect(page.locator(".activity-board--assembly")).toBeVisible();
     await expect(page.locator("h1")).toHaveText("Universalis");
     await expect(page.locator('[data-board="sheet"][data-slot="p1"]')).toHaveClass(/is-right/);
+  });
+});
+
+test.describe("wrong and right sound and look different (Phase 110)", () => {
+  test("marks a kept answer secured where a flat one is marked nothing", async ({ page }) => {
+    await seedProgress(page, {
+      ...CASE_001,
+      currentScreen: "field",
+      sourceActivities: LOGGED_TWO,
+    });
+    await loadSeededSave(page);
+    expect(await walkToNpc(page, "taino-elder")).toBe(true);
+    await page.locator('[data-npc="taino-elder"]').click();
+
+    const bubble = page.locator(".field-speech-bubble");
+    // "decides" is the elder's one useful answer — every speaker in every shipped interview has
+    // exactly one, and hers is the cacique. "grows" sends you to the gardener.
+    await bubble.locator('[data-question="decides"]').click();
+    // Gold-edged before the press, which is the signal that this one carries something.
+    await expect(bubble.locator(".field-interview__answer")).toHaveClass(/is-useful/);
+    await bubble.locator(".field-interview__log").click();
+
+    const receipt = bubble.locator(".field-interview__logged");
+    await expect(receipt).toHaveClass(/is-kept/);
+    await expect(receipt.locator("i")).toHaveText("✓");
+    // The half a player can see across the room: the counter moves for this one and did not for the
+    // deflection above.
+    await expect(page.locator(".field-tracker__progress b")).toHaveText("3/7");
+  });
+
+  test("the audit says where to look when a verdict misses", async ({ page }) => {
+    await seedProgress(page, {
+      ...CASE_001,
+      currentScreen: "discrepancy",
+      activeActivitySourceId: "columbus-letter",
+      sourceActivities: { "columbus-letter": { state: {}, completed: false, briefed: true } },
+    });
+    await loadSeededSave(page);
+    const board = page.locator(".activity-board--discrepancy");
+    await expect(board).toBeVisible();
+    // Opens silent — it has not been asked anything yet.
+    await expect(board.locator(".activity-reconsider")).toHaveCount(0);
+
+    const claim = board.locator(".activity-claim").first();
+    const verdicts = claim.locator(".activity-verdict");
+    // Press every verdict in turn; whichever misses has to say so rather than going red in silence,
+    // which is what eleven of the twenty-four missions did until Phase 110.
+    const count = await verdicts.count();
+    let sawReconsider = false;
+    for (let i = 0; i < count; i += 1) {
+      await verdicts.nth(i).click();
+      if (await claim.locator(".activity-wrong-marker, .is-wrong").count()) {
+        if (await claim.locator(".activity-reconsider").count()) sawReconsider = true;
+      }
+    }
+    expect(sawReconsider).toBe(true);
   });
 });
 
