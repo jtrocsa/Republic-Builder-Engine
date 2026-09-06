@@ -411,6 +411,34 @@ const MIN_TERRITORY_GAP = 1.5;
 const SOURCE_REACH = 1.55;
 const NPC_REACH = 1.45;
 
+// The recall beacon's own reach. It is deliberately absent from the object sweep below, because the
+// beacon stays out of nearestFieldInteraction() and so nothing about it is decided by that sort.
+// What it is not absent from is INVARIANTS' "Recall to Archive" entry, which justifies keeping it
+// out by saying how many maps park a body inside it: a fourth competitor in a nearest-wins sort
+// would cost those maps an NPC to reach a control that is already one Tab away.
+//
+// That sentence read "three of the seven maps walk a body inside its reach (0.92, 0.10 and 1.68
+// tiles)" for many phases. Re-measured in Phase 118 it is three of eight and **not those three**:
+// 1.68 is Richmond's Liaison and 1.68 is outside a 1.55 reach, so it was never inside it, while
+// Philadelphia's town crier at 1.50 is inside it and was never named. The count stayed right while
+// every member of it changed, which is the hardest kind of stale claim to spot — nothing about the
+// number looks wrong.
+//
+// So the measurement has a reader now. This is not a rule the game must obey; a body near the
+// beacon is perfectly legal. It is the evidence a written decision rests on, and it fails when the
+// evidence moves rather than when the game breaks. Update the table and the sentence together.
+const RECALL_REACH = 1.55;
+const BODIES_INSIDE_THE_BEACON = {
+  "unit-01": [],
+  "unit-02": ["wharf-clerk"],
+  "unit-03": ["town-crier"],
+  "unit-04": ["canal-mule-driver"],
+  "unit-05": [],
+  "unit-06": [],
+  "unit-07": [],
+  "unit-08": [],
+};
+
 function crowdedPairs(behaviours, grid) {
   const entries = Object.entries(behaviours).map(([id, behaviour]) => [
     id,
@@ -576,6 +604,22 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     const { x, y } = map.recall;
     expect(inBounds(x, y)).toBe(true);
     expect(map.isLand(x, y)).toBe(true);
+  });
+
+  it("parks the documented bodies, and only those, inside the recall beacon (edge case)", () => {
+    const grid = fieldNavGridFor(map);
+    const inside = Object.entries(map.behaviours)
+      .filter(
+        ([, behaviour]) =>
+          territoryGap(territoryOf(behaviour, grid), { points: [map.recall], radius: 0 }) <=
+          RECALL_REACH
+      )
+      .map(([id]) => id)
+      .sort();
+    expect(
+      inside,
+      `${unitId}: INVARIANTS' "Recall to Archive" entry counts these — re-measure and update both`
+    ).toEqual(BODIES_INSIDE_THE_BEACON[unitId]);
   });
 
   it("places every NPC on land, in bounds, and clear of collision rects (normal case)", () => {
