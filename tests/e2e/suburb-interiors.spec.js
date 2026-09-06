@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave, readProgress, walkTo } from "./helpers/progress-seed.js";
+import {
+  seedProgress,
+  loadSeededSave,
+  readProgress,
+  walkTo,
+  holdKey,
+} from "./helpers/progress-seed.js";
 
 // Fairmeadow's two rooms, and **this file walks to the doors from outside** — which is the one thing
 // the interior specs before it deliberately do not do.
@@ -171,15 +177,57 @@ test.describe("Fairmeadow interiors", () => {
       "the gap in the counter is walkable"
     ).toBe(true);
 
-    // And **the chain says so out loud.** Standing at the desk, `e` resolves to the checklist rather
-    // than to the man beside it — the record is 0.5 tiles away and he is 1.2 — and because it is
-    // locked, what comes back is the gate's own line naming the appraisal and the man who carries it.
-    // A locked record is still an interaction; it draws no marker and it refuses, which is different
-    // from not being there. Three phases have now shipped a cross-surface lock and this is the first
-    // one whose refusal is asserted.
+    // **The walk ends on the man's reach and the assertion below needs the desk's.**
+    //
+    // `walkTo` returns the instant `.is-near` lights on the thing it was pointed at, and
+    // `nearestFieldInteraction()` sorts every person, record and doorstep into one list by raw
+    // distance and takes the first — so where the walk happens to stop is what decides which of the
+    // two `e` opens. The officer stands at (4.5, 4.6) with a reach of 1.45; the desk's record sits
+    // at (6.0, 4.0) with 1.55. The bisector between them crosses his row at x 5.37 and his reach
+    // ends at 5.95, which is a window about **0.6 of a tile wide** — and a burst of the walker
+    // carries up to 2.5. Land west of it and `e` opens the officer, `toggleFieldDialogue()` clears
+    // `progress.fieldNotice`, and the assertion below reads an empty string. That is exactly the
+    // failure this test was seen producing, recorded in decision log `0118` §8 and never routed.
+    //
+    // So the arrival is stated rather than assumed, the way the model house's is above. Step east —
+    // away from him, toward the desk — and **ask the game what `e` will reach** rather than
+    // recomputing its answer here, which is the line `0093` drew for the nav probe. The loop is
+    // bounded by the state it is looking for and not by a count of milliseconds: Phase 119's rule,
+    // and the third time this suite has needed it.
+    //
+    // East is open floor. The ledgers stop at row 4 and the counter starts at row 6, so rows 4-6 run
+    // clear from the officer to his own chair at column 7; and the route in comes through the gap in
+    // the counter from the east, so stepping east is stepping away from the body, never into it.
+    const reaching = () => page.evaluate(() => window.__chronicleReach()?.id ?? null);
+    let reaches = await reaching();
+    for (let step = 0; step < 12 && reaches !== "suburb-underwriting-checklist"; step += 1) {
+      await holdKey(page, "ArrowRight", 90);
+      reaches = await reaching();
+    }
+    const atDesk = await playerAt(page);
+    expect(
+      reaches,
+      `standing at ${atDesk.x.toFixed(2)},${atDesk.y.toFixed(2)}, e has to reach the checklist rather than the man beside it`
+    ).toBe("suburb-underwriting-checklist");
+
+    // And **the chain says so out loud.** Because the checklist is locked, what comes back is the
+    // gate's own line naming the appraisal and the man who carries it. A locked record is still an
+    // interaction; it draws no marker and it refuses, which is different from not being there.
+    // Three phases have now shipped a cross-surface lock and this is the first one whose refusal is
+    // asserted.
     await page.keyboard.press("e");
-    await expect(page.locator("#fieldNotice")).toContainText("Valuation report");
-    await expect(page.locator("#fieldNotice")).toContainText("Howard Renfrew");
+    // `refuseLockedRecord()` merges the source points of every surface in the unit to find the
+    // appraisal, which lives out on the map. If that merge ever loses it, the generic fallback
+    // ("Another record in this case has to be secured first.") is written instead and fails both of
+    // these in exactly the same way as a wrong arrival would. The messages say which to look for.
+    await expect(
+      page.locator("#fieldNotice"),
+      "the refusal names the appraisal; a generic line means refuseLockedRecord() lost the point"
+    ).toContainText("Valuation report");
+    await expect(
+      page.locator("#fieldNotice"),
+      "and names who carries it, which comes from the appraisal's anchoring NPC"
+    ).toContainText("Howard Renfrew");
 
     // Out onto Broad Street, and **straight back in through the same door** — the leg that proves
     // the doorstep is standable from the outside and that `door.y` is the row the generator wrote.

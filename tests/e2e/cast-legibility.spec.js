@@ -51,6 +51,24 @@ const SURFACES = [
   ["Fairmeadow building & loan", "case-022", "fairmeadow-building-and-loan"],
 ];
 
+// **The Institute's own rooms, added in Phase 120.** This shipped measuring eighteen surfaces, and
+// the game has twenty-one — the three it skipped being the ones every session starts in and returns
+// to after every mission. They are not a different kind of problem: all three draw their art onto
+// the same `.field-world-overlay` canvas this file samples, and the Main Hall paints three tiles on
+// it. What was missing was only that `__chronicleCast()` had no hub branch, so there was nothing to
+// ask. Five bodies, and no automated check had ever looked at any of them — the hub baselines in
+// `visual-regression.spec.js` hide `.hub-npc` before they fire, for the same reason the field ones
+// hide `[data-npc]`.
+//
+// **The Archive Room is deliberately not the twenty-first.** Nobody lives in it — `main.js` returns
+// `HUB_NPC_RUNTIME_NONE` for that room and always has — so there is no cast to measure and a row
+// here would report "clean" about an empty list. Twenty of twenty-one, and the twenty-first has
+// nothing to say.
+const HUB_SURFACES = [
+  ["Institute main hall", "main"],
+  ["Institute entrance hall", "hallway"],
+];
+
 // Percentage of the pill's *text* box — the pill inset by its own 4px/6px CSS padding — carrying
 // overlay art. Measured across all eighteen surfaces before this number was chosen: the two defects
 // Phase 114 fixed read 24.2 and 97.6, and the worst reading that survives review is 2.2, a lamppost
@@ -62,6 +80,20 @@ const MAX_TEXT_INK = 8;
 // all perfectly clear. This is the "is this person drawn at all" bar, not a tidiness one.
 const MAX_BODY_INK = 55;
 
+// The two kinds of surface differ in four selectors and nothing else. Named here rather than
+// branched inside `measure()`, so the measurement itself stays one piece of code asking one
+// question — the hub is not a special case of it, it is the same case with different ids.
+const FIELD_DOM = {
+  frame: ".field-viewport",
+  player: "#caseFieldPlayer .character-sprite",
+  npc: (id) => `.field-npc[data-npc="${id}"]`,
+};
+const HUB_DOM = {
+  frame: "#instituteMap",
+  player: "#institutePlayer .character-sprite",
+  npc: (id) => `.hub-npc[data-hub-npc="${id}"]`,
+};
+
 async function openSurface(page, caseId, room) {
   await seedProgress(page, {
     currentScreen: "field",
@@ -70,8 +102,23 @@ async function openSurface(page, caseId, room) {
     tutorial: { step: "complete", completed: true, skipped: false },
     ...(room ? { currentFieldRoom: room, fieldReturn: { x: 10, y: 10, facing: "down" } } : {}),
   });
+  await settle(page, FIELD_DOM);
+}
+
+// The tutorial has to read as finished or the Main Hall opens on the Director's escort, which locks
+// input and holds the cast where the scene wants them rather than where the table posts them.
+async function openHubRoom(page, hubRoom) {
+  await seedProgress(page, {
+    currentScreen: "institute",
+    currentHubRoom: hubRoom,
+    tutorial: { step: "complete", completed: true, skipped: false },
+  });
+  await settle(page, HUB_DOM);
+}
+
+async function settle(page, dom) {
   await loadSeededSave(page);
-  await expect(page.locator(".field-viewport")).toBeVisible();
+  await expect(page.locator(dom.frame)).toBeVisible();
   // The overlay canvas is sized and painted after an async image load.
   await page.waitForFunction(() => {
     const canvas = document.querySelector(".field-world-overlay");
@@ -84,85 +131,86 @@ async function openSurface(page, caseId, room) {
 // come from the game's own behaviour table (`window.__chronicleCast`, dev-only, gated exactly as
 // `__chronicleNav` is), so a stationed body is measured where it was *posted* rather than wherever
 // this frame happened to catch it.
-async function measure(page) {
-  return page.evaluate(() => {
-    const TILE = 48;
-    const overlay = document.querySelector(".field-world-overlay");
-    const ctx = overlay.getContext("2d", { willReadFrequently: true });
-    const ob = overlay.getBoundingClientRect();
-    // Clamped to the canvas rather than refused at its edge. `getImageData` throws on a box that
-    // runs off the surface, and returning null there would silently exempt anybody standing near
-    // the frame — a filter over an empty list passes, which is the vacuity this repo keeps paying
-    // for. A pill half off the world is measured on the half that is on it.
-    const ink = (x, y, w, h) => {
-      const left = Math.max(0, Math.round(x));
-      const top = Math.max(0, Math.round(y));
-      const right = Math.min(overlay.width, Math.round(x + w));
-      const bottom = Math.min(overlay.height, Math.round(y + h));
-      const width = right - left;
-      const height = bottom - top;
-      if (width <= 0 || height <= 0) return null;
-      const data = ctx.getImageData(left, top, width, height).data;
-      let hit = 0;
-      for (let i = 3; i < data.length; i += 4) if (data[i] > 8) hit += 1;
-      return +((100 * hit) / (width * height)).toFixed(1);
-    };
-    const playerRect = document
-      .querySelector("#caseFieldPlayer .character-sprite")
-      .getBoundingClientRect();
-    const player = [
-      playerRect.left - ob.left,
-      playerRect.top - ob.top,
-      playerRect.width,
-      playerRect.height,
-    ];
-
-    return window.__chronicleCast().map((job) => {
-      const el = document.querySelector(`.field-npc[data-npc="${job.id}"]`);
-      if (!el) return { ...job, missing: true };
-      const span = el.querySelector("span:not(.character-sprite):not(.cast-shadow)");
-      const sprite = el.querySelector(".character-sprite");
-      // The element's own inline left/top IS its anchor in canvas pixels, so the pill and sprite
-      // boxes can be expressed relative to it and then re-anchored wherever the job's own
-      // coordinates say the body belongs.
-      const ax = parseFloat(el.style.left);
-      const ay = parseFloat(el.style.top);
-      const rel = (r) => [r.left - ob.left - ax, r.top - ob.top - ay, r.width, r.height];
-      const pill = rel(span.getBoundingClientRect());
-      const body = rel(sprite.getBoundingClientRect());
-      const px = job.at.x * TILE;
-      const py = job.at.y * TILE;
-      const overPlayer = (ox, oy) => {
-        const left = ox + pill[0];
-        const top = oy + pill[1];
-        return (
-          left < player[0] + player[2] &&
-          left + pill[2] > player[0] &&
-          top < player[1] + player[3] &&
-          top + pill[3] > player[1]
-        );
+async function measure(page, dom = FIELD_DOM) {
+  return page.evaluate(
+    ({ playerSel, npcSel }) => {
+      const TILE = 48;
+      const overlay = document.querySelector(".field-world-overlay");
+      const ctx = overlay.getContext("2d", { willReadFrequently: true });
+      const ob = overlay.getBoundingClientRect();
+      // Clamped to the canvas rather than refused at its edge. `getImageData` throws on a box that
+      // runs off the surface, and returning null there would silently exempt anybody standing near
+      // the frame — a filter over an empty list passes, which is the vacuity this repo keeps paying
+      // for. A pill half off the world is measured on the half that is on it.
+      const ink = (x, y, w, h) => {
+        const left = Math.max(0, Math.round(x));
+        const top = Math.max(0, Math.round(y));
+        const right = Math.min(overlay.width, Math.round(x + w));
+        const bottom = Math.min(overlay.height, Math.round(y + h));
+        const width = right - left;
+        const height = bottom - top;
+        if (width <= 0 || height <= 0) return null;
+        const data = ctx.getImageData(left, top, width, height).data;
+        let hit = 0;
+        for (let i = 3; i < data.length; i += 4) if (data[i] > 8) hit += 1;
+        return +((100 * hit) / (width * height)).toFixed(1);
       };
-      // A wanderer is held to its whole disc; anything else, to the one point it holds.
-      let pillOnSpawn = overPlayer(px, py);
-      if (job.kind === "wander" && job.radius) {
-        for (let angle = 0; angle < 360 && !pillOnSpawn; angle += 10) {
-          const rad = (angle * Math.PI) / 180;
-          for (let r = 0.1; r <= job.radius + 1e-9; r += 0.1) {
-            if (overPlayer(px + r * Math.cos(rad) * TILE, py + r * Math.sin(rad) * TILE)) {
-              pillOnSpawn = true;
-              break;
+      const playerRect = document.querySelector(playerSel).getBoundingClientRect();
+      const player = [
+        playerRect.left - ob.left,
+        playerRect.top - ob.top,
+        playerRect.width,
+        playerRect.height,
+      ];
+
+      return window.__chronicleCast().map((job) => {
+        const el = document.querySelector(npcSel.replace("__ID__", job.id));
+        if (!el) return { ...job, missing: true };
+        const span = el.querySelector("span:not(.character-sprite):not(.cast-shadow)");
+        const sprite = el.querySelector(".character-sprite");
+        // The element's own inline left/top IS its anchor in canvas pixels, so the pill and sprite
+        // boxes can be expressed relative to it and then re-anchored wherever the job's own
+        // coordinates say the body belongs.
+        const ax = parseFloat(el.style.left);
+        const ay = parseFloat(el.style.top);
+        const rel = (r) => [r.left - ob.left - ax, r.top - ob.top - ay, r.width, r.height];
+        const pill = rel(span.getBoundingClientRect());
+        const body = rel(sprite.getBoundingClientRect());
+        const px = job.at.x * TILE;
+        const py = job.at.y * TILE;
+        const overPlayer = (ox, oy) => {
+          const left = ox + pill[0];
+          const top = oy + pill[1];
+          return (
+            left < player[0] + player[2] &&
+            left + pill[2] > player[0] &&
+            top < player[1] + player[3] &&
+            top + pill[3] > player[1]
+          );
+        };
+        // A wanderer is held to its whole disc; anything else, to the one point it holds.
+        let pillOnSpawn = overPlayer(px, py);
+        if (job.kind === "wander" && job.radius) {
+          for (let angle = 0; angle < 360 && !pillOnSpawn; angle += 10) {
+            const rad = (angle * Math.PI) / 180;
+            for (let r = 0.1; r <= job.radius + 1e-9; r += 0.1) {
+              if (overPlayer(px + r * Math.cos(rad) * TILE, py + r * Math.sin(rad) * TILE)) {
+                pillOnSpawn = true;
+                break;
+              }
             }
           }
         }
-      }
-      return {
-        ...job,
-        text: ink(px + pill[0] + 6, py + pill[1] + 4, pill[2] - 12, pill[3] - 8),
-        body: ink(px + body[0], py + body[1], body[2], body[3]),
-        pillOnSpawn,
-      };
-    });
-  });
+        return {
+          ...job,
+          text: ink(px + pill[0] + 6, py + pill[1] + 4, pill[2] - 12, pill[3] - 8),
+          body: ink(px + body[0], py + body[1], body[2], body[3]),
+          pillOnSpawn,
+        };
+      });
+    },
+    { playerSel: dom.player, npcSel: dom.npc("__ID__") }
+  );
 }
 
 test.describe("Cast legibility", () => {
@@ -204,6 +252,39 @@ test.describe("Cast legibility", () => {
       expect(
         onSpawn.map((c) => `${c.id} "${c.label}" (${c.kind}) reaches the spawn`),
         `${name}: no name pill may land on the player's arrival square`
+      ).toEqual([]);
+    });
+  }
+
+  // The same assertions, on the two Institute rooms that have a cast. The spawn clause is dropped
+  // rather than adapted: a hub room is entered from three different places depending on what the
+  // player just did — the foyer, the Archive Room door, and a recall landing beside the Navigation
+  // Table — so "the arrival square" is not one square here, and a claim about one of the three would
+  // be a claim picking its own example. `field-map-coordinates.test.js` already holds all three
+  // against the cast, by body rather than by pill.
+  for (const [name, hubRoom] of HUB_SURFACES) {
+    test(`${name}: nothing is drawn over a posted body or its name`, async ({ page }) => {
+      await openHubRoom(page, hubRoom);
+      const cast = await measure(page, HUB_DOM);
+      expect(cast.length, `${name} has a cast`).toBeGreaterThan(0);
+      expect(
+        cast.filter((c) => c.missing).map((c) => c.id),
+        `${name}: every job has a body on screen`
+      ).toEqual([]);
+      expect(
+        cast.filter((c) => c.kind === "none").map((c) => c.id),
+        `${name}: every staff member is seeded with a station, route or wander`
+      ).toEqual([]);
+
+      const buried = cast
+        .filter((c) => c.kind === "station")
+        .filter((c) => (c.text ?? 0) > MAX_TEXT_INK || (c.body ?? 0) > MAX_BODY_INK);
+      expect(
+        buried.map(
+          (c) =>
+            `${c.id} "${c.label}" at (${c.at.x},${c.at.y}) — name ${c.text}% / body ${c.body}% under overlay art`
+        ),
+        `${name}: a posted body and its name must not be painted over`
       ).toEqual([]);
     });
   }

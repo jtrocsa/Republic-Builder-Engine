@@ -606,6 +606,58 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
     expect(map.isLand(x, y)).toBe(true);
   });
 
+  // **Everything the mission needs, from the cell the player actually starts on.**
+  //
+  // Every other reachability assertion on an outdoor map is *local*: is there standable ground
+  // within this thing's own reach. That question is answered a tile away from the thing and says
+  // nothing about whether a walk can arrive there — which is the question a student asks. Ten field
+  // interiors and all three hub rooms have been flood-filled from their spawn for phases;
+  // `fieldTraversal()` has existed since Phase 105 and was instantiated exactly twice, for
+  // Richmond's bluff and the wharf's rail, both times to prove a *named barrier* has exactly the
+  // crossings its map claims. Six of the eight outdoor maps were never filled at all.
+  //
+  // Stated as "the spawn's component contains every interactable" rather than "no open ground is
+  // stranded", because an outdoor map may legitimately hold ground nobody is meant to walk to — a
+  // sandbar, a roof, the far bank — and a pocket of scenery is not a defect the way a pocket of
+  // room is. What is a defect is a record, a doorstep or the way home behind a wall.
+  it("puts every record, doorstep and the recall beacon in the spawn's own component (edge case)", () => {
+    const { fill, canStand } = fieldTraversal(map);
+    const reached = fill();
+    expect(
+      reached.size,
+      `${unitId}: the spawn itself is blocked, so nothing is reachable`
+    ).toBeGreaterThan(0);
+
+    // Object-anchored records only, for `placedPoints()`'s own reason: an NPC-anchored record has no
+    // coordinates of its own and rides its carrier, who is in the list below in person.
+    const wanted = [
+      ...placedPoints().map(([id, point]) => [`record ${id}`, point, SOURCE_REACH]),
+      ...Object.entries(map.interiors || {}).map(([id, room]) => [
+        `doorstep of ${id}`,
+        room.door,
+        NPC_REACH,
+      ]),
+      ...map.npcs.map((npc) => [`${npc.id}`, npc, NPC_REACH]),
+      ["the recall beacon", map.recall, RECALL_REACH],
+    ];
+
+    // Within its own reach, never on its exact cell: every one of these stands on something solid —
+    // a person, a desk, a doorway — so the cell itself is blocked by construction. The reaches are
+    // the game's own, the same numbers `nearestFieldInteraction()` sorts by.
+    const unreachable = wanted
+      .filter(([, at, reach]) => {
+        for (let angle = 0; angle < 360; angle += 15) {
+          const rad = (angle * Math.PI) / 180;
+          for (let r = 0.2; r <= reach + 1e-9; r += 0.2) {
+            if (canStand(reached, at.x + Math.cos(rad) * r, at.y + Math.sin(rad) * r)) return false;
+          }
+        }
+        return true;
+      })
+      .map(([label]) => label);
+    expect(unreachable, `${unitId}: a walk from the spawn cannot arrive at these`).toEqual([]);
+  });
+
   it("parks the documented bodies, and only those, inside the recall beacon (edge case)", () => {
     const grid = fieldNavGridFor(map);
     const inside = Object.entries(map.behaviours)
@@ -822,7 +874,13 @@ describe.each(Object.entries(FIELD_MAPS))("%s field map coordinates", (unitId, m
   it("backs every collision rect with drawn structure art (normal case)", () => {
     // The drift this catches: a rect left behind at its old coordinates after the map moved,
     // blocking a patch of empty grass the player can see straight through.
-    if (!structures) return;
+    //
+    // Both lines below were `if (!structures) return;` until Phase 120 — a test that passes by
+    // returning early is a test that reports "clean" for a map whose structures layer it could not
+    // find, which is the same class of nothing the interior art check was measuring. And a filter
+    // over an empty list passes, so a map that had lost its rects would sail through too.
+    expect(structures, `${unitId}: no structures layer to check the rects against`).toBeTruthy();
+    expect(map.blocks.length).toBeGreaterThan(0);
     const empty = map.blocks
       .filter((block) =>
         cellsUnder(block).every(([col, row]) => structures.data[row * tmj.width + col] === 0)
@@ -1136,10 +1194,24 @@ describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
       // in a screenshot of a room whose furniture all still renders somewhere else.
       //
       // An interior's solid things are spread across more layers than an outdoor map's single
-      // "structures" — walls, furniture and the objects stamped on top — so this asks whether ANY
-      // tile layer has paint in the cell rather than naming one.
+      // "structures" — walls, furniture and the objects stamped on top — so this asks whether any
+      // of them has paint in the cell rather than naming one.
+      //
+      // **Every layer except the floor.** Phase 113 shipped this asking whether ANY tile layer had
+      // paint, and reported it clean on all ten rooms — which it would have done whatever the rooms
+      // looked like, because `ground` is painted in **every cell of every surface in this
+      // repository**, all 22 of them. There is no cell anywhere that fails "some layer has paint",
+      // so the predicate was true before it was asked and the result was a sentence about nothing.
+      //
+      // Note which vacuity this is. The `room.blocks.length` line below is the other one — a filter
+      // over an empty list passes — and it was carried deliberately, and it does not catch this:
+      // here the list was full and the *test* was always true. A guard can be vacuous on either
+      // axis and only one of them looks empty. Corrected in Phase 120; all ten rooms are still
+      // clean, and so is the Main Hall, which is now asked the same question for the first time.
       const tmj = loadTmj(`${room.id}.tmj`);
-      const painted = tmj.layers.filter((layer) => layer.type === "tilelayer" && layer.data);
+      const painted = tmj.layers.filter(
+        (layer) => layer.type === "tilelayer" && layer.data && layer.name !== "ground"
+      );
       expect(painted.length).toBeGreaterThan(0);
       // A filter over an empty list passes, which is 0102 rule applied one surface down: a room
       // that had somehow lost its walls would sail through both of these guards saying nothing.
@@ -1213,6 +1285,13 @@ describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
     it("stands its doorstep somewhere the outdoor map can be walked to", () => {
       // The door lives on the outdoor map, so it is checked against the outdoor map's land mask and
       // collision — a doorstep stamped inside its own building's rect is reachable by nobody.
+      //
+      // **This asks a local question and only a local question**: is there standable ground within
+      // the door's own reach. It cannot see whether that ground is joined to the rest of the map, so
+      // a doorstep in a sealed pocket passes it. The connected version is the outdoor block's "puts
+      // every record, doorstep and the recall beacon in the spawn's own component", added in Phase
+      // 120 — this stays because it is cheap, it names the room rather than the unit, and it fails
+      // first on the commoner defect.
       const { x, y } = room.door;
       expect(x).toBeGreaterThan(0);
       expect(y).toBeGreaterThan(0);
@@ -1244,6 +1323,111 @@ describe.runIf(FIELD_INTERIORS.length > 0).each(FIELD_INTERIORS)(
         expect(traversal.canReach(point.x, point.y, 1.55), `${id} is unreachable`).toBe(true);
       }
     });
+
+    // **The interior block never read `room.behaviours`.**
+    //
+    // Everything above this line reads `room.npcs[].x/y` — where a person is *declared* — and the
+    // game moves them from `room.behaviours`, which is a different table that nothing held against
+    // the first. Four guards the outdoor maps have had for phases had no counterpart in here at
+    // all: where a job actually sends a body, whether the two tables agree about where somebody
+    // starts, whether a wanderer has room to wander, and whether two people can end up close enough
+    // that the wrong one answers. Ten rooms, 24 jobs, none of them asked.
+    //
+    // These are the same functions the outdoor block calls, on the same terms. `fieldNavGridFor()`
+    // already resolves an interior correctly — it reads `map.grid || FIELD_GRID` for exactly this
+    // reason — so nothing here is a second implementation of anything.
+    const interiorAnchors = (behaviour) =>
+      behaviour.kind === "route" ? behaviour.stops : [behaviour.at || behaviour.home];
+
+    it("stands every body on walkable floor at every place its job sends it (edge case)", () => {
+      const traversal = walk();
+      const bad = [];
+      for (const [id, behaviour] of Object.entries(room.behaviours || {})) {
+        interiorAnchors(behaviour).forEach((point, index) => {
+          const where = behaviour.kind === "route" ? `stop ${index}` : "post";
+          if (!traversal.open(point.x, point.y)) bad.push(`${id} ${where} is inside the furniture`);
+        });
+      }
+      expect(bad).toEqual([]);
+    });
+
+    it("anchors every body's behaviour at the coordinates the room declares (edge case)", () => {
+      // The content table and the behaviour table have to agree about where somebody starts,
+      // because the declared x/y is what a source anchor reads before the first tick moves them.
+      const mismatched = room.npcs
+        .filter((npc) => room.behaviours?.[npc.id])
+        .filter((npc) => {
+          const [anchor] = interiorAnchors(room.behaviours[npc.id]);
+          return anchor.x !== npc.x || anchor.y !== npc.y;
+        })
+        .map((npc) => npc.id);
+      expect(mismatched).toEqual([]);
+    });
+
+    it("gives every wanderer enough floor to use, and every route a walk (edge case)", () => {
+      // Two of the ten rooms wander somebody; none routes anybody. The route half therefore has no
+      // subject today and is written anyway — a check with nothing to measure is not the same thing
+      // as a check that cannot fail, and this one goes red the day an interior is given a circuit
+      // its furniture will not let it walk.
+      const traversal = walk();
+      const cramped = [];
+      for (const [id, behaviour] of Object.entries(room.behaviours || {})) {
+        if (behaviour.kind === "route") {
+          const circuit = buildCircuit(fieldNavGridFor(room), behaviour.stops);
+          const stops = circuit.filter((point) => point.stop).length;
+          if (stops < behaviour.stops.length) {
+            cramped.push(`${id} reached ${stops}/${behaviour.stops.length} stops`);
+          }
+          continue;
+        }
+        if (behaviour.kind !== "wander") continue;
+        let open = 0;
+        const samples = 64;
+        for (let i = 0; i < samples; i += 1) {
+          const angle = (i / samples) * Math.PI * 2;
+          const distance = behaviour.radius * (0.35 + (i % 3) * 0.325);
+          const x = behaviour.home.x + Math.cos(angle) * distance;
+          const y = behaviour.home.y + Math.sin(angle) * distance;
+          if (traversal.open(x, y)) open += 1;
+        }
+        if (open / samples < 0.3) cramped.push(`${id} ${Math.round((open / samples) * 100)}% open`);
+      }
+      expect(cramped).toEqual([]);
+    });
+
+    it("keeps any two bodies' ground apart, so the wrong one cannot answer (edge case)", () => {
+      expect(crowdedPairs(room.behaviours || {}, fieldNavGridFor(room))).toEqual([]);
+    });
+
+    // The furniture half of the same rule, and the one CLAUDE.md names in as many words: **a door is
+    // an interaction, and it competes for the same reach.** `nearestFieldInteraction()` sorts an
+    // interior's people, its records and its way out into one nearest-wins list, so a body whose
+    // ground reaches inside the exit's reach can answer instead of the door — which is how a room
+    // becomes one you cannot leave. Phase 97 checked the cast and not the furniture and Phase 98
+    // paid for it; this is the same check the eight outdoor maps have had since Part 6B, in the ten
+    // rooms that never got it.
+    it("keeps every body's ground out of a record's or the exit's reach (edge case)", () => {
+      // `navGrid` and not `grid`: the room's own `grid` is its size and is already in scope here,
+      // and this is the router's.
+      const navGrid = fieldNavGridFor(room);
+      const targets = [
+        ...Object.entries(room.sourcePoints || {})
+          .filter(([, point]) => !point.anchor?.npc)
+          .map(([id, point]) => [`record ${id}`, point, SOURCE_REACH]),
+        ["the way out", room.exit, NPC_REACH],
+      ];
+      const contended = [];
+      for (const [npcId, behaviour] of Object.entries(room.behaviours || {})) {
+        const territory = territoryOf(behaviour, navGrid);
+        for (const [label, point, reach] of targets) {
+          const gap = territoryGap(territory, { points: [point], radius: 0 });
+          if (gap < reach) {
+            contended.push(`${npcId} comes ${gap.toFixed(2)} within ${label}'s ${reach} reach`);
+          }
+        }
+      }
+      expect(contended).toEqual([]);
+    });
   }
 );
 
@@ -1272,6 +1456,49 @@ describe("institute main hall coordinates", () => {
     expect(tmj.width).toBe(HUB_GRID.columns);
     expect(tmj.height).toBe(HUB_GRID.rows);
     expect(tmj.tilewidth).toBe(HUB_GRID.tile);
+    // Both dimensions, because a tileset is not required to be square and the outdoor block and the
+    // interior block have always asked for both. All three hub rooms asked only for the width.
+    expect(tmj.tileheight).toBe(HUB_GRID.tile);
+  });
+
+  // **The Main Hall was the only one of the game's 21 walkable surfaces asked neither of these.**
+  //
+  // The eight outdoor maps have had both for phases; the ten interiors got them in Phase 113; the
+  // Archive Room and the Entrance Hall have both. `HUB_BLOCK_RECTS` was imported into this file and
+  // used once, as the flood fill's input — so the room every mission in the game starts and ends in
+  // was the one whose walls were never held against its own grid or its own art.
+  //
+  // Decision log `0112` §3 says "the outdoor maps and both hub rooms have been checked" for exactly
+  // these two. There are three hub rooms. It is the same shape as Phase 118's twelve counted claims
+  // — a number that stayed plausible because nobody re-derived it — one document further down.
+  it("keeps every collision rect inside the hall and non-degenerate (edge case)", () => {
+    const bad = HUB_BLOCK_RECTS.filter(
+      (b) =>
+        b.x1 >= b.x2 ||
+        b.y1 >= b.y2 ||
+        b.x1 < 0 ||
+        b.y1 < 0 ||
+        b.x2 > HUB_GRID.columns ||
+        b.y2 > HUB_GRID.rows
+    ).map((b) => b.kind);
+    expect(bad).toEqual([]);
+  });
+
+  it("backs every collision rect with drawn furniture (normal case)", () => {
+    // Every layer but the floor, for the reason the interior block above spells out: `ground` is
+    // painted in every cell of every surface in the repository, so a check that counts it is true
+    // before it is asked.
+    const painted = tmj.layers.filter(
+      (layer) => layer.type === "tilelayer" && layer.data && layer.name !== "ground"
+    );
+    expect(painted.length).toBeGreaterThan(0);
+    expect(HUB_BLOCK_RECTS.length).toBeGreaterThan(0);
+    const empty = HUB_BLOCK_RECTS.filter((block) =>
+      cellsUnder(block, HUB_GRID).every((cell) =>
+        painted.every((layer) => layer.data[cell[1] * tmj.width + cell[0]] === 0)
+      )
+    ).map((block) => block.kind);
+    expect(empty).toEqual([]);
   });
 
   it("lets the player walk from the spawn to every interaction target (normal case)", () => {
@@ -1436,9 +1663,14 @@ describe("archive room coordinates", () => {
     expect(tmj.width).toBe(ARCHIVE_ROOM_GRID.columns);
     expect(tmj.height).toBe(ARCHIVE_ROOM_GRID.rows);
     expect(tmj.tilewidth).toBe(ARCHIVE_ROOM_GRID.tile);
+    expect(tmj.tileheight).toBe(ARCHIVE_ROOM_GRID.tile);
   });
 
   it("backs every collision rect with drawn furniture (normal case)", () => {
+    // A filter over an empty list passes, so say the list is not empty. Same line the interiors have
+    // carried since Phase 113 and the outdoor maps and the other two hub rooms gained in Phase 120.
+    expect(structures).toBeTruthy();
+    expect(ARCHIVE_ROOM_BLOCK_RECTS.length).toBeGreaterThan(0);
     const empty = ARCHIVE_ROOM_BLOCK_RECTS.filter((block) =>
       cells(block).every(([col, row]) => structures.data[row * tmj.width + col] === 0)
     ).map((block) => block.kind);
@@ -1515,6 +1747,7 @@ describe("institute entrance hall coordinates", () => {
     expect(tmj.width).toBe(HALLWAY_GRID.columns);
     expect(tmj.height).toBe(HALLWAY_GRID.rows);
     expect(tmj.tilewidth).toBe(HALLWAY_GRID.tile);
+    expect(tmj.tileheight).toBe(HALLWAY_GRID.tile);
   });
 
   it("draws its greenery on an overlay layer, so the player walks behind it (normal case)", () => {
@@ -1525,6 +1758,8 @@ describe("institute entrance hall coordinates", () => {
   });
 
   it("backs every collision rect with drawn furniture (normal case)", () => {
+    expect(structures).toBeTruthy();
+    expect(HALLWAY_BLOCK_RECTS.length).toBeGreaterThan(0);
     const empty = HALLWAY_BLOCK_RECTS.filter((block) =>
       cells(block).every(([col, row]) => structures.data[row * tmj.width + col] === 0)
     ).map((block) => block.kind);

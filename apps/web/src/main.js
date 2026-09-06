@@ -3223,7 +3223,13 @@ const UNIT5_HOSPITAL_WARD_BEHAVIOURS = {
   // A small disc in the open south aisle between the cots and the presses, which is where a woman
   // working a ward would be. Every step is still gated by isFieldNpcBlocked, so the disc overlapping
   // the presses' rects costs her nothing but the cells she cannot enter.
-  "richmond-ward-nurse": { kind: "wander", home: { x: 4.0, y: 8.6 }, radius: 1.2 },
+  //
+  // Home was y 8.6 until Phase 120, against a declared 8.4 two tables up — the only body in the game
+  // whose two tables disagreed about where it starts, and it stood for phases because the interior
+  // block never read `room.behaviours` at all. The declared coordinate wins because it is the one
+  // other code reads: a source anchor takes it before the first tick moves anybody. The disc is
+  // marginally better here too, 75% open against 70%, and 0.2 of a tile is nine pixels.
+  "richmond-ward-nurse": { kind: "wander", home: { x: 4.0, y: 8.4 }, radius: 1.2 },
 };
 const UNIT5_HOSPITAL_WARD_SOURCE_POINTS = {
   "richmond-ward-register": {
@@ -5234,6 +5240,17 @@ function activeHubNpcRuntime() {
   if (progress.currentHubRoom === "archive") return HUB_NPC_RUNTIME_NONE;
   return hubNpcRuntime;
 }
+/**
+ * The same three-way resolve, over the authored behaviour tables rather than the live states —
+ * which is what a caller wants when the question is where somebody was *posted* rather than where
+ * this frame caught them. Used by the dev cast probe; `HUB_NPC_RUNTIME_NONE` doubles as the empty
+ * table because the Archive Room has nobody in it either way.
+ */
+function activeHubNpcBehaviours() {
+  if (progress.currentHubRoom === "hallway") return HALLWAY_NPC_BEHAVIOURS;
+  if (progress.currentHubRoom === "archive") return HUB_NPC_RUNTIME_NONE;
+  return HUB_NPC_BEHAVIOURS;
+}
 const hubHeldKeys = new Set();
 let hubMoveFrame = null;
 let lastHubMoveAt = 0;
@@ -6018,6 +6035,22 @@ function installDevNavProbe() {
 function installDevCastProbe() {
   if (!import.meta.env.DEV) return;
   window.__chronicleCast = () => {
+    // The Institute's rooms answer the same question in the same shape. They were left out when
+    // this shipped, so `cast-legibility.spec.js` measured eighteen of the game's twenty-one walkable
+    // surfaces and the three it skipped are the ones every session begins and ends in — five bodies
+    // whose name pills no automated check has ever looked at, on rooms whose own screenshots hide
+    // `.hub-npc` before they fire. The label is the target's `name` because a hub pill prints the
+    // person, where a field pill prints the job.
+    if (progress.currentScreen === "institute") {
+      const targets = activeHubTargets();
+      return Object.entries(activeHubNpcBehaviours()).map(([id, job]) => ({
+        id,
+        label: targets[id]?.name || id,
+        kind: job?.kind || "none",
+        at: job?.at || job?.home || { x: targets[id]?.x, y: targets[id]?.y },
+        radius: job?.radius ?? null,
+      }));
+    }
     const map = activeFieldMap();
     return (map.npcs || []).map((npc) => {
       const job = map.behaviours?.[npc.id];
@@ -6032,6 +6065,27 @@ function installDevCastProbe() {
       };
     });
   };
+}
+/**
+ * What `E` would reach right now on the active field surface — the answer, not the arithmetic.
+ * Dev-only, and gated exactly as the two probes above are.
+ *
+ * Why a test needs this. `nearestFieldInteraction()` sorts people, records and doorsteps into one
+ * list by raw distance and takes the first, so *which* of them a keypress opens is a question about
+ * where the player happens to be standing — and `walkTo` only ever promises to get inside the reach
+ * of the thing it was pointed at. A spec that wants one of the others has had no way to ask what it
+ * is about to get. `suburb-interiors.spec.js` asserted a locked record's refusal from a position it
+ * never checked, and the two candidates there are 0.6 of a tile apart; worse, a locked record draws
+ * no world marker, so there is not even an `.is-near` to read for it. The failure was an empty
+ * status line, and it was recorded twice as load. See decision log `0118` §8 and `0119`.
+ *
+ * **It reads the game's answer and does not restate its rules** — the line `0093` drew for the nav
+ * probe. The reaches, the sort and the tie-break all stay in `nearestFieldInteraction()`; this hands
+ * back whatever that function returned, so a reach that changes changes here too.
+ */
+function installDevReachProbe() {
+  if (!import.meta.env.DEV) return;
+  window.__chronicleReach = () => nearestFieldInteraction();
 }
 function applyDevWarp() {
   if (!import.meta.env.DEV) return;
@@ -17417,6 +17471,7 @@ if (app) {
   applyDevWarp();
   installDevNavProbe();
   installDevCastProbe();
+  installDevReachProbe();
   // Before the first render, so a player who finished missions before the Codex existed opens it
   // to their own work rather than to an empty archive. A no-op on every boot after the first.
   backfillCodex();

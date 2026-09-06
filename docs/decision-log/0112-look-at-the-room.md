@@ -52,6 +52,14 @@ accepted, not fixed.
 
 ## 3. Two guards the interiors never had
 
+> **Corrected in Phase 120 (`0119` §1–2).** Two claims in this section were wrong. There are three
+> hub rooms, not two, and the uncounted one — the Main Hall — had **neither** of these checks until
+> Phase 120; it was the only one of the game's twenty-one walkable surfaces with neither. And the
+> art check below reported "clean on all ten" about nothing: it asked whether _any_ tile layer had
+> paint in the cell, and `ground` is painted in every cell of every surface in the repository, so the
+> predicate was true before it was asked. The rooms really are clean — that was re-established with
+> `ground` excluded — but this section did not establish it.
+
 The outdoor maps and both hub rooms have been checked for **rects in bounds and non-degenerate** and
 for **every rect backed by drawn art** for phases. The ten field interiors had neither: their block
 was traversal-shaped only — size, land mask, entry, exit, no sealed pocket, people clear of the
