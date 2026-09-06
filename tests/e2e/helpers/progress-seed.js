@@ -347,11 +347,23 @@ export async function walkTo(
         // Sized to the distance left, then capped. A leg runs through cells the probe said were
         // free, so a long hold is safe here in a way it never was for the old slide, and it cannot
         // overshoot: FIELD_SPEED is a ceiling and the frame clamp only ever makes a burst cover less.
+        //
+        // **The floor is 150ms and not 70** (Phase 121, decision log `0120`). Phase 119 set it at 70
+        // as "at least something", against a page running 40+ fps at the configured two workers.
+        // Then Phase 121 pinned the field's map frame to the top of its row so the whole of it is on
+        // screen on every unit — Richmond went from 384 of its 517 pixels visible to all 517 — which
+        // means more of the map is composited every frame, and under worker contention the frame
+        // rate drops further than it used to. **A 70ms burst is about one frame at that rate**, and a
+        // burst that renders one frame can move less than `PROGRESS_TILES`, which this loop reads as
+        // a stall; four of those strand a leg. Measured: the counting-room walk — six tiles in the
+        // narrowest room in the game — went from 0 failures in 5 runs to 1 in 5, and back to 0 in 5
+        // at 150. That is two or three frames even at 15fps, and a fifth of the 700ms default, so it
+        // changes nothing about a burst that had room to be longer anyway.
         bursts += 1;
         await holdKey(
           page,
           key,
-          Math.max(70, Math.min(burstMs, Math.round((Math.abs(delta) / TILES_PER_SECOND) * 1000)))
+          Math.max(150, Math.min(burstMs, Math.round((Math.abs(delta) / TILES_PER_SECOND) * 1000)))
         );
         const after = await step();
         if (!after) return false;

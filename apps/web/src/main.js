@@ -13593,7 +13593,7 @@ function fieldScreen() {
     .join(" · ");
   // Resolved once for the whole cast rather than once per body — see fieldInterviewSpeakerStatus().
   const liveInterview = liveFieldInterview();
-  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseName(activeCase))}</h1><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map((npc) => fieldNpcButton(npc, liveInterview)).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
+  return `${chrome()}<main class="shell case-field case-field--living"><section class="field-intro"><button class="back-link" data-action="field-recall">← Recall to Archive</button><p class="kicker">${esc(kicker)}</p><h1>${esc(resolvedCaseName(activeCase))}</h1><p class="field-notice" id="fieldNotice" ${fieldNotice ? "" : "hidden"}>${esc(fieldNotice)}</p><p class="field-question">${esc(activeCase.question)}</p><p>${esc(copy.intro)}</p><p class="field-legend">Look for a <b>✦</b> — over a person's head or on the object holding a record. The checklist on the map tracks all of them.</p></section><section class="field-viewport field-scene--interactive" id="caseFieldMap"><div class="caribbean-world field-world--${map.id}" id="caribbeanWorld" style="${fieldWorldStyle()}">${map.worldMarkup()}${recallBeacon()}${fieldDoorMarkers()}${map.npcs.map((npc) => fieldNpcButton(npc, liveInterview)).join("")}${sources.map(fieldSourceSignal).join("")}${fieldDialogueBubble()}<div class="case-field-player" id="caseFieldPlayer" data-facing="${fieldMovement.facing}" style="${fieldPositionStyle()}" aria-label="${esc(progress.profile.name || "Chronicler")}"><span class="cast-shadow"></span>${characterSpriteMarkup(chroniclerKey(), fieldMovement.facing, { id: "caseFieldPlayerSprite", walking: fieldMovement.moving, speed: FIELD_SPEED })}</div></div>${fieldObjectiveTracker()}</section><aside class="field-channel"><p class="kicker">Codex field link</p><h2>Evidence Channel</h2><p class="role">Archive connection · portable</p><p>Institute staff remain in the Archive. In the field, your Codex preserves source readings, observation notes, and the final transmission back to the Navigation Table.</p><button class="btn btn-outline" data-action="codex" data-origin="field">Open Codex <b>${countEvidence(caseId)}</b></button>${PRACTICE_CHECK_QUESTS[caseId] && progress.settings.miniGamesEnabled ? `<button class="btn btn-outline btn-outline--practice" data-action="practice-check">Practice Check →</button>` : ""}${caseId === "case-001" ? `<button class="text-button field-reset-button" data-action="reset-case-001">Reset Case 1.01</button>` : ""}${allSecured ? `<button class="btn btn-gold" data-action="reconstruction">Open Reconstruction Table →</button>` : reconstructionGate}</aside></main>`;
 }
 
 // Human-facing name for each engine, used in the activity screen's eyebrow. The engine keys
@@ -13962,14 +13962,26 @@ function caseArcFiled(sourceId) {
  * nothing — this is a state of the activity screen, the same way the Entrance Hall is a room and not
  * a screen. `briefed` lives on the per-source activity entry beside `state` and `completed`.
  */
+const beginButton = (source) =>
+  `<button class="btn btn-gold mission-brief__begin" data-action="mission-briefed" data-source="${esc(source.id)}">Begin the mission →</button>`;
 function missionInstructionsScreen(kind, source, activity) {
   const kicker = activityKicker(kind);
   const giver = missionGiver(source, activity);
   // The portrait is the character's own committed `-portrait.png` — characterSheet() builds one for
   // every member of the cast and throws at boot if a file is missing, so this can never 404.
+  // **The button goes above the giver's line, not under it** (Phase 121, decision log `0120`).
+  //
+  // The comment on `begin` below is the reason this screen puts the control in this column at all,
+  // and it was right — and then the thing it was protecting the button from grew here instead. A
+  // giver's line runs from nothing at all on Case 1.01 to 683 characters at Ellis Island, which is
+  // 133px of quote against 486px, so the button was **below the fold on Units 6 and 7 at both
+  // sizes** — 195px under at 1280x720 — and clearing it by 12px on Unit 5. The one control the
+  // screen exists to offer, under authored prose, exactly as the Navigation Table had it in Phase
+  // 117. Where a control sits does not depend on how long an author wrote: the portrait and the
+  // caption are fixed, so the button is placed against those and the line follows it.
   const plate = giver
-    ? `<figure class="mission-brief__giver"><img class="mission-brief__portrait" src="${sheetFor(giver.npc.sprite).portrait}" alt=""><figcaption><b>${esc(giver.npc.name)}</b>${giver.npc.label ? `<span>${esc(giver.npc.label)}</span>` : ""}</figcaption>${giver.line ? `<blockquote><p>${esc(giver.line)}</p></blockquote>` : ""}</figure>`
-    : `<figure class="mission-brief__giver is-record"><div class="mission-brief__mark" aria-hidden="true">${ACTIVITY_ENGINE_ICONS[kind] || ""}</div><figcaption><b>${esc(source.title)}</b><span>Nobody handed you this one</span></figcaption></figure>`;
+    ? `<figure class="mission-brief__giver"><img class="mission-brief__portrait" src="${sheetFor(giver.npc.sprite).portrait}" alt=""><figcaption><b>${esc(giver.npc.name)}</b>${giver.npc.label ? `<span>${esc(giver.npc.label)}</span>` : ""}</figcaption>${beginButton(source)}${giver.line ? `<blockquote><p>${esc(giver.line)}</p></blockquote>` : ""}</figure>`
+    : `<figure class="mission-brief__giver is-record"><div class="mission-brief__mark" aria-hidden="true">${ACTIVITY_ENGINE_ICONS[kind] || ""}</div><figcaption><b>${esc(source.title)}</b><span>Nobody handed you this one</span></figcaption>${beginButton(source)}</figure>`;
   const steps = activity.howItWorks.steps.map((step) => `<li>${esc(step)}</li>`).join("");
   const note = activity.howItWorks.note
     ? `<p class="mission-brief__note">${esc(activity.howItWorks.note)}</p>`
@@ -13979,13 +13991,16 @@ function missionInstructionsScreen(kind, source, activity) {
         .map((word) => `<dt>${esc(word.term)}</dt><dd>${esc(word.definition)}</dd>`)
         .join("")}</dl></section>`
     : "";
+  // (The button itself is placed inside the plate above, and `beginButton()` builds it. The reason
+  // it lives in this column at all is below, unedited, because it is still the reason — Phase 121
+  // only moved it above the line that had grown underneath it.)
+  //
   // The button lives in the giver's column, not under the instructions. Two reasons, and the first
   // is the binding one: on the 1366x768 Chromebook this game is built for, a heading, an intro,
   // three steps and a glossary put anything below them off the bottom of the screen, and a
   // click-to-continue control a player has to scroll to find is a screen that looks stuck. The
   // second is that it reads correctly there — you accept the job from the person offering it.
-  const begin = `<button class="btn btn-gold mission-brief__begin" data-action="mission-briefed" data-source="${esc(source.id)}">Begin the mission →</button>`;
-  return `${chrome()}<main class="shell mission-brief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}${begin}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p class="mission-brief__intro">${esc(activity.intro)}</p>${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${activity.thinkingMove ? `<p class="mission-brief__move"><b>What this asks of you</b> ${esc(activity.thinkingMove)}</p>` : ""}<section class="mission-brief__steps"><h2>Mission Instructions</h2><ol>${steps}</ol>${note}</section>${terms}</section></main>`;
+  return `${chrome()}<main class="shell mission-brief" data-activity-source="${esc(source.id)}"><section class="mission-brief__from">${plate}</section><section class="mission-brief__body"><button class="back-link" data-action="field">← Back to the field</button><p class="kicker kicker--activity">${kicker}</p><h1>${esc(activity.title)}</h1>${activityVariantLine(activity)}<p class="mission-brief__intro">${esc(activity.intro)}</p>${activity.missionQuestion ? `<p class="mission-brief__question">${esc(activity.missionQuestion)}</p>` : ""}${activity.thinkingMove ? `<p class="mission-brief__move"><b>What this asks of you</b> ${esc(activity.thinkingMove)}</p>` : ""}<section class="mission-brief__steps"><h2>Mission Instructions</h2><ol>${steps}</ol>${note}</section>${terms}</section></main>`;
 }
 
 // One dispatch point for every control an engine renders. Deliberately on its own

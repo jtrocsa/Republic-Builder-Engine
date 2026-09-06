@@ -6289,10 +6289,26 @@ dd {
 /* -------------------------------------------------------------------------
    Milestone 3.4.2 · Living Caribbean interaction/game pass
    ------------------------------------------------------------------------- */
+/* **The map does not move because an author wrote more.** (Phase 121, decision log `0120`.)
+   This is the last of three `.case-field--living` declarations and the one that wins, so it is where
+   `align-items` is decided; the `center` in `.case-field` and in the 5840 block above are both
+   superseded and neither should be "fixed" instead of this one.
+
+   Centred, the middle column — the playable map — was centred against a row as tall as the left
+   column, and that column ends with `copy.intro`, which is authored per unit and is not the same
+   length twice. Measured at 1280x720 with the frame 517px tall: Unit 1 put its top edge at **131**
+   and showed all 517; Unit 7 put it at **437** and showed **283**, so a student opening Ellis Island
+   met a map that was 45% below the fold, under prose. The slide across the eight maps is **306px**,
+   and nothing about the screen says the map continues.
+
+   Phase 117 wrote the rule for the Navigation Table — *where a control sits does not depend on how
+   long an author wrote* — and pinned `.archive-copy` to the top of its grid row for exactly this
+   reason. The playing screen is the same shape and the bigger surface. Prose scrolls; the map does
+   not. */
 .case-field--living {
   grid-template-columns: minmax(250px, 0.48fr) minmax(740px, 1.95fr) minmax(260px, 0.56fr);
   gap: 24px;
-  align-items: center;
+  align-items: start;
   overflow: hidden;
 }
 .case-field--living .field-intro {
