@@ -11909,7 +11909,7 @@ const unitReadyForReview = (unit) =>
  * than the selected one.
  *
  * Eight tabs now, and the label lost its " · Locked" suffix in Phase 90C. Three things already
- * said it: the button is `disabled`, it renders at 0.45 opacity, and the legend directly above
+ * said it: the button is `disabled`, it renders at 0.45 opacity, and the legend directly below
  * spells out "○ Teacher locked". What the suffix cost was a line each — at 1366x768 the tabs ran
  * off the bottom of the viewport from Period 5 down, so a student could not see or click the last
  * three periods of the course without scrolling a screen that otherwise has no scroll.
@@ -11927,10 +11927,12 @@ const unitReadyForReview = (unit) =>
  * teaching `✓ Archived` for the case markers beside it.
  *
  * **A glyph, and it costs no width.** Phase 90C's problem two paragraphs up is still the binding
- * one, and it is worse than that entry knows: at 1280x720, with a long guiding question above them,
- * four tabs already sit below the fold. So the tick is **absolutely positioned inside the pill's
- * existing 14px right padding** rather than added to the flow — every tab measures 73px archived or
- * not, and the strip keeps the rows it had. An inline glyph was the first attempt and measured
+ * one, and when this shipped it was worse than that entry knew: the strip then rendered under the
+ * selected unit's guiding question, so four tabs sat below the fold at 1280x720 on Unit 8 and six
+ * on Unit 7. Phase 117 moved the strip above that question and the tabs stopped moving at all — but
+ * the tick is still **absolutely positioned inside the pill's existing 14px right padding** rather
+ * than added to the flow, because the strip has only ever had the width it has: every tab measures
+ * 73px archived or not, and the strip keeps the rows it had. An inline glyph was the first attempt and measured
  * +14px a tab, which at 1366 repacked three tabs to a row into two and bought a fourth row. A mark
  * saying "you have finished this" must not be the reason the tab is off the screen.
  *
@@ -11980,7 +11982,7 @@ function archiveScreen() {
     ? ""
     : `<p class="route-locked-reason">${esc(lockedReasonForCase(selected))}</p>`;
   // How this unit closes, once every case and Archive Challenge in it is done. Two shapes, because
-  // only two of the seven units have authored an Archive Review — offering one for the other five
+  // only two of the eight units have authored an Archive Review — offering one for the other six
   // opened Unit 1's questions under their name, and it was load-bearing, since submitting it was the
   // only thing outside Teacher Mode that opened the next unit. Spine Review Part 12, P12-1.
   const unitCloseButton = !unitReadyForReview(selectedUnit)
@@ -12010,7 +12012,16 @@ function archiveScreen() {
     markerPositions.get(selected.id) ||
     projectPoint([selected.mapPosition.lon, selected.mapPosition.lat], view.bounds, viewport);
   const { left: threadLeft, top: threadTop } = xyToPercent(threadXY, viewport);
-  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="hub-return">← Main Hall</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Select a marker to read its route.</p><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc([caseNumberLabel(selected), selected.date].filter(Boolean).join(" · "))}</span><h2>${esc(resolvedCaseName(selected))}</h2><p>${esc(selected.summary)}</p><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitCloseButton}</aside></main>${authorPanel()}`;
+  // Two columns, one rule: **where a control sits does not depend on how long an author wrote.**
+  // Until Phase 117 the period strip rendered under the guiding question and the gold button under
+  // the case summary, and both of those are prose that grew unit over unit — 18 words of summary in
+  // Unit 1 against 79 in Unit 8, three lines of question against seven. At 1280x720 that put six
+  // period tabs below the fold on Unit 7 and the button that starts the mission below it on Units 7
+  // and 8, on a screen whose middle column is a full-bleed map that gives no hint anything is under
+  // it. So each column runs navigation, then its legend, then its buttons, and the prose trails.
+  // `.archive-copy` is pinned to the top of its grid row for the same reason: centred against a
+  // route panel whose height is that summary, the strip slid 89px between Unit 1 and Unit 8.
+  return `${chrome()}<main class="shell archive-layout"><section class="archive-copy"><button class="back-link" data-action="hub-return">← Main Hall</button><p class="kicker">The Archive</p><h1>Chronicle Navigation Table</h1><p>Select a marker to read its route.</p>${unitTabs(selectedUnit)}<div class="archive-legend"><span class="legend-active">✦ Available</span><span class="legend-complete">✓ Archived</span><span class="legend-locked">○ Teacher locked</span></div><p class="archive-central-question"><b>Guiding question:</b> ${esc(resolvedUnitCentralQuestion(selectedUnit))}</p></section><section class="atlas-table" aria-label="${esc(resolvedUnitTitle(selectedUnit))} navigation map">${atlasSvgMarkup(view, viewport, "Coastline map of the case's historical setting")}${labelsMarkup}${visibleCases.map((c) => caseMarker(c, markerPositions.get(c.id), viewport)).join("")}<div class="route-thread route-thread--active" style="left:${threadLeft};top:${threadTop}"></div></section><aside class="route-panel"><p class="kicker">${esc(availability)}</p><span class="case-date">${esc([caseNumberLabel(selected), selected.date].filter(Boolean).join(" · "))}</span><h2>${esc(resolvedCaseName(selected))}</h2><div class="route-meta"><span>${esc(selected.location)}</span><span>${isComplete(selected.id) ? "Archived" : "In progress"}</span></div><button class="btn btn-gold" data-action="travel" data-case="${selected.id}" ${!isUnlocked(selected.id) ? "disabled" : ""}>${esc(chronotravelLabel)} <span>→</span></button>${lockedReasonMarkup}<p class="route-hint">${esc(routeHint)}</p><button class="btn btn-outline" data-action="mini-games">Try a Mini-Game →</button>${unitCloseButton}<p class="route-summary">${esc(selected.summary)}</p></aside></main>${authorPanel()}`;
 }
 
 // Mini-games (Storm Navigation, Cargo Sorting) are a pacing/reward break reached from the

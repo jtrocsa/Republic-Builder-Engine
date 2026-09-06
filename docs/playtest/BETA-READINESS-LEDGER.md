@@ -160,6 +160,14 @@ nothing routed is open in either ledger.**
   archived period looked exactly like one never started — so `completedUnits` has a reader and
   `unitComplete`, which answered the same question for `unit-01` alone, is deleted.
 
+**And a third finding came back.** Phase 116 measured the strip it was marking and found that
+**P5-5 had never actually been fixed** — Part 5's unit tabs below the fold, closed in Phase 90C and
+re-measured clear in Phase 107, both times on the default save with Unit 1 selected, which is the
+one state that cannot show it. **Closed 2026-09-06 as Phase 117, decision log `0116`**, along with
+the larger half nobody had looked for: the gold button that starts the mission sat under the case
+summary, which runs 18 words in Unit 1 and 79 in Unit 8, and was below the fold on Units 7 and 8 at
+both sizes. Where a control sits does not depend on how long an author wrote.
+
 **P0-5 is stale and needs no work.** It recorded the chrome eyebrow still reading "REPUBLIC BUILDER
 ENGINE" on 2026-08-03. Verified 2026-09-05: the string survives in two source comments
 (`chronicle-opening.defaults.js`, `unit.schema.js`) and on no rendered surface. Recorded here so the

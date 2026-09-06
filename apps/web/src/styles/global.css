@@ -940,8 +940,13 @@ select {
   gap: 28px;
   align-items: center;
 }
+/* Pinned to the top of the grid row rather than centred in it (Phase 117). The row is as tall as
+   the tallest of the three columns, which is the route panel on the units whose case summaries run
+   long — so a centred left column started 107px down on Unit 1 and 196px down on Unit 8, and the
+   period strip slid 89px out from under the cursor that had just clicked it. Navigation does not
+   move because of prose in the column beside it. */
 .archive-copy {
-  align-self: center;
+  align-self: start;
 }
 /* Smaller than the other screens' headings on purpose. "Chronicle Navigation Table" is three words
    that will not sit on one line in a 270px column at any size, so at the shared clamp it was three
@@ -1140,6 +1145,16 @@ select {
   color: #a9bfbc;
   font-size: 0.78rem;
   line-height: 1.5;
+}
+/* The case description, and it is the last thing in the panel on purpose (Phase 117). Everything
+   above it is fixed height whatever unit is selected; this is the one block that is not, and it runs
+   from five lines in Unit 1 to sixteen in Unit 8. Underneath the controls it can be any length it
+   likes. Above them it decided whether the button that starts the mission was on the screen. The
+   rule is the divider that says so: controls above it, description below. */
+.route-summary {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 .mini-games-shell {
   display: flex;

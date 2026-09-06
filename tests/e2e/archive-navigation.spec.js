@@ -9,6 +9,21 @@ import { seedProgress, loadSeededSave, walkToHubTarget } from "./helpers/progres
 
 const COMPLETE_TUTORIAL = { step: "complete", completed: true, skipped: false };
 
+// The whole course open at once — the state a student is in by the end of the year, and the one
+// the fold cases below are measured against. Written out for the same reason the tab count is:
+// derived from UNITS, neither could notice a unit arriving.
+const EVERY_UNIT = [
+  "unit-01",
+  "unit-02",
+  "unit-03",
+  "unit-04",
+  "unit-05",
+  "unit-06",
+  "unit-07",
+  "unit-08",
+];
+const EVERY_CASE = Array.from({ length: 24 }, (_, i) => `case-${String(i + 1).padStart(3, "0")}`);
+
 test.describe("Part 5 · the Archive Room and the Navigation Table", () => {
   // P5-1. The numerator counted every archived case in the game; the denominator was a literal 3.
   // Six cases archived across two units therefore read "6/3 Unit 1 cases archived" in a room whose
@@ -94,6 +109,9 @@ test.describe("Part 5 · the Archive Room and the Navigation Table", () => {
   });
 
   // P5-5. Six of the seven tabs sat below the fold, and the page grew a scrollbar to hold them.
+  // This is the state Phase 90C measured when it fixed that and Phase 107 measured when it
+  // re-checked it at eight units: the default save, Unit 1 selected, two cases unlocked. It is
+  // not the worst state, and for nine phases it was the only one anything looked at. See below.
   test("every unit tab is reachable without scrolling", async ({ page }) => {
     await seedProgress(page, {
       currentScreen: "archive",
@@ -122,4 +140,81 @@ test.describe("Part 5 · the Archive Room and the Navigation Table", () => {
     // The date range moved to `title` rather than out of the game.
     await expect(tabs.first()).toHaveAttribute("title", /1491/);
   });
+
+  // P5-5 again — and both measurements that closed it read the state above, which is the one state
+  // that cannot reproduce the defect. The strip used to render *under* the selected unit's guiding
+  // question, so where this screen's only navigation landed was a function of how long an author
+  // had written: with Unit 8 selected and the course fully open, Periods 5 through 8 sat below the
+  // fold at 1280x720, and the mark legend sat below it at 1366x768 too. The case above asserts
+  // precisely that this cannot happen, and passed every run for nine phases.
+  //
+  // The gold button that starts the mission was worse. It sat under the case summary, which runs
+  // from 18 words in Unit 1 to 79 in Unit 8, so on Units 7 and 8 the one control this screen exists
+  // to offer was entirely below the fold at 1280x720 and clipped at 1366x768.
+  //
+  // Phase 117 put every control above the prose it used to sit under, in both columns, and pinned
+  // the copy column to the top of its grid row instead of centring it against the panel beside it.
+  // This walks all eight periods at both sizes a student actually gets. The last assertion is the
+  // one that states the rule rather than a symptom: the strip does not move at all.
+  for (const [w, h] of [
+    [1280, 720],
+    [1366, 768],
+  ]) {
+    test(`the strip, the legend and the way in stay on screen for every unit at ${w}x${h}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await seedProgress(page, {
+        currentScreen: "archive",
+        unlocked: EVERY_CASE,
+        tutorial: COMPLETE_TUTORIAL,
+      });
+      await loadSeededSave(page);
+      await expect(page.locator(".archive-layout")).toBeVisible();
+
+      const stripTops = new Set();
+      for (const unit of EVERY_UNIT) {
+        await page.locator(`[data-unit="${unit}"]`).click();
+        const seen = await page.evaluate(() => {
+          // Measured from the top of the document, always. Clicking a tab that is below the fold
+          // makes Playwright scroll it into view, and every rect after that would be read against a
+          // scrolled viewport — which is exactly the state in which a defect looks like a pass.
+          window.scrollTo(0, 0);
+          const rect = (sel) => document.querySelector(sel)?.getBoundingClientRect() || null;
+          // How far past the bottom of the window this element's own bottom edge sits. Negative is
+          // clearance; anything above zero is a control the student has to scroll to find, on a
+          // screen whose middle column is a full-bleed map with no scroll affordance of its own.
+          const past = (sel) => {
+            const r = rect(sel);
+            return r ? Math.round(r.bottom - window.innerHeight) : -1;
+          };
+          return {
+            caseName: document.querySelector(".route-panel h2").textContent,
+            stripTop: Math.round(rect(".archive-unit-tabs").top),
+            offscreen: [...document.querySelectorAll(".unit-tab")]
+              .filter((el) => el.getBoundingClientRect().bottom > window.innerHeight)
+              .map((el) => el.textContent.trim()),
+            legendPast: past(".archive-legend:not(.archive-unit-tabs)"),
+            travelPast: past('.route-panel [data-action="travel"]'),
+            miniPast: past('.route-panel [data-action="mini-games"]'),
+          };
+        });
+        expect(seen.offscreen, `${unit}: period tabs below the fold`).toEqual([]);
+        expect(seen.legendPast, `${unit}: the ✦/✓/○ legend is below the fold`).toBeLessThanOrEqual(
+          0
+        );
+        expect(
+          seen.travelPast,
+          `${unit}: "${seen.caseName}" is opened by a button below the fold`
+        ).toBeLessThanOrEqual(0);
+        expect(seen.miniPast, `${unit}: the mini-game route is below the fold`).toBeLessThanOrEqual(
+          0
+        );
+        stripTops.add(seen.stripTop);
+      }
+      // One value across all eight. The strip is where it is because of the chrome and the heading
+      // above it, and for no other reason — not because of the unit it happens to be selecting.
+      expect([...stripTops]).toHaveLength(1);
+    });
+  }
 });
