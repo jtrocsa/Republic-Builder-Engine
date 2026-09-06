@@ -10549,6 +10549,31 @@ button:hover,
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* A period the student has archived (Phase 116). Two things make this rule the shape it is.
+   The green is `.legend-complete`'s, because this screen's own legend prints "✓ Archived" in it a
+   few pixels below — keep the two the same colour. And **the tick costs no width**: it is absolutely
+   positioned inside the pill's existing 14px right padding rather than added to the flow. An inline
+   glyph measured +14px a tab, which at 1366 repacked the strip from three tabs a row to two and cost
+   it a whole fourth row — on a column that already puts tabs under the fold at 1280x720 when the
+   selected unit's guiding question runs long. A mark that says "you have finished this" must not be
+   the reason the tab is off the screen. */
+.unit-tab {
+  position: relative;
+}
+.unit-tab.is-archived {
+  border-color: rgba(162, 215, 171, 0.5);
+}
+.unit-tab i {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72em;
+  font-style: normal;
+  /* Wins over `.unit-tab.is-selected`'s gold, which the button would otherwise pass down: a tab can
+     be both selected and archived, and those are two facts rather than one. */
+  color: #a2d7ab;
+}
 
 /* Unit 2 field: painted map PNG pipeline (hub-style) */
 .field-world--unit-02 {

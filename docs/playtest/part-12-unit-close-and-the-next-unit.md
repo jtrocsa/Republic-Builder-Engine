@@ -30,7 +30,7 @@ off the source. No owner pass was run.
 | P12-4 | S2  | `broken`  | One mission in five of seven units drops the case's arc close entirely                                                                   | Fixed. The paragraph is about the case, so it survives; the quote does not.        |
 | P12-5 | S3  | `rough`   | Two Unit 1 badges describe themselves in the future tense after they have been earned                                                    | Fixed by P12-3 — where and when is true in both states.                            |
 | P12-6 | S3  | `unclear` | Finishing a unit announces nothing, and leaves the Navigation Table on the unit just finished                                            | Fixed. A notice, and the next period named on the button that opens it.            |
-| P12-7 | S3  | `broken`  | `progress.unitComplete` and `progress.completedUnits` are written and read by nothing                                                    | Carried — see `0088` §5 for why, and what to do about it.                          |
+| P12-7 | S3  | `broken`  | `progress.unitComplete` and `progress.completedUnits` are written and read by nothing                                                    | **Taken — Phase 116, `0115`.** Carried eight phases first, per `0088` §5.          |
 | P12-8 | S3  | `unclear` | The Reconstruction Table is all-or-nothing over up to seven records and never says which one is wrong                                    | Fixed. It says how many are right, and still names none.                           |
 | P12-9 | S3  | `rough`   | Nothing walks the case-close chain; `upload` has neither a spec nor a baseline                                                           | Fixed. `unit-close.spec.js` walks it end to end.                                   |
 
@@ -110,6 +110,13 @@ The smaller event is announced and the larger one is not.
 **P12-7.** Both fields are in `DEFAULT_PROGRESS`, both are written by `submit-review`, and no file
 in `apps/web/src`, `tests/` or `scripts/` reads either. `unitComplete` is additionally only ever
 written for `unit-01`. This is why P12-3 and P12-6 have nothing to read.
+
+**Taken in Phase 116 (decision log `0115`), on the condition `0088` §5 set rather than before it.**
+The cause turned up on the Navigation Table: its period strip has four states a student cares about
+and drew two, so **a period they had archived rendered byte-identical to one they had not started**
+— while the legend a few pixels below was teaching `✓ Archived` for the case markers on the same
+screen. `completedUnits` is what that tick reads, and `unitComplete` is deleted, having answered
+the same question for one unit since Unit 1 was the whole game.
 
 **P12-8.** `check-reconstruction` compares every record and, on any mismatch, prints one sentence
 for the whole board. Units 3, 6 and 7 put seven records on it.

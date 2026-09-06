@@ -13,6 +13,10 @@
 //      Table on the unit just archived with the new one an undiscovered tab away.
 //   3. P12-2 — the Archive Review keeps what you typed. It was the one written surface in the game
 //      that lived only in the DOM until Submit was pressed.
+//   4. P12-7 — `progress.completedUnits` is read by something. It was written by `closeUnit()` and
+//      read by nothing for the whole of the Spine Review, and the period strip it now drives had
+//      four states and drew two: a unit you had archived looked exactly like one you had not
+//      started. Phase 116, decision log `0115`.
 import { expect, test } from "@playwright/test";
 import { loadSeededSave, seedProgress, readProgress } from "./helpers/progress-seed.js";
 
@@ -91,6 +95,31 @@ test.describe("a finished unit closes through what it actually has", () => {
     // And it lands on the new unit's table rather than the archived one's.
     await onward.click();
     await expect(page.locator(".archive-unit-tabs .is-selected")).toHaveText("Period 4");
+  });
+
+  test("the period you just archived says so on the strip (P12-7)", async ({ page }) => {
+    await page.locator('[data-action="close-unit"]').click();
+    await page.locator('[data-action="open-next-unit"]').click();
+
+    // Period 3's tab was byte-identical to Period 4's untouched one before Phase 116 — same
+    // classes, same title, same text — on the one screen whose job is choosing what to do next.
+    const archived = page.locator('.unit-tab[data-unit="unit-03"]');
+    await expect(archived).toHaveClass(/is-archived/);
+    await expect(archived.locator("i")).toHaveText("✓");
+    // The glyph is aria-hidden, so the state has to be in the name or it is not there at all.
+    await expect(archived).toHaveAttribute("aria-label", /· Archived$/);
+
+    // A period that is merely open, and one the teacher has not unlocked, keep saying what they
+    // said — the strip has four states and this is the one that was missing, not a fourth mark.
+    await expect(page.locator('.unit-tab[data-unit="unit-04"]')).not.toHaveClass(/is-archived/);
+    await expect(page.locator('.unit-tab[data-unit="unit-04"] i')).toHaveCount(0);
+    await expect(page.locator('.unit-tab[data-unit="unit-05"]')).toBeDisabled();
+
+    // The dead field `completedUnits` outlived is gone rather than still writing itself for one
+    // unit and nobody. `0088` §5 named this as the condition for deleting it.
+    const saved = await readProgress(page);
+    expect(saved).not.toHaveProperty("unitComplete");
+    expect(saved.completedUnits).toContain("unit-03");
   });
 });
 

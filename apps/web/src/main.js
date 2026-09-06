@@ -11908,23 +11908,49 @@ const unitReadyForReview = (unit) =>
  * The unit switcher — this screen's primary navigation, and the only way to reach a unit other
  * than the selected one.
  *
- * Seven tabs now, and the label lost its " · Locked" suffix in Phase 90C. Three things already
+ * Eight tabs now, and the label lost its " · Locked" suffix in Phase 90C. Three things already
  * said it: the button is `disabled`, it renders at 0.45 opacity, and the legend directly above
  * spells out "○ Teacher locked". What the suffix cost was a line each — at 1366x768 the tabs ran
  * off the bottom of the viewport from Period 5 down, so a student could not see or click the last
  * three periods of the course without scrolling a screen that otherwise has no scroll.
  *
  * The date range stays in `title` rather than being dropped: it is genuine orientation for a
- * student picking a unit, it just does not need to be spent on width seven times over. The short
+ * student picking a unit, it just does not need to be spent on width eight times over. The short
  * label is read off `unit.period`'s own first segment rather than counted from the array index,
- * which would quietly hard-code "unit N is period N" — true for all seven today and not a fact
+ * which would quietly hard-code "unit N is period N" — true for all eight today and not a fact
  * this function has any business asserting.
+ *
+ * **The archived state is `progress.completedUnits`' first reader** (decision log `0115`). The
+ * strip has four states a student cares about and drew two — selected, and the teacher-locked
+ * treatment above — so a period they had archived rendered byte-identical to one they had not
+ * started, on the screen whose only job is choosing what to do next, a few pixels above a legend
+ * teaching `✓ Archived` for the case markers beside it.
+ *
+ * **A glyph, and it costs no width.** Phase 90C's problem two paragraphs up is still the binding
+ * one, and it is worse than that entry knows: at 1280x720, with a long guiding question above them,
+ * four tabs already sit below the fold. So the tick is **absolutely positioned inside the pill's
+ * existing 14px right padding** rather than added to the flow — every tab measures 73px archived or
+ * not, and the strip keeps the rows it had. An inline glyph was the first attempt and measured
+ * +14px a tab, which at 1366 repacked three tabs to a row into two and bought a fourth row. A mark
+ * saying "you have finished this" must not be the reason the tab is off the screen.
+ *
+ * Colour alone was not available either, because green against the gold `is-selected` already
+ * carries is the pair a colour-blind student is least able to separate, and that is exactly the
+ * pair these two rules would otherwise have been.
  */
 function unitTabs(selectedUnit) {
   return `<div class="archive-legend archive-unit-tabs">${UNITS.map((unit) => {
     const unlockedInUnit = unit.cases.some((c) => isUnlocked(c.id));
+    const archived = progress.completedUnits.includes(unit.id);
     const short = unit.period.split(" · ")[0];
-    return `<button class="text-button unit-tab ${unit.id === selectedUnit.id ? "is-selected" : ""}" data-action="select-unit" data-unit="${unit.id}" title="${esc(unit.period)}${unlockedInUnit ? "" : " · Teacher locked"}" ${unlockedInUnit ? "" : "disabled"}>${esc(short)}</button>`;
+    // One string for the tooltip and the accessible name. The glyph is `aria-hidden`, so without
+    // this a screen reader announces "Period 1" over a tick and says nothing about it being done —
+    // the same split the Mission Tracker's rows make, for the same reason.
+    const label = `${unit.period}${archived ? " · Archived" : unlockedInUnit ? "" : " · Teacher locked"}`;
+    const classes = ["text-button", "unit-tab"];
+    if (unit.id === selectedUnit.id) classes.push("is-selected");
+    if (archived) classes.push("is-archived");
+    return `<button class="${classes.join(" ")}" data-action="select-unit" data-unit="${unit.id}" title="${esc(label)}" aria-label="${esc(label)}" ${unlockedInUnit ? "" : "disabled"}><span>${esc(short)}</span>${archived ? '<i aria-hidden="true">✓</i>' : ""}</button>`;
   }).join("")}</div>`;
 }
 
@@ -16115,7 +16141,10 @@ function handleReviewClick(target, action) {
  * whole unit wrote nothing at all.
  */
 function closeUnit(unitId) {
-  if (unitId === "unit-01") progress.unitComplete = true;
+  // `progress.unitComplete` was written here too until Phase 116, for `unit-01` alone and for
+  // nobody — it answered "has this student finished the game" back when Unit 1 was the game, and
+  // `completedUnits` beside it answers the same question for all eight. Deleted with the field
+  // (Spine Review P12-7, `0088` §5), on the phase that finally gave `completedUnits` a reader.
   if (!progress.completedUnits.includes(unitId)) progress.completedUnits.push(unitId);
   unlockNextUnit(unitId);
   const unit = unitById(unitId);

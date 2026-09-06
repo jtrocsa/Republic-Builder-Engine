@@ -25,7 +25,6 @@ export const DEFAULT_PROGRESS = {
   empireOrder: [],
   pendingUploadCaseId: null,
   review: { answers: {}, saq: {} },
-  unitComplete: false,
   hubNotice: "",
   fieldNotice: "",
   // Per-source activity state: { [sourceId]: { state, completed, briefed } }, where `state` belongs

@@ -106,3 +106,8 @@ tab or the route panel, which is a visual change to the one screen this program 
 touching. **Whoever next has real cause to ask "which units has this student finished" should use
 `completedUnits` and delete `unitComplete`** — it answers the same question for one unit only, and
 has since Unit 1 was the whole game.
+
+**That cause arrived in Phase 116, eight phases later** — the Navigation Table's period strip has
+four states and drew two, so an archived period looked exactly like one never started. See
+[`0115`](./0115-the-strip-had-four-states-and-drew-two.md), which also argues that the eight phases
+of waiting were the right outcome of this section rather than a cost of it.

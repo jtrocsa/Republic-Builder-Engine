@@ -146,7 +146,8 @@ by name.
 
 ## Carried in from the Spine Review
 
-Neither of that program's remaining S3s belonged to this one. One has since been taken:
+Neither of that program's remaining S3s belonged to this one. **Both have since been taken, and
+nothing routed is open in either ledger.**
 
 - **P10-6** — the game cannot decide whether a non-field mission is a place you travel to or work
   you do at the Archive. **Closed 2026-09-06 as Phase 115, decision log `0114`.** Three of the four
@@ -154,7 +155,10 @@ Neither of that program's remaining S3s belonged to this one. One has since been
   plate is keyed by unit, so on sixteen of twenty-four cases it painted one place under the name of
   another — a Kansas railhead behind "Chicago, Illinois · 1893". Only a case with a map travels now.
 - **P12-7** — `progress.unitComplete` and `progress.completedUnits` are written and read by nothing.
-  → carried, see `0088` §5. **The last routed S3 in the repository.**
+  **Closed 2026-09-06 as Phase 116, decision log `0115`**, on the condition `0088` §5 set and eight
+  phases after it was written. The Navigation Table's period strip has four states and drew two — an
+  archived period looked exactly like one never started — so `completedUnits` has a reader and
+  `unitComplete`, which answered the same question for `unit-01` alone, is deleted.
 
 **P0-5 is stale and needs no work.** It recorded the chrome eyebrow still reading "REPUBLIC BUILDER
 ENGINE" on 2026-08-03. Verified 2026-09-05: the string survives in two source comments

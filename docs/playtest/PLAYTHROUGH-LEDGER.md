@@ -15,22 +15,22 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 
 ## Status
 
-| №                                                    | Part                                        | Status     | Closed     | Open                                    |
-| ---------------------------------------------------- | ------------------------------------------- | ---------- | ---------- | --------------------------------------- |
-| [0](./part-00-unblock.md)                            | Unblock and instrument                      | **closed** | 2026-08-03 | 1 S3                                    |
-| [1](./part-01-04-the-intro.md)                       | Cold boot and landing                       | **closed** | 2026-08-22 | —                                       |
-| [2](./part-01-04-the-intro.md)                       | The Director and identity                   | **closed** | 2026-08-22 | —                                       |
-| [3](./part-01-04-the-intro.md)                       | The Entrance Hall                           | **closed** | 2026-08-22 | —                                       |
-| [4](./part-01-04-the-intro.md)                       | Main Hall and the tutorial tour             | **closed** | 2026-08-22 | —                                       |
-| [5](./part-05-archive-and-navigation-table.md)       | Archive Room and the Navigation Table       | **closed** | 2026-08-22 | —                                       |
-| [6A](./part-06-the-field-runtime.md)                 | The field runtime — the world               | **closed** | 2026-08-22 | —                                       |
-| [6B](./part-06-the-field-runtime.md)                 | The field runtime — the mission surface     | **closed** | 2026-08-23 | —                                       |
-| [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed** | 2026-08-23 | —                                       |
-| [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed** | 2026-08-23 | —                                       |
-| [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed** | 2026-08-23 | —                                       |
-| [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed** | 2026-08-23 | —                                       |
-| [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed** | 2026-08-23 | 1 S3 _(P12-7, carried — see `0088` §5)_ |
-| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | — _(P10-6 taken, `0114`)_               |
+| №                                                    | Part                                        | Status     | Closed     | Open                      |
+| ---------------------------------------------------- | ------------------------------------------- | ---------- | ---------- | ------------------------- |
+| [0](./part-00-unblock.md)                            | Unblock and instrument                      | **closed** | 2026-08-03 | — _(P0-4 stale, `0112`)_  |
+| [1](./part-01-04-the-intro.md)                       | Cold boot and landing                       | **closed** | 2026-08-22 | —                         |
+| [2](./part-01-04-the-intro.md)                       | The Director and identity                   | **closed** | 2026-08-22 | —                         |
+| [3](./part-01-04-the-intro.md)                       | The Entrance Hall                           | **closed** | 2026-08-22 | —                         |
+| [4](./part-01-04-the-intro.md)                       | Main Hall and the tutorial tour             | **closed** | 2026-08-22 | —                         |
+| [5](./part-05-archive-and-navigation-table.md)       | Archive Room and the Navigation Table       | **closed** | 2026-08-22 | —                         |
+| [6A](./part-06-the-field-runtime.md)                 | The field runtime — the world               | **closed** | 2026-08-22 | —                         |
+| [6B](./part-06-the-field-runtime.md)                 | The field runtime — the mission surface     | **closed** | 2026-08-23 | —                         |
+| [7](./part-07-mission-instructions-and-the-board.md) | Mission Instructions and the activity board | **closed** | 2026-08-23 | —                         |
+| [8](./part-08-the-field-notebook-and-the-debrief.md) | The Field Notebook and the debrief          | **closed** | 2026-08-23 | —                         |
+| [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed** | 2026-08-23 | —                         |
+| [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed** | 2026-08-23 | —                         |
+| [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed** | 2026-08-23 | — _(P12-7 taken, `0115`)_ |
+| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | — _(P10-6 taken, `0114`)_ |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
 history — no sha column to go stale.
@@ -57,8 +57,13 @@ check that the options it was routed with are the only options.**
 
 Part 10's P10-4 — a finished mission's own work saved and
 shown nowhere — went to an ADR because it needed a read-only render mode across the quest types, and
-the program fixes behaviour rather than shape. It shipped as Phase 92; decision log `0091`. What is
-still open above is what is still open.
+the program fixes behaviour rather than shape. It shipped as Phase 92; decision log `0091`.
+
+**Nothing in the table above is open, as of 2026-09-06.** The last two carried S3s were taken in
+Phases 115 and 116 (`0114`, `0115`), and Part 0’s row — which had counted P0-4 as open since
+2026-08-03 — was measured stale in Phase 113 and updated here. **A routed finding must name a
+destination, and something has to check the destination took it**: P0-3 and P0-4 were both routed to
+a part that closed without them, which is the one rule this program set and then broke twice.
 
 Walk order is the row order above: `0 → 1…9 → 11 → 12 → 10`. Parts 1–9 are strictly ordered because
 each part's play script starts from the previous part's exit state — that is what keeps a script to

@@ -22,14 +22,14 @@ with NPCs visible and screenshotted each beat — `visual-regression.spec.js` hi
 
 ## Findings
 
-| id   | sev · cat         | finding                                                                                                                                 | outcome                                                                 |
-| ---- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| P0-1 | S1 · broken       | The Mission Tracker's in-flight block named a case's **first** started record for the rest of the case                                  | fixed                                                                   |
-| P0-2 | S1 · broken       | "Open the Field Notebook →" carried that same first record's id, so it reopened a filed mission                                         | fixed (same cause)                                                      |
-| P0-3 | S2 · broken       | Logging a non-`useful` interview answer prints "✓ In your Field Notebook" and the answer never reaches the notebook                     | **Fixed in Phase 106**, ADR `0105` — three receipts, no content changed |
-| P0-4 | S3 · rough        | The Codex aside clips its text and its "Open Codex" button at a 1280px viewport; baselines are banked at 1366×768 so nothing catches it | → Part 6                                                                |
-| P0-5 | S3 · inconsistent | The chrome eyebrow still reads "REPUBLIC BUILDER ENGINE"                                                                                | → the known branding cleanup in `CLAUDE.md`; not this program's         |
-| P0-6 | S1 · broken       | A click inside the dialogue bubble that missed a control closed the bubble, so the record button read as dead                           | fixed                                                                   |
+| id   | sev · cat         | finding                                                                                                                                 | outcome                                                                                          |
+| ---- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| P0-1 | S1 · broken       | The Mission Tracker's in-flight block named a case's **first** started record for the rest of the case                                  | fixed                                                                                            |
+| P0-2 | S1 · broken       | "Open the Field Notebook →" carried that same first record's id, so it reopened a filed mission                                         | fixed (same cause)                                                                               |
+| P0-3 | S2 · broken       | Logging a non-`useful` interview answer prints "✓ In your Field Notebook" and the answer never reaches the notebook                     | **Fixed in Phase 106**, ADR `0105` — three receipts, no content changed                          |
+| P0-4 | S3 · rough        | The Codex aside clips its text and its "Open Codex" button at a 1280px viewport; baselines are banked at 1366×768 so nothing catches it | → Part 6, which closed without it. **Measured stale in Phase 113** (`0112`).                     |
+| P0-5 | S3 · inconsistent | The chrome eyebrow still reads "REPUBLIC BUILDER ENGINE"                                                                                | → out of the program. **Verified stale in Phase 113**: two source comments, no rendered surface. |
+| P0-6 | S1 · broken       | A click inside the dialogue bubble that missed a control closed the bubble, so the record button read as dead                           | fixed                                                                                            |
 
 ### P0-1 / P0-2 — one cause, two symptoms
 
@@ -145,6 +145,15 @@ the ledger carried it on this row instead. The rule that a routed finding must n
 did its job — one was named — and nothing checked that the destination took it. Recorded because it
 is the kind of thing worth knowing when the next program is designed, not because a closed one needs
 a mechanism for it.
+
+**P0-4 did not arrive at Part 6 either, and by Phase 113 there was nothing left to arrive.** Measured
+at 1280: the Codex aside reports `scrollHeight === clientHeight` at 561 with `overflow-y: visible`
+and its "Open Codex" button 260px clear of the fold, identical to 1366. Something else fixed the
+thing and only the finding survived. **P0-5 went the same way** — "REPUBLIC BUILDER ENGINE" survives
+in two source comments (`chronicle-opening.defaults.js`, `unit.schema.js`) and on no rendered
+surface, and has since Phase 81. Both are recorded in
+[`BETA-READINESS-LEDGER.md`](./BETA-READINESS-LEDGER.md) so nobody spends a session on either; this
+row is updated in Phase 116 because the status table was still counting one of them as open.
 
 `main.js` is **13,588 lines** (`wc -l`) at close. Note for future counts: PowerShell's
 `Measure-Object -Line` under-reports this file by ~340; use `wc -l`.

@@ -171,7 +171,7 @@ flowchart TD
 ## 7. Save-data flow
 
 - `apps/web/src/engine/chronicle-progress-store.js` (74 lines, fully read) is the single real persistence layer. Key: `"republic-builder.chronicle.unit-01.v2"` (`:1`).
-- `DEFAULT_PROGRESS` (`:2-26`) fields: `profile{name,appearance}`, `currentScreen`, `selectedUnitId`, `selectedCaseId`, `activeCaseId`, `unlocked[]`, `completedCases[]`, `caseEvidence{"case-001":[]}`, `responses{}`, `revealedContexts[]`, `reconstruction{}`, `exchangeLedger{}`, `empireConnections{}`, `empireOrder[]`, `pendingUploadCaseId`, `review{answers,saq}`, `unitComplete`, `hubNotice`, `fieldNotice`, `sourceActivities{}`, `submissions{}`, `activityState{}`, `completedUnits[]`.
+- `DEFAULT_PROGRESS` (`:2-26`) fields: `profile{name,appearance}`, `currentScreen`, `selectedUnitId`, `selectedCaseId`, `activeCaseId`, `unlocked[]`, `completedCases[]`, `caseEvidence{"case-001":[]}`, `responses{}`, `revealedContexts[]`, `reconstruction{}`, `exchangeLedger{}`, `empireConnections{}`, `empireOrder[]`, `pendingUploadCaseId`, `review{answers,saq}`, `hubNotice`, `fieldNotice`, `sourceActivities{}`, `submissions{}`, `activityState{}`, `completedUnits[]`.
 - `readProgress()` (`:27-62`) — `JSON.parse` then a field-by-field deep merge over `structuredClone(DEFAULT_PROGRESS)` (defensive against partial/legacy saved shapes); catches parse failure and returns fresh defaults.
 - `saveProgress(next)` (`:63-66`) — **synchronous, unthrottled** `localStorage.setItem`. No debounce, no batching, no dirty-check.
 - `resetProgress()` (`:67-70`) — `localStorage.removeItem(KEY)`.
