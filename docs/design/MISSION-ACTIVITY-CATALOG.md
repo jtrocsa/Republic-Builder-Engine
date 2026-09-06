@@ -82,8 +82,9 @@ These are different things and the codebase currently blurs them. Use these word
 
 ### Mission
 
-**The investigation.** Reached by Chronotravel from the Navigation Table; rendered either as a
-walkable field map or by `missionScreen()`. Required — it carries unit progression.
+**The investigation.** Reached from the Navigation Table — **by Chronotravel if it has a map, and
+directly if it does not** (decision log `0114`) — and rendered either as a walkable field map or by
+`missionScreen()`. Required — it carries unit progression.
 
 A mission is where the game is a game: you go somewhere, the place has people in it, you come back
 with something. **AP writing is allowed in a mission.** The problem was never that missions contain

@@ -12191,7 +12191,9 @@ const afterMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * map used to open on an empty frame while `renderTiledMap()` went and fetched them.
  *
  * A case that does not route to a field map has no tilesets to warm, so it warms none — its
- * mission screen is HTML.
+ * mission screen is HTML. Since `0114` no such case opens this screen at all; the branch is kept
+ * because `currentScreen` is persisted, so a student who was mid-warp when the build changed
+ * under them resumes here, and `leaveWarp()` still hands them to the right screen.
  */
 function warpArtUrls() {
   if (progress.currentScreen === "return-warp")
@@ -14432,12 +14434,14 @@ function codexScreen() {
     })
     .join("");
 
-  // Fourteen of the twenty-one cases are non-map missions and declare no `sources` at all, so on
-  // those this section was a heading and a note over an empty grid — reachable from either hub
-  // room's side panel any time one of them is the active case.
+  // Two cases in every three are non-map missions and declare no `sources` at all — one case per
+  // unit walks a map and the other two do not — so on those this section was a heading and a note
+  // over an empty grid, reachable from either hub room's side panel any time one of them is the
+  // active case. Written as a ratio rather than a count on purpose: the count was "fourteen of the
+  // twenty-one" for three units longer than it was true (Spine Review Part 10, P10-7).
   const satchelSection =
     satchel ||
-    `<p class="codex-empty">${sourcesForCase(codexCaseId).length ? "Nothing secured on this case yet." : "This case has no field records — it is worked from the Archive, out of what you have already filed."}</p>`;
+    `<p class="codex-empty">${sourcesForCase(codexCaseId).length ? "Nothing secured on this case yet." : "This mission has no field records — it is read here at the Archive, from the record itself."}</p>`;
 
   const entries = codexEntries(progress.codex);
   const stats = codexStats(entries);
@@ -15230,18 +15234,45 @@ function resetCaseOneDemo() {
   save();
 }
 
+/**
+ * Opens a case — through the Chronotravel warp if there is somewhere to go, and directly if there
+ * is not.
+ *
+ * **Only a case with a map travels** (decision log `0114`). Every case used to, and the warp is
+ * the one screen that names a place while showing a painting of it: a plate belongs to a *unit*,
+ * and a unit is only one place for the single case that walks its map. On the other sixteen the
+ * screen put a Kansas cattle railhead behind "Chicago, Illinois · 1893", a 1957 suburban boulevard
+ * behind "The United States Senate · 1 June 1950", and a wartime Richmond at dusk behind a card
+ * reading 1846–1861 — with "Anchor holds" printed underneath. No art fixes that; sixteen more
+ * paintings would, and the plate table's own header explains why there will never be sixteen more.
+ *
+ * The rest of the game already said so. The Navigation Table's button reads "Open The Exchange
+ * Ledger" rather than "Initiate Chronotravel", the Codex says the case is worked at the Archive,
+ * and the way out is a back link and not a recall. Three surfaces to one, and the one had no
+ * picture to stand on. Canon rule 3 is the sentence that was there all along: the Navigation Table
+ * opens a passage through a **strong** imprint, which is not a promise that every record has one.
+ *
+ * So Chronotravel now happens eight times in the game instead of twenty-four, and every one of
+ * them opens on a painting of the ground the player is about to stand on.
+ */
 function goToCase(caseId) {
-  playSfx("chrono");
+  const route = caseById(caseId)?.route;
+  const travels = route === "field";
+  // "dialogue" is this game's generic *opened* cue — two short rising notes, already played for a
+  // hub object that is not the trophy shelf. The chrono sweep stays with the journeys.
+  playSfx(travels ? "chrono" : "dialogue");
   progress.activeCaseId = caseId;
   progress.selectedUnitId = unitForCase(caseId)?.id || progress.selectedUnitId;
-  if (caseById(caseId)?.route === "field") {
+  if (travels) {
     resetFieldPosition();
     // The notice answers something the player just did, so it must not outlive the visit that
     // produced it — it is saved with the rest of progress, and arriving to a stale "Move closer to
     // interact with the burgess." would be the only thing the line ever said.
     progress.fieldNotice = "";
   }
-  progress.currentScreen = "travel";
+  // Same fallback as leaveWarp()'s, for the same reason: `route` is a screen id off authored
+  // content, and a case that names one this build does not have belongs back at the table.
+  progress.currentScreen = travels ? "travel" : route || "archive";
   save();
   render();
 }

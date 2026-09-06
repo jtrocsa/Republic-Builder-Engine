@@ -76,6 +76,24 @@ describe("Chronotravel plates", () => {
     expect(painted).toEqual(wired);
   });
 
+  it("opens on exactly one case per unit — the one that walks the map", () => {
+    // What makes "keyed by unit" a true statement rather than a convenient one. A plate is the
+    // unit's map painted from outside, and since `0114` the warp it fronts is reached only by a
+    // case whose route is `field`. Two field cases in a unit would put one painting in front of
+    // two different arrivals; none would leave a painting nothing ever opens on, which is the
+    // state the queue guard above used to describe.
+    //
+    // This is the check that was missing while the warp showed a Kansas railhead on the way to
+    // Chicago: the guards here all read the *table*, and the table was never wrong.
+    const offenders = units
+      .map((unit) => [unit.id, unit.cases.filter((kase) => kase.route === "field").length])
+      .filter(([, count]) => count !== 1);
+    expect(
+      offenders,
+      `units whose field-case count is not 1: ${JSON.stringify(offenders)}`
+    ).toEqual([]);
+  });
+
   it("writes alt text on every plate, because it is the whole screen", () => {
     for (const [key, entry] of Object.entries(CHRONOTRAVEL_PLATES)) {
       expect(entry.alt.length, `${key}: alt text too thin to describe a painting`).toBeGreaterThan(

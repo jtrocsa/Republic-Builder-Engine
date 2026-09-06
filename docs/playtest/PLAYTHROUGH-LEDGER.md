@@ -30,7 +30,7 @@ its rationale, never a findings list. `ARCHITECTURE-QUICKREF.md` holds one line 
 | [9](./part-09-the-record-and-the-checks.md)          | The record and the checks                   | **closed** | 2026-08-23 | —                                       |
 | [11](./part-11-the-institute-archive.md)             | The Institute Archive                       | **closed** | 2026-08-23 | —                                       |
 | [12](./part-12-unit-close-and-the-next-unit.md)      | Unit close and the next unit                | **closed** | 2026-08-23 | 1 S3 _(P12-7, carried — see `0088` §5)_ |
-| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | 1 S3 _(P10-6 → ADR)_                    |
+| [10](./part-10-the-non-field-missions.md)            | The non-field missions                      | **closed** | 2026-08-23 | — _(P10-6 taken, `0114`)_               |
 
 A part's fix commit is the one that flips its status row, so `git log` on its part file is the
 history — no sha column to go stale.

@@ -18,15 +18,15 @@ a comment. Both are corrected here.
 All `A` (static audit), and four of the seven measured in a browser across all fourteen missions
 rather than read off the source. No owner pass was run.
 
-| №     | S   | Category       | What                                                                                                                     | Outcome                                                           |
-| ----- | --- | -------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| P10-1 | S2  | `inconsistent` | **All fourteen missions announce themselves as "Archive Challenge complete"** — the one distinction that is load-bearing | Fixed. The card is told which of the two it is rendering.         |
-| P10-2 | S2  | `broken`       | A mission you finished yourself re-opens with the message written for a save that never answered it                      | Fixed. Two states, told apart by whether there is an answer.      |
-| P10-3 | S2  | `rough`        | Twelve of the fourteen print the date twice, side by side                                                                | Fixed. `caseWhereAndWhen()`, the helper Phase 90K already added.  |
-| P10-4 | S3  | `hollow`       | A finished mission's own work is saved and then shown nowhere                                                            | Routed → ADR `0091`. **Shipped in Phase 92**, read-only mode.     |
-| P10-5 | S3  | `unclear`      | The case number is missing from the kicker on twelve of the fourteen                                                     | **Fixed in Phase 105**, ADR `0104` — derived, no content changed. |
-| P10-6 | S3  | `inconsistent` | The game cannot decide whether a non-field mission is a place you travel to or work you do at the Archive                | Routed → ADR. Its cheap half — naming what unlocked — fixed here. |
-| P10-7 | S3  | `rough`        | Two places still say "ten of the twenty-one"                                                                             | Fixed in passing.                                                 |
+| №     | S   | Category       | What                                                                                                                     | Outcome                                                                                |
+| ----- | --- | -------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| P10-1 | S2  | `inconsistent` | **All fourteen missions announce themselves as "Archive Challenge complete"** — the one distinction that is load-bearing | Fixed. The card is told which of the two it is rendering.                              |
+| P10-2 | S2  | `broken`       | A mission you finished yourself re-opens with the message written for a save that never answered it                      | Fixed. Two states, told apart by whether there is an answer.                           |
+| P10-3 | S2  | `rough`        | Twelve of the fourteen print the date twice, side by side                                                                | Fixed. `caseWhereAndWhen()`, the helper Phase 90K already added.                       |
+| P10-4 | S3  | `hollow`       | A finished mission's own work is saved and then shown nowhere                                                            | Routed → ADR `0091`. **Shipped in Phase 92**, read-only mode.                          |
+| P10-5 | S3  | `unclear`      | The case number is missing from the kicker on twelve of the fourteen                                                     | **Fixed in Phase 105**, ADR `0104` — derived, no content changed.                      |
+| P10-6 | S3  | `inconsistent` | The game cannot decide whether a non-field mission is a place you travel to or work you do at the Archive                | **Taken — Phase 115, `0114`.** Its cheap half — naming what unlocked — was fixed here. |
+| P10-7 | S3  | `rough`        | Two places still say "ten of the twenty-one"                                                                             | Fixed in passing.                                                                      |
 
 ---
 
@@ -95,6 +95,16 @@ you have already filed." And the exit is a plain "← Navigation Table" — no t
 warp, where a field case gets both. Three surfaces, three answers. Which one is right is a design
 decision rather than a bug, and it goes to an ADR. Its cheapest true half is fixed here: nothing
 told the player that finishing the mission had just unlocked the next case, which it had.
+
+**Taken in Phase 115 (decision log `0114`), and the count above is what decided it.** Three
+surfaces, three answers — but two of the three said the same thing, and so did the Navigation
+Table's button, which reads "Open The Exchange Ledger" rather than "Initiate Chronotravel". The
+warp was alone, and it had no picture to stand on: a plate is keyed by unit, so on sixteen of the
+twenty-four cases it painted one place while the card named another. A Kansas cattle railhead under
+"Chicago, Illinois · 1893"; a 1957 suburban boulevard under "The United States Senate · 1 June
+1950"; wartime Richmond under a card reading 1846–1861. **Only a case with a map travels now**, which
+is eight of the twenty-four, and canon rule 3 had licensed exactly that all along — the Navigation
+Table opens a passage through a _strong_ imprint.
 
 **P10-7.** `main.js`'s Codex comment reads "Ten of the twenty-one cases are non-map missions" and
 this program's own ledger row was titled "The ten non-field missions". Both were written at five

@@ -4,9 +4,14 @@
 // pulls back to. The warp screens were an abstract teal vortex for a long time and said nothing
 // about where you were going; a plate says it in the one second before the map exists.
 //
-// **A plate belongs to a unit, not a case.** A unit is one place and one era — Unit 1's three
-// cases are all the 1493 Caribbean whether they route to a field map or not, so all three open on
-// the same painting. Keying by case would mean eighteen paintings to say six things.
+// **A plate belongs to a unit, and exactly one of that unit's cases opens on it.** The plate is
+// the unit's map painted from outside, so it is only ever true of the case that walks that map.
+// This file used to say a unit was "one place and one era" and let all three cases open on it,
+// which is why the warp spent three phases showing a Kansas railhead behind "Chicago, Illinois ·
+// 1893" and a 1957 boulevard behind "The United States Senate · 1 June 1950". Keying by case would
+// mean twenty-seven paintings to say nine things; the fix was the other direction — a case with no
+// map does not open a warp at all. See decision log `0114`, and the guard in
+// `tests/unit/chronotravel-plates.test.js` that pins one field case per unit.
 //
 // **`note` is flavour and must stay flavour.** It orients the player in the setting they are about
 // to stand in; it is not a fact to be tested, a hint, or a claim a mission depends on. A plate is

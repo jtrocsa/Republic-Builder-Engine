@@ -3,9 +3,10 @@ import { seedProgress, loadSeededSave, readProgress } from "./helpers/progress-s
 
 // Scenario 6: the two groups Phase 58 split apart, each played end to end.
 //
-//   a non-map **mission**   Chronotravel -> missionScreen() -> that case's own quest -> completion
-//                           written to progress.completedCases. Seeded via
-//                           currentScreen: "mission" + activeCaseId.
+//   a non-map **mission**   the Navigation Table -> missionScreen() -> that case's own quest ->
+//                           completion written to progress.completedCases. Seeded via
+//                           currentScreen: "mission" + activeCaseId. It does not Chronotravel;
+//                           only a case with a map does (decision log `0114`).
 //   an **Archive Challenge** the unit's written work, reached from the Archive Terminal. Seeded via
 //                           currentScreen: "archive-challenges" + selectedUnitId.
 //
@@ -364,12 +365,10 @@ test.describe("Archive Challenge", () => {
     ).toHaveCount(0);
   });
 
-  test("Chronotravel from the Navigation Table lands on the case's own mission (normal case)", async ({
-    page,
-  }) => {
+  test("the Navigation Table opens a non-map mission directly (normal case)", async ({ page }) => {
     // The whole reported flow, end to end, and the one leg no other spec walks: pick a marker, read
-    // its call to action, travel, arrive. travelScreen()'s handoff is a pure passthrough
-    // (`currentScreen = case.route`), so this is also what proves `route: "mission"` is wired.
+    // its call to action, open it, arrive. goToCase() sends a case straight to its own `route`
+    // when there is no map to warp to, so this is also what proves `route: "mission"` is wired.
     await seedProgress(page, {
       currentScreen: "archive",
       selectedUnitId: "unit-01",
@@ -389,12 +388,11 @@ test.describe("Archive Challenge", () => {
     );
     await travel.click();
 
-    // The warp no longer leaves on its own (Phase 88B): the tunnel runs, the plate arrives, and
-    // the prompt appears once both gates are open. Waiting for it is also what proves they opened.
-    const enter = page.getByRole("button", { name: "Follow the evidence →" });
-    await expect(enter).toBeVisible({ timeout: 15_000 });
-    await enter.click();
+    // No warp in between as of `0114`: the button says "Open The Exchange Ledger" and opening it
+    // is what it does. The four and a half seconds of tunnel and dwell bought a painting of the
+    // Caribbean shore in front of a mission set on the Atlantic crossing.
     await expect(page.locator(".mission-shell")).toBeVisible();
+    await expect(page.locator("[data-warp]")).toHaveCount(0);
     await expect(page.locator(".mission-shell h1")).toContainText("Exchange Ledger");
     // Case number in the eyebrow, mission name in the heading — the same split the teacher's
     // Manage Content wizard header uses.

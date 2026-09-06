@@ -93,9 +93,37 @@ test.describe("Chronotravel", () => {
     await expect(travelWarp(page)).toHaveCount(0);
   });
 
-  test("carries a non-map mission too, and lands on its own screen", async ({ page }) => {
-    // Every case travels, not only the six with maps — so the plate is the unit's era rather than
-    // a picture of a map that this case does not have.
+  test("a mission with no map does not travel — it opens", async ({ page }) => {
+    // The reverse of what this case asserted until `0114`, and the reversal is the whole point.
+    // Every case used to warp, on the reasoning that the plate could stand for the unit's era if
+    // not its place. Unit 6 is where that stops being arguable: the painting is a Kansas cattle
+    // railhead in 1873 and Case 6.02 is the Chicago World's Fair in 1893, so the screen announced
+    // one place over a picture of another and printed "Anchor holds" under it.
+    //
+    // Driven from the Navigation Table rather than seeded on a screen, because the claim is about
+    // which screen the button reaches.
+    await seedProgress(page, {
+      currentScreen: "archive",
+      selectedUnitId: "unit-06",
+      selectedCaseId: "case-017",
+      unlocked: ["case-001", "case-016", "case-017"],
+    });
+    await loadSeededSave(page);
+
+    const open = page.locator('[data-action="travel"][data-case="case-017"]');
+    // The table has said this for six phases; it is the warp that disagreed.
+    await expect(open).toContainText("Open");
+    await expect(open).not.toContainText("Chronotravel");
+    await open.click();
+
+    await expect(page.locator(".mission-shell")).toBeVisible();
+    await expect(page.locator("[data-warp]")).toHaveCount(0);
+  });
+
+  test("still hands over a save that was already inside the warp", async ({ page }) => {
+    // `currentScreen` is persisted, so the build changing under a student mid-warp is a real
+    // state and not a hypothetical one. warpArtUrls() and leaveWarp() both keep their non-field
+    // branch for exactly this, and this is the case that says so.
     await seedProgress(page, {
       currentScreen: "travel",
       activeCaseId: "case-002",
@@ -105,7 +133,7 @@ test.describe("Chronotravel", () => {
     await expect(plate(page)).toHaveAttribute("src", /unit-01-caribbean/);
 
     await enterFromWarp(page, "Follow the evidence →");
-    await expect(page.locator(".activity-shell")).toBeVisible();
+    await expect(page.locator(".mission-shell")).toBeVisible();
   });
 
   test("skip goes straight through", async ({ page }) => {
