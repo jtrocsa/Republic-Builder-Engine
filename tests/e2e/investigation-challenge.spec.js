@@ -66,10 +66,7 @@ test.describe("Investigation Challenge", () => {
       await walkTo(
         page,
         '.source-signal--world[data-source="waldseemuller-map"]',
-        "caseFieldPlayer",
-        {
-          timeoutMs: 60_000,
-        }
+        "caseFieldPlayer"
       )
     ).toBe(true);
     await table.click();

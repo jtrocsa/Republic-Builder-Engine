@@ -834,7 +834,7 @@ test.describe("Gameplay visual-regression baselines", () => {
     // to with setScreen() the way the activity screens above can — it has to be walked to. See
     // investigation-challenge.spec.js, which banks the behaviour.
     const table = '.source-signal--world[data-source="waldseemuller-map"]';
-    expect(await walkTo(page, table, "caseFieldPlayer", { timeoutMs: 60_000 })).toBe(true);
+    expect(await walkTo(page, table, "caseFieldPlayer")).toBe(true);
     await page.locator(table).click();
 
     await expect(

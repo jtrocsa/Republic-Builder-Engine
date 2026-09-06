@@ -162,6 +162,11 @@ const TILE_PX = 48;
 const TILES_PER_SECOND = 3.65;
 // Close enough to a corner to turn at it. Under a third of a tile, well inside every reach radius.
 const ARRIVE_TILES = 0.3;
+// What counts as having got somewhere with a burst. Positions are read as pixels over 48, so one
+// pixel is 0.021 of a tile; this is a shade above that and well under the 0.25 tiles even the
+// shortest 70ms burst covers at full speed. It is the noise floor the old movement test already
+// used, kept because it was the right number for the wrong question.
+const PROGRESS_TILES = 0.03;
 
 /**
  * Shared body of the walkers above. It reads the room's walls out of the running game and walks a
@@ -190,6 +195,31 @@ const ARRIVE_TILES = 0.3;
  * predicates do, so a patrolling NPC can invalidate it by walking. A leg that stops making progress
  * therefore re-plans rather than shoves, up to `maxReplans`.
  *
+ * **And it is bounded by progress, not by the clock** (Phase 119). It used to carry a 20-second
+ * wall-clock deadline, and the longest walk in the suite — out of Ellis Island's inspection hall,
+ * back down the switchback both rails force — covers 41.7 tiles, which is **11.4 seconds of pure
+ * walking on an idle machine at one worker**. 57% of the budget went on the distance the room is
+ * designed to make you cover, and the rest had to absorb every source of latency at two workers:
+ * the frame clamp above, and 44 `page.evaluate` round trips that move nobody. It tipped over, and
+ * the two specs that had already raised the ceiling to 60 seconds by hand were the two that hit it
+ * first.
+ *
+ * The rule is the one `frame-budget.spec.js` was written to hold in Phase 93: **a test's verdict
+ * must not depend on how fast the machine is.** A walk that is still closing on its waypoint is
+ * not failing, however long it has taken, so nothing here counts milliseconds. A walk gives up when
+ * it stops making progress — measured toward the waypoint being walked, which catches a body
+ * sliding along a wall and a body being pushed backwards, both of which the old "did anything move
+ * at all" test scored as progress. `maxStalls` is four rather than two because a stalled burst now
+ * squares up on the other axis first (see the burst below), so the count has to allow both axes two
+ * attempts before it gives up. `maxBursts` is a last-resort net against an unbounded loop rather
+ * than a deadline: 300 is thirteen times the 22 bursts that longest walk actually uses.
+ *
+ * A walk that genuinely cannot arrive still fails fast rather than hanging. `planRoute()` returns
+ * the reachable cell closest to the target, so if an edit closes a gate the walker reaches the near
+ * side of it, finds no `.is-near`, and re-plans onto the same spot — where every waypoint is
+ * already within `ARRIVE_TILES`, so the remaining replans cost nothing and it returns false with
+ * the calling spec's own message.
+ *
  * What did not change: it still stops the moment the game's own `.is-near` appears, so it survives
  * the map moving underneath it, and it still returns whether it got there rather than asserting.
  *
@@ -201,12 +231,12 @@ export async function walkTo(
   page,
   selector,
   playerId,
-  { burstMs = 700, timeoutMs = 20_000, maxReplans = 8 } = {}
+  { burstMs = 700, maxStalls = 4, maxReplans = 8, maxBursts = 300 } = {}
 ) {
   const surface = playerId === "caseFieldPlayer" ? "field" : "hub";
   const target = page.locator(selector);
   const isNear = () => target.evaluate((el) => el.classList.contains("is-near"));
-  const deadline = Date.now() + timeoutMs;
+  let bursts = 0;
 
   // One round trip per burst rather than three: whether we have arrived and where we are are the
   // same question, asked of the same frame.
@@ -239,7 +269,7 @@ export async function walkTo(
     );
 
   for (let replan = 0; replan <= maxReplans; replan += 1) {
-    if (Date.now() > deadline) return isNear();
+    if (bursts > maxBursts) return isNear();
     if (await isNear()) return true;
     const route = await planRoute(page, surface, selector);
     if (route.error === "no-probe") {
@@ -261,9 +291,15 @@ export async function walkTo(
 
     let stranded = false;
     for (const waypoint of route.waypoints) {
-      let blocked = 0;
+      // The closest this leg has come to its waypoint, kept per axis. Progress is measured
+      // against the best so far rather than against the previous burst, so a body sliding forward
+      // and back along a wall reads as the stall it is — and per axis because one leg can spend
+      // bursts on both, and a distance in x compared against a distance in y is not a measurement.
+      let closestH = Infinity;
+      let closestV = Infinity;
+      let stalls = 0;
       for (;;) {
-        if (Date.now() > deadline) return isNear();
+        if (bursts > maxBursts) return isNear();
         const at = await step();
         if (!at) return false;
         if (at.near) return true;
@@ -273,11 +309,34 @@ export async function walkTo(
         }
         const dx = waypoint.x - at.x;
         const dy = waypoint.y - at.y;
-        // Legs are axis-aligned by construction, so in practice this is one axis. It is written as a
-        // choice anyway because the player starts mid-cell, off the lattice the route is drawn on.
-        const horizontal = Math.abs(dx) >= Math.abs(dy);
+        // Legs are axis-aligned by construction, so the leg's own axis is the one with further to
+        // go, and walking it to within ARRIVE_TILES is what finishes the leg.
+        const wider = Math.abs(dx) >= Math.abs(dy);
+        if (Math.abs(wider ? dx : dy) <= ARRIVE_TILES) break;
+
+        // **Which axis this burst is spent on, and why it is not always the leg's own.**
+        //
+        // The route's cells sit on the probe's half-tile lattice and the player does not, so a leg
+        // can be walked along a row a quarter-tile off the row the plan cleared — and that row can
+        // be solid. Under load this is not rare: a burst that covers 0.17 tiles instead of 2.5
+        // leaves the body at rest against a wall the plan says is not there, and re-planning from
+        // that spot returns the same route, so it wedges. Measured at six workers, twice, at the
+        // same coordinates: the player stopped at (12.66, 7.25) walking to a waypoint at
+        // (13.00, 7.00), with no NPC within four tiles, and every burst after that moved it 0.00
+        // tiles for the whole replan budget.
+        //
+        // So a stalled burst squares up on the *other* axis, which puts the body back on the row
+        // the plan actually cleared. The threshold for "worth squaring up" is PROGRESS_TILES and
+        // deliberately not ARRIVE_TILES: the offset that wedged the walk was 0.25 of a tile, which
+        // ARRIVE_TILES calls arrived. A quarter tile is nothing to a route and is the whole
+        // difference to a foot box.
+        //
+        // This is not the greedy steering Phase 94 removed. The route is still the plan and is
+        // still walked corner to corner; this is only how one leg is walked when the body is off
+        // the lattice the corners were drawn on.
+        const squareUp = stalls % 2 === 1 && Math.abs(wider ? dy : dx) > PROGRESS_TILES;
+        const horizontal = squareUp ? !wider : wider;
         const delta = horizontal ? dx : dy;
-        if (Math.abs(delta) <= ARRIVE_TILES) break;
         const key = horizontal
           ? delta > 0
             ? "ArrowRight"
@@ -288,6 +347,7 @@ export async function walkTo(
         // Sized to the distance left, then capped. A leg runs through cells the probe said were
         // free, so a long hold is safe here in a way it never was for the old slide, and it cannot
         // overshoot: FIELD_SPEED is a ceiling and the frame clamp only ever makes a burst cover less.
+        bursts += 1;
         await holdKey(
           page,
           key,
@@ -296,10 +356,21 @@ export async function walkTo(
         const after = await step();
         if (!after) return false;
         if (after.near) return true;
-        const moved = Math.abs(after.x - at.x) + Math.abs(after.y - at.y) > 0.03;
-        blocked = moved ? 0 : blocked + 1;
-        // Something is standing where the snapshot said floor. Ask again rather than shove.
-        if (blocked >= 2) {
+        // On the axis actually pressed, because that is the one the burst was spent on. The old
+        // test was total displacement against the previous frame, which a wall slide satisfies for
+        // as long as the player is held against the wall.
+        const left = Math.abs(horizontal ? waypoint.x - after.x : waypoint.y - after.y);
+        const best = horizontal ? closestH : closestV;
+        if (best - left > PROGRESS_TILES) {
+          if (horizontal) closestH = left;
+          else closestV = left;
+          stalls = 0;
+        } else {
+          stalls += 1;
+        }
+        // Something is standing where the snapshot said floor, or the burst bought nothing. Ask
+        // again rather than shove.
+        if (stalls >= maxStalls) {
           stranded = true;
           break;
         }
@@ -308,7 +379,7 @@ export async function walkTo(
     }
     // Walking the whole route without `.is-near` firing is not a failure either: the closest
     // reachable cell to a target standing behind a rail can be outside its reach, and by the time we
-    // arrive the target may have moved. Ask again, until the replan budget or the clock says stop.
+    // arrive the target may have moved. Ask again, until the replan budget says stop.
     if (await isNear()) return true;
   }
   return isNear();

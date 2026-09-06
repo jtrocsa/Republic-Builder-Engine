@@ -293,15 +293,79 @@ test.describe("Field movement, collision, and dialogue", () => {
     await page.locator(".field-door--exit").click();
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    const cycle = () =>
-      page
-        .locator("#caseFieldPlayerSprite")
-        .evaluate((el) => Number.parseFloat(el.style.getPropertyValue("--sprite-cycle")));
+    // **Both readings below are of a value the game writes once per animation frame, and both used
+    // to be taken after a fixed wall-clock wait.** That is the same defect the walker carried, and
+    // it is sharper here, because the slide is a *window* rather than a threshold.
+    //
+    // The player stands 0.62 tiles clear of the keeper. A diagonal closes that at 2.58 tiles/s, so
+    // for the first ~240ms both components are free and the legs correctly read 0.301; then down is
+    // blocked and the body slides; then the body clears the keeper's own width and descends freely
+    // again, back to 0.301. The old fixed 260ms landed 20ms inside the open edge of that window.
+    // Waiting for the descent to stall and *then* reading over the wire does not work either — the
+    // round trips cost more than the window is wide, which is how the first repair here read the
+    // free diagonal and compared it against itself.
+    //
+    // So the sampling happens **inside the page, on the frame the condition first holds**, and the
+    // only thing that crosses the wire is the answer. Frames, not milliseconds: a busy machine
+    // makes this take longer and cannot make it read the wrong frame.
+    const cycleWhenSteady = () =>
+      page.evaluate(
+        () =>
+          new Promise((resolve, reject) => {
+            const player = document.getElementById("caseFieldPlayer");
+            const sprite = document.getElementById("caseFieldPlayerSprite");
+            let last = null;
+            let frames = 0;
+            const tick = () => {
+              const at = player.style.left + "/" + player.style.top;
+              const cycle = Number.parseFloat(sprite.style.getPropertyValue("--sprite-cycle"));
+              // Moving this frame, and running the same cycle it ran last frame: the reading is the
+              // walk's speed rather than whatever the first frame after a keydown happened to be.
+              if (last && at !== last.at && cycle === last.cycle) {
+                resolve(cycle);
+                return;
+              }
+              last = { at, cycle };
+              frames += 1;
+              if (frames > 600) reject(new Error("the legs never settled to a walking speed"));
+              else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          })
+      );
+
+    const cycleWhileSliding = () =>
+      page.evaluate(
+        () =>
+          new Promise((resolve, reject) => {
+            const player = document.getElementById("caseFieldPlayer");
+            const sprite = document.getElementById("caseFieldPlayerSprite");
+            let last = null;
+            let frames = 0;
+            const tick = () => {
+              const top = player.style.top;
+              const left = player.style.left;
+              const cycle = Number.parseFloat(sprite.style.getPropertyValue("--sprite-cycle"));
+              // The slide, stated exactly: this frame moved the body sideways and not downward.
+              // Nothing else on this map does that, and a body that has simply stopped fails the
+              // first half of it.
+              if (last && top === last.top && left !== last.left) {
+                resolve(cycle);
+                return;
+              }
+              last = { top, left };
+              frames += 1;
+              if (frames > 600) {
+                reject(new Error("the descent never stalled, so the keeper is not blocking it"));
+              } else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          })
+      );
 
     // Straight along a free axis: the full 3.65 tiles/s, so 1.1 / 3.65 = 0.301s.
     await page.keyboard.down("ArrowLeft");
-    await page.waitForTimeout(220);
-    const free = await cycle();
+    const free = await cycleWhenSteady();
     await page.keyboard.up("ArrowLeft");
     expect(free).toBeCloseTo(0.301, 2);
 
@@ -309,8 +373,7 @@ test.describe("Field movement, collision, and dialogue", () => {
     // so the legs have to run at 1.1 / 2.58 = 0.426s and not at 0.301s.
     await page.keyboard.down("ArrowDown");
     await page.keyboard.down("ArrowRight");
-    await page.waitForTimeout(260);
-    const slid = await cycle();
+    const slid = await cycleWhileSliding();
     await page.keyboard.up("ArrowRight");
     await page.keyboard.up("ArrowDown");
     expect(slid).toBeGreaterThan(free);
