@@ -5525,6 +5525,22 @@ if (
 // module-local and walked the player out of the Institute again, which is Part 9's finding 7.
 let sourceOrigin = "field";
 let openSourceId = null;
+// **A new screen opens at the top of itself.**
+//
+// render() replaces #app wholesale and the browser keeps the document's scroll offset across that,
+// clamped to whatever the new page can hold. That is right for a re-render of the screen you are
+// already on — placing a fragment on a board must not throw you back to its heading — and wrong
+// the moment the screen underneath you changes, because the offset is then a leftover from a page
+// that is gone. The player reached the closer at the foot of a 3,320px board; the Mission Debrief
+// that opens on their click is 1,462px, so they arrive at 742 — its exact bottom, with the record
+// they just filed and the paragraph explaining it above the top of the window.
+//
+// So the reset is keyed to *what is on screen*, not to a call of render(). The screen id alone is
+// not that key: Mission Instructions, the board and the debrief are three views of one id, and the
+// board→debrief step is the worst case in the game. `activityView` is written by activityScreen()
+// as it picks between them, and read here.
+let renderedView = "";
+let activityView = "";
 // The reader's own refusal line, and the bar it enforces. Both live here rather than inside
 // sourceReader() because the handler writes the first and the renderer reads it.
 const READING_MIN_LENGTH = 15;
@@ -13724,6 +13740,7 @@ function activityScreen(kind) {
   // render()'s recovery path, which resets the whole case.
   if (!source || !activity || activity.kind !== kind) {
     progress.currentScreen = "field";
+    activityView = "";
     save();
     return `${chrome()}<main class="shell"><section class="empty-state"><h1>Nothing open</h1><p>That activity is no longer in your hands. Walk back to the record to pick it up again.</p><button class="btn btn-gold" data-action="field">Back to the field →</button></section></main>`;
   }
@@ -13735,15 +13752,20 @@ function activityScreen(kind) {
   // never again — the copy column below keeps the same steps for the rest of the mission, which is
   // what makes clearing this screen safe. An activity with no `howItWorks` has nothing to show and
   // goes straight to its board.
-  if (activity.howItWorks && !entry.briefed)
+  if (activity.howItWorks && !entry.briefed) {
+    activityView = "instructions";
     return missionInstructionsScreen(kind, source, activity);
+  }
   const complete = isActivityComplete(kind, activity, entry.state);
   // The third state, and the mirror of the first: the mission opens on the person who handed it
   // over and closes on what it turned out to establish. Shown the moment the closer lands, which is
   // why the filed option's own `why` is reprinted there — a player moved off the board instantly
   // would otherwise never read it.
-  if (complete && activity.debrief && !entry.debriefed)
+  if (complete && activity.debrief && !entry.debriefed) {
+    activityView = "debrief";
     return missionDebriefScreen(kind, source, activity, entry);
+  }
+  activityView = "board";
   const kicker = activityKicker(kind);
   const board = renderActivity(kind, activity, entry.state, activityContext(activity));
   // The line that starts the activity, in the voice of whoever says it. Rendered by the host rather
@@ -15195,6 +15217,20 @@ function render() {
     html = `${chrome()}<main class="shell"><section class="empty-state"><p class="kicker">Chronicle recovery</p><h1>Archive display restored.</h1><p>The screen recovered instead of staying blank. Return to the Institute and continue testing.</p><button class="btn btn-gold" data-action="home">Return to Institute →</button><button class="btn btn-outline" data-action="reset-case-001">Reset Case 1.01</button></section></main>${authorPanel()}`;
   }
   app.innerHTML = html;
+  // Written after the switch, because activityView is one of the things the switch decides. The
+  // surface ids are in the key for completeness rather than for a measured defect — the field and
+  // hub pages have under 50px of slack between them — and the cost of including them is nothing.
+  const view = [
+    progress.currentScreen,
+    progress.currentHubRoom,
+    progress.currentFieldRoom,
+    progress.activeActivitySourceId,
+    activityView,
+  ].join("|");
+  if (view !== renderedView) {
+    renderedView = view;
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }
   syncManageContentNativeDialogs();
   if (currentIntroLines()) window.requestAnimationFrame(startIntroTypewriter);
   // The warp needs its canvas mounted before it can paint into it, so its phase driver starts here

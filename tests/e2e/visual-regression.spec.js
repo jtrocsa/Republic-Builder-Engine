@@ -1033,12 +1033,12 @@ test.describe("Gameplay visual-regression baselines", () => {
 
     await expect(page.locator(".reader-shell")).toBeVisible();
     await expect(page.locator("#sourceResponse")).toBeVisible();
-    // The button that opens the record sits at the foot of a long activity page, and a screen
-    // change does not reset the document's scroll — so arriving this way lands mid-page with the
-    // chrome bar and the back link above the fold. That is pre-existing and shared with the
-    // multiple-choice route above; this baseline is of the masthead, so start it where the masthead
-    // is rather than re-recording this baseline around a scroll offset.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // This used to scroll to the top by hand. The button that opens the record sits at the foot of a
+    // long activity page, and until Phase 125 a screen change carried the document's scroll offset
+    // with it, so arriving this way landed mid-page with the chrome bar and the back link above the
+    // window — which is what the multiple-choice baseline beside this one had photographed and was
+    // defending. A new screen opens at its own top now; the line is gone rather than kept as a
+    // no-op, because a workaround left in place reads as a defect still standing.
     await expect(page).toHaveScreenshot(snap("source-reader-primary-prose"));
   });
 
