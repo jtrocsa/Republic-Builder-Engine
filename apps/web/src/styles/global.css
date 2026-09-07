@@ -2468,6 +2468,23 @@ dd {
   color: #ffe0d4;
   background: rgba(157, 81, 68, 0.23);
 }
+/* A status line with nothing in it is not a status.
+ *
+ * .feedback is painted unconditionally, in rgba(91, 150, 101, 0.2) — the same green
+ * .feedback.success uses — and three of these ship empty in the markup, waiting for
+ * showFeedback() to fill them: #reconstructionFeedback on Record Reconstruction, #reviewFeedback
+ * on the Archive Review, and #identityFeedback on the screen where a new player names their
+ * Chronicler. So all three opened with a full-width filled bar under their main button, in the
+ * colour this interface uses to say a thing went right, before the player had done anything at
+ * all — reading as a second disabled button, or an input that failed to load.
+ *
+ * Same idiom and same reason as .director-reveal-rail:empty, a thousand lines down this file. It
+ * is not an emptiness the
+ * markup can avoid: the element has to exist for showFeedback() to find it by id, so the rule
+ * belongs here rather than in a conditional render. */
+.feedback:empty {
+  display: none;
+}
 .evidence-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
