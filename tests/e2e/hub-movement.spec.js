@@ -261,4 +261,85 @@ test.describe("Main Hall movement", () => {
     const stoppedFacings = new Set(seen.filter((s) => !s.walking).map((s) => s.facing));
     expect([...stoppedFacings]).toEqual(["up"]);
   });
+
+  test("the legs run at the speed the body covers, the wall slide included (regression)", async ({
+    page,
+  }) => {
+    // "Ground speed drives the walk cycle, per body, per moment." The field adopted the measured
+    // version of this and the hub did not — though the field's own comment says otherwise:
+    // *"updateInstitutePlayer() has taken a speed since Phase 63 for exactly this reason; the field
+    // passed the constant."* It does take one, but the only caller that ever passed it is the
+    // scripted-scene runner, at the 2.2 a scene walks at. runHubMovementLoop() passed nothing and
+    // got the HUB_SPEED default, so a diagonal held against a wall — where the body keeps one of
+    // the two normalised components and covers 0.707 of the ground — ran the legs 41% fast.
+    //
+    // Sampled inside the page on the frame the condition first holds, for the reason
+    // field-movement-dialogue.spec.js sets out at length: the round trip is wider than the window,
+    // so a fixed wait measures the free diagonal and compares it against itself.
+    await seedProgress(page, {
+      currentScreen: "institute",
+      currentHubRoom: "main",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    await expect(page.locator("#institutePlayer")).toBeVisible();
+
+    // South to the wall first. The spawn (11.5, 9) sits 0.4 tiles off Professor Park's west stop —
+    // CLAUDE.md names that overlap — and his circuit runs row 9.4 eastward, so measuring anything
+    // from the spawn is measuring around a man who may be standing in it. The south wall is below
+    // both him and the Director's post on row 8.6, and it is the wall the slide needs anyway.
+    await holdKey(page, "ArrowDown", 700);
+
+    const sample = (condition) =>
+      page.evaluate(
+        (kind) =>
+          new Promise((resolve, reject) => {
+            const player = document.getElementById("institutePlayer");
+            const sprite = document.getElementById("institutePlayerSprite");
+            let last = null;
+            let frames = 0;
+            const tick = () => {
+              const left = player.style.left;
+              const top = player.style.top;
+              const cycle = Number.parseFloat(sprite.style.getPropertyValue("--sprite-cycle"));
+              if (last) {
+                // "free": moving, and running the cycle it ran last frame, so the reading is the
+                // walk's own speed rather than whatever the first frame after a keydown was.
+                // "slide": this frame moved the body sideways and not downward — nothing else on
+                // this row does that, and a body that has simply stopped fails the first half.
+                const held =
+                  kind === "free"
+                    ? left !== last.left && cycle === last.cycle
+                    : top === last.top && left !== last.left;
+                if (held) {
+                  resolve(cycle);
+                  return;
+                }
+              }
+              last = { left, top, cycle };
+              frames += 1;
+              if (frames > 600) reject(new Error(`the ${kind} reading never came`));
+              else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          }),
+        condition
+      );
+
+    // West along the wall on a free axis: the full 3.65 tiles/s, so 1.1 / 3.65 = 0.301s.
+    await page.keyboard.down("ArrowLeft");
+    const free = await sample("free");
+    await page.keyboard.up("ArrowLeft");
+    expect(free).toBeCloseTo(0.301, 2);
+
+    // Now down-and-west with down against the wall. The body slides at 0.707 x 3.65 = 2.58, so the
+    // legs have to run at 1.1 / 2.58 = 0.426s and not at 0.301s.
+    await page.keyboard.down("ArrowDown");
+    await page.keyboard.down("ArrowLeft");
+    const slid = await sample("slide");
+    await page.keyboard.up("ArrowLeft");
+    await page.keyboard.up("ArrowDown");
+    expect(slid).toBeGreaterThan(free);
+    expect(slid).toBeCloseTo(0.426, 1);
+  });
 });

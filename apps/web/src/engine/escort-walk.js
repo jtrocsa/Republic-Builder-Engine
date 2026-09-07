@@ -146,6 +146,24 @@ export function stepEscort(state, dtMs) {
   // an escort that never reports `done` holds `moveActor` open forever and locks the player in the
   // room. That is the failure the empty-waypoints case is also guarded against.
   state.done = state.leaderDone && state.followerDistance >= state.distance - state.gap - 1e-9;
+  // A walk that is over has nobody walking on it, and it has to be said here because the frame the
+  // escort finishes is a frame both bodies moved on. The follower by construction — `done` is the
+  // moment it reaches its station, which it reaches by moving — and the leader too whenever the two
+  // land on the same tick, which is every walk whose follower held its gap the whole way.
+  //
+  // applyMotion() above reports this frame's displacement and is right to. What makes it wrong to
+  // leave is that **the host stops calling stepEscort() the instant `done` is true**, so the last
+  // tick's flags are the flags the sprites keep until something else repaints them — and in the
+  // Institute the next thing to do that is the end of the whole scene. The player stood at the
+  // Preservation Case marching on the spot through the Director's next line, on every scripted walk
+  // in the game, and the Director did it beside them on the legs that ended level with him.
+  //
+  // The existing latching test could not see it: it steps 8000ms past the end, so it only ever
+  // asked what the flags settle to on a frame the host never runs.
+  if (state.done) {
+    leader.walking = false;
+    follower.moving = false;
+  }
   return { leaderDone: state.leaderDone, done: state.done };
 }
 

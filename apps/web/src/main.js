@@ -10803,6 +10803,17 @@ function startHubScene(id, { onDone = null } = {}) {
   hubHeldKeys.clear();
   stopHubMovementLoop();
   instituteMovement.moving = false;
+  // The NPC tick is suspended for the whole scene — updateInstituteNpcs() early-returns on
+  // isHubSceneActive() — so every body the scene is not itself moving keeps whatever `walking` it
+  // was holding on the frame the scene took the room. paintHubSceneFrame() then re-applies that
+  // stale flag to all of them, sixty times a second, for as long as the scene runs.
+  //
+  // Both of the Main Hall's route walkers are mid-stride most of the time, so the odds were good
+  // that the Director's tour played out with Dr Soto or Professor Park marching on the spot behind
+  // it. Symmetric with finishHubScene(), which clears the same flags on the way out; this is the
+  // half that was missing, and it belongs beside the two lines above that stop the player for the
+  // same reason.
+  for (const body of Object.values(activeHubNpcRuntime())) body.walking = false;
   render();
   hubScene.frame = window.requestAnimationFrame(runHubSceneFrame);
   return true;
@@ -11331,6 +11342,8 @@ function runHubMovementLoop(now) {
     Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "up" : "down";
   const nextX = Number((instituteMovement.x + dx * distance).toFixed(3));
   const nextY = Number((instituteMovement.y + dy * distance).toFixed(3));
+  const fromX = instituteMovement.x;
+  const fromY = instituteMovement.y;
   let moved = false;
   if (!isHubBlocked(nextX, nextY)) {
     instituteMovement.x = nextX;
@@ -11350,7 +11363,14 @@ function runHubMovementLoop(now) {
   }
   instituteMovement.moving = moved;
   if (moved) instituteMovement.step = !instituteMovement.step;
-  updateInstitutePlayer();
+  // The same measurement runFieldMovementLoop() makes, and for the same reason: a diagonal held
+  // against a wall keeps one of its two normalised components, so the body covers 0.707 of the
+  // ground while the legs ran at full speed. The field's comment says updateInstitutePlayer() "has
+  // taken a speed since Phase 63 for exactly this reason" — it takes one, but for the scripted
+  // walk's 2.2, and this caller has always passed nothing and got HUB_SPEED. Measured rather than
+  // special-cased, so anything that later moves the player some other way is covered already.
+  const travelled = Math.hypot(instituteMovement.x - fromX, instituteMovement.y - fromY);
+  updateInstitutePlayer(elapsed > 0 && travelled > 0 ? travelled / (elapsed / 1000) : HUB_SPEED);
   hubMoveFrame = window.requestAnimationFrame(runHubMovementLoop);
 }
 function interactWithHubTarget(id) {

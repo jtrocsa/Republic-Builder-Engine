@@ -230,6 +230,54 @@ describe("escort walk", () => {
     expect(state.follower.moving).toBe(false);
   });
 
+  it("stands both bodies still on the frame it finishes, not the frame after (regression)", () => {
+    // The test above steps 8000ms past the end, so it only ever asked what the flags settle to on
+    // frames the host never runs — **runHubSceneFrame() stops calling stepEscort() the instant
+    // `done` is true.** Stepping exactly the way the host does is the whole point here.
+    //
+    // And the frame an escort finishes on is a frame both bodies moved: the follower by
+    // construction, since `done` is the moment it reaches its station and it reaches it by moving,
+    // and the leader too whenever the two land on the same tick. So the last flags written were
+    // `true`, nothing repainted the sprites until the end of the entire scene, and the player stood
+    // at the Preservation Case marching on the spot through the Director's next line.
+    const state = straightWalk();
+    let ticks = 0;
+    while (!state.done && ticks < 400) {
+      stepEscort(state, 16);
+      ticks += 1;
+    }
+    expect(state.done).toBe(true);
+    expect(state.leader.walking).toBe(false);
+    expect(state.follower.moving).toBe(false);
+  });
+
+  it("stands a follower still that was still closing when the leader arrived (edge case)", () => {
+    // The other arrival shape, and the one where `leaderDone` genuinely precedes `done`: a follower
+    // that started further back than the gap is still walking after the leader has stopped, so the
+    // leader's flag goes false on its own and only the follower's is left to clear. Both paths end
+    // in the same room, and a fix that only covered the simultaneous case would leave this one
+    // walking.
+    const { leader, follower } = bodies();
+    follower.y = 15.3; // the Entrance Hall spawn, four tiles further back than reach allows
+    const state = createEscortWalk({
+      waypoints: [{ x: 10, y: 2.6 }],
+      speed: SPEED,
+      gap: GAP,
+      leader,
+      follower,
+    });
+    let sawLeaderDoneBeforeDone = false;
+    let ticks = 0;
+    while (!state.done && ticks < 600) {
+      const result = stepEscort(state, 16);
+      if (result.leaderDone && !result.done) sawLeaderDoneBeforeDone = true;
+      ticks += 1;
+    }
+    expect(sawLeaderDoneBeforeDone).toBe(true);
+    expect(state.leader.walking).toBe(false);
+    expect(state.follower.moving).toBe(false);
+  });
+
   it("terminates immediately when there is nowhere to walk (edge case)", () => {
     // findRoute() returns [] when start and goal share a cell, and null when there is no way at
     // all — the hub scene runner's `moveActor` passes `|| []` for the second, so both arrive here
