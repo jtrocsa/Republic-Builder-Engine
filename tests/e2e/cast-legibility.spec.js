@@ -165,8 +165,14 @@ async function measure(page, dom = FIELD_DOM) {
 
       return window.__chronicleCast().map((job) => {
         const el = document.querySelector(npcSel.replace("__ID__", job.id));
-        if (!el) return { ...job, missing: true };
-        const span = el.querySelector("span:not(.character-sprite):not(.cast-shadow)");
+        // The pill is a sibling of the body since Phase 123, not a child of it — a name is drawn
+        // above every body now, and it could not be while it lived inside one. The plate carries the
+        // body's own anchor, so `rel()` below is measuring exactly what it measured before. A body
+        // without one is reported here rather than thrown on: this file's whole subject is a
+        // measurement that could quietly stop measuring anything.
+        const plate = document.querySelector(`[data-cast-label="${job.id}"]`);
+        const span = plate?.querySelector("span:not(.character-sprite):not(.cast-shadow)");
+        if (!el || !span) return { ...job, missing: true };
         const sprite = el.querySelector(".character-sprite");
         // The element's own inline left/top IS its anchor in canvas pixels, so the pill and sprite
         // boxes can be expressed relative to it and then re-anchored wherever the job's own
@@ -221,7 +227,7 @@ test.describe("Cast legibility", () => {
       expect(cast.length, `${name} has a cast`).toBeGreaterThan(0);
       expect(
         cast.filter((c) => c.missing).map((c) => c.id),
-        `${name}: every job has a body on screen`
+        `${name}: every job has a body and a nameplate on screen`
       ).toEqual([]);
 
       // "An NPC has a job." Without this the filter below is the very failure this phase wrote up:
@@ -269,7 +275,7 @@ test.describe("Cast legibility", () => {
       expect(cast.length, `${name} has a cast`).toBeGreaterThan(0);
       expect(
         cast.filter((c) => c.missing).map((c) => c.id),
-        `${name}: every job has a body on screen`
+        `${name}: every job has a body and a nameplate on screen`
       ).toEqual([]);
       expect(
         cast.filter((c) => c.kind === "none").map((c) => c.id),

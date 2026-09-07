@@ -313,7 +313,9 @@ test.describe("Gameplay visual-regression baselines", () => {
     // Same requestAnimationFrame patrol-loop reasoning as institute-main-hall above — field
     // NPCs (`[data-npc]`) are never pixel-stable between two consecutive frames, and masking
     // (vs. hiding) has the same bounding-box-drift problem noted there.
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-caribbean"));
 
     // Each activity screen resolves its record from progress.activeActivitySourceId, so seeding it
@@ -386,7 +388,9 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "riverbendTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-riverbend"));
 
     // **The Powhatan landing has no baseline of its own, deliberately.** This shot frames the spawn
@@ -578,7 +582,9 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "commonCauseTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-common-cause"));
   });
 
@@ -599,7 +605,9 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "canalCrossroadsTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-canal-crossroads"));
 
     // Both interiors, seeded directly — see field-interiors.spec.js for why the rooms are entered
@@ -607,12 +615,16 @@ test.describe("Gameplay visual-regression baselines", () => {
     // rather than merging into it, so each call carries the full seed.
     await setScreen(page, { ...seed, currentFieldRoom: "canal-print-shop" });
     await waitForTiledCanvas(page, "canalPrintShopTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-canal-print-shop"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "canal-boarding-house" });
     await waitForTiledCanvas(page, "canalBoardingHouseTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-canal-boarding-house"));
   });
 
@@ -632,17 +644,23 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "richmondTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-richmond"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "richmond-counting-room" });
     await waitForTiledCanvas(page, "richmondCountingRoomTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-richmond-counting-room"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "richmond-hospital-ward" });
     await waitForTiledCanvas(page, "richmondHospitalWardTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-richmond-hospital-ward"));
   });
 
@@ -660,17 +678,23 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "railheadTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-railhead"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "railhead-land-office" });
     await waitForTiledCanvas(page, "railheadLandOfficeTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-railhead-land-office"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "railhead-telegraph-office" });
     await waitForTiledCanvas(page, "railheadTelegraphOfficeTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-railhead-telegraph-office"));
   });
 
@@ -695,17 +719,23 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "immigrantPortTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-immigrant-port"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "immigrant-port-inspection-hall" });
     await waitForTiledCanvas(page, "immigrantPortInspectionHallTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-immigrant-port-inspection-hall"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "immigrant-port-inquiry-room" });
     await waitForTiledCanvas(page, "immigrantPortInquiryRoomTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-immigrant-port-inquiry-room"));
   });
 
@@ -735,17 +765,23 @@ test.describe("Gameplay visual-regression baselines", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
     await waitForTiledCanvas(page, "fairmeadowTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-fairmeadow"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "fairmeadow-model-house" });
     await waitForTiledCanvas(page, "fairmeadowModelHouseTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-fairmeadow-model-house"));
 
     await setScreen(page, { ...seed, currentFieldRoom: "fairmeadow-building-and-loan" });
     await waitForTiledCanvas(page, "fairmeadowBuildingAndLoanTiledCanvas");
-    await page.addStyleTag({ content: "[data-npc] { visibility: hidden !important; }" });
+    await page.addStyleTag({
+      content: "[data-npc], [data-cast-label] { visibility: hidden !important; }",
+    });
     await expect(page).toHaveScreenshot(snap("field-fairmeadow-building-and-loan"));
   });
 

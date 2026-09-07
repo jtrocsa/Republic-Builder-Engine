@@ -1621,6 +1621,57 @@ function applyCharacterSprite(node, key, facing, walking, speed) {
   node.classList.toggle("is-idling", idling);
 }
 
+/**
+ * A character's name pill, emitted **beside** the body rather than inside it.
+ *
+ * A name is a label and a label is for reading, so nothing that stands next to somebody should be
+ * able to punch a hole through their name. It could: `.field-npc` and `.hub-npc` each carry a
+ * transform and a z-index, which makes every body its own stacking context, so a pill hung off a
+ * body can never rise above another body however high its own z-index goes. The player sits above
+ * the cast on both surfaces — 80 over 70 in the field, 42 over 28 in the Institute — so the pill
+ * went under whoever walked in front of it.
+ *
+ * It is not a rare shape. The pill hangs below the feet, and standing south of somebody is how you
+ * talk to somebody who is facing you, so the body that covers a name is usually the player's and
+ * usually deliberate. Measured through the tutorial's own tour, the room spends most of its beats
+ * with a name under a body: 57% of the Director's, 93% of Dr Soto's, and it ends parked with 72% of
+ * "Director Hale" behind the player, which is where it stays until the player walks away.
+ *
+ * **The classes are copied verbatim on purpose.** Thirteen layered rules style this pill as
+ * `.field-npc span:not(.character-sprite):not(.cast-shadow)` — a *descendant* selector — plus the
+ * faction colours as `.field-npc--taino span` and the two states as `.field-npc.is-near span` and
+ * `.field-npc.is-talking span`. Giving the plate the body's own class list means every one of them
+ * matches the pill in its new home unchanged, and none of that cascade had to be re-derived. This
+ * file has been paid for by guesses about that cascade before; the only new rule is the z-index.
+ */
+function castNameplate(base, bodyClasses, id, positionStyle, label) {
+  return `<span class="${bodyClasses} ${base}--nameplate" data-cast-label="${esc(id)}" style="${positionStyle}" aria-hidden="true"><span>${esc(label)}</span></span>`;
+}
+/**
+ * Keeps a nameplate glued to the body it names: same box, same state classes, one layer up.
+ *
+ * Called from the per-body loops that already patch a body's position, so a plate never needs a tick
+ * of its own — and written through a comparison rather than unconditionally, because both loops run
+ * at 30Hz over up to nine bodies and re-assigning a class list that has not changed is style work
+ * for no visual difference. Same reasoning as applyCharacterSprite()'s `data-sheet` guard.
+ */
+function syncNameplate(plates, id, node, modifier) {
+  const plate = plates.get(id);
+  if (!plate) return;
+  if (plate.style.cssText !== node.style.cssText) plate.style.cssText = node.style.cssText;
+  const want = `${node.className} ${modifier}`;
+  if (plate.className !== want) plate.className = want;
+}
+/** The nameplates on the surface being ticked, keyed by the id of the body each one names. */
+function nameplatesById() {
+  return new Map(
+    [...document.querySelectorAll("[data-cast-label]")].map((node) => [
+      node.dataset.castLabel,
+      node,
+    ])
+  );
+}
+
 let fieldMovement = { x: 28.0, y: 22.0, facing: "down", moving: false, step: false, queued: null };
 let fieldCamera = { x: 0, y: 0 };
 // `tile` is the CSS pixel size of one grid cell. It must equal the .tmj tile size (48) or the
@@ -1919,6 +1970,8 @@ function updateFieldNpcs(now = performance.now()) {
     [...document.querySelectorAll("[data-npc]")].map((node) => [node.dataset.npc, node])
   );
   const npcsById = new Map(activeFieldMap().npcs.map((npc) => [npc.id, npc]));
+  // One query for the plates too, for the same reason as the bodies above.
+  const plates = nameplatesById();
   Object.entries(fieldNpcRuntime).forEach(([id, state]) => {
     // Whoever the player is talking to stands still and keeps facing them. Their wander picks up
     // from wherever they stopped once the conversation closes.
@@ -1931,6 +1984,10 @@ function updateFieldNpcs(now = performance.now()) {
     node.style.top = `${(state.y * activeFieldGrid().tile).toFixed(1)}px`;
     node.classList.toggle("is-walking-npc", state.walking);
     node.dataset.facing = state.facing;
+    // The plate follows the body it names — position and every state class, including the ones
+    // updateFieldProximityUi() and closeFieldDialogueOnMove() write onto the button, which this
+    // 30Hz tick picks up within a frame rather than needing hands of their own.
+    syncNameplate(plates, id, node, "field-npc--nameplate");
     const npc = npcsById.get(id);
     if (npc) {
       applyCharacterSprite(
@@ -5329,6 +5386,7 @@ function updateInstituteNpcs(now = performance.now()) {
   const nodes = new Map(
     [...document.querySelectorAll("[data-hub-npc]")].map((node) => [node.dataset.hubNpc, node])
   );
+  const plates = nameplatesById();
   Object.entries(activeHubNpcRuntime()).forEach(([id, state]) => {
     // Standing still while being spoken to — nobody wanders off mid-sentence. Scenes never reach
     // this line any more; they are handled by the early return above.
@@ -5344,6 +5402,7 @@ function updateInstituteNpcs(now = performance.now()) {
     node.style.cssText = hubCharacterStyle(state.x, state.y);
     node.classList.toggle("is-walking-npc", state.walking);
     node.dataset.facing = state.facing;
+    syncNameplate(plates, id, node, "hub-npc--nameplate");
     applyCharacterSprite(
       node.querySelector(".character-sprite"),
       id,
@@ -10846,12 +10905,17 @@ function runHubSceneFrame(now) {
 /** Pushes this frame's actor positions and highlight onto the DOM the last render() put up. */
 function paintHubSceneFrame() {
   const runtime = activeHubNpcRuntime();
+  const plates = nameplatesById();
   for (const [id, body] of Object.entries(runtime)) {
     const node = document.querySelector(`[data-hub-npc="${id}"]`);
     if (!node) continue;
     node.style.cssText = hubCharacterStyle(body.x, body.y);
     node.classList.toggle("is-walking-npc", Boolean(body.walking));
     node.dataset.facing = body.facing;
+    // A scene is the one time nothing else repaints the room (Phase 122), so a plate left behind
+    // here stays behind for the whole scene — which is exactly the sequence the defect was measured
+    // in.
+    syncNameplate(plates, id, node, "hub-npc--nameplate");
     applyCharacterSprite(
       node.querySelector(".character-sprite"),
       id,
@@ -11462,7 +11526,9 @@ function instituteNpc(targetId, label) {
   // hubCharacterStyle() rather than the percentage math this used to inline: the Main Hall became a
   // camera room in Phase 54, and a hardcoded percentage would have placed all three NPCs wrong the
   // moment HUB_GRID gained a `tile`.
-  return `<button class="hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}" data-facing="${esc(state.facing || "down")}" style="${hubCharacterStyle(state.x, state.y)}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><span class="cast-shadow"></span>${characterSpriteMarkup(targetId, state.facing || "down", { walking, speed: runtime[targetId]?.speed })}<span>${esc(label)}</span>${isNear ? "<i>!</i>" : ""}</button>`;
+  const bodyClasses = `hub-npc hub-npc--${targetId} ${isNear ? "is-near" : ""} ${walking ? "is-walking-npc" : ""}`;
+  const position = hubCharacterStyle(state.x, state.y);
+  return `<button class="${bodyClasses}" data-facing="${esc(state.facing || "down")}" style="${position}" data-action="hub-interact" data-target="${targetId}" data-hub-npc="${targetId}" aria-label="Speak with ${esc(target.name)}"><span class="cast-shadow"></span>${characterSpriteMarkup(targetId, state.facing || "down", { walking, speed: runtime[targetId]?.speed })}${isNear ? "<i>!</i>" : ""}</button>${castNameplate("hub-npc", bodyClasses, targetId, position, label)}`;
 }
 function instituteScreen() {
   if (progress.currentHubRoom === "archive") return archiveRoomScreen();
@@ -13263,7 +13329,11 @@ function fieldNpcButton(npc, live) {
       : mark === "secured"
         ? `${npc.name} — account secured`
         : `Talk with ${npc.name}`;
-  return `<button class="field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}" data-facing="${esc(state.facing || "down")}" style="left:${(state.x * activeFieldGrid().tile).toFixed(1)}px;top:${(state.y * activeFieldGrid().tile).toFixed(1)}px" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}<span>${esc(npc.label)}</span>${badge}</button>`;
+  // Held in one string because the nameplate beside the button wears the same list — see
+  // castNameplate() for why every pill rule is a descendant selector and why that matters here.
+  const bodyClasses = `field-npc field-npc--${esc(npc.group)} field-npc--${esc(npc.id)} ${active ? "is-talking" : ""} ${near ? "is-near" : ""} ${walking ? "is-walking-npc" : ""} ${carried ? "has-record" : ""}`;
+  const position = `left:${(state.x * activeFieldGrid().tile).toFixed(1)}px;top:${(state.y * activeFieldGrid().tile).toFixed(1)}px`;
+  return `<button class="${bodyClasses}" data-facing="${esc(state.facing || "down")}" style="${position}" data-action="field-talk" data-npc="${esc(npc.id)}" aria-label="${esc(label)}"><span class="cast-shadow"></span>${characterSpriteMarkup(npc.sprite, state.facing || "down", { walking, speed: state.speed })}${badge}</button>${castNameplate("field-npc", bodyClasses, npc.id, position, npc.label)}`;
 }
 /**
  * Where this person stands in the interview the player currently has open, or null.

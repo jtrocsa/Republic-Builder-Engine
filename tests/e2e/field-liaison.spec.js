@@ -39,7 +39,9 @@ test.describe("the Field Liaison at the Institute", () => {
 
     const voss = page.locator('[data-hub-npc="liaison"]');
     await expect(voss).toBeVisible();
-    await expect(voss).toContainText("Emery Voss");
+    // The name pill is a sibling of the body since Phase 123, not a child of it — a name has to be
+    // drawn above every body and it could not be while it lived inside one. `0122`.
+    await expect(page.locator('[data-cast-label="liaison"]')).toContainText("Emery Voss");
 
     expect(await walkToHubNpc(page, "liaison")).toBe(true);
     await page.keyboard.press("e");
@@ -150,9 +152,12 @@ test.describe("the Field Liaison in the field", () => {
       const voss = page.locator('[data-npc="liaison"]');
       await expect(voss).toBeVisible();
       // The name, not the job — the pill is the one surface where getting this wrong is invisible
-      // to every other assertion in this file.
-      await expect(voss).toContainText("Emery Voss");
-      await expect(voss).not.toContainText("Liaison");
+      // to every other assertion in this file. Read off the nameplate, which is where the pill has
+      // lived since Phase 123 (`0122`): a name is drawn above every body, and a pill inside a body's
+      // own button could never be, because a body is a stacking context.
+      const vossName = page.locator('[data-cast-label="liaison"]');
+      await expect(vossName).toContainText("Emery Voss");
+      await expect(vossName).not.toContainText("Liaison");
 
       expect(await walkToNpc(page, "liaison"), "Voss is unreachable from the spawn").toBe(true);
       await page.keyboard.press("e");

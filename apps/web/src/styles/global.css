@@ -45,21 +45,33 @@
      centre (engine/sprite-animation.js FOOT_ANCHOR) rather than a number
      tuned by eye — see .hub-npc for what happened when it was the latter.
 
-     --cast-label-top is where a character's name pill hangs. Deriving it
-     from --cast-foot is the whole point: the label then sits a fixed 8px
-     below the *feet*, and because --cast-foot differs per surface the same
-     expression puts it below the sprite in the field (+35.8px from the
-     anchor) and in the hub (+17.1px) without either surface knowing about
-     the other. Written against the button's own box instead, as it was until
-     Phase 62, it tracked the hit area — so the field's 55x79 button put the
-     pill across everyone's boots while the hub's 48x56 one happened to clear
-     them, and no amount of nudging one fixed the other. */
+     A character's name pill hangs a fixed 8px below the *feet* —
+     calc(50% + var(--cast-foot) + 8px), where 50% of the body's own box is
+     always its anchor. It is written at the two label rules rather than
+     carried here as a --cast-label-top variable, and that is not tidiness:
+     **a custom property substitutes at the point of declaration, not at the
+     point of use.** A --cast-label-top declared here would resolve
+     var(--cast-foot) against :root's 0.58 once and inherit that number
+     everywhere, so .hub-npc's 0.19 override would change nothing.
+
+     It did change nothing, from Phase 62 to Phase 123. The comment that used
+     to stand here said the one expression "puts it below the sprite in the
+     field (+35.8px from the anchor) and in the hub (+17.1px) without either
+     surface knowing about the other". It put both at +35.8. The field is
+     right at that number and the Institute is not: hub feet are at +9.12, so
+     every name in the Institute hung 26.7px — over half a tile — below the
+     person it named, out on the floor, and Dr Soto's landed on the face of
+     anyone walking the aisle beneath her. Written against the button's own
+     box instead, as it was until Phase 62, it tracked the hit area — so the
+     field's 55x79 button put the pill across everyone's boots while the
+     hub's 48x56 one happened to clear them, and no amount of nudging one
+     fixed the other. Both of those are the same mistake: the pill has to be
+     measured from the feet, and the feet are a per-surface number. */
   --tile: 48px;
   --cast-h: 56px;
   --cast-w: calc(var(--cast-h) * 48 / 56);
   --cast-ground-offset: calc(var(--cast-h) * 11 / 28);
   --cast-foot: calc(var(--tile) * 0.58);
-  --cast-label-top: calc(50% + var(--cast-foot) + 8px);
 
   /* Base channels — one alpha ramp instead of the ~157 hand-written
      rgba(239, 204, 122, …) literals scattered through this file. */
@@ -5425,10 +5437,12 @@ dd {
 
 /* `top: 98%` until Phase 62 — right by luck rather than by construction. 98% of a 56px box put the
    pill 2px under the sole; the same declaration on the field's 79px button would have put it 4px
-   past the bottom of the map tile. Both surfaces now share --cast-label-top. */
+   past the bottom of the map tile. Both surfaces now share one expression, measured from their own feet. */
 .hub-npc span:not(.character-sprite):not(.cast-shadow) {
   position: absolute;
-  top: var(--cast-label-top);
+  /* 8px below this surface's feet — see :root for why the expression is here and not in a
+     variable. In the Institute --cast-foot is 0.19 of a tile, so this is the anchor + 17.1px. */
+  top: calc(50% + var(--cast-foot) + 8px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -6216,7 +6230,7 @@ dd {
   background: linear-gradient(#e6d6b6 0 25%, #4f7f88 25% 68%, #5a3a28 68%);
 }
 /* The name pill under a field NPC. Its `top` is the one shared with `.hub-npc` below — see the
-   comment on --cast-label-top in :root for why one expression serves both surfaces. Consolidated
+   comment in :root for why that expression is written here rather than carried in a variable. Consolidated
    from six chronologically-layered `top` redeclarations (70/82/74/64px, a narrow-viewport 56px, and
    four per-character 63px overrides), all of which measured from the *button's* box rather than
    from the character, which is how the field's label came to sit across everyone's boots while the
@@ -6224,7 +6238,9 @@ dd {
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
   position: absolute;
   left: 50%;
-  top: var(--cast-label-top);
+  /* The same 8px below the feet, and on this surface --cast-foot is 0.58 of a tile — the anchor
+     + 35.8px. This is the number both surfaces were getting; see :root. */
+  top: calc(50% + var(--cast-foot) + 8px);
   transform: translateX(-50%);
   /* Wraps rather than running as wide as the label wants (Phase 113). A pill is centred on its body,
      so a long role on somebody standing near the frame's edge ran straight off it — Ellis Island's
@@ -6728,7 +6744,7 @@ dd {
 .field-npc i {
   display: none !important;
 }
-/* This rule's `top: 82px !important` is gone with the other five — see --cast-label-top. */
+/* This rule's `top: 82px !important` is gone with the other five — see the label's own `top`. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
   background: rgba(6, 35, 48, 0.92) !important;
 }
@@ -8959,7 +8975,7 @@ p.activity-howto__note {
   transform: translate(-50%, -53%) !important;
 }
 
-/* `top: 74px !important` removed here too — see --cast-label-top. */
+/* `top: 74px !important` removed here too — see the label's own `top`. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
   font-size: 8.5px !important;
   padding: 3px 6px !important;
@@ -9131,7 +9147,7 @@ p.activity-howto__note {
     width: 42px !important;
     height: 60px !important;
   }
-  /* No narrow-viewport `top` for the label either. --cast-label-top measures 50% of whatever box
+  /* No narrow-viewport `top` for the label either. the label's `top` measures 50% of whatever box
      the button happens to be, so it lands 2px under the sprite's sole at 42x60 exactly as it does
      at 55x79 — which is the property a fixed pixel offset per breakpoint could never have. */
   /* No narrow-viewport scale-down for .source-signal--world any more: at 30px it is already the
@@ -9646,7 +9662,7 @@ p.activity-howto__note {
 }
 /* `top: 64px !important` was the winner of the six, and the one that put the pill across the boots
    — it measured +24.5px from the anchor against a sprite whose sole is at +27.8px. Gone with the
-   rest; see --cast-label-top. */
+   rest; see the label's own `top`. */
 .field-npc span:not(.character-sprite):not(.cast-shadow) {
   font-size: 11px !important;
   padding: 4px 7px !important;
@@ -10195,6 +10211,31 @@ html {
    to sit here are gone — see the note where those classes were retired. */
 .source-signal--world {
   z-index: 75 !important;
+}
+
+/* **A name is drawn above every body.** The other half of the rule the line above states for a
+   record marker — "so a record marker is never hidden behind the person it is attached to" — and it
+   was missing for the pill that names the person.
+
+   The pill used to hang inside its own body's button, and `.field-npc`/`.hub-npc` each carry a
+   transform and a z-index, so every body is its own stacking context and a pill could never rise
+   out of one. The player is above the cast on both surfaces (80 over 70 here, 42 over 28 in the
+   Institute), and the pill hangs below the feet, so walking up to somebody who is facing you put
+   your body through their name. Through the tutorial tour that was 57% of the Director's name,
+   93% of Dr Soto's, and 72% left standing at the end of it.
+
+   main.js now emits the pill as a sibling wearing the body's own class list — so all thirteen
+   layered `.field-npc span:not(...)` rules, both faction colours and both state rules still style
+   it, untouched — and this is the only new declaration. 85 is deliberately between the player (80)
+   and the world's overlay layer (90): a name clears every body and is still drawn behind the
+   canopy it is standing under, which is the thing cast-legibility.spec.js measures and the thing
+   that found the watchman inside the maple. Raising a name above the overlay would have made that
+   guard moot rather than passing. */
+.field-npc.field-npc--nameplate,
+.hub-npc.hub-npc--nameplate {
+  z-index: 85 !important;
+  pointer-events: none !important;
+  cursor: default;
 }
 .cartographer-table {
   left: 300px !important;
