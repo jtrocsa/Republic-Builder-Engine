@@ -369,6 +369,7 @@ maxlength
 maxrects
 mcculloch
 minigames
+minmax
 mislinking
 mozjpeg
 mozjpeg's

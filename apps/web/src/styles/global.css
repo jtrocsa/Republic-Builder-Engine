@@ -9160,6 +9160,34 @@ p.activity-howto__note {
 .case-field--living {
   grid-template-columns: minmax(240px, 0.38fr) minmax(760px, 1.42fr) minmax(220px, 0.34fr);
 }
+
+/* **A three-column grid whose minimums do not fit is a panel cut in half, silently.** (Phase 124,
+   decision log `0123`.)
+
+   The declaration above is the one that wins, and its own floors add up: 240 + 760 + 220 plus two
+   24px gaps is **1268px** of grid that cannot compress. `main.case-field` gets the viewport less a
+   scrollbar and 28px of padding each side, so it has 1209px at 1280 wide — and `.case-field--living`
+   carries `overflow: hidden` (Phase 121, so a long map cannot push the page sideways), which turned
+   the 59px shortfall into a clean cut through the Evidence Channel rather than a scrollbar.
+
+   What that cost, measured: the panel is 220px and **59 of them were off the screen**, taking the
+   last few characters off every line of it and **35px off the right edge of both buttons** — "Open
+   Codex" and its evidence count, and "Practice Check →". No scrollbar, no ellipsis, nothing on the
+   screen saying there was more. It fires below **1339px** of viewport, which is 1280x720 and
+   1280x800, and it is why this is scoped to 1338 rather than to a round number: the threshold is
+   measured, and 1366 must not move, because lowering a floor that is currently binding at 1366
+   would redistribute that grid and move eight visual baselines for a defect that is not there.
+
+   The 40px comes off the prose column and 12 off the map, which is the order Phase 121 set: prose
+   scrolls, the map does not, and the Evidence Channel is neither — it is the panel holding the two
+   buttons that leave this screen. The map's floor stays well above the ~706px its own
+   `min-height: 480px` and 1.47:1 aspect ratio imply, so nothing here is fighting that rule either. */
+@media (max-width: 1338px) {
+  .case-field--living {
+    grid-template-columns: minmax(200px, 0.38fr) minmax(700px, 1.42fr) minmax(220px, 0.34fr);
+    gap: 20px;
+  }
+}
 .case-field--living .field-intro h1 {
   font-size: clamp(2.15rem, 3vw, 3.55rem);
   max-width: 10ch;
