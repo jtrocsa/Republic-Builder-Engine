@@ -13,9 +13,14 @@ down, and you scroll to it and pick the conclusion you believe.
 
 The Mission Debrief opens **at its bottom**. The mission's name, the plate of the person who handed
 the work over, **What you filed** with the sentence explaining why that conclusion holds, and
-**What you kept** are all above the top of the window. What is on the screen is the end of the page
-and one button: **Open The Caribbean—Island Society →**. Press it — and it is the only thing there
-to press — and you have gone past the whole debrief without knowing it existed.
+**What you kept** are all above the top of the window.
+
+**There is nothing on the screen to press.** Both of the debrief's controls are above it — the
+onward button at **−291px** and **← Back to the field** at **−606** — so the screen a student lands
+on at the end of their first mission is the tail of a dramatic-liberties disclosure list, cut
+mid-sentence at the top, with no heading, no chrome bar and no way out that they can see. Getting
+anywhere means guessing to scroll up on a page they have no reason to believe has anything above
+them.
 
 The record then opens the same way, 43px down, with the chrome bar and **← Back to field** above the
 window.
@@ -36,6 +41,7 @@ Measured at 1280×720, on Case 1.01:
 | where the player stands to press it | scrollY **2,600**                              |
 | the Mission Debrief                 | **1,462px**, so its greatest scroll is **742** |
 | where the player arrives            | **742 — its exact bottom**                     |
+| controls in the window there        | **none** — button at −291, back link at −606   |
 | then the record                     | 868px, arrive at 148; back link at **−43**     |
 
 The clamp is the whole mechanism: `min(the offset you had, the new page's height − the window)`. It
