@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { seedProgress, loadSeededSave } from "./helpers/progress-seed.js";
+import { openSeededSave } from "./helpers/progress-seed.js";
 import { UNIT_01_ACTIVITIES } from "../../apps/web/src/content/activities/unit-01-activities.js";
 import { UNIT_02_ACTIVITIES } from "../../apps/web/src/content/activities/unit-02-activities.js";
 import { UNIT_03_ACTIVITIES } from "../../apps/web/src/content/activities/unit-03-activities.js";
@@ -89,8 +89,7 @@ for (const size of SIZES) {
       test.setTimeout(120_000);
       const tops = new Map();
       for (const [label, caseId] of FIELD_CASES) {
-        await seedProgress(page, seedFor(caseId));
-        await loadSeededSave(page);
+        await openSeededSave(page, seedFor(caseId));
         await expect(page.locator("#caseFieldPlayer")).toBeVisible();
         // From the top of the document, or a rect read after any scroll is a rect read against the
         // wrong origin — the state in which this defect looks like a pass (Phase 117).
@@ -119,8 +118,7 @@ for (const size of SIZES) {
     test("the field's status line is on screen when the game writes one", async ({ page }) => {
       test.setTimeout(120_000);
       for (const [label, caseId] of FIELD_CASES) {
-        await seedProgress(page, seedFor(caseId));
-        await loadSeededSave(page);
+        await openSeededSave(page, seedFor(caseId));
         await expect(page.locator("#caseFieldPlayer")).toBeVisible();
         // Provoke it the way a player does: click somebody out of reach. Interaction is
         // proximity-gated, so this refuses and writes the line rather than opening anybody.
@@ -174,11 +172,10 @@ test.describe("1280x720", () => {
     test.setTimeout(180_000);
     expect(WORST_PER_UNIT.size, "one mission from every unit with a map").toBe(8);
     for (const { caseId, sourceId, kind } of WORST_PER_UNIT.values()) {
-      await seedProgress(
+      await openSeededSave(
         page,
         seedFor(caseId, { currentScreen: kind, activeActivitySourceId: sourceId })
       );
-      await loadSeededSave(page);
       const begin = page.locator(".mission-brief__begin");
       await expect(begin).toBeVisible();
       await page.evaluate(() => window.scrollTo(0, 0));
@@ -189,4 +186,166 @@ test.describe("1280x720", () => {
       ).toBeLessThanOrEqual(720);
     }
   });
+});
+
+// **And a screen the player cannot scroll past has to fit.**
+//
+// The two tables above are the field cases and their missions, which is the ground Phase 121
+// measured. Everything else a student opens was uncovered, and one screen in it was wrong: the
+// **identity screen** — the second screen of the game, where a new player picks an appearance and
+// names their Chronicler — put both of its controls **31px below the fold at 1280x720**, including
+// "Confirm identity →", the button that starts the game. It had been 69px under until Phase 126
+// took the empty feedback bar out from between the help text and the buttons.
+//
+// It was the only one. The survey behind this table swept every other student screen at both
+// sizes, and unit completion, the transmission, the Chronotravel plate, the Archive Challenges list
+// and the Codex across all eight units — ninety-six screen states — and found nothing else. So this
+// is a guard rather than a finding, and its job is to stay green. See decision log `0126`.
+//
+// **The rule is Phase 121's, unchanged: prose scrolls, controls do not.** It is not "the page
+// fits". The Codex is 838px tall at 1280x720 and passes, because a record is prose and its one
+// control is at the top. What is excluded is excluded because its *content* is unbounded, and each
+// exclusion was measured rather than assumed:
+//
+//   - the Practice Check (4,159px), the Archive Review (2,824-3,275px) and every activity board —
+//     a long quiz, a long essay and a long board all scroll on purpose, and the closer at the foot
+//     of a board is the whole subject of `arrival-scroll.spec.js`;
+//   - the Mission Debrief and the record reader, which are things to read;
+//   - the **Archive Rotation**, whose card is one practice item of whatever height that item has.
+//     Measured at 1280x720 on Case 1.01: "Next →" is **17px** under on each of the three MCQs,
+//     **115px** under on the sequencing item and **610px** under on the HIPP — and it moves further
+//     down when you answer, because the feedback line appears above it. No arrangement of that
+//     screen's own copy puts a four-textarea HIPP's button above the fold, so the rotation is
+//     recorded in `0126` §5 and deliberately not chased here.
+//
+// **`travel` and `return-warp` are excluded for the opposite reason**: the warp screen is
+// full-bleed and its controls are positioned against the bottom of the viewport, so they cannot go
+// under the fold by construction. A row for them would be a test that cannot fail.
+
+const FIXED_SCREENS = [
+  ["the identity screen", { currentScreen: "identity" }],
+  ["intro · welcome", { currentScreen: "intro-welcome" }],
+  ["intro · briefing", { currentScreen: "intro-briefing" }],
+  ["intro · protocol", { currentScreen: "intro-protocol" }],
+  ["intro · registration", { currentScreen: "intro-registration" }],
+  ["the Codex", { currentScreen: "codex" }],
+  ["the mini-games shelf", { currentScreen: "mini-games" }],
+  ["the Skill Mastery record", { currentScreen: "mastery" }],
+  ["the Archive Challenges list", { currentScreen: "archive-challenges" }],
+];
+
+// The two screens whose copy is authored per unit, so the thing Phase 117 named — a control's
+// position depending on how long somebody wrote — is live on them. **One size**, for the reason
+// the mission block above gives: only the height binds, and 720 is the smaller of the two.
+const PER_UNIT_SCREENS = [
+  [
+    "unit completion",
+    (unit, caseId) => ({
+      currentScreen: "completion",
+      selectedUnitId: unit,
+      activeCaseId: caseId,
+      selectedCaseId: caseId,
+    }),
+  ],
+  [
+    "the transmission",
+    (unit, caseId) => ({
+      currentScreen: "upload",
+      pendingUploadCaseId: caseId,
+      activeCaseId: caseId,
+      selectedCaseId: caseId,
+    }),
+  ],
+];
+
+// Same order as FIELD_CASES, which is unit order — the completion screen is keyed by unit and
+// the transmission by case, and both are needed to seed one row.
+const UNIT_IDS = [
+  "unit-01",
+  "unit-02",
+  "unit-03",
+  "unit-04",
+  "unit-05",
+  "unit-06",
+  "unit-07",
+  "unit-08",
+];
+
+/**
+ * Every control on the page that is under the fold, and how many there were to begin with.
+ *
+ * The count is the anti-vacuity half, and it is not decoration: "no control is below the fold" is
+ * satisfied perfectly by a screen with no controls, and a seed that misses lands on this app's own
+ * `.empty-state` recovery markup — a back link and a sentence. The lesson is fresh here: every loop
+ * in this file spent six phases measuring case-001 eight times, and passed every run.
+ */
+async function controlsBelowFold(page, height) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const under = await page.evaluate(
+    (fold) =>
+      [...document.querySelectorAll("main button, main a[href]")]
+        .filter((el) => {
+          const style = window.getComputedStyle(el);
+          if (style.display === "none" || style.visibility === "hidden") return false;
+          return el.getBoundingClientRect().height > 4;
+        })
+        .map((el) => ({
+          label: (el.textContent || el.getAttribute("aria-label") || "")
+            .trim()
+            .replace(/\s+/g, " ")
+            .slice(0, 40),
+          under: Math.round(el.getBoundingClientRect().bottom - fold),
+        }))
+        .filter((row) => row.under > 0),
+    height
+  );
+  return {
+    under,
+    total: await page.locator("main button, main a[href]").count(),
+    recovered: await page.locator("main .empty-state").count(),
+  };
+}
+
+for (const size of SIZES) {
+  test.describe(`${size.width}x${size.height}`, () => {
+    test.use({ viewport: size });
+
+    test("every control on a screen with fixed content is on it", async ({ page }) => {
+      test.setTimeout(180_000);
+      for (const [label, seed] of FIXED_SCREENS) {
+        await openSeededSave(page, seedFor("case-001", seed));
+        await expect(page.locator("main")).toBeVisible();
+        const { under, total, recovered } = await controlsBelowFold(page, size.height);
+        expect(recovered, `${label} is the screen it seeded, not the empty state`).toBe(0);
+        expect(total, `${label} rendered controls to measure`).toBeGreaterThan(0);
+        expect(
+          under,
+          `${label}: ${under.map((row) => `"${row.label}" is ${row.under}px below the fold`).join("; ")}`
+        ).toEqual([]);
+      }
+    });
+  });
+}
+
+test.describe("1280x720", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  // One test per screen rather than one for both: eight boots is about eighty seconds here and
+  // sixteen does not fit a single test's budget, which is the honest reason and not a taxonomy.
+  for (const [label, build] of PER_UNIT_SCREENS) {
+    test(`${label}: every control is on screen on all eight units`, async ({ page }) => {
+      test.setTimeout(180_000);
+      for (const [index, [unitLabel, caseId]] of FIELD_CASES.entries()) {
+        await openSeededSave(page, seedFor(caseId, build(UNIT_IDS[index], caseId)));
+        await expect(page.locator("main")).toBeVisible();
+        const { under, total, recovered } = await controlsBelowFold(page, 720);
+        expect(recovered, `${label}, ${unitLabel}: seeded the empty state`).toBe(0);
+        expect(total, `${label}, ${unitLabel}: rendered controls to measure`).toBeGreaterThan(0);
+        expect(
+          under,
+          `${label}, ${unitLabel}: ${under.map((row) => `"${row.label}" is ${row.under}px below the fold`).join("; ")}`
+        ).toEqual([]);
+      }
+    });
+  }
 });

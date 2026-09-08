@@ -61,6 +61,39 @@ export async function loadSeededSave(page) {
   await enterSavedGame(page);
 }
 
+/**
+ * The seed a **loop** wants, and the reason it needs its own function.
+ *
+ * `seedProgress()` installs an init script that writes only when the key is still empty. That
+ * guard is deliberate and load-bearing — it is what lets `reloadIntoSave()` exist without
+ * clobbering the game's own writes back to the first seed — but it makes a **second** call on the
+ * same page do nothing at all, because booting the game once saves and the key is no longer empty.
+ * A spec that loops over eight units on one page therefore seeds the first one and then re-opens
+ * that same save seven more times. The loop runs, every assertion passes, and every iteration
+ * after the first is measuring unit 01.
+ *
+ * Nothing about that looks wrong from the outside, which is why it stood: three guards in
+ * `fold-and-controls.spec.js` sat like it from Phase 121 to Phase 127, including the one whose
+ * whole claim is that a number takes the *same value on all eight maps* — a claim one map
+ * satisfies trivially. See decision log `0126`.
+ *
+ * So this writes the key directly, on the page that is already open, and `loadSeededSave()` then
+ * boots exactly what the caller asked for. On a page that has never navigated there is no origin
+ * to write to and `seedProgress()` is the right call, so this picks between them rather than
+ * making every loop remember which iteration it is on.
+ */
+export async function openSeededSave(page, overrides = {}) {
+  if (page.url().startsWith("http")) {
+    await page.evaluate(({ key, data }) => window.localStorage.setItem(key, JSON.stringify(data)), {
+      key: PROGRESS_KEY,
+      data: overrides,
+    });
+  } else {
+    await seedProgress(page, overrides);
+  }
+  await loadSeededSave(page);
+}
+
 // page.reload() re-runs module scope, so `showMainMenu` resets *and* the title re-arms — a reload
 // lands back at the very top of the app, not in the game. Eight specs walked those steps by hand,
 // and all eight missed the title the day it shipped. This is that walk, written once.

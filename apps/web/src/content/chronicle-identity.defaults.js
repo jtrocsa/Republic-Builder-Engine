@@ -12,8 +12,11 @@ export const CHRONICLE_IDENTITY_DEFAULTS = {
     nameLabel: "What name should the Archive use?",
     namePlaceholder: "Enter your name",
     nameHelp: "Up to 14 characters. Your name is used in dialogue and on your Codex.",
-    appearanceLabel: "Choose your appearance",
-    appearanceHelp: "Choose the field sprite that feels most like your Chronicler.",
+    // One line, above the control, and it used to be two bracketing it: "Choose your appearance"
+    // over the two portraits and "Choose the field sprite that feels most like your Chronicler."
+    // under them. The same instruction twice, and the second one cost 45px on a screen whose
+    // Confirm button did not fit at 1280x720. See decision log 0126.
+    appearanceLabel: "Choose the Chronicler you will walk the field as.",
     back: "Return to protocol",
     confirm: "Confirm identity",
     selectionHint: "Identity draft saved on this device.",
