@@ -165,6 +165,42 @@ export async function walkToNpc(page, npcId, options = {}) {
 }
 
 /**
+ * Walk to a body and open its dialogue, as **one operation** — because a wanderer does not wait.
+ *
+ * `walkTo` promises exactly this much: the target was in reach at one instant, the frame the game's
+ * own `.is-near` appeared. For a stationed body that promise still holds a round trip later when the
+ * caller presses. For one of the game's **fifteen `kind: "wander"` bodies** it need not, and
+ * `field-talk` re-asks `isNearFieldNpc()` at the click, so the press is refused and the game writes
+ * "Move closer to interact with …" instead of opening a bubble.
+ *
+ * Measured on the Taíno child, who wanders a 1.2-tile disc on the Caribbean beach, over twelve runs
+ * of the same walk: the player arrived between **0.33 and 1.44 tiles** away — every one of them
+ * inside the 1.45 reach, every walk correct — and the child then moved between **0.00 and 0.62 of a
+ * tile** before the press landed. **One run in twelve arrived at 0.99 and pressed at 1.60**, and got
+ * the refusal. That was `activity-engines.spec.js`'s intermittent failure, and no property of the
+ * walk: the walk was fine and the interval after it was not.
+ *
+ * There is nothing to do about a body allowed to walk away except close again, so the walk and the
+ * press are one operation and it is retried. **Only the game can say whether a press landed**, and
+ * the bubble is that answer — which is why this waits for the bubble rather than re-deriving the
+ * reach. Use it for a `wander` body; a stationed one does not need it and converting those would be
+ * churn. See decision log `0127` §5.
+ */
+export async function openFieldNpc(page, npcId, { attempts = 4 } = {}) {
+  const bubble = page.locator(".field-speech-bubble");
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (!(await walkToNpc(page, npcId))) return false;
+    await page.locator(`[data-npc="${npcId}"]`).click();
+    const opened = await bubble
+      .waitFor({ state: "visible", timeout: 1500 })
+      .then(() => true)
+      .catch(() => false);
+    if (opened) return true;
+  }
+  return false;
+}
+
+/**
  * The Main Hall / Archive Room equivalent, keyed on a HUB_TARGETS id.
  *
  * Same reason as walkToNpc: the two timed holds this replaced encoded one specific furniture layout
@@ -200,6 +236,70 @@ const ARRIVE_TILES = 0.3;
 // shortest 70ms burst covers at full speed. It is the noise floor the old movement test already
 // used, kept because it was the right number for the wrong question.
 const PROGRESS_TILES = 0.03;
+// **How far off the plan's own row counts as off it** — and it is deliberately not the number above,
+// which is the whole of Phase 128. PROGRESS_TILES answers "did that burst move the body"; this
+// answers "is the body standing on the row the route was drawn along". They were one constant, and
+// the second question got the first one's answer: the offset that wedged the counting-room walk is
+// **0.025 of a tile**, which PROGRESS_TILES calls noise, and the row it was off had **0.02 of a tile
+// of clearance**. One pixel is 1/48 of a tile and positions are written in pixels, so an offset
+// smaller than this is not a difference the game can be asked to act on — below it the body *is* on
+// the row and the block is something else. See decision log `0127`.
+const OFF_ROW_TILES = 1 / 48;
+
+/**
+ * Which axis the next burst is spent on: "horizontal" or "vertical".
+ *
+ * Exported and pure because it is the walker's one non-obvious decision, it has been wrong twice,
+ * and neither time could be reproduced on demand in a browser — the window in Richmond is 0.01 of
+ * a tile wide, which is a sixth of what one rendered frame moves the body, so no amount of load
+ * summons it and no number of green runs rules it out. `tests/unit/walker-square-up.test.js` asks
+ * it both incidents' own measured numbers instead.
+ *
+ * The route's cells sit on the probe's half-tile lattice and the player does not, so a leg
+ * can be walked along a row a quarter-tile off the row the plan cleared — and that row can
+ * be solid. Under load this is not rare: a burst that covers 0.17 tiles instead of 2.5
+ * leaves the body at rest against a wall the plan says is not there, and re-planning from
+ * that spot returns the same route, so it wedges. Measured at six workers, twice, at the
+ * same coordinates: the player stopped at (12.66, 7.25) walking to a waypoint at
+ * (13.00, 7.00), with no NPC within four tiles, and every burst after that moved it 0.00
+ * tiles for the whole replan budget.
+ *
+ * So a stalled burst squares up on the *other* axis, which puts the body back on the row
+ * the plan actually cleared. The threshold is not ARRIVE_TILES: the offset that wedged the
+ * walk Phase 119 measured was 0.25 of a tile, which ARRIVE_TILES calls arrived. A quarter
+ * tile is nothing to a route and is the whole difference to a foot box.
+ *
+ * **And it is not PROGRESS_TILES either, which is what Phase 128 fixed.** That gate read
+ * `> PROGRESS_TILES`, so an offset the noise floor calls noise disqualified the escape — and
+ * the offset that wedges a walk can be far smaller than the offset that moves one. Measured
+ * in Richmond's counting room, three failures resting at the identical coordinate: the route
+ * west past Nathan Purcell runs along lattice row y = 10.0, where the player's foot box
+ * clears his blocking box by **0.02 of a tile, one pixel**; the vertical leg into that row
+ * falls short under load and ends at y = 10.025, which `ARRIVE_TILES` calls arrived; 0.005
+ * of a tile of overlap then stops the body dead at x = 5.260 every time. The cross-axis
+ * offset is 0.025 and the gate wanted more than 0.03, so the walker pressed the same blocked
+ * key until it ran out of stalls and re-planned onto the same wedge. The hatch was there and
+ * six thousandths of a tile disqualified it.
+ *
+ * **And Richmond is not a special room.** `npcFootBox()` puts a body's blocking edge 0.2 of a tile
+ * below its anchor, and this game posts people on `.6` offsets, so a person standing at y = k.6
+ * seals the lattice row at y = k for anybody whose foot box reaches k + 0.78 — 0.02 of a tile of
+ * daylight. A sweep of the committed geometry finds **eleven bodies** doing that across the
+ * eighteen field surfaces, and every single one of them is posted at `.6`. Ten of them stand where
+ * a route has somewhere else to go. Nathan Purcell stands in the only aisle to the book-keeper.
+ * Which is why this is fixed here and not by moving anybody: the `.6` posting is how a body is
+ * lined up with its own feet, and the one-tile aisle is how these rooms are drawn.
+ *
+ * This is not the greedy steering Phase 94 removed. The route is still the plan and is
+ * still walked corner to corner; this is only how one leg is walked when the body is off
+ * the lattice the corners were drawn on.
+ */
+export function burstAxis(stalls, dx, dy) {
+  const wider = Math.abs(dx) >= Math.abs(dy);
+  const squareUp = stalls % 2 === 1 && Math.abs(wider ? dy : dx) > OFF_ROW_TILES;
+  const horizontal = squareUp ? !wider : wider;
+  return horizontal ? "horizontal" : "vertical";
+}
 
 /**
  * Shared body of the walkers above. It reads the room's walls out of the running game and walks a
@@ -347,28 +447,7 @@ export async function walkTo(
         const wider = Math.abs(dx) >= Math.abs(dy);
         if (Math.abs(wider ? dx : dy) <= ARRIVE_TILES) break;
 
-        // **Which axis this burst is spent on, and why it is not always the leg's own.**
-        //
-        // The route's cells sit on the probe's half-tile lattice and the player does not, so a leg
-        // can be walked along a row a quarter-tile off the row the plan cleared — and that row can
-        // be solid. Under load this is not rare: a burst that covers 0.17 tiles instead of 2.5
-        // leaves the body at rest against a wall the plan says is not there, and re-planning from
-        // that spot returns the same route, so it wedges. Measured at six workers, twice, at the
-        // same coordinates: the player stopped at (12.66, 7.25) walking to a waypoint at
-        // (13.00, 7.00), with no NPC within four tiles, and every burst after that moved it 0.00
-        // tiles for the whole replan budget.
-        //
-        // So a stalled burst squares up on the *other* axis, which puts the body back on the row
-        // the plan actually cleared. The threshold for "worth squaring up" is PROGRESS_TILES and
-        // deliberately not ARRIVE_TILES: the offset that wedged the walk was 0.25 of a tile, which
-        // ARRIVE_TILES calls arrived. A quarter tile is nothing to a route and is the whole
-        // difference to a foot box.
-        //
-        // This is not the greedy steering Phase 94 removed. The route is still the plan and is
-        // still walked corner to corner; this is only how one leg is walked when the body is off
-        // the lattice the corners were drawn on.
-        const squareUp = stalls % 2 === 1 && Math.abs(wider ? dy : dx) > PROGRESS_TILES;
-        const horizontal = squareUp ? !wider : wider;
+        const horizontal = burstAxis(stalls, dx, dy) === "horizontal";
         const delta = horizontal ? dx : dy;
         const key = horizontal
           ? delta > 0

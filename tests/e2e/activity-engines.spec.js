@@ -20,6 +20,7 @@ import { expect, test } from "@playwright/test";
 import {
   briefed,
   loadSeededSave,
+  openFieldNpc,
   readProgress,
   seedProgress,
   walkToNpc,
@@ -92,11 +93,12 @@ test.describe("INTERVIEW, out on the map", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    expect(await walkToNpc(page, "taino-child")).toBe(true);
-    await page.locator('[data-npc="taino-child"]').click();
+    expect(
+      await openFieldNpc(page, "taino-child"),
+      "the child is reachable and answers the press"
+    ).toBe(true);
 
     const bubble = page.locator(".field-speech-bubble");
-    await expect(bubble).toBeVisible();
     // His own standing line stays above the chips — it is what tells a player he is worth asking.
     await expect(bubble).toContainText("Nobody asks me what grows here");
     await expect(bubble.locator(".field-interview__q")).toHaveCount(4);
@@ -243,9 +245,10 @@ test.describe("INTERVIEW, out on the map", () => {
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    expect(await walkToNpc(page, "taino-child")).toBe(true);
-    await page.locator('[data-npc="taino-child"]').click();
-    await expect(page.locator(".field-speech-bubble")).toBeVisible();
+    expect(
+      await openFieldNpc(page, "taino-child"),
+      "the child is reachable and answers the press"
+    ).toBe(true);
     await expect(page.locator(".field-interview__q")).toHaveCount(0);
   });
 
@@ -263,9 +266,10 @@ test.describe("INTERVIEW, out on the map", () => {
 
     // The first playtest found Columbus still holding out four question chips long after the
     // record they belonged to had been closed.
-    expect(await walkToNpc(page, "taino-child")).toBe(true);
-    await page.locator('[data-npc="taino-child"]').click();
-    await expect(page.locator(".field-speech-bubble")).toBeVisible();
+    expect(
+      await openFieldNpc(page, "taino-child"),
+      "the child is reachable and answers the press"
+    ).toBe(true);
     await expect(page.locator(".field-interview__q")).toHaveCount(0);
 
     // And the notebook is still reachable, which is the other half of the same change: the
