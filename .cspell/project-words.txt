@@ -386,6 +386,7 @@ noreferrer
 nums
 obergefell
 objectgroup
+opsz
 osullivan
 overwritable
 oxipng
@@ -510,6 +511,7 @@ viewbox
 vigas
 waldseemuller
 waterskins
+wght
 webp
 wilsons
 wordmark

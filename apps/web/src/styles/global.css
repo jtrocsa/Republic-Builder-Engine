@@ -1,4 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Spectral:ital,wght@0,400;0,600;0,700;1,600&display=swap");
+/* Every tuple carries a value for **every** axis named before the @, and that is the whole of
+   this line. `DM+Sans:opsz,wght@9..40,400;500;600;700` names two axes and then supplies one pair
+   and three loose numbers, so Google Fonts answers **400 Bad Request** — and because the three
+   families are asked for in one request, that one malformed family took Cinzel and Spectral down
+   with it. The 400 comes back as `text/html`, which Chromium refuses cross-origin, so the only
+   trace was `net::ERR_BLOCKED_BY_ORB` in a console nobody was reading. Shipped in the second
+   commit of the project and never once corrected, so until now the whole game has drawn in
+   `serif`, `system-ui` and `sans-serif`. See decision log `0128`. */
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Spectral:ital,wght@0,400;0,600;0,700;1,600&display=swap");
 
 /* ============================================================
    Chronicle Design System — tokens (Phase 44)
@@ -5741,9 +5749,23 @@ dd {
 .case-field .back-link {
   color: #f0cf7a;
 }
-/* Give the actual table map more visual authority without crowding laptop layouts. */
+/* Give the actual table map more visual authority without crowding laptop layouts.
+
+   **The left floor is 275 and not 220 because the display face now actually renders** (Phase 129,
+   decision log `0128`). Two things in that column are decided by its width, and both fell over
+   between 230 and 275 the moment Cinzel and DM Sans started arriving: "Select a marker to read its
+   route." wants **241px** on one line, and three period pills with their gaps want **271px**. At
+   230 the sentence took two lines and the strip took four rows instead of three — **+41px** on the
+   one screen whose own guard says in as many words that it must not grow a scrollbar, and it grew
+   one exactly that tall at 1280x720.
+
+   Paid for out of the map, which gives up 25px and keeps 679 against its 590 floor, rather than out
+   of the pill: `.unit-tab`'s 14px of side padding is load-bearing for the archived tick, which sits
+   inside it (see `.unit-tab.is-archived` below), and tightening it to 10 to buy the same three rows
+   left the tick 5px from the label. **This is the third declaration of this grid in the file and it
+   is the one that wins** — restyle here; do not append a fourth. */
 .archive-layout {
-  grid-template-columns: minmax(220px, 0.58fr) minmax(590px, 1.7fr) minmax(250px, 0.62fr);
+  grid-template-columns: minmax(275px, 0.58fr) minmax(590px, 1.7fr) minmax(250px, 0.62fr);
 }
 .atlas-table {
   min-height: 430px;
