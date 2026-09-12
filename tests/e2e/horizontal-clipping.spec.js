@@ -94,6 +94,52 @@ function clippedContent(page) {
   });
 }
 
+/**
+ * And the same silence one level in: **a box does not cut off its own contents either.**
+ *
+ * `clippedContent()` above asks whether a box is too wide for the nearest ancestor that clips. This
+ * asks whether the *content* is too big for the box it is already in — an element that clips its own
+ * overflow and whose `scrollWidth`/`scrollHeight` exceeds what it shows. The failure is the same one
+ * this file was written about, with the same three properties: no scrollbar, no ellipsis, and a
+ * result that looks exactly like a panel someone designed that way. A fixed-height box whose text
+ * grew is the ordinary cause, which is why it is worth asking here rather than only about width —
+ * Phase 129 moved every text metric in the game at once when the three faces began to load, and
+ * `intro-sequence.spec.js` guards exactly one such box (the Director's) out of all of them.
+ *
+ * Two exclusions beyond this file's existing ones. **A deliberate truncation announces itself**:
+ * `text-overflow: ellipsis` draws the ellipsis that says there is more, so it is a design decision
+ * rather than a silent cut. And **the screen-reader pattern is a clipped box on purpose** — a
+ * `.visually-hidden` span is a 1x1 box holding text nobody is meant to see, so it overflows itself
+ * by definition; it is excluded by its size rather than by its class name, because what disqualifies
+ * it is being too small to show a glyph at all, not what it happens to be called.
+ */
+function truncatedText(page) {
+  return page.evaluate(() => {
+    const cut = [];
+    for (const el of document.querySelectorAll("main *")) {
+      if (!(el.textContent || "").trim()) continue;
+      if (el.closest(".field-viewport, .institute-map, #archiveRoomMap, svg")) continue;
+      // Too small to show a glyph: the screen-reader pattern, whose whole job is to be clipped.
+      if (el.clientWidth <= 4 || el.clientHeight <= 4) continue;
+
+      const style = window.getComputedStyle(el);
+      if (style.textOverflow === "ellipsis") continue;
+
+      const clipsY = style.overflowY === "hidden" || style.overflowY === "clip";
+      const clipsX = style.overflowX === "hidden" || style.overflowX === "clip";
+      const overY = clipsY ? el.scrollHeight - el.clientHeight : 0;
+      const overX = clipsX ? el.scrollWidth - el.clientWidth : 0;
+      if (overY <= 1 && overX <= 1) continue;
+
+      const name = (el.className || "").toString().split(" ")[0] || el.tagName.toLowerCase();
+      cut.push(
+        `${name} cuts its own text by ${[overY > 1 ? `${overY}px tall` : null, overX > 1 ? `${overX}px wide` : null].filter(Boolean).join(" and ")}`
+      );
+    }
+    return [...new Set(cut)];
+  });
+}
+
 test.describe("Nothing is cut off the side of the screen", () => {
   for (const [width, height] of SIZES) {
     for (const [name, seed] of SCREENS) {
@@ -114,6 +160,9 @@ test.describe("Nothing is cut off the side of the screen", () => {
         ).toBeGreaterThan(10);
 
         expect(await clippedContent(page), `${name} at ${width}px`).toEqual([]);
+
+        // The same cut, one level in: a box that clips its own contents.
+        expect(await truncatedText(page), `${name} at ${width}px cuts no text`).toEqual([]);
 
         // And the page itself does not answer a too-wide layout with a sideways scrollbar, which is
         // the other way this can go and is no better on a screen a student plays on.
