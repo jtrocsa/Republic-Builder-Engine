@@ -5,8 +5,16 @@
    with it. The 400 comes back as `text/html`, which Chromium refuses cross-origin, so the only
    trace was `net::ERR_BLOCKED_BY_ORB` in a console nobody was reading. Shipped in the second
    commit of the project and never once corrected, so until now the whole game has drawn in
-   `serif`, `system-ui` and `sans-serif`. See decision log `0128`. */
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Spectral:ital,wght@0,400;0,600;0,700;1,600&display=swap");
+   `serif`, `system-ui` and `sans-serif`. See decision log `0128`.
+
+   **There are four families on this line now and the blast radius grew with it** (Phase 130,
+   decision log `0129`). EB Garamond joined for `.quest-prompt` — the face every question stem in
+   the game is read in. One malformed term still takes down all four, so **verify this URL with
+   `curl` before committing a change to it**; a 200 is the only proof, because the failure is
+   invisible in the browser and a passing visual suite will photograph whatever it gets. Family
+   order is alphabetical by convention only — both orders were measured at 200, so order is not
+   what the API is strict about. Tuples are. */
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=EB+Garamond:wght@400..600&family=Spectral:ital,wght@0,400;0,600;0,700;1,600&display=swap");
 
 /* ============================================================
    Chronicle Design System — tokens (Phase 44)
@@ -127,10 +135,24 @@
   --c-font-display: "Spectral", serif;
   --c-font-label: "Cinzel", serif;
   --c-font-ui: "DM Sans", system-ui, sans-serif;
+  /* The face a question is read in, and the only role that is about reading rather than about
+     chrome (Phase 130, decision log `0129`). Cinzel is the *label* face — 44 of its 48 sized uses
+     in this file are under 0.9rem, on eyebrows, pills and buttons — and `.quest-prompt` had it
+     hard-coded at 1.05rem, so every AP stem in the game was set in small capitals. An old-style
+     serif is the opposite specialism: it is drawn for continuous reading, and it is the right
+     period for a history game. **It carries its own size**, because Garamond's x-height is small
+     and a straight swap reads a size down — see `--c-text-prompt`. */
+  --c-font-prompt: "EB Garamond", Garamond, serif;
   --c-text-display: clamp(2.5rem, 4.2vw, 4.8rem);
   --c-text-page: clamp(1.9rem, 2.6vw, 2.6rem);
   --c-text-section: 1.2rem;
   --c-text-body: 1rem;
+  /* Paired with `--c-font-prompt` and measured against the face it replaces, not guessed: the
+     stem "The Library of Congress exhibition text on Taíno society is best classified as which
+     kind of record?" sets **703px** in Cinzel at 1.05rem and **666px** in EB Garamond at the same
+     size — 5% narrower, which is the small x-height showing. 1.15rem brings it to **730px**, which
+     is the same apparent size and still one line in the stem column. Change the two together. */
+  --c-text-prompt: 1.15rem;
   --c-text-meta: 0.85rem;
   --c-text-label: 0.72rem;
   --c-text-micro: 0.68rem;
@@ -6930,10 +6952,16 @@ dd {
   padding-bottom: 0;
   border-bottom: 0;
 }
+/* Every question stem in the game — all five quest renderers put their `quest.prompt` in this
+   element, and so does the sealed archive-challenge record. It is the one place a student has to
+   read closely, so it takes the reading face rather than the label face; see `--c-font-prompt`.
+   Weight is stated rather than inherited: a `<p>` would take 400, and the stem is gold on navy,
+   where an old-style serif's thin strokes want the extra half-step. */
 .quest-prompt {
-  font-family: "Cinzel", serif;
+  font-family: var(--c-font-prompt);
+  font-weight: 500;
   color: #ffdf91;
-  font-size: 1.05rem;
+  font-size: var(--c-text-prompt);
   line-height: 1.5;
   margin: 0 0 14px;
 }
