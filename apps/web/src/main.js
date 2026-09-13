@@ -9394,6 +9394,303 @@ export function reorderAuthoringRow(rows, index, direction) {
   return next;
 }
 
+/**
+ * The row edits behind Manage Content's add/remove buttons, as pure functions on `fields`.
+ *
+ * These were eleven inline bodies in handleManageContentClick(), each opening with the same four
+ * lines — sync from the DOM, mutate, reassign `manageContentAuthoring`, render — with a hard-coded
+ * quest-kind literal that had to match the form the branch edited, and nothing checking that it did.
+ *
+ * **The skeleton was the duplication; the bodies were not.** Every one of these carries a real
+ * authoring rule — a floor or a ceiling on how many rows there may be, and in three cases a repair
+ * that keeps the rest of the form consistent afterwards:
+ *
+ *   - removing the correct MCQ choice promotes the first remaining one, so a question is never
+ *     left with no right answer;
+ *   - removing a sequencing item renumbers every `position` 0..n-1, because the positions are the
+ *     answer key and a gap in them is a broken quest;
+ *   - removing an evidence slot repoints every source filed under it at the first remaining slot,
+ *     because `correctSlotId` is matched by slug and an orphan matches nothing.
+ *
+ * **None of that was tested.** Pulling them out is what makes the dispatch table below safe: the
+ * rules are asserted in tests/unit/manage-content-row-edits.test.js, and the kind literal now sits
+ * in the same table row as the edit it belongs to instead of being repeated by hand.
+ *
+ * Each takes and returns `fields` so the table can treat them uniformly, and each copies the
+ * collection it changes rather than splicing in place.
+ */
+
+/** An MCQ needs at least two choices, and exactly one of them has to be the answer. */
+export function addMcqChoice(fields) {
+  return { ...fields, choices: [...fields.choices, { text: "", correct: false }] };
+}
+export function removeMcqChoice(fields, index) {
+  if (fields.choices.length <= 2) return fields;
+  const removedWasCorrect = fields.choices[index].correct;
+  const choices = fields.choices.filter((_, i) => i !== index);
+  // Promote the first remaining choice rather than leaving the question unanswerable.
+  if (removedWasCorrect && !choices.some((c) => c.correct))
+    choices[0] = { ...choices[0], correct: true };
+  return { ...fields, choices };
+}
+export function moveMcqChoice(fields, rowIndex, direction) {
+  return { ...fields, choices: reorderAuthoringRow(fields.choices, rowIndex, direction) };
+}
+
+/** A sequencing item's `position` is the answer key, so a removal has to close the gap. */
+export function addSequenceItem(fields) {
+  return { ...fields, items: [...fields.items, { label: "", position: fields.items.length }] };
+}
+export function removeSequenceItem(fields, index) {
+  if (fields.items.length <= 2) return fields;
+  const items = fields.items
+    .filter((_, i) => i !== index)
+    .sort((a, b) => a.position - b.position)
+    .map((item, i) => ({ ...item, position: i }));
+  return { ...fields, items };
+}
+
+/** A source's `correctSlotId` is a slot label's slug, so a removed slot orphans its sources. */
+export function addEvidenceSlot(fields) {
+  return { ...fields, slots: [...fields.slots, { label: "" }] };
+}
+export function removeEvidenceSlot(fields, index) {
+  if (fields.slots.length <= 2) return fields;
+  const removedSlotId = slugify(fields.slots[index].label);
+  const slots = fields.slots.filter((_, i) => i !== index);
+  const fallbackSlotId = slugify(slots[0].label);
+  const sources = fields.sources.map((source) =>
+    source.correctSlotId === removedSlotId ? { ...source, correctSlotId: fallbackSlotId } : source
+  );
+  return { ...fields, slots, sources };
+}
+export function addEvidenceSource(fields) {
+  return {
+    ...fields,
+    sources: [
+      ...fields.sources,
+      {
+        label: "",
+        attribution: "",
+        excerpt: "",
+        skillCategory: SKILL_CATEGORIES[0],
+        correctSlotId: fields.slots[0] ? slugify(fields.slots[0].label) : "",
+        sourcePoolValue: "",
+      },
+    ],
+  };
+}
+export function removeEvidenceSource(fields, index) {
+  if (fields.sources.length <= 1) return fields;
+  return { ...fields, sources: fields.sources.filter((_, i) => i !== index) };
+}
+
+/** HIPP: at most two prompts, and each prompt keeps between three and six options. */
+export function addHippPrompt(fields) {
+  if (fields.hippPrompts.length >= 2) return fields;
+  return {
+    ...fields,
+    hippPrompts: [
+      ...fields.hippPrompts,
+      {
+        dimension: HIPP_DIMENSIONS[0],
+        argument: "",
+        options: [
+          { text: "", correct: true, identificationOnly: false },
+          { text: "", correct: false, identificationOnly: true },
+          { text: "", correct: false, identificationOnly: false },
+        ],
+      },
+    ],
+  };
+}
+export function removeHippPrompt(fields, index) {
+  if (fields.hippPrompts.length <= 1) return fields;
+  return { ...fields, hippPrompts: fields.hippPrompts.filter((_, i) => i !== index) };
+}
+const withPromptOptions = (fields, promptIndex, options) => ({
+  ...fields,
+  hippPrompts: fields.hippPrompts.map((prompt, i) =>
+    i === promptIndex ? { ...prompt, options } : prompt
+  ),
+});
+export function addHippOption(fields, promptIndex) {
+  const options = fields.hippPrompts[promptIndex].options;
+  if (options.length >= 6) return fields;
+  return withPromptOptions(fields, promptIndex, [
+    ...options,
+    { text: "", correct: false, identificationOnly: false },
+  ]);
+}
+export function removeHippOption(fields, promptIndex, optionIndex) {
+  const options = fields.hippPrompts[promptIndex].options;
+  if (options.length <= 3) return fields;
+  return withPromptOptions(
+    fields,
+    promptIndex,
+    options.filter((_, i) => i !== optionIndex)
+  );
+}
+export function moveHippOption(fields, promptIndex, rowIndex, direction) {
+  return withPromptOptions(
+    fields,
+    promptIndex,
+    reorderAuthoringRow(fields.hippPrompts[promptIndex].options, rowIndex, direction)
+  );
+}
+
+/**
+ * action -> [the quest kind whose form it edits, the edit].
+ *
+ * The kind and the edit are one row here, which is the whole point: they used to be a literal and a
+ * body written out eleven times, and keeping them in step was somebody's memory. `data` is the
+ * clicked element's dataset, so an edit needing a row index reads it by name.
+ */
+export const AUTHORING_ROW_EDITS = {
+  "add-mcq-choice": ["mcq", (fields) => addMcqChoice(fields)],
+  "remove-mcq-choice": ["mcq", (fields, data) => removeMcqChoice(fields, Number(data.rowIndex))],
+  "move-mcq-choice": [
+    "mcq",
+    (fields, data) => moveMcqChoice(fields, Number(data.rowIndex), Number(data.direction)),
+  ],
+  "add-sequence-item": ["sequencing", (fields) => addSequenceItem(fields)],
+  "remove-sequence-item": [
+    "sequencing",
+    (fields, data) => removeSequenceItem(fields, Number(data.rowIndex)),
+  ],
+  "add-evidence-slot": ["evidence-organizing", (fields) => addEvidenceSlot(fields)],
+  "remove-evidence-slot": [
+    "evidence-organizing",
+    (fields, data) => removeEvidenceSlot(fields, Number(data.rowIndex)),
+  ],
+  "add-evidence-source": ["evidence-organizing", (fields) => addEvidenceSource(fields)],
+  "remove-evidence-source": [
+    "evidence-organizing",
+    (fields, data) => removeEvidenceSource(fields, Number(data.rowIndex)),
+  ],
+  "add-hipp-prompt": ["hipp", (fields) => addHippPrompt(fields)],
+  "remove-hipp-prompt": ["hipp", (fields, data) => removeHippPrompt(fields, Number(data.rowIndex))],
+  "add-hipp-option": ["hipp", (fields, data) => addHippOption(fields, Number(data.promptIndex))],
+  "remove-hipp-option": [
+    "hipp",
+    (fields, data) => removeHippOption(fields, Number(data.promptIndex), Number(data.rowIndex)),
+  ],
+  "move-hipp-option": [
+    "hipp",
+    (fields, data) =>
+      moveHippOption(
+        fields,
+        Number(data.promptIndex),
+        Number(data.rowIndex),
+        Number(data.direction)
+      ),
+  ],
+};
+
+/**
+ * "Select source" on an authoring form: which fields a picked pool source copies into, per quest
+ * type, as pure functions.
+ *
+ * A one-time copy-in, not a persistent link — see poolSourcesForCopy()'s doc comment. The fields
+ * stay freely editable afterwards, and confirmSourceChangeIfNeeded() guards the write so a teacher
+ * who has already edited the excerpt is asked before it is replaced.
+ *
+ * Four branches of handleAppChange() carried this, each repeating the same ten-line skeleton —
+ * resolve the pick, find the form, sync it, read the old pool value, confirm, assign, clear the
+ * text tools, render — around three or four lines that differ. As with AUTHORING_ROW_EDITS above,
+ * the skeleton was the duplication and the middle was not:
+ *
+ *   - **hipp** writes the document itself (`documentText`/`documentAttribution`) and prefers the
+ *     source's real transcribed `fullText` over the short `excerpt` when one exists — it is the only
+ *     one that does, because HIPP asks a student to read the document rather than cite it;
+ *   - **evidence-organizing** is row-indexed: each of its sources is a row, so everything here is
+ *     keyed by that row rather than by the form;
+ *   - **mcq** and **sequencing** are genuinely the same write against two different forms.
+ *
+ * `toolKey` is the key under which manageContentAuthoring.textTools caches that field's text-tool
+ * state; it is cleared on a copy-in because the cached state describes text that has just been
+ * replaced. For evidence it is per row, which is why it is a function.
+ */
+export function applyPickedHippSource(fields, picked) {
+  return {
+    ...fields,
+    documentText: picked.fullText || picked.excerpt,
+    documentAttribution: picked.attribution,
+  };
+}
+export function applyPickedRelatedSource(fields, picked) {
+  return {
+    ...fields,
+    relatedSourceLabel: picked.label,
+    relatedSourceAttribution: picked.attribution,
+    relatedSourceExcerpt: picked.excerpt,
+  };
+}
+export function applyPickedEvidenceSource(fields, picked, rowIndex) {
+  return {
+    ...fields,
+    sources: fields.sources.map((source, i) =>
+      i === rowIndex
+        ? {
+            ...source,
+            label: picked.label,
+            attribution: picked.attribution,
+            excerpt: picked.excerpt,
+          }
+        : source
+    ),
+  };
+}
+
+/**
+ * attribute -> how that form copies a picked source in.
+ *
+ * `kind` is the form whose rows get synced out of the DOM, and it has to match the form that renders
+ * the <select> — the same hazard AUTHORING_ROW_EDITS closes, guarded the same way in
+ * tests/unit/manage-content-row-edits.test.js.
+ */
+export const SOURCE_PICKER_TARGETS = {
+  "data-copy-hipp-source": {
+    kind: "hipp",
+    toolKey: () => "hipp",
+    oldPoolValue: (authored) => authored.fields.hippSourcePoolValue,
+    // The text a copy-in would overwrite, which is what the confirm prompt is about.
+    currentText: (fields) => fields.documentText,
+    apply: applyPickedHippSource,
+  },
+  "data-copy-evidence-source": {
+    kind: "evidence-organizing",
+    toolKey: (data) => `evidence-${Number(data.rowIndex)}`,
+    oldPoolValue: (authored, data) =>
+      authored.fields.sources[Number(data.rowIndex)]?.sourcePoolValue,
+    currentText: (fields, data) => fields.sources[Number(data.rowIndex)].excerpt,
+    apply: (fields, picked, data) =>
+      applyPickedEvidenceSource(fields, picked, Number(data.rowIndex)),
+  },
+  "data-copy-mcq-source": {
+    kind: "mcq",
+    toolKey: () => "mcq",
+    oldPoolValue: (authored) => authored.fields.mcqSourcePoolValue,
+    currentText: (fields) => fields.relatedSourceExcerpt,
+    apply: applyPickedRelatedSource,
+  },
+  "data-copy-sequencing-source": {
+    kind: "sequencing",
+    toolKey: () => "sequencing",
+    oldPoolValue: (authored) => authored.fields.sequencingSourcePoolValue,
+    currentText: (fields) => fields.relatedSourceExcerpt,
+    apply: applyPickedRelatedSource,
+  },
+};
+
+/** The SOURCE_PICKER_TARGETS entry for a changed <select>, or undefined if it is not one. */
+function sourcePickerTargetFor(field) {
+  for (const [attribute, target] of Object.entries(SOURCE_PICKER_TARGETS)) {
+    if (field.matches(`[${attribute}]`)) return target;
+  }
+  return undefined;
+}
+
 // Validates the open authoring form's current fields and persists them as
 // this slot's draft selection (a new or reused custom_content_items
 // "replacement" row, then setDraftSelection pointing the slot at it) —
@@ -10311,160 +10608,14 @@ function handleManageContentClick(target, action) {
     }
     return true;
   }
-  if (action === "add-mcq-choice") {
-    const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
-    fields.choices.push({ text: "", correct: false });
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-mcq-choice") {
-    const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
-    const index = Number(target.dataset.rowIndex);
-    if (fields.choices.length > 2) {
-      const removedWasCorrect = fields.choices[index].correct;
-      fields.choices.splice(index, 1);
-      if (removedWasCorrect && !fields.choices.some((c) => c.correct))
-        fields.choices[0].correct = true;
-    }
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "move-mcq-choice") {
-    const fields = syncAuthoringFieldsFromDom("mcq", currentAuthoringFormEl());
-    fields.choices = reorderAuthoringRow(
-      fields.choices,
-      Number(target.dataset.rowIndex),
-      Number(target.dataset.direction)
-    );
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "add-sequence-item") {
-    const fields = syncAuthoringFieldsFromDom("sequencing", currentAuthoringFormEl());
-    fields.items.push({ label: "", position: fields.items.length });
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-sequence-item") {
-    const fields = syncAuthoringFieldsFromDom("sequencing", currentAuthoringFormEl());
-    const index = Number(target.dataset.rowIndex);
-    if (fields.items.length > 2) {
-      fields.items.splice(index, 1);
-      fields.items = fields.items
-        .sort((a, b) => a.position - b.position)
-        .map((item, i) => ({ ...item, position: i }));
-    }
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "add-evidence-slot") {
-    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
-    fields.slots.push({ label: "" });
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-evidence-slot") {
-    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
-    const index = Number(target.dataset.rowIndex);
-    if (fields.slots.length > 2) {
-      const removedSlotId = slugify(fields.slots[index].label);
-      fields.slots.splice(index, 1);
-      const fallbackSlotId = slugify(fields.slots[0].label);
-      fields.sources = fields.sources.map((source) =>
-        source.correctSlotId === removedSlotId
-          ? { ...source, correctSlotId: fallbackSlotId }
-          : source
-      );
-    }
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "add-evidence-source") {
-    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
-    fields.sources.push({
-      label: "",
-      attribution: "",
-      excerpt: "",
-      skillCategory: SKILL_CATEGORIES[0],
-      correctSlotId: fields.slots[0] ? slugify(fields.slots[0].label) : "",
-      sourcePoolValue: "",
-    });
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-evidence-source") {
-    const fields = syncAuthoringFieldsFromDom("evidence-organizing", currentAuthoringFormEl());
-    const index = Number(target.dataset.rowIndex);
-    if (fields.sources.length > 1) fields.sources.splice(index, 1);
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "add-hipp-prompt") {
-    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
-    if (fields.hippPrompts.length < 2) {
-      fields.hippPrompts.push({
-        dimension: HIPP_DIMENSIONS[0],
-        argument: "",
-        options: [
-          { text: "", correct: true, identificationOnly: false },
-          { text: "", correct: false, identificationOnly: true },
-          { text: "", correct: false, identificationOnly: false },
-        ],
-      });
-    }
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-hipp-prompt") {
-    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
-    const index = Number(target.dataset.rowIndex);
-    if (fields.hippPrompts.length > 1) fields.hippPrompts.splice(index, 1);
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "add-hipp-option") {
-    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
-    const promptIndex = Number(target.dataset.promptIndex);
-    if (fields.hippPrompts[promptIndex].options.length < 6) {
-      fields.hippPrompts[promptIndex].options.push({
-        text: "",
-        correct: false,
-        identificationOnly: false,
-      });
-    }
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "remove-hipp-option") {
-    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
-    const promptIndex = Number(target.dataset.promptIndex);
-    const optionIndex = Number(target.dataset.rowIndex);
-    const options = fields.hippPrompts[promptIndex].options;
-    if (options.length > 3) options.splice(optionIndex, 1);
-    manageContentAuthoring = { ...manageContentAuthoring, fields };
-    render();
-    return true;
-  }
-  if (action === "move-hipp-option") {
-    const fields = syncAuthoringFieldsFromDom("hipp", currentAuthoringFormEl());
-    const promptIndex = Number(target.dataset.promptIndex);
-    fields.hippPrompts[promptIndex].options = reorderAuthoringRow(
-      fields.hippPrompts[promptIndex].options,
-      Number(target.dataset.rowIndex),
-      Number(target.dataset.direction)
-    );
+  // The fourteen add/remove/move buttons on the authoring forms, dispatched from one table.
+  // Each was its own branch opening with these same four lines and a hard-coded quest kind; the
+  // kind now travels with its edit in AUTHORING_ROW_EDITS, and the edits themselves are pure and
+  // tested (tests/unit/manage-content-row-edits.test.js). See that table's comment.
+  const rowEdit = AUTHORING_ROW_EDITS[action];
+  if (rowEdit) {
+    const [kind, edit] = rowEdit;
+    const fields = edit(syncAuthoringFieldsFromDom(kind, currentAuthoringFormEl()), target.dataset);
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
     return true;
@@ -17061,94 +17212,30 @@ async function handleAppChange(event) {
     fields.items = reorderSequenceItems(fields.items, rowIndex, targetPosition);
     manageContentAuthoring = { ...manageContentAuthoring, fields };
     render();
-  } else if (field.matches("[data-copy-hipp-source]")) {
-    // One-time copy-in, not a persistent link — see poolSourcesForCopy()'s
-    // doc comment. Fields stay freely editable after this fires. Prefers
-    // the source's real transcribed fullText over the short excerpt when
-    // one exists — see resolvePoolSourceFields()'s doc comment. Guarded by
-    // confirmSourceChangeIfNeeded() so a customized excerpt isn't silently
-    // discarded — see that function's doc comment.
+  } else if (sourcePickerTargetFor(field)) {
+    // The four "Select source" dropdowns, one skeleton. Each used to be its own branch repeating
+    // these ten lines around three that differ; SOURCE_PICKER_TARGETS holds the differences, and
+    // its `kind` is guarded against the form that renders each <select>. A one-time copy-in, not a
+    // persistent link, and confirmSourceChangeIfNeeded() asks before overwriting edited text.
+    const target = sourcePickerTargetFor(field);
     const picked = field.value && resolvePoolSourceFields(field.value);
     if (picked) {
-      const formEl = field.closest("[data-authoring-form]");
-      const fields = syncAuthoringFieldsFromDom("hipp", formEl);
-      const oldPoolValue = manageContentAuthoring.fields.hippSourcePoolValue;
-      confirmSourceChangeIfNeeded(field, "hipp", oldPoolValue, fields.documentText, () => {
-        fields.documentText = picked.fullText || picked.excerpt;
-        fields.documentAttribution = picked.attribution;
-        manageContentAuthoring = {
-          ...manageContentAuthoring,
-          fields,
-          textTools: { ...manageContentAuthoring.textTools, hipp: undefined },
-        };
-        render();
-      });
-    }
-  } else if (field.matches("[data-copy-evidence-source]")) {
-    const picked = field.value && resolvePoolSourceFields(field.value);
-    if (picked) {
-      const formEl = field.closest("[data-authoring-form]");
-      const fields = syncAuthoringFieldsFromDom("evidence-organizing", formEl);
-      const rowIndex = Number(field.dataset.rowIndex);
-      const oldPoolValue = manageContentAuthoring.fields.sources[rowIndex]?.sourcePoolValue;
-      confirmSourceChangeIfNeeded(
-        field,
-        `evidence-${rowIndex}`,
-        oldPoolValue,
-        fields.sources[rowIndex].excerpt,
-        () => {
-          fields.sources[rowIndex] = {
-            ...fields.sources[rowIndex],
-            label: picked.label,
-            attribution: picked.attribution,
-            excerpt: picked.excerpt,
-          };
-          manageContentAuthoring = {
-            ...manageContentAuthoring,
-            fields,
-            textTools: { ...manageContentAuthoring.textTools, [`evidence-${rowIndex}`]: undefined },
-          };
-          render();
-        }
+      const data = field.dataset;
+      const fields = syncAuthoringFieldsFromDom(
+        target.kind,
+        field.closest("[data-authoring-form]")
       );
-    }
-  } else if (field.matches("[data-copy-mcq-source]")) {
-    const picked = field.value && resolvePoolSourceFields(field.value);
-    if (picked) {
-      const formEl = field.closest("[data-authoring-form]");
-      const fields = syncAuthoringFieldsFromDom("mcq", formEl);
-      const oldPoolValue = manageContentAuthoring.fields.mcqSourcePoolValue;
-      confirmSourceChangeIfNeeded(field, "mcq", oldPoolValue, fields.relatedSourceExcerpt, () => {
-        fields.relatedSourceLabel = picked.label;
-        fields.relatedSourceAttribution = picked.attribution;
-        fields.relatedSourceExcerpt = picked.excerpt;
-        manageContentAuthoring = {
-          ...manageContentAuthoring,
-          fields,
-          textTools: { ...manageContentAuthoring.textTools, mcq: undefined },
-        };
-        render();
-      });
-    }
-  } else if (field.matches("[data-copy-sequencing-source]")) {
-    const picked = field.value && resolvePoolSourceFields(field.value);
-    if (picked) {
-      const formEl = field.closest("[data-authoring-form]");
-      const fields = syncAuthoringFieldsFromDom("sequencing", formEl);
-      const oldPoolValue = manageContentAuthoring.fields.sequencingSourcePoolValue;
+      const toolKey = target.toolKey(data);
       confirmSourceChangeIfNeeded(
         field,
-        "sequencing",
-        oldPoolValue,
-        fields.relatedSourceExcerpt,
+        toolKey,
+        target.oldPoolValue(manageContentAuthoring, data),
+        target.currentText(fields, data),
         () => {
-          fields.relatedSourceLabel = picked.label;
-          fields.relatedSourceAttribution = picked.attribution;
-          fields.relatedSourceExcerpt = picked.excerpt;
           manageContentAuthoring = {
             ...manageContentAuthoring,
-            fields,
-            textTools: { ...manageContentAuthoring.textTools, sequencing: undefined },
+            fields: target.apply(fields, picked, data),
+            textTools: { ...manageContentAuthoring.textTools, [toolKey]: undefined },
           };
           render();
         }
