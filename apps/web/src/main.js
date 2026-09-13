@@ -5583,91 +5583,123 @@ const authUiState = {
   signupDraft: null,
   classroomRows: [],
 };
-let teacherUiState = {
-  activeTab: "classrooms",
-  classrooms: [],
-  selectedClassroomId: null,
-  roster: [],
-  submissions: [],
-  newClassroomName: "",
-  lastProvisioned: null,
-  lastReissuedPassword: null,
-  progressByStudent: {},
-  enabledUnitIndex: 0,
-  error: "",
-  pending: false,
-  // Assignments (Phase 50D) — due-date records layered on the existing
-  // submissions/evaluations/manual_grades tables; gradedEvaluationIds is a
-  // flat Set (not per-assignment) since computeAssignmentReport() cross-
-  // references it against teacherUiState.submissions itself. The create-form
-  // fields themselves are read straight from the DOM at click time (see
-  // "create-assignment"), matching new-classroom-name's existing convention
-  // — no controlled-input state needed.
-  assignments: [],
-  gradedEvaluationIds: new Set(),
-  // Sources tab (Teacher Dashboard) — a classroom's curated pool of
-  // candidate sources per unit, lazy-loaded per unit the first time its
-  // accordion section is opened (also loaded from Manage Content's
-  // authoring form — see loadManageContentCaseData()). sourcePoolByUnit:
-  // { [unitNumber]: Map<sourceId, sourceKind> } | undefined (not yet
-  // loaded).
-  sourcePoolByUnit: {},
-  // Unit numbers with a getUnitSourcePool() fetch currently in flight — a
-  // separate Set rather than a 3rd sentinel value inside sourcePoolByUnit,
-  // so every existing `!pool`/`pool === undefined` check there keeps working
-  // unchanged; this only exists to let the Manage Content source selector
-  // show "Loading sources…" instead of the "empty pool" message while a
-  // fetch that might still fill it is still running.
-  sourcePoolLoadingUnits: new Set(),
-  sourcesExpandedUnit: null,
-  // Which pool rows currently have their full source content expanded —
-  // keyed by `${kind}:${id}` since text/visual ids aren't guaranteed unique
-  // against each other.
-  sourcesPreviewKeys: new Set(),
-  // Which previews have "Show Full Text" expanded — same key shape as above.
-  sourcesFullTextKeys: new Set(),
-};
+/**
+ * The Teacher Dashboard's in-memory UI state, and the one function that produces it.
+ *
+ * **A factory, not an object literal, because this shape is written in two places.** Sign-out
+ * rebuilds it from scratch, and for as long as that was a second hand-written literal the two
+ * drifted: the sign-out copy omitted `sourcePoolLoadingUnits`, `sourcesPreviewKeys` and
+ * `sourcesFullTextKeys` — all three `Set`s — so signing out and back in within one page session
+ * left five `.has(...)` calls reading `undefined`, three of them on a render path
+ * (`sourceRowMarkup()`, `sourceSelectorFieldMarkup()`). Opening the Sources tab or Manage Content
+ * then threw, and `render()`'s catch turned the `TypeError` into the generic "Archive display
+ * recovered from a render issue" screen, so the real error never reached anyone.
+ *
+ * That catch is a real safety net and stays. It is also why this class of bug is invisible by
+ * construction, and therefore why the shape is asserted in `tests/unit/ui-state-shapes.test.js`
+ * rather than left to be noticed. **Add a field here and nowhere else.**
+ */
+export function initialTeacherUiState() {
+  return {
+    activeTab: "classrooms",
+    classrooms: [],
+    selectedClassroomId: null,
+    roster: [],
+    submissions: [],
+    newClassroomName: "",
+    lastProvisioned: null,
+    lastReissuedPassword: null,
+    progressByStudent: {},
+    enabledUnitIndex: 0,
+    error: "",
+    pending: false,
+    // Assignments (Phase 50D) — due-date records layered on the existing
+    // submissions/evaluations/manual_grades tables; gradedEvaluationIds is a
+    // flat Set (not per-assignment) since computeAssignmentReport() cross-
+    // references it against teacherUiState.submissions itself. The create-form
+    // fields themselves are read straight from the DOM at click time (see
+    // "create-assignment"), matching new-classroom-name's existing convention
+    // — no controlled-input state needed.
+    assignments: [],
+    gradedEvaluationIds: new Set(),
+    // Sources tab (Teacher Dashboard) — a classroom's curated pool of
+    // candidate sources per unit, lazy-loaded per unit the first time its
+    // accordion section is opened (also loaded from Manage Content's
+    // authoring form — see loadManageContentCaseData()). sourcePoolByUnit:
+    // { [unitNumber]: Map<sourceId, sourceKind> } | undefined (not yet
+    // loaded).
+    sourcePoolByUnit: {},
+    // Unit numbers with a getUnitSourcePool() fetch currently in flight — a
+    // separate Set rather than a 3rd sentinel value inside sourcePoolByUnit,
+    // so every existing `!pool`/`pool === undefined` check there keeps working
+    // unchanged; this only exists to let the Manage Content source selector
+    // show "Loading sources…" instead of the "empty pool" message while a
+    // fetch that might still fill it is still running.
+    sourcePoolLoadingUnits: new Set(),
+    sourcesExpandedUnit: null,
+    // Which pool rows currently have their full source content expanded —
+    // keyed by `${kind}:${id}` since text/visual ids aren't guaranteed unique
+    // against each other.
+    sourcesPreviewKeys: new Set(),
+    // Which previews have "Show Full Text" expanded — same key shape as above.
+    sourcesFullTextKeys: new Set(),
+  };
+}
+let teacherUiState = initialTeacherUiState();
 // Manage Content (Teacher Mode's source/MCQ-quest swap editor) state —
 // separate from teacherUiState since it's a distinct screen family with its
 // own loader/click-handler group, mirroring how gradingUiState is split out.
-let contentUiState = {
-  selectedCaseId: null,
-  // "name" -> "preview" -> "edit"/"replace" -> "published", the guided
-  // per-mission wizard (see manageContentCaseScreen()'s dispatch below) —
-  // only meaningful for non-map cases; reset to "name" whenever a fresh case
-  // is opened ("open-manage-content-case"), left alone across in-place data
-  // reloads (loadManageContentCaseData(), e.g. after Save/Publish) so a
-  // teacher stays on the step they're working in.
-  wizardStep: "name",
-  // The case's one official quest slot (its Archive Challenge) — every
-  // non-map case has at most one, see officialQuestSlotsForCase()'s doc
-  // comment — or null if this case has none yet.
-  // {slotKind, currentSlotKind, officialId, officialLabel, draftAltId,
-  //  draftAltKind, publishedAltId, latestCustomAltId, previewContent}
-  slot: null,
-  error: "",
-  // Plain-language confirmation for an action that just succeeded (e.g.
-  // "Draft saved.") — see feedbackSuccess(). Cleared whenever a new pending
-  // action starts, so it can't linger stale across an unrelated save/publish.
-  successMessage: "",
-  pending: false,
-  // Which kind of async action most recently failed, so the command bar's
-  // status badge can say "Save failed"/"Publish failed" instead of a single
-  // generic error state — set right before persistAuthoringSelection()/
-  // publishCaseSelections() run, cleared on success.
-  lastActionFailed: null,
-  // True once "Save Draft" has succeeded without a publish since — needed
-  // because slot.draftAltId/publishedAltId alone can't always tell: editing
-  // an already-customized slot further reuses its existing custom_content_
-  // items row (see persistAuthoringSelection()'s canReuseExistingCustomRow),
-  // so the row's id — and therefore draftAltId — doesn't change even though
-  // its content just did. This session-local flag is the accurate signal in
-  // that case; reset on a fresh case load (there's no way to recover it from
-  // stored data alone once the editor's closed and reopened, since the data
-  // model only tracks ids, not per-save content history — see
-  // manageContentSlotStatus()'s doc comment).
-  draftSavedSincePublish: false,
-};
+/**
+ * Manage Content's editor state, produced in one place for the same reason as
+ * `initialTeacherUiState()` above — see that comment for the incident.
+ *
+ * This one had drifted further. The sign-out copy dropped `slot`, `successMessage`,
+ * `lastActionFailed` and `draftSavedSincePublish`, and wrote `slots: []` and `additionSlots: []`
+ * in their place — two fields that exist nowhere else in this file and never have. A third
+ * literal, in "open-manage-content-case", was the only one that matched the declaration.
+ * Three shapes for one object.
+ */
+export function initialContentUiState() {
+  return {
+    selectedCaseId: null,
+    // "name" -> "preview" -> "edit"/"replace" -> "published", the guided
+    // per-mission wizard (see manageContentCaseScreen()'s dispatch below) —
+    // only meaningful for non-map cases; reset to "name" whenever a fresh case
+    // is opened ("open-manage-content-case"), left alone across in-place data
+    // reloads (loadManageContentCaseData(), e.g. after Save/Publish) so a
+    // teacher stays on the step they're working in.
+    wizardStep: "name",
+    // The case's one official quest slot (its Archive Challenge) — every
+    // non-map case has at most one, see officialQuestSlotsForCase()'s doc
+    // comment — or null if this case has none yet.
+    // {slotKind, currentSlotKind, officialId, officialLabel, draftAltId,
+    //  draftAltKind, publishedAltId, latestCustomAltId, previewContent}
+    slot: null,
+    error: "",
+    // Plain-language confirmation for an action that just succeeded (e.g.
+    // "Draft saved.") — see feedbackSuccess(). Cleared whenever a new pending
+    // action starts, so it can't linger stale across an unrelated save/publish.
+    successMessage: "",
+    pending: false,
+    // Which kind of async action most recently failed, so the command bar's
+    // status badge can say "Save failed"/"Publish failed" instead of a single
+    // generic error state — set right before persistAuthoringSelection()/
+    // publishCaseSelections() run, cleared on success.
+    lastActionFailed: null,
+    // True once "Save Draft" has succeeded without a publish since — needed
+    // because slot.draftAltId/publishedAltId alone can't always tell: editing
+    // an already-customized slot further reuses its existing custom_content_
+    // items row (see persistAuthoringSelection()'s canReuseExistingCustomRow),
+    // so the row's id — and therefore draftAltId — doesn't change even though
+    // its content just did. This session-local flag is the accurate signal in
+    // that case; reset on a fresh case load (there's no way to recover it from
+    // stored data alone once the editor's closed and reopened, since the data
+    // model only tracks ids, not per-save content history — see
+    // manageContentSlotStatus()'s doc comment).
+    draftSavedSincePublish: false,
+  };
+}
+let contentUiState = initialContentUiState();
 // Which unit's mission list is expanded on the top-level manageContentScreen()
 // accordion — a single id (not a Set) so opening one unit always collapses
 // whichever was previously open. Transient UI state, never persisted.
@@ -9878,16 +9910,8 @@ function handleManageContentClick(target, action) {
     return true;
   }
   if (action === "open-manage-content-case") {
-    contentUiState = {
-      selectedCaseId: target.dataset.caseId,
-      wizardStep: "name",
-      slot: null,
-      error: "",
-      successMessage: "",
-      pending: false,
-      lastActionFailed: null,
-      draftSavedSincePublish: false,
-    };
+    // The factory plus this screen's one override, rather than a third copy of the shape.
+    contentUiState = { ...initialContentUiState(), selectedCaseId: target.dataset.caseId };
     manageContentAuthoring = null;
     previewSession = { active: false, snapshot: null };
     progress.currentScreen = "manage-content-case";
@@ -16822,32 +16846,11 @@ function handleAuthScreenClick(target, action) {
   if (action === "teacher-sign-out") {
     signOut().then(() => {
       currentProfile = null;
-      teacherUiState = {
-        activeTab: "classrooms",
-        classrooms: [],
-        selectedClassroomId: null,
-        roster: [],
-        submissions: [],
-        newClassroomName: "",
-        lastProvisioned: null,
-        lastReissuedPassword: null,
-        progressByStudent: {},
-        enabledUnitIndex: 0,
-        error: "",
-        pending: false,
-        assignments: [],
-        gradedEvaluationIds: new Set(),
-        sourcePoolByUnit: {},
-        sourcesExpandedUnit: null,
-      };
-      contentUiState = {
-        selectedCaseId: null,
-        wizardStep: "name",
-        slots: [],
-        additionSlots: [],
-        error: "",
-        pending: false,
-      };
+      // Both rebuilt from their factories rather than re-listed here. These two were hand-written
+      // literals and had drifted from their declarations — see initialTeacherUiState()'s comment
+      // for what that cost.
+      teacherUiState = initialTeacherUiState();
+      contentUiState = initialContentUiState();
       previewSession = { active: false, snapshot: null };
       authUiState.signupStep = 1;
       authUiState.signupDraft = null;
