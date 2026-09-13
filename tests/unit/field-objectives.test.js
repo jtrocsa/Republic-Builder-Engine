@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // What the field's Mission Tracker says: the checklist row per record (fieldObjectives), and which
 // single mission the block underneath it is about (pickTrackedActivity).
 //

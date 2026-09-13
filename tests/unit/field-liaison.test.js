@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // The Field Liaison, and the two rules about her that are cheap to break silently.
 //
 // Emery Voss is specified in docs/design/THE-FIELD-LIAISON.md and debuted in Phase 80. Two of that

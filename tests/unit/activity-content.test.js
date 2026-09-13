@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // The invariants that hold *between* two authored activities, and between an activity and the map
 // it is played on. No schema catches any of these, because each one spans two files.
 //

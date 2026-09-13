@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // The read-only render mode — one contract slot, six implementations, and the reason all six are
 // checked here rather than in each type's own file: the thing that can go wrong is not one
 // renderer's markup, it is the six disagreeing about what "read-only" means.

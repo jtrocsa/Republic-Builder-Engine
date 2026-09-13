@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // A case says where and when it is set, once.
 //
 // `caseWhereAndWhen()` merges a case's `location` and its `date` into one dateline, and the merge

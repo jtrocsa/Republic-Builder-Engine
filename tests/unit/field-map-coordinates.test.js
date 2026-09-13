@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // Cross-checks every hand-written field coordinate in main.js against the generated .tmj.
 //
 // Why this exists: a field map's *art* lives in a .tmj produced by scripts/generate-*-tmj.js, and

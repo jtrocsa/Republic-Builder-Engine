@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // A content change must not take completed work away from a student mid-unit.
 //
 // Phase 58 replaced Unit 1's and Unit 2's unit-level Archive Challenges with real SAQs, and re-typed

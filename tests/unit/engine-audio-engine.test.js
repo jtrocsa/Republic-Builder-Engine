@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // audio-engine.js reads its `audioEnabled` flag from localStorage once, at module-load

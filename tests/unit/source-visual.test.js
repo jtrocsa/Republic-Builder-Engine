@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // The document a student reads describes itself.
 //
 // The defect this guards (Phase 58): sourceVisual() branched on `source.visual` and hardcoded a

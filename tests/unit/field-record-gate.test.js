@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // A locked record must not be openable — on every map, by every route into it.
 //
 // `sourceAvailability()` has had its own tests since Phase 70 and they all pass. What nothing

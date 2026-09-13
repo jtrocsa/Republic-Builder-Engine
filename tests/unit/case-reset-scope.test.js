@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // What "Reset Case 1.01" is allowed to touch.
 //
 // The control has named one case since it shipped, and until Spine Review Part 6 its first

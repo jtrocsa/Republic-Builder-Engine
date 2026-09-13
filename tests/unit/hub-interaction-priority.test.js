@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // Spine Review Part 5, finding P5-6.
 //
 // `nearestHubTarget()` was built on `Array#find`, so for as long as it has existed it answered

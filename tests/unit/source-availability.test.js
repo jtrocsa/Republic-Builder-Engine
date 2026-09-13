@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // The one gate that decides whether a record can be pursued yet.
 //
 // Why this is worth a test of its own: the rule used to live inline inside `fieldSourceSignal()` as

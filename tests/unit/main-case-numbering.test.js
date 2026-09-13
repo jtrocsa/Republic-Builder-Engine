@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// This file needs a DOM. The suite's default is `node` (vitest.config.js) because most of these
+// files do not, and standing up jsdom for all of them cost more than the tests took to run.
+
 // Every mission has a number, and the number is the one its title claims.
 //
 // `caseNumberLabel()` used to read the number off a `"Case N.NN — "` prefix that only Unit 1's three

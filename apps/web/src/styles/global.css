@@ -292,9 +292,6 @@ select {
   margin: auto;
   padding: var(--c-space-7) 0;
 }
-.c-page--wide {
-  width: min(var(--c-width-editor), calc(100% - var(--c-gutter)));
-}
 .c-page-header {
   display: flex;
   flex-wrap: wrap;
@@ -387,11 +384,6 @@ select {
   border-radius: var(--c-radius-md);
   background: rgba(var(--c-black-rgb), 0.16);
 }
-.c-panel--parchment {
-  border-color: rgba(var(--c-navy-rgb), 0.25);
-  background: linear-gradient(180deg, rgba(233, 213, 163, 0.14), rgba(233, 213, 163, 0.06));
-  color: var(--c-text);
-}
 
 /* Forms */
 .c-field {
@@ -402,11 +394,6 @@ select {
 }
 .c-field:first-child {
   margin-top: 0;
-}
-.c-field--inline {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--c-space-2);
 }
 .c-field-label-row {
   display: flex;
@@ -476,13 +463,6 @@ select {
   opacity: 0.6;
   cursor: not-allowed;
   background: var(--c-disabled-bg);
-}
-.c-input--measured {
-  max-width: 32em;
-}
-.c-field--wide .c-textarea,
-.c-field--wide .c-input {
-  max-width: none;
 }
 
 /* Chips — one shared badge/status primitive, replacing the file's 8
@@ -558,17 +538,6 @@ select {
   to {
     transform: rotate(360deg);
   }
-}
-.c-skeleton {
-  border-radius: var(--c-radius-sm);
-  background: linear-gradient(
-    90deg,
-    rgba(var(--c-ink-rgb), 0.06) 25%,
-    rgba(var(--c-ink-rgb), 0.12) 37%,
-    rgba(var(--c-ink-rgb), 0.06) 63%
-  );
-  background-size: 400% 100%;
-  animation: c-skeleton-shimmer 1.4s ease infinite;
 }
 @keyframes c-skeleton-shimmer {
   0% {
@@ -856,13 +825,6 @@ select {
   flex-wrap: wrap;
   margin-top: 26px;
 }
-.institute-home {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(470px, 1.1fr);
-  align-items: center;
-  gap: 64px;
-}
-.institute-copy h1,
 .archive-copy h1,
 .field-intro h1,
 .reader-copy h1,
@@ -877,7 +839,6 @@ select {
     serif;
   letter-spacing: -0.045em;
 }
-.institute-copy > p:not(.kicker):not(.subtitle),
 .archive-copy > p:not(.kicker),
 .field-intro > p:not(.kicker):not(.field-question),
 .review-copy > p:not(.kicker) {
@@ -885,96 +846,6 @@ select {
   color: #d1dcda;
   font-size: 1rem;
   line-height: 1.7;
-}
-.institute-scene {
-  position: relative;
-  min-height: 480px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 25%, rgba(230, 191, 106, 0.2), transparent 24%),
-    linear-gradient(180deg, #0c4354, #062838);
-}
-.foyer-shelves {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 0;
-  height: 62%;
-  background:
-    repeating-linear-gradient(90deg, rgba(1, 16, 25, 0.25) 0 14%, transparent 14% 18%),
-    repeating-linear-gradient(180deg, rgba(236, 202, 126, 0.2) 0 3%, transparent 3% 22%);
-  opacity: 0.8;
-}
-.foyer-globe {
-  position: absolute;
-  width: 130px;
-  height: 130px;
-  left: 14%;
-  bottom: 16%;
-  border: 2px solid rgba(240, 205, 125, 0.5);
-  border-radius: 50%;
-  box-shadow:
-    inset 18px -12px 0 rgba(240, 205, 125, 0.08),
-    0 0 0 10px rgba(240, 205, 125, 0.03);
-}
-.foyer-door {
-  position: absolute;
-  left: 50%;
-  bottom: 15%;
-  width: 150px;
-  height: 225px;
-  transform: translateX(-50%);
-  border: 2px solid rgba(234, 200, 117, 0.55);
-  border-radius: 80px 80px 8px 8px;
-  background: linear-gradient(180deg, #113e50, #071d2b);
-  box-shadow:
-    0 0 0 11px rgba(238, 204, 125, 0.05),
-    0 0 34px rgba(237, 197, 99, 0.23);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-.foyer-door span {
-  font:
-    700 1rem "Cinzel",
-    serif;
-  color: var(--gold-soft);
-}
-.foyer-card {
-  position: absolute;
-  right: 8%;
-  top: 9%;
-  width: 230px;
-  padding: 15px;
-  border: 1px solid rgba(239, 205, 125, 0.32);
-  border-radius: 14px;
-  background: rgba(3, 27, 39, 0.8);
-}
-.foyer-card p,
-.foyer-card strong,
-.foyer-card span {
-  display: block;
-}
-.foyer-card p {
-  margin: 0;
-  color: var(--gold-soft);
-  font:
-    700 0.62rem "Cinzel",
-    serif;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.foyer-card strong {
-  margin: 8px 0 4px;
-  font:
-    700 1.12rem "Spectral",
-    serif;
-}
-.foyer-card span {
-  color: #bed0cf;
-  font-size: 0.78rem;
 }
 .archive-layout {
   display: grid;
@@ -1598,159 +1469,6 @@ select {
     repeating-linear-gradient(155deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 18px),
     linear-gradient(#247e99, #17657e);
   animation: waterShift 2.8s linear infinite;
-}
-/* .sandbank/.grassland removed (Phase 45D dead-CSS sweep) — pre-Tiled CSS-drawn field pieces
-   with zero remaining references anywhere in main.js since the Caribbean field moved onto a
-   real .tmj (decision-log 0029). Their exclusive @keyframes grassBreath removed too;
-   @keyframes waterShift stays — .shoreline below still uses it. */
-.pathing {
-  position: absolute;
-  left: 43%;
-  top: 38%;
-  width: 20%;
-  height: 48%;
-  background: linear-gradient(
-    90deg,
-    rgba(125, 82, 47, 0.14),
-    rgba(203, 151, 91, 0.82),
-    rgba(125, 82, 47, 0.14)
-  );
-  clip-path: polygon(
-    27% 0,
-    72% 0,
-    76% 25%,
-    63% 47%,
-    79% 75%,
-    70% 100%,
-    25% 100%,
-    34% 75%,
-    22% 48%,
-    34% 25%
-  );
-}
-.field-building {
-  position: absolute;
-  left: 46%;
-  top: 32%;
-  width: 21%;
-  height: 14%;
-  transform: translate(-50%, -50%);
-  border: 3px solid #71583c;
-  border-radius: 22px 22px 3px 3px;
-  background: linear-gradient(#d8bb7b 0 63%, #b4965d 63%);
-  box-shadow: inset 0 -8px 0 rgba(var(--c-black-rgb), 0.1);
-}
-.field-building::after {
-  content: "";
-  position: absolute;
-  left: 43%;
-  bottom: 0;
-  width: 17%;
-  height: 40%;
-  background: #5d4731;
-  border: 2px solid #3b2e20;
-}
-.field-building span {
-  position: absolute;
-  left: 50%;
-  top: -28px;
-  transform: translateX(-50%);
-  padding: 4px 7px;
-  border: 1px solid rgba(238, 204, 123, 0.45);
-  border-radius: 6px;
-  background: rgba(3, 29, 40, 0.85);
-  white-space: nowrap;
-  color: #ffe9bb;
-  font:
-    700 0.54rem "Cinzel",
-    serif;
-  letter-spacing: 0.06em;
-}
-.field-prop {
-  position: absolute;
-  z-index: 2;
-}
-.prop-tree {
-  width: 11%;
-  height: 23%;
-}
-.prop-tree::before {
-  content: "";
-  position: absolute;
-  left: 43%;
-  top: 32%;
-  bottom: 0;
-  width: 14%;
-  background: #604226;
-}
-.prop-tree::after {
-  content: "";
-  position: absolute;
-  left: 3%;
-  right: 3%;
-  top: 0;
-  height: 50%;
-  background: #326c4b;
-  clip-path: polygon(
-    20% 100%,
-    0 50%,
-    20% 44%,
-    12% 16%,
-    38% 22%,
-    50% 0,
-    62% 22%,
-    88% 16%,
-    80% 44%,
-    100% 50%,
-    80% 100%
-  );
-  animation: treeSway 3s ease-in-out infinite alternate;
-}
-.tree-one {
-  left: 23%;
-  top: 28%;
-}
-.tree-two {
-  right: 23%;
-  bottom: 21%;
-}
-.prop-lantern {
-  left: 35%;
-  bottom: 32%;
-  width: 3.4%;
-  height: 17%;
-  border: 2px solid #173947;
-  background: #1c5a68;
-}
-.prop-lantern::after {
-  content: "";
-  position: absolute;
-  left: 13%;
-  right: 13%;
-  top: 18%;
-  bottom: 30%;
-  background: #f3d174;
-  box-shadow: 0 0 13px rgba(244, 208, 116, 0.86);
-  animation: lanternGlow 1.8s ease-in-out infinite alternate;
-}
-.prop-boat {
-  left: 16%;
-  bottom: 12%;
-  width: 14%;
-  height: 5%;
-  border: 3px solid #512f19;
-  border-bottom-width: 5px;
-  background: #8a5c34;
-  transform: rotate(-9deg);
-}
-.prop-boat::after {
-  content: "";
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  top: -9px;
-  height: 8px;
-  background: #d9b574;
 }
 /* .field-mentor/.field-player removed entirely (Phase 45D dead-CSS sweep) — both pre-Tiled CSS-
    drawn field-scene figures with zero remaining references anywhere in main.js (only
@@ -2455,8 +2173,7 @@ dd {
   font-size: 0.85rem;
   line-height: 1.55;
 }
-.reconstruction-board label,
-.connection-builder label {
+.reconstruction-board label {
   display: grid;
   gap: 6px;
   margin-top: 13px;
@@ -2467,8 +2184,7 @@ dd {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.reconstruction-board select,
-.connection-builder select {
+.reconstruction-board select {
   width: 100%;
   padding: 9px;
   border: 1px solid rgba(239, 204, 123, 0.4);
@@ -2545,30 +2261,6 @@ dd {
   color: #c5d4d1;
   font-size: 0.8rem;
   line-height: 1.5;
-}
-.connection-builder {
-  padding: 19px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.35);
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(14, 59, 72, 0.86), rgba(4, 28, 41, 0.92));
-}
-.connection-builder h2 {
-  margin: 0;
-  color: #f7e5b7;
-  font:
-    700 1.6rem "Spectral",
-    serif;
-}
-.connection-builder small {
-  color: #aec1bc;
-  font:
-    500 0.76rem/1.45 "DM Sans",
-    sans-serif;
-  text-transform: none;
-  letter-spacing: 0;
-}
-.connection-builder .btn {
-  margin-top: 18px;
 }
 .review-work {
   display: grid;
@@ -4466,7 +4158,6 @@ dd {
   .case-field,
   .puzzle-shell,
   .review-shell,
-  .institute-home,
   .reader-shell {
     grid-template-columns: 1fr;
   }
@@ -4511,7 +4202,6 @@ dd {
   .shell {
     padding: 28px 0;
   }
-  .institute-copy h1,
   .archive-copy h1,
   .field-intro h1,
   .reader-copy h1,
@@ -6191,73 +5881,6 @@ dd {
 .caribbean-world * {
   box-sizing: border-box;
 }
-.spanish-ship {
-  position: absolute;
-  left: 150px;
-  top: 300px;
-  width: 235px;
-  height: 82px;
-  z-index: 4;
-  transform: rotate(-9deg);
-  background: linear-gradient(#8b572e, #5f391e);
-  border: 4px solid #3d2618;
-  border-radius: 12px 12px 40px 40px;
-  box-shadow: 0 12px 0 rgba(var(--c-black-rgb), 0.18);
-}
-.spanish-ship::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 13px;
-  height: 12px;
-  background: repeating-linear-gradient(90deg, #c28a45 0 18px, #6e4328 18px 24px);
-}
-.spanish-ship .mast {
-  position: absolute;
-  left: 112px;
-  bottom: 62px;
-  width: 8px;
-  height: 145px;
-  background: #4d321f;
-}
-.spanish-ship .sail {
-  position: absolute;
-  bottom: 112px;
-  background: #eee1bd;
-  border: 2px solid #86633a;
-  box-shadow: inset -10px -8px 0 rgba(189, 163, 102, 0.24);
-}
-.spanish-ship .sail-one {
-  left: 122px;
-  width: 70px;
-  height: 68px;
-  clip-path: polygon(0 0, 100% 38%, 0 100%);
-}
-.spanish-ship .sail-two {
-  left: 44px;
-  width: 60px;
-  height: 58px;
-  clip-path: polygon(100% 0, 100% 100%, 0 45%);
-}
-.spanish-ship b {
-  position: absolute;
-  left: 112px;
-  bottom: 190px;
-  color: #6b2e23;
-  font-size: 18px;
-}
-.ship-shadow {
-  position: absolute;
-  left: 125px;
-  top: 372px;
-  width: 280px;
-  height: 48px;
-  background: rgba(20, 70, 85, 0.28);
-  border-radius: 50%;
-  transform: rotate(-9deg);
-  z-index: 2;
-}
 /* Consolidated from 7 chronologically-layered hotfix redeclarations of the bare .field-npc rule
    (Phase 45B) — see docs/architecture/FILE-AUDIT-2026-07.md §8. Same resolved-cascade
    methodology as the .case-field-player consolidation above; verified against the Phase 45A
@@ -6334,16 +5957,7 @@ dd {
 .source-signal {
   z-index: 9;
 }
-/* .case-field-player (position/z-index/width/height/transform/transition/pointer-events),
-   .case-field-player > span:not(.character-sprite):not(.cast-shadow), and .case-field-player img were all consolidated into their
-   single canonical rule near the top of this file (Phase 45B). */
-
-/* Disable older island pieces when a living world is rendered. .sandbank/.grassland/
-   .field-mentor removed from this list (Phase 45D dead-CSS sweep) along with their own base
-   rules further up this file — confirmed zero references anywhere in main.js; .shoreline and
-   .pathing are still live (both have real call sites) and stay. */
-.case-field--living .shoreline,
-.case-field--living .pathing {
+.case-field--living .shoreline {
   display: none !important;
 }
 @media (max-width: 1180px) {
@@ -6413,29 +6027,6 @@ dd {
 .caribbean-world {
   will-change: transform;
   backface-visibility: hidden;
-}
-.arrival-cove {
-  left: 252px !important;
-  top: 482px !important;
-  width: 152px !important;
-  height: 86px !important;
-  border-color: rgba(86, 216, 231, 0.65) !important;
-  color: #e8fcff !important;
-  background: radial-gradient(
-    circle,
-    rgba(86, 216, 231, 0.22),
-    rgba(var(--c-gold-rgb), 0.08) 45%,
-    transparent 68%
-  ) !important;
-  cursor: pointer;
-}
-.arrival-cove::before {
-  color: #77e6f4;
-  text-shadow: 0 0 18px rgba(86, 216, 231, 0.86);
-}
-.arrival-cove span {
-  font-size: 9px;
-  line-height: 1.2;
 }
 .recall-beacon {
   position: absolute;
@@ -6828,22 +6419,6 @@ dd {
   border-color: rgba(126, 200, 202, 0.5);
   color: #dff5f4;
 }
-.spanish-ship {
-  left: 122px !important;
-  top: 290px !important;
-  width: 270px !important;
-  height: 94px !important;
-}
-.spanish-ship .mast {
-  height: 178px !important;
-  bottom: 70px !important;
-}
-.spanish-ship .sail-one {
-  bottom: 132px !important;
-}
-.spanish-ship .sail-two {
-  bottom: 132px !important;
-}
 /* .case-field-player's own transition (58ms) and the fieldFootsteps 0.23s is-walking pairing
    here were both fully superseded by later hotfixes — consolidated into the single
    .case-field-player rule and the single .case-field-player.is-walking/.hub-player.is-walking
@@ -6933,14 +6508,6 @@ dd {
   font-family: "Cinzel", serif;
   color: var(--cream);
   margin-top: 0;
-} /* The Spanish-camp POV checkpoint's options. Its markup predates `.choice` and is a bare
-   `<label><input> text`, so it can't share that class without touching the one screen it belongs to —
-   but it is multiple choice on a mission screen, so it gets the same size, spacing, hover and
-   selected treatment. Anything less makes one mission look like a different app. */
-.choice-stack {
-  display: grid;
-  gap: 10px;
-  margin: 18px 0;
 }
 .quest-practice-item {
   margin-bottom: 26px;
@@ -8991,18 +8558,6 @@ p.activity-howto__note {
     padding: 10px 12px;
   }
 }
-.map-piece--nw {
-  background-position: 0% 0%;
-}
-.map-piece--ne {
-  background-position: 100% 0%;
-}
-.map-piece--sw {
-  background-position: 0% 100%;
-}
-.map-piece--se {
-  background-position: 100% 100%;
-}
 .reader-shell {
 }
 @media (max-width: 1180px) {
@@ -9050,15 +8605,6 @@ p.activity-howto__note {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* .case-field-player's transition (42ms) and the fieldFootsteps 0.18s is-walking pairing here
-   were both superseded by later hotfixes — consolidated into the single .case-field-player and
-   .case-field-player.is-walking/.hub-player.is-walking rules near the top of this file
-   (Phase 45B). */
-/* .source-signal--world (min-width/transform) and its b/small font sizes here were superseded and are
-   now in the single consolidated .source-signal--world block near the top of this file (Phase 56). */
-.arrival-cove {
-  opacity: 0.9;
-}
 .recall-beacon span {
   font-size: 8.5px !important;
 }
@@ -9070,141 +8616,9 @@ p.activity-howto__note {
   width: min(1440px, calc(100% - 42px));
   grid-template-columns: minmax(250px, 0.45fr) minmax(740px, 1.6fr);
 }
-.village-scene--animated {
-  min-height: 330px;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(166, 200, 111, 0.45) 0 4px, transparent 5px),
-    linear-gradient(140deg, #6e9b61, #4f7e5e);
-  background-size:
-    42px 42px,
-    auto;
-} /* Ten-piece map reconstruction puzzle */
-.jigsaw-board--ten {
-  gap: 18px;
-}
-.jigsaw-grid--ten {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 6px;
-  width: min(900px, 100%);
-  aspect-ratio: 2.62/1;
-  margin: 0 auto;
-  padding: 10px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.36);
-  border-radius: 18px;
-  background: #0a3141;
-}
-.map-slot--p1 {
-  background-position: 0% 0%;
-}
-.map-slot--p2 {
-  background-position: 25% 0%;
-}
-.map-slot--p3 {
-  background-position: 50% 0%;
-}
-.map-slot--p4 {
-  background-position: 75% 0%;
-}
-.map-slot--p5 {
-  background-position: 100% 0%;
-}
-.map-slot--p6 {
-  background-position: 0% 100%;
-}
-.map-slot--p7 {
-  background-position: 25% 100%;
-}
-.map-slot--p8 {
-  background-position: 50% 100%;
-}
-.map-slot--p9 {
-  background-position: 75% 100%;
-}
-.map-slot--p10 {
-  background-position: 100% 100%;
-}
-.map-piece--p1 {
-  background-position: 0% 0%;
-  border-top-left-radius: 12px !important;
-}
-.map-piece--p2 {
-  background-position: 25% 0%;
-  clip-path: polygon(
-    0 0,
-    42% 0,
-    48% 10%,
-    57% 0,
-    100% 0,
-    100% 44%,
-    92% 51%,
-    100% 58%,
-    100% 100%,
-    0 100%,
-    0 60%,
-    8% 52%,
-    0 44%
-  );
-}
-.map-piece--p3 {
-  background-position: 50% 0%;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 100%,
-    58% 100%,
-    50% 90%,
-    42% 100%,
-    0 100%,
-    0 55%,
-    8% 50%,
-    0 43%
-  );
-}
-.map-piece--p4 {
-  background-position: 75% 0%;
-  clip-path: polygon(0 0, 100% 0, 100% 42%, 91% 49%, 100% 58%, 100% 100%, 0 100%, 0 0);
-}
-.map-piece--p5 {
-  background-position: 100% 0%;
-  border-top-right-radius: 12px !important;
-}
-.map-piece--p6 {
-  background-position: 0% 100%;
-  border-bottom-left-radius: 12px !important;
-}
-.map-piece--p7 {
-  background-position: 25% 100%;
-  clip-path: polygon(0 0, 45% 0, 51% 10%, 58% 0, 100% 0, 100% 100%, 0 100%, 0 0);
-}
-.map-piece--p8 {
-  background-position: 50% 100%;
-  clip-path: polygon(0 0, 40% 0, 50% 10%, 60% 0, 100% 0, 100% 100%, 0 100%, 0 58%, 8% 50%, 0 42%);
-}
-.map-piece--p9 {
-  background-position: 75% 100%;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 42% 100%, 50% 90%, 58% 100%, 0 100%, 0 0);
-}
-.map-piece--p10 {
-  background-position: 100% 100%;
-  border-bottom-right-radius: 12px !important;
-}
-.piece-tray--ten {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-}
 @media (max-width: 1180px) {
   .activity-shell--wide {
     grid-template-columns: 1fr;
-  }
-  .jigsaw-grid--ten {
-    grid-template-columns: repeat(5, 1fr);
-    min-height: 360px;
-  }
-  .piece-tray--ten {
-    grid-template-columns: repeat(2, 1fr);
   }
   .case-field--living .field-intro h1 {
     max-width: 100%;
@@ -9317,61 +8731,6 @@ p.activity-howto__note {
    consolidated .field-viewport rule near the top of this file (Phase 45B). */
 .caribbean-world {
   will-change: transform;
-}
-.village-scene--focused {
-  min-height: 390px;
-  border-color: rgba(113, 222, 215, 0.35);
-  background: linear-gradient(160deg, #6b9f62, #4d815d);
-}
-.village-scene--focused::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 22%, rgba(239, 209, 128, 0.24), transparent 18%),
-    radial-gradient(circle at 72% 36%, rgba(239, 209, 128, 0.18), transparent 23%),
-    radial-gradient(circle at 56% 100%, rgba(30, 94, 102, 0.24), transparent 28%);
-}
-.scene-person--elder {
-  left: 48%;
-  top: 28%;
-  height: calc(100px * 56 / 45);
-}
-.scene-person--left {
-  left: 33%;
-  top: 45%;
-}
-.scene-person--right {
-  left: 62%;
-  top: 46%;
-}
-.scene-person--family.scene-person--one {
-  left: 39%;
-  top: 50%;
-}
-.scene-person--family.scene-person--two {
-  left: 59%;
-  top: 52%;
-}
-.scene-person--worker {
-  left: 24%;
-  top: 42%;
-}
-.scene-person--canoe {
-  right: 24%;
-  top: 48%;
-}
-.scene-bohio--large {
-  left: 34%;
-  top: 13%;
-  width: 190px;
-  height: 135px;
-}
-.scene-bohio--small {
-  left: 58%;
-  top: 26%;
-  width: 135px;
-  height: 96px;
 } /* Cleaner, non-ghosted jigsaw board */
 .activity-shell--wide {
   grid-template-columns: minmax(230px, 0.38fr) minmax(740px, 1.62fr);
@@ -9380,100 +8739,9 @@ p.activity-howto__note {
   font-size: clamp(2.25rem, 3.2vw, 4.2rem);
   line-height: 1.02;
 }
-.jigsaw-grid--ten {
-  width: min(760px, 100%);
-  aspect-ratio: 1.55/1;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 8px;
-  background: linear-gradient(150deg, rgba(8, 43, 58, 0.96), rgba(4, 27, 40, 0.96));
-}
-.piece-tray--ten {
-  grid-template-columns: repeat(5, minmax(112px, 1fr));
-  align-items: stretch;
-}
-.map-piece--p1 {
-  clip-path: polygon(0 0, 84% 0, 100% 16%, 100% 100%, 0 100%);
-}
-.map-piece--p2 {
-  clip-path: polygon(
-    0 0,
-    40% 0,
-    49% 13%,
-    58% 0,
-    100% 0,
-    100% 45%,
-    88% 53%,
-    100% 62%,
-    100% 100%,
-    0 100%,
-    0 62%,
-    10% 53%,
-    0 45%
-  );
-}
-.map-piece--p3 {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 100%,
-    60% 100%,
-    50% 87%,
-    40% 100%,
-    0 100%,
-    0 58%,
-    12% 50%,
-    0 42%
-  );
-}
-.map-piece--p4 {
-  clip-path: polygon(0 0, 100% 0, 100% 40%, 89% 50%, 100% 60%, 100% 100%, 0 100%, 0 0);
-}
-.map-piece--p5 {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 16% 100%, 0 84%);
-}
-.map-piece--p6 {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-}
-.map-piece--p7 {
-  clip-path: polygon(0 0, 42% 0, 50% 13%, 58% 0, 100% 0, 100% 100%, 0 100%);
-}
-.map-piece--p8 {
-  clip-path: polygon(
-    0 0,
-    38% 0,
-    50% 13%,
-    62% 0,
-    100% 0,
-    100% 58%,
-    90% 50%,
-    100% 42%,
-    100% 100%,
-    0 100%,
-    0 58%,
-    10% 50%,
-    0 42%
-  );
-}
-.map-piece--p9 {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 40% 100%, 50% 87%, 60% 100%, 0 100%);
-}
-.map-piece--p10 {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 16%, 16% 0);
-}
 @media (max-width: 1180px) {
   .activity-shell--wide {
     grid-template-columns: 1fr;
-  }
-  .jigsaw-grid--ten {
-    width: min(780px, 100%);
-    min-height: 0;
-  }
-  .piece-tray--ten {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .village-scene--focused {
-    min-height: 330px;
   }
   .case-field--living {
     grid-template-columns: 1fr;
@@ -9586,144 +8854,6 @@ p.activity-howto__note {
   color: #e8ffff !important;
   box-shadow: 0 0 0 3px rgba(117, 235, 239, 0.12);
 }
-/* .field-interact-prompt removed here and at its 6 other redeclarations below (Phase 45D
-   dead-CSS sweep) — zero references anywhere in main.js. The field screen's real interaction
-   surface is #fieldNotice/.field-notice (a static intro panel, not a proximity prompt); the
-   hub's equivalent proximity prompt is the differently-named #hubInteractPrompt/
-   .hub-interact-prompt, confirmed live in instituteMainRoomScreen()/archiveRoomScreen(). */
-.jigsaw-board--ten {
-  align-content: start;
-}
-.jigsaw-grid--ten {
-  gap: 0 !important;
-  padding: 18px !important;
-  border-radius: 24px !important;
-  background: linear-gradient(145deg, #0a3342, #041e2b) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(var(--c-gold-rgb), 0.28),
-    inset 0 0 40px rgba(var(--c-black-rgb), 0.24) !important;
-}
-.map-piece--p1,
-.map-slot--p1::before {
-  background-position: 0% 0%;
-  clip-path: polygon(0 0, 100% 0, 100% 42%, 88% 50%, 100% 60%, 100% 100%, 0 100%, 0 0) !important;
-}
-.map-piece--p2,
-.map-slot--p2::before {
-  background-position: 25% 0%;
-  clip-path: polygon(
-    0 0,
-    42% 0,
-    50% 14%,
-    60% 0,
-    100% 0,
-    100% 100%,
-    62% 100%,
-    50% 88%,
-    39% 100%,
-    0 100%,
-    0 59%,
-    11% 50%,
-    0 41%
-  ) !important;
-}
-.map-piece--p3,
-.map-slot--p3::before {
-  background-position: 50% 0%;
-  clip-path: polygon(
-    0 0,
-    38% 0,
-    50% 13%,
-    63% 0,
-    100% 0,
-    100% 43%,
-    89% 50%,
-    100% 60%,
-    100% 100%,
-    0 100%,
-    0 0
-  ) !important;
-}
-.map-piece--p4,
-.map-slot--p4::before {
-  background-position: 75% 0%;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 100%,
-    62% 100%,
-    50% 88%,
-    38% 100%,
-    0 100%,
-    0 58%,
-    12% 50%,
-    0 41%
-  ) !important;
-}
-.map-piece--p5,
-.map-slot--p5::before {
-  background-position: 100% 0%;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 58%, 12% 50%, 0 42%) !important;
-}
-.map-piece--p6,
-.map-slot--p6::before {
-  background-position: 0% 100%;
-  clip-path: polygon(0 0, 100% 0, 100% 42%, 88% 50%, 100% 59%, 100% 100%, 0 100%, 0 0) !important;
-}
-.map-piece--p7,
-.map-slot--p7::before {
-  background-position: 25% 100%;
-  clip-path: polygon(
-    0 0,
-    39% 0,
-    50% 12%,
-    62% 0,
-    100% 0,
-    100% 100%,
-    0 100%,
-    0 58%,
-    12% 50%,
-    0 42%
-  ) !important;
-}
-.map-piece--p8,
-.map-slot--p8::before {
-  background-position: 50% 100%;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 43%,
-    88% 50%,
-    100% 59%,
-    100% 100%,
-    61% 100%,
-    50% 88%,
-    39% 100%,
-    0 100%,
-    0 0
-  ) !important;
-}
-.map-piece--p9,
-.map-slot--p9::before {
-  background-position: 75% 100%;
-  clip-path: polygon(
-    0 0,
-    38% 0,
-    50% 13%,
-    62% 0,
-    100% 0,
-    100% 100%,
-    0 100%,
-    0 58%,
-    12% 50%,
-    0 41%
-  ) !important;
-}
-.map-piece--p10,
-.map-slot--p10::before {
-  background-position: 100% 100%;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0) !important;
-}
 
 /* Milestone 3.4.7 — clarity and puzzle corrections */
 .field-viewport,
@@ -9780,43 +8910,11 @@ p.activity-howto__note {
 .activity-shell--wide {
   grid-template-columns: minmax(260px, 0.46fr) minmax(720px, 1.54fr) !important;
 }
-.jigsaw-grid--ten {
-  position: relative !important;
-  width: min(820px, 100%) !important;
-  aspect-ratio: 1.55/1 !important;
-  grid-template-columns: repeat(5, 1fr) !important;
-  grid-template-rows: repeat(2, 1fr) !important;
-  gap: 0 !important;
-  padding: 16px !important;
-  overflow: hidden !important;
-}
-.jigsaw-grid--ten::after {
-  content: "";
-  position: absolute;
-  inset: 16px;
-  z-index: 8;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 200'%3E%3Cg fill='none' stroke='%23041f2d' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round' opacity='.92'%3E%3Cpath d='M100 0 C92 22 119 22 111 45 C105 63 82 58 88 82 C91 95 100 96 100 100 C100 104 91 105 88 118 C82 142 105 137 111 155 C119 178 92 178 100 200'/%3E%3Cpath d='M200 0 C191 20 218 22 210 44 C204 62 182 58 188 82 C191 95 200 96 200 100 C200 104 191 105 188 118 C182 142 204 138 210 156 C218 178 191 180 200 200'/%3E%3Cpath d='M300 0 C291 20 318 22 310 44 C304 62 282 58 288 82 C291 95 300 96 300 100 C300 104 291 105 288 118 C282 142 304 138 310 156 C318 178 291 180 300 200'/%3E%3Cpath d='M400 0 C391 20 418 22 410 44 C404 62 382 58 388 82 C391 95 400 96 400 100 C400 104 391 105 388 118 C382 142 404 138 410 156 C418 178 391 180 400 200'/%3E%3Cpath d='M0 100 C18 91 22 118 44 110 C62 104 58 82 82 88 C95 91 96 100 100 100 C104 100 105 91 118 88 C142 82 138 104 156 110 C178 118 182 91 200 100 C218 109 222 82 244 90 C262 96 258 118 282 112 C295 109 296 100 300 100 C304 100 305 109 318 112 C342 118 338 96 356 90 C378 82 382 109 400 100 C418 91 422 118 444 110 C462 104 458 82 482 88 C495 91 496 100 500 100'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  mix-blend-mode: multiply;
-}
-.piece-tray--ten {
-  display: grid !important;
-  grid-template-columns: repeat(5, minmax(92px, 1fr)) !important;
-  gap: 10px !important;
-  align-items: start !important;
-  width: min(820px, 100%) !important;
-  margin: 0 auto !important;
-}
 .activity-feedback {
   font-size: 16px !important;
   line-height: 1.45 !important;
 }
 @media (max-width: 1180px) {
-  .piece-tray--ten {
-    grid-template-columns: repeat(5, minmax(70px, 1fr)) !important;
-  }
   .activity-shell--wide {
     grid-template-columns: 1fr !important;
   }
@@ -9871,20 +8969,6 @@ html {
 .archive-badges span + span {
   margin-top: 5px;
 }
-
-/* Remove the ugly black puzzle lines. Use simple connected rectangular sockets for now. */
-.jigsaw-grid--ten::after {
-  display: none !important;
-  content: none !important;
-}
-.jigsaw-grid--ten {
-  padding: 14px !important;
-  background: linear-gradient(145deg, #0a3342, #041e2b) !important;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.55) !important;
-}
-.piece-tray--ten {
-  grid-template-columns: repeat(5, minmax(90px, 1fr)) !important;
-}
 /* -------------------------------------------------------------------------
    Milestone 3.4.11 · dialogue anchoring, preservation case UI, and field map cleanup
    ------------------------------------------------------------------------- */
@@ -9902,10 +8986,6 @@ html {
   border-color: rgba(var(--c-gold-rgb), 0.62) !important;
   box-shadow: 0 6px 12px rgba(var(--c-black-rgb), 0.26) !important;
 }
-/* .source-signal--world small's colour here is now set (gold, to match the glyph) in the single
-   consolidated block near the top of this file (Phase 56). */
-/* One clean recall object: no extra blue cove ring. */
-.arrival-cove,
 .recall-cove {
   display: none !important;
 }
@@ -9931,48 +9011,6 @@ html {
   font-size: 10px !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
-}
-
-/* Move the puzzle interaction to a believable cartographer station by the ship. */
-.cartographer-table {
-  position: absolute;
-  left: 238px;
-  top: 414px;
-  width: 96px;
-  height: 54px;
-  z-index: 6;
-  transform: rotate(-5deg);
-  border: 3px solid #5d3b21;
-  border-radius: 8px;
-  background: #a97945;
-  box-shadow: 0 11px 0 rgba(var(--c-black-rgb), 0.14);
-}
-.cartographer-table span {
-  position: absolute;
-  inset: 9px;
-  border: 2px solid rgba(238, 218, 163, 0.78);
-  background:
-    linear-gradient(135deg, transparent 47%, rgba(238, 218, 163, 0.75) 48% 52%, transparent 53%),
-    linear-gradient(45deg, transparent 47%, rgba(238, 218, 163, 0.75) 48% 52%, transparent 53%),
-    rgba(31, 74, 76, 0.76);
-}
-.cartographer-table b {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 5px);
-  transform: translateX(-50%);
-  padding: 3px 6px;
-  border: 1px solid rgba(var(--c-gold-rgb), 0.46);
-  border-radius: 999px;
-  background: rgba(4, 31, 43, 0.95);
-  font:
-    900 9px/1 system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-  color: #f8e8ba;
-  white-space: nowrap;
 }
 /* The `.signal-N` positional classes are gone (Phase 56). They existed only so
    updateFieldProximityUi() could query a marker by index, which `data-source` does correctly — the
@@ -10332,13 +9370,6 @@ html {
   pointer-events: none !important;
   cursor: default;
 }
-.cartographer-table {
-  left: 300px !important;
-  top: 424px !important;
-  width: 102px !important;
-  height: 58px !important;
-  z-index: 8 !important;
-}
 .recall-beacon {
   z-index: 7 !important;
 }
@@ -10396,9 +9427,6 @@ html {
   .field-speech-bubble {
     width: 280px;
     max-width: 280px;
-  }
-  .cartographer-table {
-    left: 292px !important;
   }
 }
 
@@ -10491,12 +9519,6 @@ body {
 .recall-beacon:focus-visible {
   outline: 2px solid rgba(126, 221, 214, 0.8) !important;
   outline-offset: 4px !important;
-}
-
-/* Collision-safe placements need less visual crowding. */
-.cartographer-table {
-  left: 300px !important;
-  top: 434px !important;
 }
 /* The last two `.signal-N` scale overrides; retired with the classes themselves (Phase 56). */
 .recall-beacon {
@@ -10671,21 +9693,11 @@ button:hover,
     rgba(3, 19, 30, 0.34) 100%
   );
 }
-.spanish-ship,
-.ship-shadow,
-.cartographer-table,
 .recall-beacon,
 .source-signal--world,
 .field-npc,
 .case-field-player {
   z-index: 8;
-}
-.spanish-ship {
-  box-shadow:
-    inset 0 10px 0 rgba(203, 134, 67, 0.22),
-    inset 0 -14px 0 rgba(51, 30, 17, 0.24),
-    0 18px 0 rgba(var(--c-black-rgb), 0.18),
-    0 26px 22px rgba(var(--c-black-rgb), 0.16) !important;
 }
 /* .case-field-player's transition: none/will-change and the fieldFootsteps 0.28s is-walking
    pairing (for both .case-field-player and .hub-player) are now fully covered by the single
