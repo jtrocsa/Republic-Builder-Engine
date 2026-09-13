@@ -95,8 +95,19 @@ function activeLocalId(animation, elapsedMs) {
   return animation[animation.length - 1].tileid;
 }
 
+// Rebuilt on every renderTiledMap() call before this was memoised — a Map of Maps over every
+// tileset's `tiles` array, which on Richmond is ten tilesets re-indexed for a result that cannot
+// change. Keyed weakly by the parsed .tmj, so a map nobody visits is never indexed and nothing is
+// retained once the module drops it. Nothing mutates what this returns; it is read with .get().
+const animationIndexCache = new WeakMap();
 function animationIndexByTileset(tmj) {
-  return new Map(tmj.tilesets.map((tileset) => [tileset, animationIndexForTileset(tileset)]));
+  const cached = animationIndexCache.get(tmj);
+  if (cached) return cached;
+  const index = new Map(
+    tmj.tilesets.map((tileset) => [tileset, animationIndexForTileset(tileset)])
+  );
+  animationIndexCache.set(tmj, index);
+  return index;
 }
 
 // A layer is "above the player" purely by naming convention, because Tiled's JSON export carries
@@ -130,6 +141,32 @@ export function hasOverlayLayers(tmj) {
   );
 }
 
+/**
+ * Why this module caches what it does.
+ *
+ * `render()` in main.js replaces `#app` wholesale, which destroys the <canvas> carrying
+ * renderTiledMapWithOverlay()'s `dataset.rendered` guard — so **every render on a map screen
+ * re-runs this enumeration from scratch**. Pressing E on an NPC costs one, and pressing E again to
+ * close costs another. On a 56x36 outdoor map that was 12,096 cell iterations and ~5,500 tile
+ * objects per render, for a result that had not changed.
+ *
+ * The drawing genuinely does have to happen again: the canvas is a new node and renderTiledMap()
+ * sets `canvas.width`, which clears it. So what is cached here is the **enumeration**, not the
+ * drawing — the ~2,700 drawImage calls stay. Caching the composited bitmap instead would remove those
+ * too, and was not done: at 2688x1728 a cached copy is ~18.6 MB per canvas against ~500 KB for the
+ * tile list, and the list is where the measured cost was.
+ *
+ * Both caches are WeakMaps keyed by the parsed .tmj object, so nothing is computed for a map the
+ * player never visits and nothing is retained past that object's own lifetime.
+ */
+const staticTileCache = new WeakMap();
+
+/** True if any tileset on this map animates — the one thing that makes the cache above unsound. */
+function animationsPresent(animationByTileset) {
+  for (const perTileset of animationByTileset.values()) if (perTileset.size > 0) return true;
+  return false;
+}
+
 // Pure (no canvas) resolution of "what to draw where" for one frame: walks every visible
 // tile layer, skips empty cells, resolves each GID to its owning tileset (however many
 // tilesets the map has) and source rect, and picks the animated frame active at elapsedMs.
@@ -141,6 +178,20 @@ export function tilesForFrame(
   animationByTileset = animationIndexByTileset(tmj),
   depth = "all"
 ) {
+  // **The cache is only sound while nothing on this map animates**, and that is checked here rather
+  // than assumed: if every tileset's animation index is empty the `if (animation)` branch below can
+  // never fire, so the result depends on (tmj, depth) alone and not on elapsedMs. A map with even
+  // one animated tileset falls through to the live walk every time, exactly as before — otherwise
+  // this would freeze it on whatever frame happened to be cached first.
+  //
+  // That is true for any all-empty index a caller passes, not just this module's own, so there is
+  // no identity check: an all-empty index cannot change the output, and an index that does animate
+  // never reads or writes the cache.
+  const cacheable = !animationsPresent(animationByTileset);
+  if (cacheable) {
+    const hit = staticTileCache.get(tmj)?.get(depth);
+    if (hit) return hit;
+  }
   const tiles = [];
   for (const layer of selectLayers(tmj, depth)) {
     if (layer.type !== "tilelayer" || !layer.visible) continue;
@@ -170,6 +221,14 @@ export function tilesForFrame(
         });
       }
     }
+  }
+  if (cacheable) {
+    let byDepth = staticTileCache.get(tmj);
+    if (!byDepth) {
+      byDepth = new Map();
+      staticTileCache.set(tmj, byDepth);
+    }
+    byDepth.set(depth, tiles);
   }
   return tiles;
 }

@@ -153,7 +153,7 @@ auditing, and auditing is the mechanism that has to find the next eight too.**
 The seven phases queued behind this one come from the same audit: the sign-out state crash
 (`teacherUiState`'s three dropped `Set` fields, hidden by `render()`'s catch), the three per-unit
 tables with a silent fallback and no test (`RECONSTRUCTION_LANES`, `PRACTICE_CHECK_QUESTS`,
-`SURFACE_TILESETS`), the whole tilemap being re-composited on every `render()` (24,192 cell iterations per `E`
+`SURFACE_TILESETS`), the whole tilemap being re-composited on every `render()` (12,096 cell iterations per `E`
 press), the 1.47 MB of base64 sprite art in the entry chunk, Unit 9's 2.05 MB of art for a unit
 nobody can enter, the 19-line per-map dispatch chain, the eleven copied authoring branches, and the
 dead-CSS / vitest-environment sweep.

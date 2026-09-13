@@ -103,6 +103,86 @@ describe("tilesForFrame", () => {
   });
 });
 
+// The enumeration above is re-run in full on every render() of a map screen, because render()
+// replaces #app and destroys the <canvas> that carries renderTiledMapWithOverlay()'s "already
+// drawn" flag. On a 56x36 outdoor map that was 12,096 cell iterations and ~5,500 tile objects for a
+// result that had not changed — twice per canvas, two canvases, on every E press and every press to
+// close again. It is memoised per (tmj, depth).
+//
+// Two things have to hold for that to be safe, and they pull opposite ways: a static map must be
+// cached, and an animated one must never be.
+describe("tilesForFrame caching", () => {
+  const staticTmj = () => ({
+    tilewidth: 48,
+    tileheight: 48,
+    tilesets: [tileset({ firstgid: 1 })],
+    layers: [
+      { type: "tilelayer", name: "ground", visible: true, width: 2, height: 1, data: [5, 6] },
+      { type: "tilelayer", name: "overlay", visible: true, width: 2, height: 1, data: [0, 7] },
+    ],
+  });
+
+  const animatedTmj = () => ({
+    tilewidth: 48,
+    tileheight: 48,
+    tilesets: [
+      tileset({
+        firstgid: 1,
+        columns: 4,
+        tiles: [
+          {
+            id: 4,
+            animation: [
+              { tileid: 4, duration: 100 },
+              { tileid: 6, duration: 100 },
+            ],
+          },
+        ],
+      }),
+    ],
+    layers: [{ type: "tilelayer", name: "ground", visible: true, width: 1, height: 1, data: [5] }],
+  });
+
+  it("returns the same array for a repeated (map, depth) on a map that does not animate", () => {
+    const tmj = staticTmj();
+    expect(tilesForFrame(tmj, 0, undefined, "below")).toBe(
+      tilesForFrame(tmj, 0, undefined, "below")
+    );
+  });
+
+  it("keys the cache by depth, so the overlay pass does not get the ground pass's tiles", () => {
+    const tmj = staticTmj();
+    const below = tilesForFrame(tmj, 0, undefined, "below");
+    const overlay = tilesForFrame(tmj, 0, undefined, "overlay");
+    expect(below).not.toBe(overlay);
+    expect(below).toHaveLength(2);
+    expect(overlay).toHaveLength(1);
+    // And still correct on the second read, which is the one served from the cache.
+    expect(tilesForFrame(tmj, 0, undefined, "overlay")).toHaveLength(1);
+  });
+
+  it("keys the cache by map, so two maps do not share a tile list", () => {
+    expect(tilesForFrame(staticTmj(), 0, undefined, "all")).not.toBe(
+      tilesForFrame(staticTmj(), 0, undefined, "all")
+    );
+  });
+
+  // The one that matters. Caching an animated map freezes it on whichever frame was cached first,
+  // and no committed .tmj animates today — so this is the assertion standing between "correct" and
+  // "correct until somebody authors an animated tile", which is a defect nothing else would catch.
+  it("does not cache a map with an animated tileset", () => {
+    const tmj = animatedTmj();
+    const first = tilesForFrame(tmj, 50);
+    const second = tilesForFrame(tmj, 150);
+    expect(first).not.toBe(second);
+    expect(first[0].sx).toBe(0); // frame 0, localId 4
+    expect(second[0].sx).toBe(96); // frame 1, localId 6
+    // A repeat of the *same* elapsed time is still re-walked rather than served from a cache.
+    expect(tilesForFrame(tmj, 50)).not.toBe(first);
+    expect(tilesForFrame(tmj, 50)).toEqual(first);
+  });
+});
+
 describe("overlay layers (walk-behind depth)", () => {
   function twoBandMap() {
     return {
