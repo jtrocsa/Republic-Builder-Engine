@@ -190,16 +190,67 @@ describe("every live palette's sheets are reachable from main.js", () => {
   // Scoped to sheets, which is where the whole class of failure lives.
   const MAIN_JS = readFileSync(path.join(REPO_ROOT, "apps/web/src/main.js"), "utf8");
 
+  // **Keyed to whether main.js can render the map, not to whether a palette exists**, because that
+  // is what the failure above actually requires: createTilesetImageResolver() has to be *called* to
+  // throw, and it is only called for a map main.js has imported. A map may be committed a phase or
+  // more before it is wired — Unit 9's Furnace Bend is, deliberately, and Phase 136 unwired its
+  // resolver to keep 2.05 MB of art out of every student's download until the unit is playable.
+  // Keying off MAP_PALETTES asserted an empty-frame risk against a map that cannot draw a frame.
+  //
+  // The signal is the `?raw` import: no import, no render, no resolver, no throw. And the moment
+  // somebody adds that import back, every sheet is checked again — so this excludes nothing that
+  // can fail, and the companion test below catches the half-wired state in between.
+  // **Both of these match a call, not a filename.** main.js carries a comment explaining how to
+  // restore Furnace Bend that names the .tmj and two of its sheets by path, and a bare substring
+  // scan reads that prose as a wiring — which is the thing this file exists to detect the absence
+  // of. The import specifier and the glob call are unambiguous; a sentence about them is not.
+  const rendersInMainJs = (palette) =>
+    MAIN_JS.includes(`"./content/maps/${path.basename(palette.map)}?raw"`);
+  const isGlobbed = (sheetPath) =>
+    MAIN_JS.includes(`import.meta.glob("./assets/tilesets/${sheetPath}"`);
+
+  // A sheet is this map's alone only if no *other* palette declares it. Counting how many times
+  // main.js globs it does not answer that: Furnace Bend and Fairmeadow share two sheets, each
+  // globbed once, and that one glob belongs to the map that renders.
+  const sheetsOnlyThisMapUses = (palette) => {
+    const elsewhere = new Set(
+      MAP_PALETTES.filter((other) => other.id !== palette.id).flatMap((other) =>
+        other.sheets.map((sheet) => sheet.path)
+      )
+    );
+    return palette.sheets
+      .map((sheet) => sheet.path)
+      .filter((sheetPath) => !elsewhere.has(sheetPath));
+  };
+
   it.each(MAP_PALETTES.map((palette) => [palette.id, palette]))(
     "%s: every sheet it declares is globbed in main.js",
     (_id, palette) => {
+      if (!rendersInMainJs(palette)) return; // committed but not wired — see the companion test
       for (const sheet of palette.sheets) {
         expect(
-          MAIN_JS.includes(`./assets/tilesets/${sheet.path}`),
+          isGlobbed(sheet.path),
           `${palette.id} draws ${sheet.path}, but main.js has no import.meta.glob for it — ` +
             "the resolver will throw and the map will render as an empty frame"
         ).toBe(true);
       }
+    }
+  );
+
+  // The state the exclusion above could otherwise hide: a map main.js does not import, whose sheets
+  // are globbed anyway. That is art in the bundle for a map nobody can reach — 2.05 MB of it, in the
+  // case this test was written for — and it is invisible, because nothing renders and nothing throws.
+  it.each(MAP_PALETTES.map((palette) => [palette.id, palette]))(
+    "%s: is either fully wired or fully unwired, never half",
+    (_id, palette) => {
+      if (rendersInMainJs(palette)) return;
+      const exclusive = sheetsOnlyThisMapUses(palette).filter(isGlobbed);
+      expect(
+        exclusive,
+        `main.js does not import ${path.basename(palette.map)}, so this map cannot render — but it ` +
+          `globs ${exclusive.length} sheet(s) no other map uses, which ships their bytes to every ` +
+          `player for a map none of them can reach. Wire the map or drop the glob.`
+      ).toEqual([]);
     }
   );
 });
