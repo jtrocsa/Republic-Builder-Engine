@@ -326,6 +326,12 @@ describe("every field map is registered in the tables outside main.js", () => {
 //    correctly have no entry, so asserting one per walkable surface would fail on eleven surfaces
 //    that are working as designed.
 describe("every walkable unit is registered in the per-unit tables inside main.js", () => {
+  // Every walkable field surface: the eight outdoor maps and the ten rooms they open into.
+  const walkableSurfaces = () =>
+    Object.values(FIELD_MAPS).flatMap((map) => [
+      [map.id, map],
+      ...Object.values(map.interiors || {}).map((room) => [room.id, room]),
+    ]);
   const section = (startsWith) => {
     const start = MAIN_JS_SOURCE.indexOf(startsWith);
     if (start === -1) throw new Error(`could not find ${startsWith}`);
@@ -381,6 +387,23 @@ describe("every walkable unit is registered in the per-unit tables inside main.j
       `SURFACE_TILESETS has no "institute-hall" entry, so every Recall to Archive preloads the ` +
         `plate alone and arrives on an unpainted hall`
     ).toBe(true);
+  });
+
+  // `renderMap` is the newest field in the surface shape and the one with the quietest failure.
+  // `activeFieldOutdoorMap()` falls back to `FIELD_MAPS["unit-01"]`, so a surface always resolves —
+  // which means a surface missing `renderMap` does not error, it renders `?.()` as a no-op and
+  // **paints nothing**. Before Phase 136 this was nineteen hand-written `if`s in render(); the
+  // chain was at least visible, and a table entry is not. Hence this, in the same commit.
+  //
+  // Interiors included: ten of the eighteen entries are rooms, and a room that paints nothing is
+  // exactly as broken as a map that does.
+  it.each(walkableSurfaces())("%s declares a renderMap", (_id, surface) => {
+    expect(
+      typeof surface.renderMap,
+      `${surface.id} has no renderMap, so render() calls nothing for it and the surface paints ` +
+        `nothing at all — no error, no blank-screen exception, just an empty frame with the cast ` +
+        `and the records drawn over it`
+    ).toBe("function");
   });
 });
 

@@ -4370,6 +4370,7 @@ export const FIELD_MAPS = {
     sourcePoints: FIELD_SOURCE_POINTS,
     musicScene: "island",
     worldMarkup: caribbeanWorldMarkup,
+    renderMap: renderCaribbeanTiledMap,
   },
   "unit-02": {
     id: "unit-02",
@@ -4383,6 +4384,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT2_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: riverbendWorldMarkup,
+    renderMap: renderRiverbendTiledMap,
   },
   "unit-03": {
     id: "unit-03",
@@ -4396,6 +4398,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT3_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: commonCauseWorldMarkup,
+    renderMap: renderCommonCauseTiledMap,
   },
   "unit-04": {
     id: "unit-04",
@@ -4411,6 +4414,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT4_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: canalCrossroadsWorldMarkup,
+    renderMap: renderCanalCrossroadsTiledMap,
   },
   "unit-05": {
     id: "unit-05",
@@ -4427,6 +4431,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT5_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: richmondWorldMarkup,
+    renderMap: renderRichmondTiledMap,
   },
   "unit-06": {
     id: "unit-06",
@@ -4443,6 +4448,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT6_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: railheadWorldMarkup,
+    renderMap: renderRailheadTiledMap,
   },
   "unit-07": {
     id: "unit-07",
@@ -4459,6 +4465,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT7_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: immigrantPortWorldMarkup,
+    renderMap: renderImmigrantPortTiledMap,
   },
   "unit-08": {
     id: "unit-08",
@@ -4476,6 +4483,7 @@ export const FIELD_MAPS = {
     sourcePoints: UNIT8_FIELD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: fairmeadowWorldMarkup,
+    renderMap: renderFairmeadowTiledMap,
   },
 };
 /** The unit's outdoor map, whatever room the player is currently standing in. */
@@ -4487,10 +4495,12 @@ function activeFieldOutdoorMap() {
  * The surface the player is on — the unit's outdoor map, or one of its interiors.
  *
  * An interior is deliberately the *same shape* as an outdoor map: `id`, `grid`, `isLand`, `blocks`,
- * `roads`, `npcs`, `behaviours`, `sourcePoints`, `worldMarkup`. That is what makes this one function
- * the whole switch — isFieldBlocked(), isFieldGroundStandable(), fieldNavGridFor(),
+ * `roads`, `npcs`, `behaviours`, `sourcePoints`, `worldMarkup`, `renderMap`. That is what makes this
+ * one function the whole switch — isFieldBlocked(), isFieldGroundStandable(), fieldNavGridFor(),
  * buildFieldNpcRuntime(), updateFieldProximityUi() and nearestFieldInteraction() already read a map
- * through this call, so they carried over to interiors without being touched. Mirrors the hub's
+ * through this call, so they carried over to interiors without being touched. `renderMap` joined
+ * the shape in Phase 136, retiring the nineteen-line per-surface `if` chain in render() — the one
+ * thing about a surface that was still hand-dispatched. Mirrors the hub's
  * activeHubGrid()/activeHubBlocks()/activeHubTargets() trio, which solves the same problem for
  * the three Institute rooms.
  */
@@ -4727,6 +4737,7 @@ FIELD_MAPS["unit-04"].interiors = {
     sourcePoints: UNIT4_PRINT_SHOP_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: canalPrintShopWorldMarkup,
+    renderMap: renderCanalPrintShopTiledMap,
     entry: { x: 10.0, y: 11.1, facing: "up" },
     exit: { x: 10.0, y: 12.1 },
     // The doorstep on Market Street. generate-canal-crossroads-tmj.js stamps the printing office at
@@ -4745,6 +4756,7 @@ FIELD_MAPS["unit-04"].interiors = {
     sourcePoints: UNIT4_BOARDING_HOUSE_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: canalBoardingHouseWorldMarkup,
+    renderMap: renderCanalBoardingHouseTiledMap,
     entry: { x: 11.0, y: 11.1, facing: "up" },
     exit: { x: 11.0, y: 12.1 },
     // The tavern is stamped at (23,22) two by two, so its door cell is (24,24).
@@ -4771,6 +4783,7 @@ FIELD_MAPS["unit-05"].interiors = {
     sourcePoints: UNIT5_COUNTING_ROOM_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: richmondCountingRoomWorldMarkup,
+    renderMap: renderRichmondCountingRoomTiledMap,
     entry: { x: 9.0, y: 11.1, facing: "up" },
     exit: { x: 9.0, y: 12.1 },
     // The doorstep on Lower Street. generate-richmond-tmj.js stamps the counting room at (32,20) two
@@ -4790,6 +4803,7 @@ FIELD_MAPS["unit-05"].interiors = {
     sourcePoints: UNIT5_HOSPITAL_WARD_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: richmondHospitalWardWorldMarkup,
+    renderMap: renderRichmondHospitalWardTiledMap,
     entry: { x: 12.0, y: 11.1, facing: "up" },
     exit: { x: 12.0, y: 12.1 },
     // The ward is stamped at (38,4) four by four, so its door cell is (40,8) — the first row of Broad
@@ -4821,6 +4835,7 @@ FIELD_MAPS["unit-06"].interiors = {
     sourcePoints: UNIT6_LAND_OFFICE_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: railheadLandOfficeWorldMarkup,
+    renderMap: renderRailheadLandOfficeTiledMap,
     entry: { x: 9.0, y: 11.1, facing: "up" },
     exit: { x: 9.0, y: 12.1 },
     // The doorstep on Front Street. generate-railhead-tmj.js stamps the land office at (18,10) two
@@ -4839,6 +4854,7 @@ FIELD_MAPS["unit-06"].interiors = {
     sourcePoints: UNIT6_TELEGRAPH_OFFICE_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: railheadTelegraphOfficeWorldMarkup,
+    renderMap: renderRailheadTelegraphOfficeTiledMap,
     entry: { x: 8.0, y: 11.1, facing: "up" },
     exit: { x: 8.0, y: 12.1 },
     // The telegraph office is stamped at (22,10) two by two, so its door cell is (23,12).
@@ -4869,6 +4885,7 @@ FIELD_MAPS["unit-07"].interiors = {
     sourcePoints: UNIT7_INSPECTION_HALL_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: immigrantPortInspectionHallWorldMarkup,
+    renderMap: renderImmigrantPortInspectionHallTiledMap,
     // 22x18 is the first interior in the game bigger than the field viewport on both axes, so this
     // is also the first room whose camera scrolls rather than centring. Still a pure function of
     // player position; it is the outdoor formula, which is what a room this size gets.
@@ -4890,6 +4907,7 @@ FIELD_MAPS["unit-07"].interiors = {
     sourcePoints: UNIT7_INQUIRY_ROOM_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: immigrantPortInquiryRoomWorldMarkup,
+    renderMap: renderImmigrantPortInquiryRoomTiledMap,
     entry: { x: 8.0, y: 11.1, facing: "up" },
     exit: { x: 8.0, y: 12.1 },
     // The inquiry wing is stamped at (36,2) four wide, so its door cell is (38,4). Twelve bays east
@@ -4927,6 +4945,7 @@ FIELD_MAPS["unit-08"].interiors = {
     sourcePoints: UNIT8_MODEL_HOUSE_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: fairmeadowModelHouseWorldMarkup,
+    renderMap: renderFairmeadowModelHouseTiledMap,
     entry: { x: 10.0, y: 13.1, facing: "up" },
     exit: { x: 10.0, y: 14.1 },
     // The doorstep on Fairmeadow Drive. generate-fairmeadow-tmj.js stamps the third house along at
@@ -4946,6 +4965,7 @@ FIELD_MAPS["unit-08"].interiors = {
     sourcePoints: UNIT8_BUILDING_AND_LOAN_SOURCE_POINTS,
     musicScene: "settlement",
     worldMarkup: fairmeadowBuildingAndLoanWorldMarkup,
+    renderMap: renderFairmeadowBuildingAndLoanTiledMap,
     entry: { x: 8.0, y: 11.1, facing: "up" },
     exit: { x: 8.0, y: 12.1 },
     // The doorstep on Broad Street. The association is stamped at (35,22) and is four tiles square,
@@ -15255,31 +15275,17 @@ function render() {
       updateFieldPlayer();
       updateFieldNpcs();
       placeFieldDialogueBubble();
-      // Keyed off the active *surface* id, so an interior paints its own canvases rather than the
-      // outdoor map's. This is still the one genuinely hard-coded per-map switch in the field
-      // runtime — a new map or room adds a line here.
-      if (activeFieldMap().id === "unit-02") renderRiverbendTiledMap();
-      if (activeFieldMap().id === "unit-01") renderCaribbeanTiledMap();
-      if (activeFieldMap().id === "unit-03") renderCommonCauseTiledMap();
-      if (activeFieldMap().id === "unit-04") renderCanalCrossroadsTiledMap();
-      if (activeFieldMap().id === "unit-05") renderRichmondTiledMap();
-      if (activeFieldMap().id === "unit-06") renderRailheadTiledMap();
-      if (activeFieldMap().id === "unit-07") renderImmigrantPortTiledMap();
-      if (activeFieldMap().id === "unit-08") renderFairmeadowTiledMap();
-      if (activeFieldMap().id === "canal-print-shop") renderCanalPrintShopTiledMap();
-      if (activeFieldMap().id === "canal-boarding-house") renderCanalBoardingHouseTiledMap();
-      if (activeFieldMap().id === "richmond-counting-room") renderRichmondCountingRoomTiledMap();
-      if (activeFieldMap().id === "richmond-hospital-ward") renderRichmondHospitalWardTiledMap();
-      if (activeFieldMap().id === "railhead-land-office") renderRailheadLandOfficeTiledMap();
-      if (activeFieldMap().id === "railhead-telegraph-office")
-        renderRailheadTelegraphOfficeTiledMap();
-      if (activeFieldMap().id === "immigrant-port-inspection-hall")
-        renderImmigrantPortInspectionHallTiledMap();
-      if (activeFieldMap().id === "immigrant-port-inquiry-room")
-        renderImmigrantPortInquiryRoomTiledMap();
-      if (activeFieldMap().id === "fairmeadow-model-house") renderFairmeadowModelHouseTiledMap();
-      if (activeFieldMap().id === "fairmeadow-building-and-loan")
-        renderFairmeadowBuildingAndLoanTiledMap();
+      // **The surface paints itself.** This was nineteen hand-written `if`s, each re-calling
+      // `activeFieldMap()`, and the file's own comment called it "the one genuinely hard-coded
+      // per-map switch in the field runtime — a new map or room adds a line here". Every one of
+      // the 21 `renderXTiledMap` wrappers had exactly one call site, and `FIELD_MAPS` entries
+      // already carry a function field (`worldMarkup`), so the shape to copy was there.
+      //
+      // `renderMap` is now part of the surface shape an interior declares, alongside `worldMarkup`
+      // — see activeFieldMap()'s comment below. `field-map-coordinates.test.js` asserts one per
+      // walkable surface, because `activeFieldOutdoorMap()` falls back to Unit 1 and a surface
+      // missing this would render `?.()` as a no-op and paint **nothing**, silently.
+      activeFieldMap().renderMap?.();
     });
   if (progress.currentScreen === "institute") {
     window.requestAnimationFrame(() => {
