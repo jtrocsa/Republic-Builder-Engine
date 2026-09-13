@@ -35,6 +35,7 @@ import {
   HUB_NAV_GRID,
   HUB_NPC_BEHAVIOURS,
   HUB_TARGETS,
+  UNITS,
   fieldNavGridFor,
   footBoxFor,
   hubFootBoxFor,
@@ -298,6 +299,88 @@ describe("every field map is registered in the tables outside main.js", () => {
         `validated, it is absent from the field guide, and every table derived from the registry ` +
         `silently skips it`
     ).toContain(unitId);
+  });
+});
+
+// The same failure mode again, in the three per-unit tables inside main.js that nothing had ever
+// asked about. All three are keyed lookups with a fallback, which is the shape CLAUDE.md names as
+// "how a whole unit ships broken": a missing entry is never an error, it is Unit 1's content, or a
+// button that quietly stops being drawn.
+//
+// FIELD_COPY above has had a guard since Phase 90 and these are its untested twins. They were found
+// by audit rather than by a run, and all three were complete when found — which is the point. The
+// cost of a table like this is paid by the unit that ships next, not by the one that added it.
+//
+// **Each keys off the table that answers its own question**, which is not the same table for all
+// three:
+//
+//  - RECONSTRUCTION_LANES and PRACTICE_CHECK_QUESTS are keyed by *case*, and the case that matters
+//    is the one a player can stand on a map in. So the key is derived: for each FIELD_MAPS unit,
+//    that unit's `route === "field"` case. Deriving from "every case with route field" would be
+//    wrong — unit-09's case-025 is one, deliberately has no entry in either table, and is not
+//    reachable because unit-09 has no map.
+//
+//  - SURFACE_TILESETS answers a narrower question than its name suggests: which art the *warp
+//    screen* preloads. `warpArtUrls()` reads it for the destination unit's outdoor map, and for
+//    "institute-hall" on the way back. Interiors and the Archive Room are not warp destinations and
+//    correctly have no entry, so asserting one per walkable surface would fail on eleven surfaces
+//    that are working as designed.
+describe("every walkable unit is registered in the per-unit tables inside main.js", () => {
+  const section = (startsWith) => {
+    const start = MAIN_JS_SOURCE.indexOf(startsWith);
+    if (start === -1) throw new Error(`could not find ${startsWith}`);
+    // Both bounds are checked. A close that is never found returns -1, and `slice(start, -1)` is then the
+    // whole rest of the file — every assertion below would pass against a table it never read.
+    const end = MAIN_JS_SOURCE.indexOf("\n};", start);
+    if (end === -1) throw new Error(`could not find the end of ${startsWith}`);
+    return MAIN_JS_SOURCE.slice(start, end);
+  };
+
+  // The case a player reaches these screens from — the one that walks this unit's map.
+  const fieldCaseIdFor = (unitId) => {
+    const unit = UNITS.find((u) => u.id === unitId);
+    if (!unit) throw new Error(`${unitId} has a field map but no entry in main.js's UNITS`);
+    const fieldCase = unit.cases.find((c) => c.route === "field");
+    if (!fieldCase) throw new Error(`${unitId} has a field map but no case with route "field"`);
+    return fieldCase.id;
+  };
+
+  it.each(Object.keys(FIELD_MAPS))("%s's field case has RECONSTRUCTION_LANES", (unitId) => {
+    const caseId = fieldCaseIdFor(unitId);
+    expect(
+      section("const RECONSTRUCTION_LANES = {").includes(`"${caseId}":`),
+      `${caseId} (${unitId}) has no RECONSTRUCTION_LANES entry, so reconstructionScreen() falls ` +
+        `back to case-001's and offers this unit's records the Caribbean's lanes — "Before ` +
+        `contact", "Early encounter", "Changing geographic knowledge" — with no error anywhere`
+    ).toBe(true);
+  });
+
+  it.each(Object.keys(FIELD_MAPS))("%s's field case has PRACTICE_CHECK_QUESTS", (unitId) => {
+    const caseId = fieldCaseIdFor(unitId);
+    expect(
+      section("const PRACTICE_CHECK_QUESTS = {").includes(`"${caseId}":`),
+      `${caseId} (${unitId}) has no PRACTICE_CHECK_QUESTS entry, so fieldScreen() stops drawing ` +
+        `the Practice Check button for this unit and practiceCheckScreen() redirects back to the ` +
+        `field — the feature disappears rather than failing`
+    ).toBe(true);
+  });
+
+  it.each(Object.keys(FIELD_MAPS))("%s has SURFACE_TILESETS", (unitId) => {
+    expect(
+      section("const SURFACE_TILESETS = {").includes(`"${unitId}":`),
+      `${unitId} has no SURFACE_TILESETS entry, so tilesetsFor() returns [] and the warp screen ` +
+        `preloads only the plate — the player lands on this map's empty frame and watches ` +
+        `renderTiledMap() fetch its sheets`
+    ).toBe(true);
+  });
+
+  // The return warp's destination, which is not a unit and so is not covered by the loop above.
+  it("the Institute hall has SURFACE_TILESETS, for the return warp", () => {
+    expect(
+      section("const SURFACE_TILESETS = {").includes('"institute-hall":'),
+      `SURFACE_TILESETS has no "institute-hall" entry, so every Recall to Archive preloads the ` +
+        `plate alone and arrives on an unpainted hall`
+    ).toBe(true);
   });
 });
 
