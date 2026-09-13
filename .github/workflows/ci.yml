@@ -7,9 +7,9 @@
 # What runs here is `npm run check` (format:check, lint, spell, test, validate:content) and a real
 # production build.
 #
-# What deliberately does NOT run here is `npm run test:e2e`. The 55 visual baselines are committed as
+# What deliberately does NOT run here is `npm run test:e2e`. The 61 visual baselines are committed as
 # *-chromium-win32.png and .gitignore excludes the darwin set as "unreviewed by definition"; a Linux
-# runner would find no baseline of its own for any screenshot and either fail or quietly write 55 new
+# runner would find no baseline of its own for any screenshot and either fail or quietly write 61 new
 # ones nobody has looked at. Run the e2e suite locally on Windows, which is what the ladder says.
 #
 # `npm run typecheck` is also absent on purpose: jsconfig's checkJs baseline is a known set of false

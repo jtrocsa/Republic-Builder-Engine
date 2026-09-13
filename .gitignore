@@ -15,16 +15,20 @@ apps/web/src/assets/generated/
 # only, never the token.
 .claude/settings.local.json
 
-# Purchased tileset packs that nothing uses: not in an import.meta.glob, not in a .tmj's tilesets[],
-# not a `from:` in derived-objects.manifest.js, and not named by content/tilesets/maps/planned-maps.js.
-# Eight of them were sitting in apps/web/src/assets/tilesets/ at 108 MB and were parked here by the
-# Phase 90 workflow audit rather than deleted. Git history keeps every one; restore a pack with
-# `git checkout <commit> -- "apps/web/src/assets/tilesets/<pack>"`.
+# NOTE (Phase 132): the block that used to sit here described parking eight unused purchased tileset
+# packs — "sitting in apps/web/src/assets/tilesets/ at 108 MB and were parked here by the Phase 90
+# workflow audit". **That cleanup was never applied.** `git show 49b4130 -- .gitignore` shows the
+# commit added this comment and no ignore patterns at all, so nothing was ever parked: all 197 files
+# under apps/web/src/assets/tilesets/ are tracked, at 132 MB, and `git ls-files --others` there
+# returns nothing. The comment is kept in corrected form rather than deleted, because a reader who
+# greps for "parked" needs to find out that it did not happen.
 #
-# Two consumers make a pack load-bearing even though nothing globs it, and both were nearly missed:
-# a `from:` source for a derived sheet (or `npm run assets:pack-objects` can no longer rebuild what
-# the maps draw), and planned-maps.js's forward slate, which tests/unit/tile-palettes.test.js asserts
-# actually exists on disk. Check both before parking anything else here.
+# Whether to untrack them is a real, unmade decision and not a documentation fix, so it is left open
+# here. Two consumers make a pack load-bearing even though nothing globs it, and both were nearly
+# missed the first time: a `from:` source for a derived sheet (or `npm run assets:pack-objects` can
+# no longer rebuild what the maps draw), and planned-maps.js's forward slate, which
+# tests/unit/tile-palettes.test.js asserts actually exists on disk. `npm run assets:audit` is the
+# authoritative check — run it before acting, rather than trusting the numbers in any comment.
 
 # Painted Chronotravel plate sources: ~2.5 MB 1672x941 PNGs, one per destination. The committed
 # artefact is apps/web/src/assets/plates/*.webp, built from these by `npm run assets:build-plates`.

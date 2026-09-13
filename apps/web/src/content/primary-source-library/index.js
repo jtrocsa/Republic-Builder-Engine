@@ -2,9 +2,14 @@
  * Aggregates the syllabus-wide primary source reference library (Units 1-9)
  * into flat, lookup-ready collections. See
  * docs/content-guide/primary-source-library.md for what this is and how to
- * use it — this module is not imported by main.js; it exists so a future
- * case/quest author (or a later engine integration) has one place to pull
- * researched sources from, rather than re-researching them per case.
+ * use it.
+ *
+ * **This module IS imported by main.js and is load-bearing in Teacher Mode.**
+ * Earlier revisions of this comment said the opposite. main.js imports five
+ * names from here — getPrimarySourcesForUnit, getVisualSourcesForUnit,
+ * PRIMARY_SOURCE_LIBRARY_UNITS, getPrimarySourceById, getVisualSourceById —
+ * and the Teacher Dashboard's entire Sources tab is built on them. A change
+ * here is user-visible; it is not a dormant authoring aid.
  */
 
 import {

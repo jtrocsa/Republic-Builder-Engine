@@ -20,8 +20,16 @@
  * does not error; it lands the player on the wrong continent. So the content list is a superset
  * of the playable list, never the other way round.
  *
- * This file imports nothing on purpose. It is read by `main.js`, by Node scripts and by tests,
- * and a single content import here would drag the whole campaign into all three.
+ * This file imports nothing on purpose, and a single content import here would drag the whole
+ * campaign into every reader.
+ *
+ * **Its readers are the validator, the field guide, the docs stats and the tests — not the game.**
+ * Earlier revisions of this comment said `main.js` reads it; it does not, and never has
+ * (`grep -c unit-registry apps/web/src/main.js` -> 0). `main.js` keeps its own parallel list, the
+ * `UNITS` array, and the two are held together in one direction only: `field-map-coordinates.test.js`
+ * asserts every `FIELD_MAPS` key is in `UNIT_IDS`, deliberately not the reverse, because a unit may
+ * have content for several phases before it has a map. So "derive from one list" is a rule about
+ * the build and test surface here, and is not enforced inside the running game.
  */
 
 /** Every unit with authored, validated content, in curriculum order. */
