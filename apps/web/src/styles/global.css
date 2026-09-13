@@ -9521,10 +9521,15 @@ body {
   outline-offset: 4px !important;
 }
 /* The last two `.signal-N` scale overrides; retired with the classes themselves (Phase 56). */
-.recall-beacon {
-  left: 410px !important;
-  top: 545px !important;
-}
+/* `.recall-beacon { left: 410px !important; top: 545px !important }` stood here and is gone
+   (Phase 140). It was a fixed world position from before the beacon was placed from data, and an
+   `!important` declaration beats the non-important inline style `recallBeacon()` writes — so the
+   beacon was pinned at one point on all eight maps while `isNearRecallBeacon()` went on measuring
+   to each map's authored `recall` tile, 16 to 23.5 tiles away. Measured, not inferred: on Unit 1
+   the game wrote `left:1056.0px;top:1152.0px` and the computed value was `410px / 545px`.
+
+   **The beacon's position is data.** It comes from `FIELD_MAPS[unit].recall`, and nothing in this
+   file may set its `left`/`top`. See decision log `0139`. */
 /* Two `.hub-trophy { top: <pct> !important }` overrides used to sit here and further down. They
    nudged the Preservation Case button onto the shelf drawn near the top-left of the retired
    `chronicle-institute-hub.png`, and being `!important` percentages they beat the inline pixel `top`
