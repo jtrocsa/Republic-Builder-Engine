@@ -392,6 +392,7 @@ overwritable
 oxipng
 papaparse
 pasteable
+pgrst
 pathed
 pathfind
 pathfinds
