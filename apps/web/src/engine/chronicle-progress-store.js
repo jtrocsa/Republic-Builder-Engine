@@ -92,6 +92,18 @@ export const DEFAULT_PROGRESS = {
   // resolveProgressConflict() compares against a remote copy's updated_at to
   // decide which is newer. Not itself synced anywhere; purely local metadata.
   lastSavedAt: null,
+  // Which signed-in student this save belongs to, stamped by
+  // hydrateRemoteProgress() on every sign-in. null means nobody yet — a solo
+  // player, which is why signing in for the first time still absorbs the save
+  // you made before you had an account.
+  //
+  // It exists because a save had no owner, and the machine is shared. On a
+  // school Chromebook the next student to sign in inherited whatever the last
+  // one left: resolveProgressConflict() compared two timestamps and the local
+  // copy was always the newer one, so it won. Measured — three completed cases
+  // replaced by one, in the returning student's own cloud row, on a correct
+  // sign-in with their own password. See docs/decision-log/0147-*.md.
+  ownerUserId: null,
 };
 export function readProgress() {
   try {

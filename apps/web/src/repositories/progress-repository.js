@@ -28,7 +28,25 @@ let pushTimeoutId = null;
 // legacy save (predating this field) — treated as -Infinity so a real remote
 // copy always wins over an empty/never-saved local one (the "new Chromebook"
 // case). Equal timestamps keep local, matching "last-write-wins, local ties."
-export function resolveProgressConflict(local, remote) {
+//
+// **Ownership is asked first, and it is not a tiebreaker.** A timestamp can
+// only say which save is newer, and on a shared machine the newest save is
+// routinely somebody else's — the student who used this Chromebook last
+// period. Comparing them at all is the mistake: a save that belongs to another
+// student is not a candidate, however recent it is. Returns null when there is
+// nothing of this student's to fall back on, which the caller reads as "start
+// clean" rather than as "keep what is here".
+//
+// signedInUserId is optional so the pure-timestamp behaviour is what a caller
+// with no session gets, unchanged.
+export function resolveProgressConflict(local, remote, signedInUserId = null) {
+  const localOwner = local?.ownerUserId ?? null;
+  // localOwner === null is a solo save made before signing in, and absorbing it
+  // is the intended behaviour — it is the only way progress made without an
+  // account ever reaches one.
+  if (signedInUserId && localOwner && localOwner !== signedInUserId) {
+    return remote ? remote.progress : null;
+  }
   if (!remote) return local;
   const localTimestamp = local?.lastSavedAt ?? -Infinity;
   const remoteTimestamp = new Date(remote.updatedAt).getTime();
@@ -46,6 +64,15 @@ export function saveProgress(next) {
     getSession()
       .then((session) => {
         if (!session) return null;
+        // **A save is only ever pushed to the row of the student it belongs to.** Signing in is
+        // two independent async paths — the handler that sets the screen and saves, and
+        // onAuthStateChange's hydrate — and the handler's save() runs first, holding whatever was
+        // on the machine before hydration had decided anything. Without this check that write is
+        // pushed to the student who has just signed in, so a returning student's cloud copy is
+        // replaced by their classmate's save (measured: three completed cases replaced by an
+        // empty one) before hydration can restore it locally. An unowned save is a solo one and
+        // still pushes, which is how progress made before signing in reaches the account.
+        if (saved.ownerUserId && saved.ownerUserId !== session.user.id) return null;
         return getCurrentClassroomId().then((classroomId) => {
           if (!classroomId) return null;
           return pushRemoteProgress(session.user.id, classroomId, saved);
@@ -62,10 +89,16 @@ export function resetProgress() {
 
 export { hasSavedProgress };
 
-// Called once after boot, fire-and-forget. Returns the resolved progress
-// object if hydration produced something different from what boot already
-// used locally, or null if there's nothing to change (signed out, no
-// classroom yet, or local was already newer/equal).
+// Called after boot **and on every sign-in** (main.js wires it to both
+// getSession() and onAuthStateChange), fire-and-forget. Returns the resolved
+// progress object if hydration produced something different from what the
+// caller is holding, or null if there's nothing to change (signed out, no
+// classroom yet, or local was already this student's and newer/equal).
+//
+// This is also where the save gets stamped with its owner, because it is the
+// one place that knows both the save and who is signed in. Every sign-in
+// passes through here, so every save a signed-in student writes afterwards
+// carries their id and the next student is not handed it.
 export async function hydrateRemoteProgress(localProgress) {
   const session = await getSession();
   if (!session) return null;
@@ -73,9 +106,14 @@ export async function hydrateRemoteProgress(localProgress) {
   if (!classroomId) return null;
 
   const remote = await pullRemoteProgress(session.user.id, classroomId);
-  const resolved = resolveProgressConflict(localProgress, remote);
-  if (resolved === localProgress) return null;
+  const resolved = resolveProgressConflict(localProgress, remote, session.user.id);
+  // null means the local save belongs to another student and this one has no
+  // remote copy to restore — a first sign-in on a classmate's machine. Clearing
+  // is the only correct answer: their save is not ours to keep playing.
+  const base = resolved === null ? resetLocalProgress() : resolved;
+  if (base === localProgress && localProgress.ownerUserId === session.user.id) return null;
 
-  saveLocalProgress(resolved);
-  return resolved;
+  const owned = { ...base, ownerUserId: session.user.id };
+  saveLocalProgress(owned);
+  return owned;
 }

@@ -110,6 +110,28 @@ export async function disableStudentSlot(rosterSlotId) {
   if (error) throw error;
 }
 
+// The names students chose for themselves, for the teacher dashboard's roster table.
+//
+// roster_slots.display_name is only ever set when a teacher provisions seats *with* names, and no
+// screen offers that — the dashboard's form is a count. What a student types when they claim a seat
+// goes to auth user_metadata and, through the on_auth_user_created trigger, to profiles.display_name.
+// So the roster's NAME column read "—" for every student in every classroom made through the app,
+// and a teacher could not tell which person was in which seat.
+//
+// 0001_init.sql's "profiles_teacher_reads_roster_students" policy exists for exactly this, and says
+// so in its own comment ("for roster display"); it was the client half that was never written. A
+// flat .in() lookup rather than an embed, because roster_slots.auth_user_id references auth.users,
+// not profiles, so PostgREST has no relationship to traverse.
+export async function getStudentDisplayNames(authUserIds) {
+  const ids = [...new Set(authUserIds.filter(Boolean))];
+  if (!ids.length) return {};
+  const { data, error } = await supabase.from("profiles").select("id, display_name").in("id", ids);
+  if (error) throw error;
+  const byUser = {};
+  for (const row of data) byUser[row.id] = row.display_name;
+  return byUser;
+}
+
 // Read-only per-student progress summary for the teacher dashboard's roster table, sourced
 // from student_world_profiles (the remote mirror of each student's local save — see
 // chronicle-progress-store.js's DEFAULT_PROGRESS for the `completedCases`/`currentScreen`

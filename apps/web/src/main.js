@@ -314,6 +314,7 @@ import {
   createClassroomsWithRoster,
   disableStudentSlot,
   getClassroomProgressSummaries,
+  getStudentDisplayNames,
 } from "./repositories/remote-classroom-repository.js";
 import {
   recordSubmission,
@@ -5577,6 +5578,10 @@ const DEV_FAKE_TEACHER = {
   displayName: "Dev Test Teacher",
   schoolName: "Dev Test School",
 };
+// Cleared on a successful sign-in as well as set on a refused one, because the machine is shared:
+// leaving one student's classroom code and ID sitting in the form for the next person to find is
+// the same mistake as leaving them their save.
+const EMPTY_SIGN_IN_DRAFT = { joinCode: "", studentIdCode: "", displayName: "", email: "" };
 const authUiState = {
   studentTab: "claim",
   teacherTab: "signin",
@@ -5589,6 +5594,14 @@ const authUiState = {
   signupStep: 1,
   signupDraft: null,
   classroomRows: [],
+  // What the two sign-in forms had typed in them. The signup wizard above has held its own draft
+  // since it shipped, for exactly this reason; the sign-in forms did not, and their inputs are
+  // uncontrolled and read at submit time — so the `render()` that draws a refusal emptied the
+  // screen along with it. A student who mistyped their password had to re-enter the classroom
+  // code and the student ID they had just been handed on a slip of paper.
+  //
+  // Passwords are deliberately not kept: the field that was wrong is the one to clear.
+  signInDraft: { ...EMPTY_SIGN_IN_DRAFT },
 };
 /**
  * The Teacher Dashboard's in-memory UI state, and the one function that produces it.
@@ -5617,6 +5630,10 @@ export function initialTeacherUiState() {
     lastProvisioned: null,
     lastReissuedPassword: null,
     progressByStudent: {},
+    // auth_user_id → the name the student chose when they claimed their seat. Kept beside
+    // progressByStudent because it is the same shape and the same table row it decorates — see
+    // getStudentDisplayNames() for why the roster's own column cannot answer this.
+    displayNameByStudent: {},
     enabledUnitIndex: 0,
     error: "",
     pending: false,
@@ -6959,9 +6976,9 @@ ${authTabsMarkup([
   { label: "First time", action: "student-tab-claim", selected: isClaim },
   { label: "Returning", action: "student-tab-signin", selected: !isClaim },
 ])}
-${fieldMarkup({ id: "join-classroom-code", label: "Classroom code", placeholder: "e.g. FOX7K2", autocomplete: "off" })}
-${fieldMarkup({ id: "join-student-id", label: "Your student ID", placeholder: "e.g. 07", autocomplete: "off" })}
-${isClaim ? fieldMarkup({ id: "join-display-name", label: "Display name", optional: true, placeholder: "How your teacher sees you", autocomplete: "off" }) : ""}
+${fieldMarkup({ id: "join-classroom-code", label: "Classroom code", placeholder: "e.g. FOX7K2", value: authUiState.signInDraft.joinCode, autocomplete: "off" })}
+${fieldMarkup({ id: "join-student-id", label: "Your student ID", placeholder: "e.g. 07", value: authUiState.signInDraft.studentIdCode, autocomplete: "off" })}
+${isClaim ? fieldMarkup({ id: "join-display-name", label: "Display name", optional: true, placeholder: "How your teacher sees you", value: authUiState.signInDraft.displayName, autocomplete: "off" }) : ""}
 ${fieldMarkup({ id: "join-password", label: "Password", control: passwordFieldMarkup("join-password", "••••••••") })}
 ${feedbackError(authUiState)}
 <button class="btn btn-gold" data-action="${isClaim ? "submit-join-claim" : "submit-join-signin"}" type="button" ${authUiState.pending ? "disabled" : ""}>${authUiState.pending ? "Please wait…" : isClaim ? "Claim my seat →" : "Sign in →"}</button>
@@ -6978,7 +6995,7 @@ ${authTabsMarkup([
   { label: "Sign In", action: "teacher-tab-signin", selected: true },
   { label: "Create Account", action: "teacher-tab-signup", selected: false },
 ])}
-${fieldMarkup({ id: "teacher-email", label: "Email", type: "email", placeholder: "you@school.edu", autocomplete: "off" })}
+${fieldMarkup({ id: "teacher-email", label: "Email", type: "email", placeholder: "you@school.edu", value: authUiState.signInDraft.email, autocomplete: "off" })}
 ${fieldMarkup({ id: "teacher-password", label: "Password", control: passwordFieldMarkup("teacher-password", "••••••••") })}
 ${authUiState.info ? `<p class="feedback" role="status" aria-live="polite">${esc(authUiState.info)}</p>` : ""}
 ${feedbackError(authUiState)}
@@ -7103,7 +7120,13 @@ function teacherClassroomsTabMarkup() {
             ]
               .filter(Boolean)
               .join(" · ");
-      return `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(slot.display_name || "—")}</td><td>${chip(statusInfo)}</td><td>${chip({ label: progressLabel, tone: "muted" })}</td><td>${actions}</td></tr>`;
+      // The teacher's own label for the seat wins where one exists; otherwise the name the student
+      // chose when they claimed it. Only the first was ever read, and no screen sets it.
+      const rosterName =
+        slot.display_name ||
+        (slot.auth_user_id ? teacherUiState.displayNameByStudent[slot.auth_user_id] : "") ||
+        "—";
+      return `<tr><td>${esc(slot.student_id_code)}</td><td>${esc(rosterName)}</td><td>${chip(statusInfo)}</td><td>${chip({ label: progressLabel, tone: "muted" })}</td><td>${actions}</td></tr>`;
     })
     .join("");
   return `
@@ -7537,12 +7560,16 @@ async function loadSelectedClassroomDetails() {
     teacherUiState.roster = [];
     teacherUiState.submissions = [];
     teacherUiState.progressByStudent = {};
+    teacherUiState.displayNameByStudent = {};
     teacherUiState.enabledUnitIndex = 0;
     teacherUiState.assignments = [];
     teacherUiState.gradedEvaluationIds = new Set();
     return;
   }
   teacherUiState.roster = await getRoster(teacherUiState.selectedClassroomId);
+  teacherUiState.displayNameByStudent = await getStudentDisplayNames(
+    teacherUiState.roster.map((slot) => slot.auth_user_id)
+  );
   teacherUiState.submissions = await listForClassroom(teacherUiState.selectedClassroomId);
   teacherUiState.progressByStudent = await getClassroomProgressSummaries(
     teacherUiState.selectedClassroomId
@@ -16643,6 +16670,9 @@ function handleAuthScreenClick(target, action) {
     const studentIdCode = document.getElementById("join-student-id")?.value.trim() || "";
     const displayName = document.getElementById("join-display-name")?.value.trim() || "";
     const password = document.getElementById("join-password")?.value || "";
+    // Before anything that can render: every exit from here draws a refusal, and drawing it used
+    // to empty the form underneath it.
+    authUiState.signInDraft = { ...authUiState.signInDraft, joinCode, studentIdCode, displayName };
     if (!validateJoinCode(joinCode) || !validateStudentIdCode(studentIdCode)) {
       authUiState.error = "Enter your classroom code and student ID.";
       render();
@@ -16660,6 +16690,7 @@ function handleAuthScreenClick(target, action) {
     claimSlot({ joinCode, studentIdCode, password, displayName })
       .then(({ email }) => signInWithPassword(email, password))
       .then(() => {
+        authUiState.signInDraft = { ...EMPTY_SIGN_IN_DRAFT };
         progress.currentScreen = "institute";
         save();
       })
@@ -16676,6 +16707,7 @@ function handleAuthScreenClick(target, action) {
     const joinCode = document.getElementById("join-classroom-code")?.value.trim() || "";
     const studentIdCode = document.getElementById("join-student-id")?.value.trim() || "";
     const password = document.getElementById("join-password")?.value || "";
+    authUiState.signInDraft = { ...authUiState.signInDraft, joinCode, studentIdCode };
     if (!validateJoinCode(joinCode) || !validateStudentIdCode(studentIdCode) || !password) {
       authUiState.error = "Enter your classroom code, student ID, and password.";
       render();
@@ -16688,6 +16720,7 @@ function handleAuthScreenClick(target, action) {
     resolveStudentEmail({ joinCode, studentIdCode })
       .then(({ email }) => signInWithPassword(email, password))
       .then(() => {
+        authUiState.signInDraft = { ...EMPTY_SIGN_IN_DRAFT };
         progress.currentScreen = "institute";
         save();
       })
@@ -16703,6 +16736,7 @@ function handleAuthScreenClick(target, action) {
   if (action === "submit-teacher-signin") {
     const email = document.getElementById("teacher-email")?.value.trim() || "";
     const password = document.getElementById("teacher-password")?.value || "";
+    authUiState.signInDraft = { ...authUiState.signInDraft, email };
     if (!email || !password) {
       authUiState.error = "Enter your email and password.";
       render();
@@ -16716,6 +16750,7 @@ function handleAuthScreenClick(target, action) {
       .then(() => getProfile())
       .then((profile) => {
         currentProfile = profile;
+        authUiState.signInDraft = { ...EMPTY_SIGN_IN_DRAFT };
         progress.currentScreen = "teacher-dashboard";
         save();
         return loadTeacherDashboardData();

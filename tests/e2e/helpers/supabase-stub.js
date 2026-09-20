@@ -54,6 +54,23 @@
  * app reads all three straight back — `new Date(undefined)` renders as "Invalid Date" on the
  * grading screen, which is a defect in the stub that looks exactly like a defect in the game.
  *
+ * ---
+ *
+ * **Phase 148 — a password is checked for an account this stub created, and for nothing else.**
+ *
+ * `signInWithPassword` goes to GoTrue, and a stub that grants a session to anything cannot show a
+ * wrong password being refused — which is the branch students actually hit, and the branch that has
+ * to work for `helpers/roster-api-stub.js`'s claim/reissue round trips to mean anything.
+ *
+ * So `accounts` holds the identities the stub was asked to mint (at `/api/roster/claim`), and a
+ * sign-in for one of those is checked. **Everything else stays permissive**, and that is the right
+ * way round rather than a mode switch: the stub knows the password of an identity it created, and it
+ * does not know `dev-fake-teacher`'s fixed credentials, which every teacher spec signs in with and
+ * which must keep getting through.
+ *
+ * `/auth/v1/user` answers with whoever the last issued session belongs to. Answering it with a
+ * constant would hand a signed-in student the teacher back.
+ *
  * **What it still is not.** It is not Postgres. It understands `eq` and `in` and nothing else, it
  * does not enforce RLS, uniqueness, foreign keys or types, and a fixture whose shape has drifted
  * from the live table will keep passing. `unsupportedFilters` is returned so a spec can see when a
@@ -75,14 +92,34 @@ const STUB_USER = {
   updated_at: "2026-01-01T00:00:00.000Z",
 };
 
-const session = () => ({
-  access_token: "stub-access-token",
+const sessionFor = (user) => ({
+  access_token: `stub-access-token-${user.id}`,
   token_type: "bearer",
   expires_in: 3600,
   expires_at: Math.floor(Date.now() / 1000) + 3600,
-  refresh_token: "stub-refresh-token",
-  user: STUB_USER,
+  refresh_token: `stub-refresh-token-${user.id}`,
+  user,
 });
+
+/**
+ * An auth identity the stub knows the password of, in the shape GoTrue returns.
+ *
+ * Only accounts the stub was asked to create are in the registry, and only those have their
+ * password checked — see `stubSupabase`'s docblock for why the rule is that way round.
+ */
+export function stubAuthUser({ id, email, role, displayName }) {
+  return {
+    id,
+    aud: "authenticated",
+    role: "authenticated",
+    email,
+    email_confirmed_at: "2026-01-01T00:00:00.000Z",
+    app_metadata: { provider: "email", providers: ["email"] },
+    user_metadata: { role, display_name: displayName },
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  };
+}
 
 const DEFAULT_TABLES = {
   profiles: [{ id: STUB_USER_ID, role: "teacher", display_name: "Stub Teacher" }],
@@ -156,7 +193,8 @@ function applyOrder(rows, url) {
 
 let generatedRows = 0;
 /** Deterministic across a run, so a failure names the same row twice. */
-const generatedId = () => `00000000-0000-4000-8000-9${String(++generatedRows).padStart(11, "0")}`;
+export const generatedId = () =>
+  `00000000-0000-4000-8000-9${String(++generatedRows).padStart(11, "0")}`;
 
 /**
  * Intercept every Supabase call on this page and answer it from live in-memory tables.
@@ -170,8 +208,10 @@ const generatedId = () => `00000000-0000-4000-8000-9${String(++generatedRows).pa
  *   writes: string[],
  *   tables: Record<string, any[]>,
  *   unsupportedFilters: string[],
+ *   accounts: Map<string, {password: string, user: any}>,
  * }>} live values, appended to as the page runs — `writes` is every mutating call, which a test can
- *   assert stayed empty, and `tables` is what the page left behind.
+ *   assert stayed empty, `tables` is what the page left behind, and `accounts` is the identities the
+ *   stub was asked to create, which `helpers/roster-api-stub.js` adds to when a seat is claimed.
  */
 export async function stubSupabase(page, options = {}) {
   const merged = { ...DEFAULT_TABLES, ...(options.tables || {}) };
@@ -180,6 +220,11 @@ export async function stubSupabase(page, options = {}) {
   const requests = [];
   const writes = [];
   const unsupportedFilters = [];
+  /** @type {Map<string, {password: string, user: any}>} email → the account, for accounts the stub made. */
+  const accounts = new Map();
+  // Which identity the last issued session belongs to. `/auth/v1/user` is a refresh of whoever is
+  // signed in, and answering it with a constant would hand a student the teacher back.
+  let currentUser = STUB_USER;
 
   const rowsOf = (table) => (tables[table] ||= []);
 
@@ -199,10 +244,37 @@ export async function stubSupabase(page, options = {}) {
       });
 
     // --- auth ---------------------------------------------------------------------------------
-    if (path.startsWith("/auth/v1/token")) return json(session());
-    if (path.startsWith("/auth/v1/user")) return json(STUB_USER);
-    if (path.startsWith("/auth/v1/signup")) return json({ ...session(), id: STUB_USER_ID });
-    if (path.startsWith("/auth/v1/logout")) return route.fulfill({ status: 204, body: "" });
+    if (path.startsWith("/auth/v1/token")) {
+      let credentials;
+      try {
+        credentials = JSON.parse(request.postData() || "{}");
+      } catch {
+        credentials = {};
+      }
+      const account = accounts.get(String(credentials.email || "").toLowerCase());
+      // An account the stub created is one whose password it knows, so a wrong one is refused the
+      // way GoTrue refuses it. Anything else is the doorway: `dev-fake-teacher` signs in with a
+      // fixed account this stub never created and must keep getting through.
+      if (account && account.password !== credentials.password) {
+        return route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "invalid_grant",
+            error_description: "Invalid login credentials",
+          }),
+        });
+      }
+      currentUser = account ? account.user : STUB_USER;
+      return json(sessionFor(currentUser));
+    }
+    if (path.startsWith("/auth/v1/user")) return json(currentUser);
+    if (path.startsWith("/auth/v1/signup"))
+      return json({ ...sessionFor(STUB_USER), id: STUB_USER_ID });
+    if (path.startsWith("/auth/v1/logout")) {
+      currentUser = STUB_USER;
+      return route.fulfill({ status: 204, body: "" });
+    }
 
     // --- PostgREST ----------------------------------------------------------------------------
     const table = path.replace("/rest/v1/", "").split("?")[0];
@@ -284,5 +356,5 @@ export async function stubSupabase(page, options = {}) {
     return answer(stored);
   });
 
-  return { requests, writes, tables, unsupportedFilters };
+  return { requests, writes, tables, unsupportedFilters, accounts };
 }
