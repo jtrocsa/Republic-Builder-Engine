@@ -26,6 +26,38 @@
  * with `Prefer: return=representation` wants its own body back, and a `HEAD` count wants
  * `content-range`. All three are handled, because the client throws on the shapes it does not
  * expect and the resulting failure looks nothing like its cause.
+ *
+ * ---
+ *
+ * **Phase 147 — a write is remembered, because a teacher's write is read back.**
+ *
+ * Phase 144 and 145 walked the teacher surfaces in one direction only: everything they touch is a
+ * *read*. That was not a choice about coverage, it was the ceiling of a stub that answered every
+ * `GET` from a frozen fixture and every write with an echo — and every consequential thing a
+ * teacher does is a write whose result they then read back:
+ *
+ * - `recordManualGrade()` inserts, and the handler immediately re-reads the submission to show the
+ *   grade it just saved. Against an echo, the teacher's own grade never appears.
+ * - `createCustomContent()` inserts **without an `id`** — the column's default supplies it — and
+ *   the caller uses `row.id` as the draft's target. Against an echo, that id is `undefined`.
+ * - `publishCaseSelections()` reads the **draft** row back out of the table to publish it. Against
+ *   an empty table that read returns nothing, so publishing takes the revert-to-official branch
+ *   and silently does nothing at all.
+ *
+ * So the tables are live here: an insert keeps its row, a `PATCH` merges into the rows it matches,
+ * a `DELETE` removes them, and a `GET` reads what is actually there. The filters are parsed rather
+ * than ignored, because a `manual_grades` read filtered by `evaluation_id` that answers with every
+ * grade in the classroom is a fixture pretending to be a database.
+ *
+ * **Three defaults are the column defaults and not conveniences.** An inserted row gets an `id`, a
+ * `created_at` and an `updated_at` if it arrived without them, because the real table does and the
+ * app reads all three straight back — `new Date(undefined)` renders as "Invalid Date" on the
+ * grading screen, which is a defect in the stub that looks exactly like a defect in the game.
+ *
+ * **What it still is not.** It is not Postgres. It understands `eq` and `in` and nothing else, it
+ * does not enforce RLS, uniqueness, foreign keys or types, and a fixture whose shape has drifted
+ * from the live table will keep passing. `unsupportedFilters` is returned so a spec can see when a
+ * query asked something this cannot answer, rather than being quietly given too many rows.
  */
 
 export const STUB_USER_ID = "00000000-0000-4000-8000-000000000001";
@@ -66,19 +98,90 @@ const DEFAULT_TABLES = {
   ],
 };
 
+/** Query parameters PostgREST reads as instructions rather than as column filters. */
+const NON_FILTER_PARAMS = new Set(["select", "order", "limit", "offset", "on_conflict", "columns"]);
+
+/** `in.(a,b,"c d")` → the set {a, b, c d}. */
+function parseInList(raw) {
+  return new Set(
+    raw
+      .replace(/^\(/, "")
+      .replace(/\)$/, "")
+      .split(",")
+      .map((value) => value.trim().replace(/^"(.*)"$/, "$1"))
+      .filter((value) => value.length > 0)
+  );
+}
+
 /**
- * Intercept every Supabase call on this page and answer it from fixtures.
+ * The row filter this URL asks for, plus anything it asked that this cannot answer.
+ *
+ * An operator that is not understood is **reported rather than skipped**. Skipping it silently
+ * widens the query — a read filtered to one student's grades would answer with the whole class's —
+ * and a stub that answers a question it did not understand is worse than one that says so.
+ */
+function filterFor(url) {
+  const tests = [];
+  const unsupported = [];
+  for (const [column, raw] of url.searchParams) {
+    if (NON_FILTER_PARAMS.has(column)) continue;
+    if (raw.startsWith("eq.")) {
+      const wanted = raw.slice(3);
+      tests.push((row) => String(row[column] ?? "") === wanted);
+    } else if (raw.startsWith("in.")) {
+      const wanted = parseInList(raw.slice(3));
+      tests.push((row) => wanted.has(String(row[column] ?? "")));
+    } else if (raw === "is.null") {
+      tests.push((row) => row[column] === null || row[column] === undefined);
+    } else {
+      unsupported.push(`${column}=${raw}`);
+    }
+  }
+  return { match: (row) => tests.every((test) => test(row)), unsupported };
+}
+
+/** `order=created_at.desc` — applied in place, because the app shows a grade history newest first. */
+function applyOrder(rows, url) {
+  const order = url.searchParams.get("order");
+  if (!order) return rows;
+  const [column, direction = "asc"] = order.split(".");
+  const sign = direction.startsWith("desc") ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const left = a[column];
+    const right = b[column];
+    if (left === right) return 0;
+    return (left > right ? 1 : -1) * sign;
+  });
+}
+
+let generatedRows = 0;
+/** Deterministic across a run, so a failure names the same row twice. */
+const generatedId = () => `00000000-0000-4000-8000-9${String(++generatedRows).padStart(11, "0")}`;
+
+/**
+ * Intercept every Supabase call on this page and answer it from live in-memory tables.
  *
  * @param {import("@playwright/test").Page} page
  * @param {{ tables?: Record<string, unknown[]> }} [options] extra or replacement table fixtures,
- *   merged over the defaults by table name.
- * @returns {Promise<{ requests: string[], writes: string[] }>} live arrays, appended to as the
- *   page runs — `writes` is every mutating call, which a test can assert stayed empty.
+ *   merged over the defaults by table name. Deep-copied, so a spec's module-level fixture is not
+ *   mutated by the run and two tests in one file start from the same state.
+ * @returns {Promise<{
+ *   requests: string[],
+ *   writes: string[],
+ *   tables: Record<string, any[]>,
+ *   unsupportedFilters: string[],
+ * }>} live values, appended to as the page runs — `writes` is every mutating call, which a test can
+ *   assert stayed empty, and `tables` is what the page left behind.
  */
 export async function stubSupabase(page, options = {}) {
-  const tables = { ...DEFAULT_TABLES, ...(options.tables || {}) };
+  const merged = { ...DEFAULT_TABLES, ...(options.tables || {}) };
+  /** @type {Record<string, any[]>} */
+  const tables = JSON.parse(JSON.stringify(merged));
   const requests = [];
   const writes = [];
+  const unsupportedFilters = [];
+
+  const rowsOf = (table) => (tables[table] ||= []);
 
   await page.route("**/*.supabase.co/**", async (route) => {
     const request = route.request();
@@ -103,32 +206,83 @@ export async function stubSupabase(page, options = {}) {
 
     // --- PostgREST ----------------------------------------------------------------------------
     const table = path.replace("/rest/v1/", "").split("?")[0];
-    const rows = tables[table] ?? [];
+    const rows = rowsOf(table);
+    const { match, unsupported } = filterFor(url);
+    for (const clause of unsupported) unsupportedFilters.push(`${method} ${table}?${clause}`);
     const wantsObject = (request.headers()["accept"] || "").includes("vnd.pgrst.object");
 
-    if (method !== "GET" && method !== "HEAD") {
-      writes.push(`${method} ${table}`);
-      // A write with `Prefer: return=representation` is handed its own body back, which is what
-      // the client does with an upsert it then reads fields off.
-      let echoed = [];
-      try {
-        const body = request.postData();
-        if (body) {
-          const parsed = JSON.parse(body);
-          echoed = Array.isArray(parsed) ? parsed : [parsed];
-        }
-      } catch {
-        echoed = [];
-      }
-      return json(wantsObject ? (echoed[0] ?? null) : echoed, {
-        "content-range": `0-${Math.max(echoed.length - 1, 0)}/${echoed.length}`,
+    const answer = (returned) =>
+      json(wantsObject ? (returned[0] ?? null) : returned, {
+        "content-range": `0-${Math.max(returned.length - 1, 0)}/${returned.length}`,
       });
+
+    if (method === "GET" || method === "HEAD") {
+      return answer(applyOrder(rows.filter(match), url));
     }
 
-    return json(wantsObject ? (rows[0] ?? null) : rows, {
-      "content-range": `0-${Math.max(rows.length - 1, 0)}/${rows.length}`,
-    });
+    writes.push(`${method} ${table}`);
+
+    let sent = [];
+    try {
+      const body = request.postData();
+      if (body) {
+        const parsed = JSON.parse(body);
+        sent = Array.isArray(parsed) ? parsed : [parsed];
+      }
+    } catch {
+      sent = [];
+    }
+
+    if (method === "DELETE") {
+      const removed = rows.filter(match);
+      tables[table] = rows.filter((row) => !match(row));
+      return answer(removed);
+    }
+
+    if (method === "PATCH") {
+      const patch = sent[0] || {};
+      const changed = [];
+      for (const row of rows) {
+        if (!match(row)) continue;
+        Object.assign(row, patch);
+        changed.push(row);
+      }
+      return answer(changed);
+    }
+
+    // POST — an insert, or an upsert when the client named a conflict target. The real table
+    // supplies `id`/`created_at`/`updated_at` from its column defaults and the app reads all three
+    // straight back, so a row that arrives without them gets them here for the same reason.
+    const conflictColumns = (url.searchParams.get("on_conflict") || "")
+      .split(",")
+      .map((column) => column.trim())
+      .filter(Boolean);
+    const now = new Date().toISOString();
+    const stored = [];
+    for (const incoming of sent) {
+      const row = {
+        id: generatedId(),
+        created_at: now,
+        updated_at: now,
+        ...incoming,
+      };
+      const existing = conflictColumns.length
+        ? rows.find((candidate) =>
+            conflictColumns.every(
+              (column) => String(candidate[column] ?? "") === String(row[column] ?? "")
+            )
+          )
+        : null;
+      if (existing) {
+        Object.assign(existing, incoming, { updated_at: row.updated_at });
+        stored.push(existing);
+      } else {
+        rows.push(row);
+        stored.push(row);
+      }
+    }
+    return answer(stored);
   });
 
-  return { requests, writes };
+  return { requests, writes, tables, unsupportedFilters };
 }

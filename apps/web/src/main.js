@@ -9720,8 +9720,14 @@ function persistAuthoringSelection() {
   // as. Picking a genuinely different type (via Replace's type picker)
   // always creates a fresh row instead, even if one already existed for
   // this slot, so its stored slot_kind always matches its content shape.
+  // editingCustomKind is what THIS session's row was actually created as, and it is read in
+  // preference to currentSlotKindAtStart because the two answer different questions: the latter is
+  // what the slot was authored as when the editor opened, and pick-question-type needs that to
+  // decide whether re-picking a type can prefill from the official content. Overloading it here
+  // would prefill an MCQ form from an evidence-organizing document.
   const canReuseExistingCustomRow =
-    auth.editingCustomId && auth.slotKind === auth.currentSlotKindAtStart;
+    auth.editingCustomId &&
+    auth.slotKind === (auth.editingCustomKind || auth.currentSlotKindAtStart);
   const persist = canReuseExistingCustomRow
     ? updateCustomContent(auth.editingCustomId, { content: result.content })
     : createCustomContent({
@@ -9732,16 +9738,27 @@ function persistAuthoringSelection() {
         replacesOfficialId: auth.editingOfficialId,
         content: result.content,
       });
-  return persist.then((row) =>
-    setDraftSelection(
+  return persist.then((row) => {
+    // Remember the row we just wrote, or the next save in this session creates another one. The
+    // reuse branch above was unreachable within a session without this: editingCustomId is seeded
+    // once, when the editor opens, from a draft that already existed — so a teacher pressing Save
+    // Draft four times while wording a question left three orphaned custom_content_items rows,
+    // each carrying a whole question blob, none of them reachable or deletable from any screen.
+    // The guard is `manageContentAuthoring === auth`, because a publish nulls it and a teacher can
+    // leave the editor while the write is in flight.
+    if (manageContentAuthoring === auth) {
+      auth.editingCustomId = row.id;
+      auth.editingCustomKind = auth.slotKind;
+    }
+    return setDraftSelection(
       classroomId,
       caseId,
       auth.officialSlotKind || auth.slotKind,
       auth.editingOfficialId,
       row.id,
       "custom"
-    )
-  );
+    );
+  });
 }
 
 // "Save Draft" (Screens 3B/3C) — persists the open form as this slot's draft
