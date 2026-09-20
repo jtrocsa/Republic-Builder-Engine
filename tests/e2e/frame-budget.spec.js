@@ -45,6 +45,38 @@ async function watchRenders(page) {
 
 const renderCount = (page) => page.evaluate(() => window.__renderCount);
 
+// **And it does not save.** The sibling invariant, added Phase 143, and it needs its own counter
+// because a save is invisible to the one above: `saveProgress()` writes `localStorage` and touches
+// no DOM, so a movement loop that saved every frame would score zero renders and pass.
+//
+// It matters for the same reason rendering does. `localStorage.setItem(KEY, JSON.stringify(next))`
+// is **synchronous** — it serialises the whole progress blob and blocks the main thread — so a save
+// on the per-frame path is a stall on every frame of every walk, and one that presents exactly like
+// a busy machine. Measured today: the blob is 1,217 bytes on a fresh Unit 1 save and the field loop
+// writes it **zero** times across six seconds of held keys. This pins that at zero.
+//
+// Worth recording because the structural audit of Phase 132 reported the opposite — that `save()`
+// runs "once inside a rAF frame" and wanted a debounce. It does not. The one `save()` reachable
+// from `runFieldMovementLoop()` is inside `closeFieldDialogueOnMove()`, which nulls
+// `progress.activeFieldNpc` and so cannot run on a second consecutive frame. The measurement
+// retired the item; this keeps it retired.
+async function watchSaves(page) {
+  await page.evaluate(() => {
+    window.__saveCount = 0;
+    if (!window.__saveHooked) {
+      window.__saveHooked = true;
+      const key = "republic-builder.chronicle.unit-01.v2";
+      const original = window.Storage.prototype.setItem;
+      window.Storage.prototype.setItem = function (name, value) {
+        if (name === key) window.__saveCount += 1;
+        return original.call(this, name, value);
+      };
+    }
+  });
+}
+
+const saveCount = (page) => page.evaluate(() => window.__saveCount);
+
 test.describe("The per-frame path patches the DOM; it does not render", () => {
   test("walking the field costs no renders, and a deliberate exit costs one", async ({ page }) => {
     await seedProgress(page, {
@@ -104,5 +136,41 @@ test.describe("The per-frame path patches the DOM; it does not render", () => {
 
     expect(await at(), "the player did not move, so the count proves nothing").not.toBe(before);
     expect(await renderCount(page), "the hub movement loop rendered").toBe(0);
+  });
+
+  test("walking the field costs no save writes, and a deliberate exit costs one", async ({
+    page,
+  }) => {
+    await seedProgress(page, {
+      currentScreen: "field",
+      activeCaseId: "case-001",
+      tutorial: { step: "complete", completed: true, skipped: false },
+    });
+    await loadSeededSave(page);
+    const player = page.locator("#caseFieldPlayer");
+    await expect(player).toBeVisible();
+
+    const at = () => player.evaluate((el) => Number.parseFloat(el.style.top));
+    const before = await at();
+    await watchSaves(page);
+    await holdKey(page, "ArrowDown", 600);
+
+    // Same loose movement check as the render case, and for the same reason: zero writes is
+    // trivially true of a walk that never happened.
+    expect(await at(), "the player did not move, so the count proves nothing").not.toBe(before);
+    expect(
+      await saveCount(page),
+      "the movement loop wrote the save blob. `saveProgress()` is a synchronous " +
+        "`localStorage.setItem` of the whole progress object, so this is a main-thread stall on " +
+        "every frame of every walk — and it is invisible to the render counter above, because a " +
+        "save touches no DOM."
+    ).toBe(0);
+
+    // And the counter is live, which is the same failure mode the render case guards against: a
+    // hook that silently stopped working reads as a passing test.
+    await page.locator('[data-action="field-recall"]').first().click();
+    await expect
+      .poll(() => saveCount(page), { message: "a deliberate screen change did not save" })
+      .toBeGreaterThan(0);
   });
 });
