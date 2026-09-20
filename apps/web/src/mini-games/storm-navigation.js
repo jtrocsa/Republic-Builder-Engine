@@ -35,7 +35,7 @@
 // a fresh node never gets more than ~16ms into its own animation timeline
 // before being torn down, so it reads as frozen near its starting frame.
 // Instead, every continuous-motion value (water flow, rain, lightning,
-// hazard/ship bob) is computed explicitly from state.elapsedMs below and
+// cloud drift, hazard/ship bob) is computed explicitly from state.elapsedMs below and
 // emitted as a literal inline style value — still a pure function of state,
 // just computed in JS instead of delegated to a CSS clock.
 
@@ -258,6 +258,25 @@ const MAX_BANK_DEG = 18;
 const PARALLAX_MAX_PX = 22;
 const CLOUDS_PARALLAX_FACTOR = 0.4; // clouds read as more distant than the coastline
 
+// Cloud drift — the last continuous effect in this scene that was still delegated to a CSS
+// clock, and the file-header note above says why that could not work: `.storm-clouds` carried
+// `animation: stormCloudsDrift 14s linear infinite`, and a node destroyed and recreated every
+// frame never gets more than one frame into its own timeline. Measured in the browser rather
+// than reasoned about: the animation's currentTime read 0ms at t=0, 0ms at t=1.5s and 0ms at
+// t=3.0s, against 121 container rebuilds in 2 seconds. The sky has never once drifted.
+//
+// Same treatment as the water, rain, lightning and bob: computed from elapsedMs here and
+// emitted as a literal inline value. Period and span are the retired keyframe's own — 0% to
+// -8% of the image's width over 14s, then wrapping — so the authored motion is unchanged;
+// this only makes it happen. Percent (not px) because the keyframe's translateX was a
+// percentage, which resolves against the element's own box and so stays correct at any width.
+const CLOUD_DRIFT_PERIOD_MS = 14000;
+const CLOUD_DRIFT_SPAN_PERCENT = -8;
+
+function cloudDriftPercent(elapsedMs) {
+  return ((elapsedMs % CLOUD_DRIFT_PERIOD_MS) / CLOUD_DRIFT_PERIOD_MS) * CLOUD_DRIFT_SPAN_PERCENT;
+}
+
 // Ship idle bob — computed from elapsedMs (see the file-header note on why: CSS keyframes
 // don't survive the per-frame full-innerHTML redraw) rather than a CSS animation.
 const SHIP_BOB_PERIOD_MS = 1800;
@@ -380,6 +399,7 @@ export function renderStormNavigationGame(state, bestScore = 0, sprites = DEFAUL
     Math.max(-1, Math.min(1, state.playerVelocityX / MAX_STEER_SPEED_PER_S)) * MAX_BANK_DEG;
   const coastlineParallaxPx = -state.playerX * PARALLAX_MAX_PX;
   const cloudsParallaxPx = coastlineParallaxPx * CLOUDS_PARALLAX_FACTOR;
+  const cloudDrift = cloudDriftPercent(state.elapsedMs);
   const shipBob = shipBobPx(state.elapsedMs);
   const waveBackgroundPos = waveBackgroundPosition(state.elapsedMs, intensity);
   const rainInlineStyle = rainStyle(state.elapsedMs, intensity);
@@ -388,7 +408,7 @@ export function renderStormNavigationGame(state, bestScore = 0, sprites = DEFAUL
   return `<section class="mini-game mini-game-storm-navigation" data-mini-game="storm-navigation">
   <p class="mini-game-timer">${state.running ? `Time survived: ${elapsedSeconds}s` : "Shipwrecked!"}</p>
   <div class="storm-track" style="background-position:${waveBackgroundPos}">
-    <img class="storm-clouds" src="${sprites.clouds}" alt="" draggable="false" style="--parallax-px:${cloudsParallaxPx.toFixed(1)}px">
+    <img class="storm-clouds" src="${sprites.clouds}" alt="" draggable="false" style="--parallax-px:${cloudsParallaxPx.toFixed(1)}px;--drift-pct:${cloudDrift.toFixed(2)}%">
     <img class="storm-coastline" src="${sprites.coastline}" alt="" draggable="false" style="--parallax-px:${coastlineParallaxPx.toFixed(1)}px">
     <div class="storm-rain" style="${rainInlineStyle}"></div>
     <div class="storm-horizon"></div>

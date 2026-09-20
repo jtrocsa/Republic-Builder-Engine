@@ -1182,21 +1182,28 @@ select {
   object-fit: cover;
   object-position: center top;
   opacity: 0.6;
-  animation: stormCloudsDrift 14s linear infinite;
+  /* --drift-pct (cloudDriftPercent) and --parallax-px are both set inline per frame from
+     storm-navigation.js, exactly as .storm-coastline's parallax already is. This used to be
+     `animation: stormCloudsDrift 14s linear infinite` and the drift never happened — see the
+     note where that keyframe stood, below. */
+  transform: translateX(calc(var(--drift-pct, 0%) + var(--parallax-px, 0px)));
 }
-/* --parallax-px (set inline per-frame from state.playerX in renderStormNavigationGame) is
-   folded into the keyframe's translateX() rather than applied as a separate base transform,
-   since the running "drift" animation would otherwise own the transform property outright and
-   ignore a sibling inline value. Shifting the background opposite the ship's steering offset
-   sells the world sliding past during a turn — the CubeField-style "flying through it" cue. */
-@keyframes stormCloudsDrift {
-  from {
-    transform: translateX(var(--parallax-px, 0px));
-  }
-  to {
-    transform: translateX(calc(-8% + var(--parallax-px, 0px)));
-  }
-}
+/* `@keyframes stormCloudsDrift` (0% to -8% of the image's width over 14s, linear, infinite)
+   stood here and is gone (Phase 141). Storm Navigation replaces its whole container's innerHTML
+   every animation frame — 121 rebuilds in 2 seconds, measured — so the `.storm-clouds` node was
+   new on every one of them and the animation restarted from its first frame each time. Measured
+   in the browser: currentTime read 0ms at t=0, 0ms at t=1.5s and 0ms at t=3.0s. The clouds never
+   drifted, in any run of this mini-game, ever.
+
+   The drift is computed from state.elapsedMs in storm-navigation.js now and emitted inline as
+   --drift-pct, which is what that module's file header already prescribes for every other
+   continuous effect here (water flow, rain, lightning, hazard/ship bob). The parallax no longer
+   needs folding into a keyframe to avoid being overridden, because there is no animation left to
+   own the transform property.
+
+   **Nothing inside .storm-track may use a CSS clock** — no `animation`, no `transition`. A
+   value that must change over time is computed from elapsedMs and written inline. Guarded by
+   tests/unit/storm-navigation-css-clock.test.js. See decision log `0140`. */
 .storm-coastline {
   position: absolute;
   top: 12%;
@@ -1270,10 +1277,15 @@ select {
   object-fit: contain;
   filter: drop-shadow(0 6px 8px rgba(var(--c-black-rgb), 0.35));
   /* --bank (set inline from state.playerVelocityX) banks the ship into a turn and levels out
-     as it glides to a stop; lives on this inner element rather than .storm-ship so it doesn't
-     fight that element's own transform (translateX centering + the --bob-px idle bob). */
+     as it glides to a stop — by way of the velocity itself decaying, not by any easing here;
+     lives on this inner element rather than .storm-ship so it doesn't fight that element's own
+     transform (translateX centering + the --bob-px idle bob). */
   transform: rotate(var(--bank, 0deg));
-  transition: transform 0.12s ease-out;
+  /* No transition: it never fired. A transition needs the element to survive a value change,
+     and this node is rebuilt every frame, so there was never a previous value to ease from
+     (measured: getAnimations() on .storm-ship-art returns 0 while a run is in progress). The
+     easing was redundant anyway — --bank is computed from playerVelocityX, which steerShip
+     already accelerates and decays smoothly, so the bank leans in and levels out on its own. */
 }
 /* --screen-t (set inline from perspectiveEase(p) in storm-navigation.js) drives the visual
    reveal instead of raw --p: real perspective isn't linear, so a hazard stays a barely-visible

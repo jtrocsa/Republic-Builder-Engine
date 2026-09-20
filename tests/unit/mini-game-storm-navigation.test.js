@@ -475,7 +475,12 @@ describe("renderStormNavigationGame", () => {
       0,
       SPRITES
     );
-    expect(html).toContain('style="--parallax-px:-4.4px"'); // clouds: -(0.5*22) * 0.4
+    // The clouds carry --drift-pct beside their parallax (see the cloud-drift block at the end
+    // of this file), so read that element's own style rather than matching a whole style attribute.
+    const cloudsParallax = (markup) =>
+      markup.match(/class="storm-clouds"[^>]*style="--parallax-px:(-?[0-9.]+)px/)[1];
+
+    expect(cloudsParallax(html)).toBe("-4.4"); // clouds: -(0.5*22) * 0.4
     expect(html).toContain('style="--parallax-px:-11.0px"'); // coastline: -(0.5*22)
 
     const mirrored = renderStormNavigationGame(
@@ -483,7 +488,7 @@ describe("renderStormNavigationGame", () => {
       0,
       SPRITES
     );
-    expect(mirrored).toContain('style="--parallax-px:4.4px"');
+    expect(cloudsParallax(mirrored)).toBe("4.4");
     expect(mirrored).toContain('style="--parallax-px:11.0px"');
   });
 
@@ -672,5 +677,74 @@ describe("perspective easing (--screen-t, exercised through renderStormNavigatio
     const screenT = screenTOf(html);
     expect(screenT).toBeCloseTo(0.1649, 4);
     expect(screenT).toBeLessThan(0.5);
+  });
+});
+
+// The sky's drift (--drift-pct, from cloudDriftPercent) — exercised through the renderer the same
+// way the perspective easing above is, since the helper is module-private.
+//
+// This used to be `.storm-clouds { animation: stormCloudsDrift 14s linear infinite }` in
+// global.css, and it never ran: main.js redraws this mini-game by replacing its container's whole
+// innerHTML every animation frame, so the node was new about every 16ms and restarted its own
+// timeline each time. Measured in the browser — the animation's currentTime read 0ms at t=0, 0ms
+// at t=1.5s and 0ms at t=3.0s. The clouds had never drifted in any run of the game. It is computed
+// from state.elapsedMs and emitted inline now, like every other continuous value in this module.
+// See decision log `0140` and tests/unit/storm-navigation-css-clock.test.js.
+describe("cloud drift (--drift-pct, exercised through renderStormNavigationGame)", () => {
+  const driftOf = (html) => {
+    const match = html.match(/--drift-pct:(-?[\d.]+)%/);
+    if (!match) throw new Error("no --drift-pct in the rendered clouds");
+    return Number(match[1]);
+  };
+  const at = (elapsedMs) =>
+    driftOf(renderStormNavigationGame({ ...createStormNavigationGame(), elapsedMs }, 0, SPRITES));
+
+  // The retired keyframe's own numbers: 0% to -8% of the image's width, over 14s, wrapping.
+  const PERIOD_MS = 14000;
+  const SPAN_PERCENT = -8;
+
+  it("starts at zero on a fresh run (boundary case)", () => {
+    expect(at(0)).toBe(0);
+  });
+
+  it("drifts steadily one way as a run goes on (normal case)", () => {
+    const samples = [0, 1000, 2000, 3000, 4000].map(at);
+    for (let i = 1; i < samples.length; i++) expect(samples[i]).toBeLessThan(samples[i - 1]);
+  });
+
+  it("is linear, matching the constant-rate keyframe it replaced (normal case)", () => {
+    // Equal time steps must produce equal distance steps.
+    const step = at(1000) - at(0);
+    expect(at(2000) - at(1000)).toBeCloseTo(step, 6);
+    expect(at(9000) - at(8000)).toBeCloseTo(step, 6);
+  });
+
+  it("covers the keyframe's full span across one period (boundary case)", () => {
+    expect(at(PERIOD_MS - 1)).toBeCloseTo(SPAN_PERCENT, 2);
+    expect(at(PERIOD_MS / 2)).toBeCloseTo(SPAN_PERCENT / 2, 6);
+  });
+
+  it("wraps at the period instead of running away, so a long run stays in range (boundary case)", () => {
+    expect(at(PERIOD_MS)).toBe(0);
+    expect(at(PERIOD_MS * 3)).toBe(0);
+    expect(at(PERIOD_MS * 7 + 3500)).toBeCloseTo(at(3500), 6);
+    // A ten-minute run is still inside the authored span, not 250% off-screen.
+    for (const ms of [60_000, 300_000, 600_000]) {
+      expect(at(ms)).toBeLessThanOrEqual(0);
+      expect(at(ms)).toBeGreaterThan(SPAN_PERCENT);
+    }
+  });
+
+  it("is emitted alongside the steering parallax, not instead of it (normal case)", () => {
+    // Both live on the same inline style; the retired keyframe had to own `transform` outright,
+    // which is why the parallax used to be folded into it.
+    const html = renderStormNavigationGame(
+      { ...createStormNavigationGame(), elapsedMs: 5000, playerX: 1 },
+      0,
+      SPRITES
+    );
+    const style = html.match(/class="storm-clouds"[^>]*style="([^"]+)"/)[1];
+    expect(style).toMatch(/--parallax-px:-?[\d.]+px/);
+    expect(style).toMatch(/--drift-pct:-?[\d.]+%/);
   });
 });
