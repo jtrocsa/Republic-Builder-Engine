@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loadSeededSave, seedProgress, walkToNpc } from "./helpers/progress-seed.js";
+import { loadSeededSave, openFieldNpc, seedProgress } from "./helpers/progress-seed.js";
 
 // Banks the checks that no unit test can make, because they are about what the browser actually
 // computes: that pressing a direction selects that direction's strip, that the CSS keyframe really
@@ -173,9 +173,20 @@ for (const [caseId, sheets] of Object.entries(SHEETS_BY_CASE)) {
   });
 }
 
-// walkToNpc only returns true once the game's own proximity check fires, so these are real pathing
+// openFieldNpc only returns true once the game itself opens the bubble, so these are real pathing
 // assertions: the carpenter's barn corner and the Powhatan pair's river landing are walkable to,
 // not stranded behind collision or standing inside a building.
+//
+// All three of these bodies are `kind: "route"`, and that is why the walk and the press are one
+// operation here. `0127` §5 wrote openFieldNpc for the Taíno child and scoped it to the game's
+// fifteen `wander` bodies, which left the route walkers reading as stationed ones. They are not: a
+// wanderer drifts inside a 1.2-tile disc, while the carpenter walks a 7.52-tile leg between his
+// barn yard and his bench, the Powhatan man 3.35 and the woman 2.69 — so every one of them covers
+// more ground between the walk and the press than the body the helper was written for. walkTo
+// promises reach at one instant and the press re-asks, so the carpenter arriving at 1.42 tiles
+// against a reach of 1.45 has 0.03 of a tile of margin and walks out of it. Measured, both arms in
+// one file and one window: 4 refusals in 12 pressing after the walk, 0 in 12 with the two as one
+// operation. See decision log `0145`.
 //
 // One test per NPC, each walking from the spawn, rather than one test chaining all three: the
 // carpenter-to-Powhatan leg would be a 30-tile traverse across the whole settlement, and three
@@ -205,10 +216,7 @@ for (const [id, line] of [
     await loadSeededSave(page);
     await expect(page.locator("#caseFieldPlayer")).toBeVisible();
 
-    expect(await walkToNpc(page, id), `${id} is reachable`).toBe(true);
-    await page.keyboard.press("e");
-    const bubble = page.locator(".field-speech-bubble");
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toContainText(line);
+    expect(await openFieldNpc(page, id), `${id} is reachable and answers`).toBe(true);
+    await expect(page.locator(".field-speech-bubble")).toContainText(line);
   });
 }

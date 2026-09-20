@@ -15,9 +15,9 @@ import { expect, test } from "@playwright/test";
 import {
   briefed,
   loadSeededSave,
+  openFieldNpc,
   readProgress,
   seedProgress,
-  walkToNpc,
 } from "./helpers/progress-seed.js";
 
 const CASE_004 = {
@@ -292,11 +292,11 @@ test.describe("INTERVIEW, at Riverbend", () => {
     await expect(page.locator(".field-tracker__progress")).toContainText("Accounts secured");
     await expect(page.locator(".field-tracker__progress b")).toHaveText("3/8");
 
-    expect(await walkToNpc(page, "settlement-burgess")).toBe(true);
-    await page.locator('[data-npc="settlement-burgess"]').click();
+    // The burgess is `kind: "route"` and walks a 4.61-tile leg along the statehouse front, so the
+    // walk and the click are one operation — see `0145`, and the note in character-directions.
+    expect(await openFieldNpc(page, "settlement-burgess")).toBe(true);
 
     const bubble = page.locator(".field-speech-bubble");
-    await expect(bubble).toBeVisible();
     await expect(bubble.locator(".field-interview__q")).toHaveCount(4);
 
     await bubble.locator('[data-question="voice"]').click();

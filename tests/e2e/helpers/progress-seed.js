@@ -165,13 +165,23 @@ export async function walkToNpc(page, npcId, options = {}) {
 }
 
 /**
- * Walk to a body and open its dialogue, as **one operation** — because a wanderer does not wait.
+ * Walk to a body and open its dialogue, as **one operation** — because a body that moves does not
+ * wait.
  *
  * `walkTo` promises exactly this much: the target was in reach at one instant, the frame the game's
- * own `.is-near` appeared. For a stationed body that promise still holds a round trip later when the
- * caller presses. For one of the game's **fifteen `kind: "wander"` bodies** it need not, and
- * `field-talk` re-asks `isNearFieldNpc()` at the click, so the press is refused and the game writes
- * "Move closer to interact with …" instead of opening a bubble.
+ * own `.is-near` appeared. For a **stationed** body that promise still holds a round trip later when
+ * the caller presses. For a body with a job that moves it, it need not, and `field-talk` re-asks
+ * `isNearFieldNpc()` at the click, so the press is refused and the game writes "Move closer to
+ * interact with …" instead of opening a bubble.
+ *
+ * **The criterion is `kind !== "station"`, not `kind === "wander"`** — which is the correction Phase
+ * 146 made. This was written in Phase 128 for the Taíno child and scoped in prose to the fifteen
+ * `wander` bodies, and that reads as though the world divides into the child and stationed people.
+ * It does not: `kind: "route"` walks too, and **further**. A wanderer drifts inside a 1.2-tile disc,
+ * while the settlement carpenter walks a **7.52-tile leg** between his barn yard and his bench, the
+ * burgess 4.61 along the statehouse front, the Powhatan man 3.35 and the woman 2.69. Every one of
+ * them covers more ground between the walk and the press than the body this was written for, and
+ * four of them are walked to by specs that then pressed. See decision log `0145`.
  *
  * Measured on the Taíno child, who wanders a 1.2-tile disc on the Caribbean beach, over twelve runs
  * of the same walk: the player arrived between **0.33 and 1.44 tiles** away — every one of them
@@ -180,11 +190,12 @@ export async function walkToNpc(page, npcId, options = {}) {
  * the refusal. That was `activity-engines.spec.js`'s intermittent failure, and no property of the
  * walk: the walk was fine and the interval after it was not.
  *
- * There is nothing to do about a body allowed to walk away except close again, so the walk and the
- * press are one operation and it is retried. **Only the game can say whether a press landed**, and
- * the bubble is that answer — which is why this waits for the bubble rather than re-deriving the
- * reach. Use it for a `wander` body; a stationed one does not need it and converting those would be
- * churn. See decision log `0127` §5.
+ * There is nothing to do about a body allowed to walk away except close the gap again, so the walk
+ * and the press are one operation and it is retried. **Only the game can say whether a press
+ * landed**, and the bubble is that answer — which is why this waits for the bubble rather than
+ * re-deriving the reach. Use it for any body whose behaviour entry is not `kind: "station"`; a
+ * stationed one does not need it and converting those would be churn. See decision log `0127` §5
+ * and `0145`.
  */
 export async function openFieldNpc(page, npcId, { attempts = 4 } = {}) {
   const bubble = page.locator(".field-speech-bubble");
