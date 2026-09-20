@@ -7213,7 +7213,7 @@ function teacherAssignmentsTabMarkup() {
   const submissionRows = teacherUiState.submissions
     .map(
       (sub) =>
-        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(SUBMISSION_TASK_TYPE_LABEL[sub.taskType] || sub.taskType)}<br><span class="c-help">${esc(sub.taskId)}</span></td><td>${esc(sub.readiness || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
+        `<tr><td>${esc(sub.studentDisplayName)}</td><td>${esc(SUBMISSION_TASK_TYPE_LABEL[sub.taskType] || sub.taskType)}<br><span class="c-help">${esc(sub.taskId)}</span></td><td>${esc(readinessLabel(sub.readiness) || "—")}</td><td><button class="text-button" data-action="open-grading" data-submission-id="${esc(sub.id)}" type="button">Review →</button></td></tr>`
     )
     .join("");
   const submissionsTable = submissionRows
@@ -14650,11 +14650,40 @@ export function sourceVisual(source) {
   return `<div class="document-paper">${masthead}${body}</div>`;
 }
 
-const READINESS_LABELS = {
+/**
+ * The Archive Evaluator's `readiness` verdict, in a person's words.
+ *
+ * The three keys are not ours — they are the enum `api/_lib/rubrics.js` puts in the JSON schema it
+ * hands the model, written for a schema rather than for a reader. Every one of them reaches a
+ * screen, so every one of them needs a translation, and `tests/unit/readiness-label.test.js` reads
+ * that schema back and holds the two together.
+ */
+export const READINESS_LABELS = {
   ready_to_revise: "Ready to revise",
   on_track: "On track",
   needs_fresh_attempt: "Try a fresh attempt",
 };
+
+/**
+ * **A readiness verdict is shown in one place, because it is shown in two.**
+ *
+ * `archiveFeedbackMarkup()` had this lookup inline and the Teacher Dashboard's Submissions table
+ * did not, so the same verdict on the same submission read `needs_fresh_attempt` in the list and
+ * "Try a fresh attempt" on the screen that list opens — two clicks apart. The Readiness column is
+ * the one place a teacher scans a whole class at once, and it was the one speaking in database.
+ *
+ * The roster's STATUS column beside it had exactly this defect and was fixed with
+ * `ROSTER_STATUS_LABEL`; this column is its untouched twin. The lookup is a function rather than a
+ * second inline read of the table so that the next site to show a verdict has one thing to call —
+ * the same argument as `nearestInReach()` and `openFieldRecord()`.
+ *
+ * Falls through to the raw value rather than to an empty cell: an unlabelled verdict is worse than
+ * an ugly one, and the guard above is what stops the fall-through ever being reached.
+ */
+export function readinessLabel(readiness) {
+  if (!readiness) return "";
+  return READINESS_LABELS[readiness] || readiness;
+}
 
 // Renders one Archive Evaluator response — reused by sourceReader(),
 // reviewScreen(), and gradingScreen() so a teacher sees exactly the feedback
@@ -14670,8 +14699,7 @@ function archiveFeedbackMarkup(feedbackPayload) {
         (row) =>
           `<article class="archive-feedback-item"><h3>${esc(row.row.replaceAll("-", " "))} — ${esc(row.met)}</h3><p>${esc(row.mirror)}</p>${row.gap ? `<p class="archive-feedback-gap">${esc(row.gap)}</p>` : ""}</article>`
       );
-  const readinessLabel = READINESS_LABELS[feedbackPayload.readiness] || feedbackPayload.readiness;
-  return `<section class="archive-feedback"><h2>Archive Evaluator feedback</h2>${items.join("")}<p class="archive-feedback-forward"><b>Forward:</b> ${esc(feedbackPayload.forward)}</p><p class="archive-feedback-readiness">${esc(readinessLabel)}</p></section>`;
+  return `<section class="archive-feedback"><h2>Archive Evaluator feedback</h2>${items.join("")}<p class="archive-feedback-forward"><b>Forward:</b> ${esc(feedbackPayload.forward)}</p><p class="archive-feedback-readiness">${esc(readinessLabel(feedbackPayload.readiness))}</p></section>`;
 }
 
 // Kicks off one POST /api/evaluate call. Fire-and-forget from the click
