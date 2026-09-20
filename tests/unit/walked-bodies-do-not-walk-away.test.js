@@ -17,9 +17,9 @@ import { dirname, join } from "node:path";
  * `kind: "wander"` bodies, and that reads as though the world divides into the child and stationed
  * people. It does not. **`kind: "route"` walks too, and further** — the settlement carpenter covers
  * a 7.52-tile leg between his barn yard and his bench, against the child's 1.2-tile disc — and four
- * route walkers were being walked to and pressed. The carpenter's was this suite's last intermittent
- * failure: measured at 4 refusals in 12 pressing after the walk, 0 in 12 with the two as one
- * operation, both arms in one file and one window.
+ * route walkers were being walked to and pressed. The carpenter's was the one flaky test in Phase
+ * 145's full-suite run of 404, measured at 4 refusals in 12 pressing after the walk and 0 in 12
+ * with the two as one operation, both arms in one file and one window.
  *
  * So the criterion is `kind !== "station"`, and it is a static one: a spec that walks to a body that
  * moves should be using `openFieldNpc()` instead. This reads `main.js` as source text, the same way
