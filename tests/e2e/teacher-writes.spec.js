@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { seedProgress, loadSeededSave } from "./helpers/progress-seed.js";
-import { stubSupabase, STUB_CLASSROOM_ID } from "./helpers/supabase-stub.js";
+import { stubSupabase, STUB_CLASSROOM_ID, STUB_USER_ID } from "./helpers/supabase-stub.js";
 
 /**
  * **What a teacher writes, and what they see when they read it back.**
@@ -33,6 +33,32 @@ const EVALUATION_ID = "00000000-0000-4000-8000-000000000200";
 
 /** One claimed student with one submission carrying one evaluation, and no grade on it yet. */
 const UNGRADED = {
+  // Restated because `options.tables` replaces a table rather than appending to it, and because the
+  // submissions read embeds `profiles!inner(display_name)` — a student with no row here is a
+  // student whose work the teacher is never shown. See `EMBEDS` in `helpers/supabase-stub.js`.
+  profiles: [
+    { id: STUB_USER_ID, role: "teacher", display_name: "Stub Teacher" },
+    { id: STUDENT_A, role: "student", display_name: "Ada Fields" },
+  ],
+  evaluations: [
+    {
+      id: EVALUATION_ID,
+      submission_id: "00000000-0000-4000-8000-000000000300",
+      feedback: {
+        elements: [
+          {
+            element: "point_of_view",
+            mirror: "The bill of lading is quoted directly.",
+            gap: "Whose interest it served is not yet named.",
+          },
+        ],
+        forward: "Name the Dutch carrying trade the Acts were written against.",
+        readiness: "on_track",
+      },
+      model: "claude-haiku-4-5",
+      created_at: "2026-03-01T00:01:00.000Z",
+    },
+  ],
   roster_slots: [
     {
       id: "00000000-0000-4000-8000-000000000101",
@@ -55,19 +81,6 @@ const UNGRADED = {
       student_response: "One cause was England's attempt to cut Dutch shippers out of the trade.",
       created_at: "2026-03-01T00:00:00.000Z",
       student_user_id: STUDENT_A,
-      profiles: { display_name: "Ada Fields" },
-      evaluations: [
-        {
-          id: EVALUATION_ID,
-          feedback: {
-            elements: [{ element: "evidence", mirror: "The bill of lading is quoted directly." }],
-            forward: "Name the Dutch carrying trade the Acts were written against.",
-            readiness: "on_track",
-          },
-          model: "claude-haiku",
-          created_at: "2026-03-01T00:01:00.000Z",
-        },
-      ],
     },
   ],
   // One grade already on file, against a **different** evaluation. Nothing in the app should ever

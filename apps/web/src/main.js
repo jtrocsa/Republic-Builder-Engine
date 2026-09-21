@@ -14742,6 +14742,62 @@ export function readinessLabel(readiness) {
   return READINESS_LABELS[readiness] || readiness;
 }
 
+/**
+ * A rubric row's name, and the verdict on it, in a person's words.
+ *
+ * Same argument as `READINESS_LABELS` directly above, about the other two enums in the same
+ * payload — and they are not decoration. The evaluator answers in one of two shapes: a HIPP source
+ * reading comes back as `elements`, and **everything else in the game comes back as `rows`** — the
+ * Archive Review SAQ of all nine units, and every SAQ and DBQ Archive Challenge. A row's `met` is
+ * the enum `api/_lib/rubrics.js` declares for the model, and it reached the student exactly as
+ * written, under `text-transform: uppercase`: **"PART A — NOT_YET"**, about their own writing.
+ *
+ * The row names had the same problem more quietly. `replaceAll("-", " ")` turned `evidence-use`
+ * into "evidence use" and `reasoning-ccot` into "reasoning ccot", which is a column name with the
+ * punctuation taken out rather than the name of an AP rubric row.
+ *
+ * Neither is a case-id literal in disguise: these are the evaluator's contract, not APUSH facts —
+ * the same thing `READINESS_LABELS` is, and they live beside it for that reason.
+ */
+export const RUBRIC_ROW_LABELS = {
+  "part-a": "Part A",
+  "part-b": "Part B",
+  "part-c": "Part C",
+  thesis: "Thesis",
+  contextualization: "Contextualization",
+  evidence: "Evidence",
+  "evidence-use": "Use of evidence",
+  "reasoning-comparison": "Comparison reasoning",
+  "reasoning-causation": "Causation reasoning",
+  "reasoning-ccot": "Continuity and change",
+  complexity: "Complexity",
+  "document-evidence": "Document evidence",
+  "outside-evidence": "Outside evidence",
+  sourcing: "Sourcing",
+};
+
+/** The three verdicts a rubric row can carry. "yes" is the one that needs a word other than its own. */
+export const RUBRIC_MET_LABELS = {
+  yes: "Met",
+  partial: "Partial",
+  not_yet: "Not yet",
+};
+
+/**
+ * Both fall through to the raw value rather than to an empty heading, for `readinessLabel()`'s
+ * reason: an unlabelled row is worse than an ugly one, and `tests/unit/rubric-row-labels.test.js`
+ * reads the schema back out of `RUBRICS` so the fall-through is never reached.
+ */
+export function rubricRowLabel(row) {
+  if (!row) return "";
+  return RUBRIC_ROW_LABELS[row] || row.replaceAll("-", " ");
+}
+
+export function rubricMetLabel(met) {
+  if (!met) return "";
+  return RUBRIC_MET_LABELS[met] || met;
+}
+
 // Renders one Archive Evaluator response — reused by sourceReader(),
 // reviewScreen(), and gradingScreen() so a teacher sees exactly the feedback
 // the student saw.
@@ -14754,7 +14810,7 @@ function archiveFeedbackMarkup(feedbackPayload) {
       )
     : (feedbackPayload.rows || []).map(
         (row) =>
-          `<article class="archive-feedback-item"><h3>${esc(row.row.replaceAll("-", " "))} — ${esc(row.met)}</h3><p>${esc(row.mirror)}</p>${row.gap ? `<p class="archive-feedback-gap">${esc(row.gap)}</p>` : ""}</article>`
+          `<article class="archive-feedback-item"><h3>${esc(rubricRowLabel(row.row))} — ${esc(rubricMetLabel(row.met))}</h3><p>${esc(row.mirror)}</p>${row.gap ? `<p class="archive-feedback-gap">${esc(row.gap)}</p>` : ""}</article>`
       );
   return `<section class="archive-feedback"><h2>Archive Evaluator feedback</h2>${items.join("")}<p class="archive-feedback-forward"><b>Forward:</b> ${esc(feedbackPayload.forward)}</p><p class="archive-feedback-readiness">${esc(readinessLabel(feedbackPayload.readiness))}</p></section>`;
 }

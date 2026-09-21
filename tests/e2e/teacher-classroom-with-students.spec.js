@@ -84,25 +84,66 @@ const ROSTER = [
 ];
 
 /**
- * The evaluator's own output shape, as `api/_lib/rubrics.js`'s SAQ schema declares it — `elements`,
- * each with a `mirror` and an optional `gap`, plus `forward` and `readiness`.
- * `archiveFeedbackMarkup()` branches on `elements` vs `rows`, and this is the branch a teacher
- * meets most. The verdict is deliberately the ugliest of the three enum values.
+ * The evaluator's own output shape for an SAQ, as `api/_lib/rubrics.js` declares it: `rows`, one per
+ * rubric row, each with a `met` verdict, a `mirror` and a `gap` that is empty when the row is met —
+ * plus a top-level `forward` and `readiness`.
+ *
+ * **This was written in the wrong shape until Phase 150** — as `elements`, which is the *HIPP*
+ * schema, with `element` values in neither schema's enum, under a comment saying it was the SAQ's.
+ * Nothing could tell, because no other fixture in the repository held a rubric row and no test had
+ * ever produced a real evaluator reply. What that hid was that `archiveFeedbackMarkup()`'s `rows`
+ * branch printed `met` exactly as the model is told to write it, so a student read **"PART A —
+ * NOT_YET"** about their own work. See decision log `0149`.
+ *
+ * The verdicts are deliberately one of each, and the readiness deliberately the ugliest of its
+ * three enum values.
  */
 const SAQ_FEEDBACK = {
-  elements: [
+  rows: [
     {
-      element: "historical_claim",
-      mirror: "You name the Navigation Acts as the cause and date them to the 1660s.",
-      gap: "The claim does not yet say who the Acts were meant to exclude.",
+      row: "part-a",
+      met: "yes",
+      mirror: "You name Columbus's audience as the crown that funded the voyage.",
+      gap: "",
     },
-    { element: "evidence", mirror: "The bill of lading is quoted directly and attributed." },
+    {
+      row: "part-b",
+      met: "partial",
+      mirror: "Maize is named as a crop that moved east.",
+      gap: "The effect on population is asserted rather than explained.",
+    },
+    {
+      row: "part-c",
+      met: "not_yet",
+      mirror: "The encomienda is named.",
+      gap: "No link yet between the labor system and the hierarchy it produced.",
+    },
   ],
   forward: "Add one sentence naming the Dutch carrying trade the Acts were written against.",
   readiness: "needs_fresh_attempt",
 };
 
 const TABLES = {
+  // The stub's default `profiles` holds the teacher alone, and `options.tables` **replaces** a
+  // table rather than appending to it — so the teacher's own row has to be restated here, or
+  // `getProfile()` finds nobody and the dashboard never opens. The two students are here because
+  // the submissions read embeds `profiles!inner(display_name)`: without a row, PostgREST's inner
+  // join drops the submission entirely and the teacher is shown an empty list rather than an
+  // anonymous one.
+  profiles: [
+    { id: STUB_USER_ID, role: "teacher", display_name: "Stub Teacher" },
+    { id: STUDENT_A, role: "student", display_name: "Ada Fields" },
+    { id: STUDENT_B, role: "student", display_name: "Bede Marsh" },
+  ],
+  evaluations: [
+    {
+      id: EVALUATION_ID,
+      submission_id: "00000000-0000-4000-8000-000000000300",
+      feedback: SAQ_FEEDBACK,
+      model: "claude-haiku-4-5",
+      created_at: "2026-03-01T00:01:00.000Z",
+    },
+  ],
   roster_slots: ROSTER,
   student_world_profiles: [
     {
@@ -123,17 +164,9 @@ const TABLES = {
       student_response: "One cause was England's attempt to cut Dutch shippers out of the trade.",
       created_at: "2026-03-01T00:00:00.000Z",
       student_user_id: STUDENT_A,
-      // PostgREST embeds these under the names the repository's `select()` asks for, and it reads
-      // `profiles.display_name` and `evaluations[0]` straight off the row.
-      profiles: { display_name: "Ada Fields" },
-      evaluations: [
-        {
-          id: EVALUATION_ID,
-          feedback: SAQ_FEEDBACK,
-          model: "claude-haiku",
-          created_at: "2026-03-01T00:01:00.000Z",
-        },
-      ],
+      // No `profiles` or `evaluations` written here: the stub resolves both embeds off the tables
+      // above, the way PostgREST does. A fixture that carries its own join answers a question the
+      // application never asks it.
     },
   ],
   manual_grades: [
@@ -237,14 +270,25 @@ test.describe("Teacher Dashboard — a classroom with students in it", () => {
     // --- the grading screen, with a real evaluation and a grade already on file ------------------
     await page.locator('[data-action="open-grading"]').first().click();
     await expect(page.locator("h1")).toHaveText("Ada Fields");
-    await expect(main).toContainText("historical claim");
-    await expect(main, "the evaluator's gap line was dropped").toContainText(
-      "does not yet say who the Acts were meant to exclude"
+    // The three rubric rows, named and judged in words. `archiveFeedbackMarkup()` is shared with
+    // the student's own two screens on purpose, so what a teacher reads here is what their student
+    // read — including, until Phase 150, `not_yet`.
+    await expect(main, "the rubric rows did not render").toContainText("Part A — Met");
+    await expect(main).toContainText("Part B — Partial");
+    await expect(main, "a row the student has not met yet says so in database").toContainText(
+      "Part C — Not yet"
     );
+    await expect(main, "the evaluator's gap line was dropped").toContainText(
+      "The effect on population is asserted rather than explained."
+    );
+    await expect(
+      main,
+      "a met row still printed a gap, which the rubric says is empty when the row is met"
+    ).not.toContainText("undefined");
     await expect(main).toContainText("Add one sentence naming the Dutch carrying trade");
     await expect(main, "the grade already on file was not shown").toContainText("2/3");
-    for (const raw of RAW_READINESS_VALUES) {
-      await expect(main, `the grading screen showed readiness as "${raw}"`).not.toContainText(raw);
+    for (const raw of [...RAW_READINESS_VALUES, "not_yet"]) {
+      await expect(main, `the grading screen showed a verdict as "${raw}"`).not.toContainText(raw);
     }
 
     expect(

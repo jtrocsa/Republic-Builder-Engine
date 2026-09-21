@@ -71,10 +71,22 @@
  * `/auth/v1/user` answers with whoever the last issued session belongs to. Answering it with a
  * constant would hand a signed-in student the teacher back.
  *
+ * ---
+ *
+ * **Phase 150 — an embed is resolved, because a row the app wrote has nobody to write one for it.**
+ *
+ * `select` was ignored: every read answered with the whole row. A spec that needed
+ * `profiles!inner(display_name)` therefore wrote the join into its own fixture by hand, which is
+ * fine for a row a fixture supplies and impossible for a row the **application** inserts. So a
+ * submission a student actually writes reached the teacher's dashboard as "Unknown student" with no
+ * verdict — and the student's half of the loop could not be walked at all. See `EMBEDS` below for
+ * the two the app asks for and why `!inner` is honoured rather than ignored.
+ *
  * **What it still is not.** It is not Postgres. It understands `eq` and `in` and nothing else, it
  * does not enforce RLS, uniqueness, foreign keys or types, and a fixture whose shape has drifted
- * from the live table will keep passing. `unsupportedFilters` is returned so a spec can see when a
- * query asked something this cannot answer, rather than being quietly given too many rows.
+ * from the live table will keep passing. `unsupportedFilters` and `unsupportedEmbeds` are returned
+ * so a spec can see when a query asked something this cannot answer, rather than being quietly
+ * given too many rows or a column of blanks.
  */
 
 export const STUB_USER_ID = "00000000-0000-4000-8000-000000000001";
@@ -137,6 +149,65 @@ const DEFAULT_TABLES = {
 
 /** Query parameters PostgREST reads as instructions rather than as column filters. */
 const NON_FILTER_PARAMS = new Set(["select", "order", "limit", "offset", "on_conflict", "columns"]);
+
+/**
+ * **The embedded selects this app makes, and the columns PostgREST resolves them by.**
+ *
+ * There are exactly two, both on `submissions`, and until Phase 150 neither was resolved — the stub
+ * answered every `select` with the whole row, so an embed simply was not there. A spec that needed
+ * one wrote it into its own fixture by hand, which works for a row a fixture supplies and **cannot**
+ * work for a row the application itself inserts. That is what made the student's half of the loop
+ * unwalkable: a submission a student actually writes arrives on the teacher's dashboard with no
+ * `profiles` to take a name from and no `evaluations` to take a verdict from, and the screen reports
+ * "Unknown student" with an empty Readiness — a defect in the stub wearing a defect in the game.
+ *
+ * `!inner` is honoured rather than ignored, because it is the one that changes what a teacher sees:
+ * a submission whose author has no `profiles` row is not shown as anonymous, it is **not shown**.
+ */
+const EMBEDS = {
+  "submissions.profiles": {
+    table: "profiles",
+    localColumn: "student_user_id",
+    foreignColumn: "id",
+    many: false,
+  },
+  "submissions.evaluations": {
+    table: "evaluations",
+    localColumn: "id",
+    foreignColumn: "submission_id",
+    many: true,
+  },
+};
+
+/** `a, b(c, d), e` → `["a", "b(c, d)", "e"]` — a comma inside an embed is not a separator. */
+function splitTopLevel(select) {
+  const parts = [];
+  let depth = 0;
+  let current = "";
+  for (const char of select) {
+    if (char === "(") depth += 1;
+    else if (char === ")") depth -= 1;
+    else if (char === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** The embeds a `select` asks for: `profiles!inner(display_name)` → `{name: "profiles", inner: true}`. */
+function embedsAsked(select) {
+  return splitTopLevel(select)
+    .filter((part) => part.includes("("))
+    .map((part) => {
+      const name = part.slice(0, part.indexOf("(")).trim();
+      const inner = name.endsWith("!inner");
+      return { name: inner ? name.slice(0, -"!inner".length) : name, inner };
+    });
+}
 
 /** `in.(a,b,"c d")` → the set {a, b, c d}. */
 function parseInList(raw) {
@@ -208,10 +279,14 @@ export const generatedId = () =>
  *   writes: string[],
  *   tables: Record<string, any[]>,
  *   unsupportedFilters: string[],
+ *   unsupportedEmbeds: string[],
  *   accounts: Map<string, {password: string, user: any}>,
  * }>} live values, appended to as the page runs — `writes` is every mutating call, which a test can
  *   assert stayed empty, `tables` is what the page left behind, and `accounts` is the identities the
  *   stub was asked to create, which `helpers/roster-api-stub.js` adds to when a seat is claimed.
+ *   `unsupportedEmbeds` is the twin of `unsupportedFilters` for a join this does not know how to
+ *   resolve: an unanswered embed is a column the screen reads as `undefined`, which is a blank cell
+ *   rather than an error, so it has to be visible from the test.
  */
 export async function stubSupabase(page, options = {}) {
   const merged = { ...DEFAULT_TABLES, ...(options.tables || {}) };
@@ -220,6 +295,7 @@ export async function stubSupabase(page, options = {}) {
   const requests = [];
   const writes = [];
   const unsupportedFilters = [];
+  const unsupportedEmbeds = [];
   /** @type {Map<string, {password: string, user: any}>} email → the account, for accounts the stub made. */
   const accounts = new Map();
   // Which identity the last issued session belongs to. `/auth/v1/user` is a refresh of whoever is
@@ -227,6 +303,38 @@ export async function stubSupabase(page, options = {}) {
   let currentUser = STUB_USER;
 
   const rowsOf = (table) => (tables[table] ||= []);
+
+  /**
+   * Resolve whatever embeds this `select` asked for, onto copies of the matched rows.
+   *
+   * Copies, because the stored row is what a spec inspects through `tables` afterwards and what the
+   * next read starts from — a resolved embed left behind on it would be a join baked into the data.
+   */
+  const applyEmbeds = (table, rows, url) => {
+    const select = url.searchParams.get("select") || "";
+    if (!select.includes("(")) return rows;
+    const asked = embedsAsked(select);
+    if (!asked.length) return rows;
+
+    let out = rows.map((row) => ({ ...row }));
+    for (const { name, inner } of asked) {
+      const spec = EMBEDS[`${table}.${name}`];
+      if (!spec) {
+        unsupportedEmbeds.push(`${table}?select=${name}(…)`);
+        continue;
+      }
+      const related = rowsOf(spec.table);
+      for (const row of out) {
+        const matches = related.filter(
+          (candidate) =>
+            String(candidate[spec.foreignColumn] ?? "") === String(row[spec.localColumn] ?? "")
+        );
+        row[name] = spec.many ? matches : (matches[0] ?? null);
+      }
+      if (inner) out = out.filter((row) => (spec.many ? row[name].length > 0 : row[name] !== null));
+    }
+    return out;
+  };
 
   await page.route("**/*.supabase.co/**", async (route) => {
     const request = route.request();
@@ -283,10 +391,12 @@ export async function stubSupabase(page, options = {}) {
     for (const clause of unsupported) unsupportedFilters.push(`${method} ${table}?${clause}`);
     const wantsObject = (request.headers()["accept"] || "").includes("vnd.pgrst.object");
 
-    const answer = (returned) =>
-      json(wantsObject ? (returned[0] ?? null) : returned, {
+    const answer = (matched) => {
+      const returned = applyEmbeds(table, matched, url);
+      return json(wantsObject ? (returned[0] ?? null) : returned, {
         "content-range": `0-${Math.max(returned.length - 1, 0)}/${returned.length}`,
       });
+    };
 
     if (method === "GET" || method === "HEAD") {
       return answer(applyOrder(rows.filter(match), url));
@@ -356,5 +466,5 @@ export async function stubSupabase(page, options = {}) {
     return answer(stored);
   });
 
-  return { requests, writes, tables, unsupportedFilters, accounts };
+  return { requests, writes, tables, unsupportedFilters, unsupportedEmbeds, accounts };
 }
