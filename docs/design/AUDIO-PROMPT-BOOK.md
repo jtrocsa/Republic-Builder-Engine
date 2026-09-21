@@ -34,8 +34,10 @@ Four things that will save you time:
    for twenty or thirty minutes straight. A catchy tune becomes an annoying tune.
 3. **Turn your volume down when you judge these.** The game plays audio very quietly. A mix that sounds
    right in Gemini will lose its quiet details in the game.
-4. **Keep sound effects out of the low-middle range.** The game has no way to duck the music under an
-   effect, so effects need to be bright and thin to be heard over a track.
+4. **Keep sound effects bright and thin.** Since Phase 152 the five long cues _do_ duck the music
+   under themselves, but the short ones that fire on nearly every press deliberately do not — a music
+   bus that pumps on every click is worse than no ducking at all. So the frequent effects still have
+   to cut through a track on their own.
 
 ## What to name the files
 
@@ -50,23 +52,32 @@ changing screens doesn't jump.
 
 ## Where the game's audio stands today
 
-So you know what you're replacing:
+So you know what you're replacing.
 
-- Every sound is generated live by a bit of code — beeps from an oscillator. **There are no audio files
-  in the project at all.**
-- **There are six loops.** Each is four to seven notes played in a row, over and over, identical every
-  time.
-- **Six of the seven maps share one of them.** Only the Caribbean map has its own. Riverbend,
-  Philadelphia, the canal town, Richmond, the Kansas railhead and Ellis Island all play the same thing.
+**Updated after Phase 152 (decision log `0151`), which built the player but commissioned no audio.**
+
+- **The game can now play an audio file, and there are still none.** Drop an `.ogg` named below into
+  `apps/web/src/assets/audio/` and it plays; nothing else has to change. Until then every sound is
+  still generated live by a bit of code — beeps from an oscillator.
+- **There are six synthesised loops**, each four to seven notes over and over. They are now the
+  _fallback_ rather than the whole soundtrack: each scene names a file to look for and a loop to use
+  until it exists.
+- **All nine maps now have a scene of their own** (`island`, `riverbend`, `philadelphia`, `canal`,
+  `richmond`, `railhead`, `port`, `fairmeadow`, and `furnacebend` reserved for Unit 9). Seven of them
+  still _sound_ the same, because they all fall back to the same settlement loop — **that is what the
+  files in §3 are for, and it is the single biggest improvement available.**
 - **About twenty-two of the thirty-two screens play one note every six seconds.** That includes the
-  entire opening, the time-travel screen, the document reader, and every question screen.
+  entire opening, the time-travel screen, the document reader, and every question screen. Unchanged —
+  those keys are §5 and are a later phase.
 - **The Meridian Institute has no music at all.**
+- **Music and effects are now separate**, with their own volume sliders on the landing screen's
+  Student panel, and the five long cues duck the music under themselves.
 
 ---
 
 ## §1 · The one thing that ties it together
 
-Seven historically accurate scores could easily sound like seven different games. One thing stops that.
+Nine historically accurate scores could easily sound like nine different games. One thing stops that.
 
 ### The Chronicle four notes
 
@@ -77,7 +88,7 @@ slightly unresolved. That's the point — the game is about history staying open
 
 - The **title theme and the Institute tracks** play it out in full.
 - **Every map plays it once per phrase on one period instrument** — a wooden flute in the Caribbean, a
-  harpsichord in Philadelphia, a clarinet at Ellis Island. Same four notes, seven different mouths.
+  harpsichord in Philadelphia, a clarinet at Ellis Island. Same four notes, nine different mouths.
 - **Meridian plays the same four notes on better equipment.** That's their whole character. See §6.
 
 Every field prompt below already contains the line _"one instrument plays a simple four-note phrase —
@@ -314,10 +325,10 @@ kind. The player is looking at a painting, not defusing a bomb.
 
 ---
 
-## §3 · The seven maps — 7 tracks
+## §3 · The nine maps — 9 tracks
 
-**Start here.** Six of these seven currently play the same loop, so this section changes the game more
-than anything else in this document.
+**Start here.** Seven of these nine currently play the same loop, so this section changes the game
+more than anything else in this document.
 
 Each map gets instruments that were actually around in that place in that year, and each one plays the
 four Chronicle notes on one of them so the whole soundtrack still hangs together.
@@ -331,11 +342,17 @@ four Chronicle notes on one of them so the whole soundtrack still hangs together
 | 5    | `richmond.ogg`     | Richmond, Virginia, 1864                       | the shared loop |
 | 6    | `railhead.ogg`     | Cottonwood Junction, Kansas, June 1873         | the shared loop |
 | 7    | `port.ogg`         | Ellis Island, New York Harbor, 17 April 1907   | the shared loop |
+| 8    | `fairmeadow.ogg`   | Fairmeadow, Pennsylvania, August 1957          | the shared loop |
+| 9    | `furnacebend.ogg`  | Furnace Bend State University, Ohio, Oct 1998  | nothing yet     |
 
-Three things that apply to all seven:
+Unit 9's map is committed but has no cast and no `FIELD_MAPS` entry, so **nothing plays there yet**
+and `furnacebend` is deliberately not a live scene key. Its prompt is written now because
+commissioning is the part with lead time; the engine key arrives in the same commit as the unit.
+
+Three things that apply to all nine:
 
 - **These belong to their time and place first.** A student who finishes a map should come away having
-  learned a period, not a plot. None of these seven should sound like time travel.
+  learned a period, not a plot. None of these nine should sound like time travel.
 - **Length matters most here.** These play for twenty or thirty minutes straight. Make three versions
   and keep the least tuneful one.
 - **Arriving somewhere is not dangerous** in this game's story. No map opens on tension.

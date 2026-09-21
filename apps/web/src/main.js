@@ -194,6 +194,11 @@ import {
   toggleAudio,
   updateMusicForScreen,
   isAudioEnabled,
+  getVolumes,
+  setMusicVolume,
+  setSfxVolume,
+  audioDebugState,
+  setTrackUrls,
 } from "./engine/audio-engine.js";
 import {
   DEFAULT_DAILY_ROTATION_TARGET,
@@ -4384,7 +4389,7 @@ export const FIELD_MAPS = {
     npcs: UNIT2_FIELD_NPCS,
     behaviours: UNIT2_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT2_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "riverbend",
     worldMarkup: riverbendWorldMarkup,
     renderMap: renderRiverbendTiledMap,
   },
@@ -4398,7 +4403,7 @@ export const FIELD_MAPS = {
     npcs: UNIT3_FIELD_NPCS,
     behaviours: UNIT3_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT3_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "philadelphia",
     worldMarkup: commonCauseWorldMarkup,
     renderMap: renderCommonCauseTiledMap,
   },
@@ -4414,7 +4419,7 @@ export const FIELD_MAPS = {
     npcs: UNIT4_FIELD_NPCS,
     behaviours: UNIT4_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT4_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "canal",
     worldMarkup: canalCrossroadsWorldMarkup,
     renderMap: renderCanalCrossroadsTiledMap,
   },
@@ -4431,7 +4436,7 @@ export const FIELD_MAPS = {
     npcs: UNIT5_FIELD_NPCS,
     behaviours: UNIT5_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT5_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "richmond",
     worldMarkup: richmondWorldMarkup,
     renderMap: renderRichmondTiledMap,
   },
@@ -4448,7 +4453,7 @@ export const FIELD_MAPS = {
     npcs: UNIT6_FIELD_NPCS,
     behaviours: UNIT6_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT6_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "railhead",
     worldMarkup: railheadWorldMarkup,
     renderMap: renderRailheadTiledMap,
   },
@@ -4465,7 +4470,7 @@ export const FIELD_MAPS = {
     npcs: UNIT7_FIELD_NPCS,
     behaviours: UNIT7_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT7_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "port",
     worldMarkup: immigrantPortWorldMarkup,
     renderMap: renderImmigrantPortTiledMap,
   },
@@ -4483,7 +4488,7 @@ export const FIELD_MAPS = {
     npcs: UNIT8_FIELD_NPCS,
     behaviours: UNIT8_FIELD_NPC_BEHAVIOURS,
     sourcePoints: UNIT8_FIELD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "fairmeadow",
     worldMarkup: fairmeadowWorldMarkup,
     renderMap: renderFairmeadowTiledMap,
   },
@@ -4722,7 +4727,7 @@ export const ARCHIVE_ROOM_BLOCK_RECTS = ARCHIVE_ROOM_BLOCKS;
  */
 const interiorGround = (grid) => (x, y) => x >= 0 && y >= 0 && x <= grid.columns && y <= grid.rows;
 
-// Canal Crossroads' two rooms, the first ever declared. `musicScene` is `settlement` on both, the
+// Canal Crossroads' two rooms, the first ever declared. `musicScene` is `canal` on both, the
 // same as the town outside: an interior is a room in that town, not a change of place, and stepping
 // through a door should not restart the score.
 const CANAL_PRINT_SHOP_GRID = { columns: 20, rows: 14, tile: 48 };
@@ -4737,7 +4742,7 @@ FIELD_MAPS["unit-04"].interiors = {
     npcs: UNIT4_PRINT_SHOP_NPCS,
     behaviours: UNIT4_PRINT_SHOP_BEHAVIOURS,
     sourcePoints: UNIT4_PRINT_SHOP_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "canal",
     worldMarkup: canalPrintShopWorldMarkup,
     renderMap: renderCanalPrintShopTiledMap,
     entry: { x: 10.0, y: 11.1, facing: "up" },
@@ -4756,7 +4761,7 @@ FIELD_MAPS["unit-04"].interiors = {
     npcs: UNIT4_BOARDING_HOUSE_NPCS,
     behaviours: UNIT4_BOARDING_HOUSE_BEHAVIOURS,
     sourcePoints: UNIT4_BOARDING_HOUSE_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "canal",
     worldMarkup: canalBoardingHouseWorldMarkup,
     renderMap: renderCanalBoardingHouseTiledMap,
     entry: { x: 11.0, y: 11.1, facing: "up" },
@@ -4766,7 +4771,7 @@ FIELD_MAPS["unit-04"].interiors = {
   },
 };
 
-// Richmond's two rooms. `musicScene` is `settlement` on both, matching the city outside them for the
+// Richmond's two rooms. `musicScene` is `richmond` on both, matching the city outside them for the
 // reason Canal Crossroads recorded: an interior is a room in that place, not a change of place, and
 // walking through a door should not restart the score. It is the right call here for a second reason
 // — a music sting on entering the counting room would editorialise a room whose entire design is that
@@ -4783,7 +4788,7 @@ FIELD_MAPS["unit-05"].interiors = {
     npcs: UNIT5_COUNTING_ROOM_NPCS,
     behaviours: UNIT5_COUNTING_ROOM_BEHAVIOURS,
     sourcePoints: UNIT5_COUNTING_ROOM_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "richmond",
     worldMarkup: richmondCountingRoomWorldMarkup,
     renderMap: renderRichmondCountingRoomTiledMap,
     entry: { x: 9.0, y: 11.1, facing: "up" },
@@ -4803,7 +4808,7 @@ FIELD_MAPS["unit-05"].interiors = {
     npcs: UNIT5_HOSPITAL_WARD_NPCS,
     behaviours: UNIT5_HOSPITAL_WARD_BEHAVIOURS,
     sourcePoints: UNIT5_HOSPITAL_WARD_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "richmond",
     worldMarkup: richmondHospitalWardWorldMarkup,
     renderMap: renderRichmondHospitalWardTiledMap,
     entry: { x: 12.0, y: 11.1, facing: "up" },
@@ -4815,7 +4820,7 @@ FIELD_MAPS["unit-05"].interiors = {
   },
 };
 
-// Cottonwood Junction's two rooms. `musicScene` is `settlement` on both, matching the town outside
+// Cottonwood Junction's two rooms. `musicScene` is `railhead` on both, matching the town outside
 // them for the reason Canal Crossroads recorded first: an interior is a room in that place, not a
 // change of place, and walking through a door should not restart the score.
 //
@@ -4835,7 +4840,7 @@ FIELD_MAPS["unit-06"].interiors = {
     npcs: UNIT6_LAND_OFFICE_NPCS,
     behaviours: UNIT6_LAND_OFFICE_BEHAVIOURS,
     sourcePoints: UNIT6_LAND_OFFICE_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "railhead",
     worldMarkup: railheadLandOfficeWorldMarkup,
     renderMap: renderRailheadLandOfficeTiledMap,
     entry: { x: 9.0, y: 11.1, facing: "up" },
@@ -4854,7 +4859,7 @@ FIELD_MAPS["unit-06"].interiors = {
     npcs: UNIT6_TELEGRAPH_OFFICE_NPCS,
     behaviours: UNIT6_TELEGRAPH_OFFICE_BEHAVIOURS,
     sourcePoints: UNIT6_TELEGRAPH_OFFICE_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "railhead",
     worldMarkup: railheadTelegraphOfficeWorldMarkup,
     renderMap: renderRailheadTelegraphOfficeTiledMap,
     entry: { x: 8.0, y: 11.1, facing: "up" },
@@ -4864,7 +4869,7 @@ FIELD_MAPS["unit-06"].interiors = {
   },
 };
 
-// Ellis Island's two rooms. `musicScene` is `settlement` on both, matching the wharf outside them
+// Ellis Island's two rooms. `musicScene` is `port` on both, matching the wharf outside them
 // for the reason Canal Crossroads recorded first: an interior is a room in that place, not a change
 // of place, and walking through a door should not restart the score.
 //
@@ -4885,7 +4890,7 @@ FIELD_MAPS["unit-07"].interiors = {
     npcs: UNIT7_INSPECTION_HALL_NPCS,
     behaviours: UNIT7_INSPECTION_HALL_BEHAVIOURS,
     sourcePoints: UNIT7_INSPECTION_HALL_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "port",
     worldMarkup: immigrantPortInspectionHallWorldMarkup,
     renderMap: renderImmigrantPortInspectionHallTiledMap,
     // 22x18 is the first interior in the game bigger than the field viewport on both axes, so this
@@ -4907,7 +4912,7 @@ FIELD_MAPS["unit-07"].interiors = {
     npcs: UNIT7_INQUIRY_ROOM_NPCS,
     behaviours: UNIT7_INQUIRY_ROOM_BEHAVIOURS,
     sourcePoints: UNIT7_INQUIRY_ROOM_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "port",
     worldMarkup: immigrantPortInquiryRoomWorldMarkup,
     renderMap: renderImmigrantPortInquiryRoomTiledMap,
     entry: { x: 8.0, y: 11.1, facing: "up" },
@@ -4919,7 +4924,7 @@ FIELD_MAPS["unit-07"].interiors = {
   },
 };
 
-// Fairmeadow's two rooms. `musicScene` is `settlement` on both, matching the map outside them, for
+// Fairmeadow's two rooms. `musicScene` is `fairmeadow` on both, matching the map outside them, for
 // the reason Canal Crossroads recorded first: an interior is a room in that place, not a change of
 // place, and walking through a door should not restart the score.
 //
@@ -4945,7 +4950,7 @@ FIELD_MAPS["unit-08"].interiors = {
     npcs: UNIT8_MODEL_HOUSE_NPCS,
     behaviours: UNIT8_MODEL_HOUSE_BEHAVIOURS,
     sourcePoints: UNIT8_MODEL_HOUSE_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "fairmeadow",
     worldMarkup: fairmeadowModelHouseWorldMarkup,
     renderMap: renderFairmeadowModelHouseTiledMap,
     entry: { x: 10.0, y: 13.1, facing: "up" },
@@ -4965,7 +4970,7 @@ FIELD_MAPS["unit-08"].interiors = {
     npcs: UNIT8_BUILDING_AND_LOAN_NPCS,
     behaviours: UNIT8_BUILDING_AND_LOAN_BEHAVIOURS,
     sourcePoints: UNIT8_BUILDING_AND_LOAN_SOURCE_POINTS,
-    musicScene: "settlement",
+    musicScene: "fairmeadow",
     worldMarkup: fairmeadowBuildingAndLoanWorldMarkup,
     renderMap: renderFairmeadowBuildingAndLoanTiledMap,
     entry: { x: 8.0, y: 11.1, facing: "up" },
@@ -6219,6 +6224,25 @@ function installDevReachProbe() {
   if (!import.meta.env.DEV) return;
   window.__chronicleReach = () => nearestFieldInteraction();
 }
+/**
+ * The fourth dev probe, gated exactly as the other three are: what the audio engine believes right
+ * now — which scene it is playing, and whether that sound is a decoded file or the synthesised loop
+ * standing in until one exists.
+ *
+ * It exists because **audio leaves no pixels**. No visual baseline can photograph a track, so the
+ * change this phase makes — eight maps that shared two loops now having eight scenes — has no
+ * observable surface at all without one. `audioDebugState()` reports the engine's own answer rather
+ * than recomputing it, per `0093`.
+ *
+ * `useTrackUrls` is how a spec proves the file branch without committing an audio asset: hand it a
+ * `data:` URL built in the page and the loader decodes it like any other, because it decodes bytes
+ * rather than trusting an extension.
+ */
+function installDevAudioProbe() {
+  if (!import.meta.env.DEV) return;
+  window.__chronicleAudio = () => audioDebugState();
+  window.__chronicleAudio.useTrackUrls = (map) => setTrackUrls(map);
+}
 function applyDevWarp() {
   if (!import.meta.env.DEV) return;
   const name = new URLSearchParams(window.location.search).get("warp");
@@ -6322,8 +6346,11 @@ function stormHeldVector() {
 function sceneForMusic() {
   if (progress.currentScreen === "field")
     // The outdoor map's scene, deliberately, even when the player is inside one of its rooms:
-    // stepping through a doorway should not restart the track. An interior declares no musicScene
-    // of its own for exactly that reason.
+    // stepping through a doorway should not restart the track. An interior *does* declare a
+    // `musicScene`, and this line is why nothing reads it — it is documentation of that decision
+    // rather than a value with a consumer, and `field-map-coordinates.test.js` holds each one equal
+    // to its own outdoor map's so it cannot drift into a quiet contradiction. (An earlier revision
+    // of this comment claimed interiors declared none; all ten always have.)
     return progress.activeFieldNpc ? "dialogue" : activeFieldOutdoorMap().musicScene;
   if (
     progress.currentScreen === "institute" ||
@@ -6917,6 +6944,39 @@ function mainMenuItemMarkup(item) {
   return `<div class="main-menu-item"><button class="btn ${item.variant}" data-action="${item.action}" ${enabled ? "" : "disabled"}>${esc(item.label)}</button>${!enabled && item.disabledHint ? `<p class="kicker">${esc(item.disabledHint)}</p>` : ""}</div>`;
 }
 
+/**
+ * The two music/effects levels, on the landing screen's Student/Teacher chooser.
+ *
+ * **Not in `chrome()`.** The header renders on ~54 of the 61 committed win32 baselines, so a slider
+ * there reprints every one — ~700 KB PNGs that do not delta-compress, which is tens of megabytes of
+ * new pack objects in a repository whose most recent weight decision (`0135`) was about exactly
+ * that, and a blind `--update-snapshots` across 54 files in the same commit as an audio change
+ * nobody can review pixel by pixel.
+ *
+ * **And not on the Student panel either, which is where this first went — measured, at 1280x720:
+ * that panel's content is already exactly 720px tall, and the two sliders took it to 868.** A
+ * screen that is nothing but controls is the last place Phase 121's rule should break, and it broke
+ * silently — the tell was a sub-pixel diff on an unrelated baseline two screens later, not anything
+ * on the landing itself. The chooser is pinned to 720 by `min-height` with its content far under,
+ * so the room is real here and borrowed there.
+ *
+ * It is also one click closer. The chrome **Menu** button sets `showMainMenu` without touching
+ * `progress`, and **Load Save** puts the player back where they were; because
+ * `progress.currentScreen` never changes while the menu is up, `sceneForMusic()` keeps returning
+ * the field's key, so a player hears the track they are adjusting.
+ */
+function audioVolumeMarkup() {
+  const { music, sfx } = getVolumes();
+  const row = (kind, label, value) =>
+    `<label class="audio-volume__row"><span>${esc(label)}</span><input type="range" min="0" max="100" step="5" value="${Math.round(value * 100)}" data-audio-volume="${kind}" aria-label="${esc(label)} volume"><output>${Math.round(value * 100)}%</output></label>`;
+  return `<div class="landing-option-group audio-volume">
+<p class="kicker">Sound</p>
+<button class="audio-toggle ${isAudioEnabled() ? "is-on" : ""}" data-action="toggle-audio" type="button">♫ ${isAudioEnabled() ? "Music on" : "Music off"}</button>
+${row("music", "Music", music)}
+${row("sfx", "Effects", sfx)}
+</div>`;
+}
+
 function mainMenuScreen() {
   if (landingMode === "student") {
     return `<main class="shell completion-shell landing-shell">${LANDING_AMBIENT}<section>
@@ -6932,7 +6992,7 @@ function mainMenuScreen() {
 <button class="btn btn-outline" data-action="landing-back" type="button">← Back</button>
 </section></main>`;
   }
-  return `<main class="shell completion-shell landing-shell">${LANDING_AMBIENT}<section><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div></section></main>`;
+  return `<main class="shell completion-shell landing-shell">${LANDING_AMBIENT}<section><h1>${esc(BRAND.campaign)}</h1><p>An AP U.S. History Adventure</p><div class="landing-choice-row"><button class="btn btn-gold" data-action="landing-student" type="button">Student</button><button class="btn btn-outline" data-action="open-teacher-login" type="button">Teacher</button></div>${audioVolumeMarkup()}</section></main>`;
 }
 
 // --- Real accounts screens (join/login/teacher-dashboard/grading) ---------
@@ -17588,6 +17648,18 @@ function handleAppInput(event) {
     if (counter) {
       counter.textContent = `${field.value.trim().length}/${DBQ_MIN_RESPONSE_LENGTH} characters`;
     }
+    // A volume slider belongs on this handler and not on `change`, for the reason every other
+    // branch here exists: **`render()` replaces `#app` wholesale**, so re-rendering on each `input`
+    // would destroy the slider the player is still dragging. Patch the `<output>` beside it
+    // directly, exactly as the three character counters above do. No `save()` either — the level is
+    // the engine's own localStorage, not save state (see `audio-engine.js`'s header).
+  } else if (field.matches("[data-audio-volume]")) {
+    const level =
+      field.dataset.audioVolume === "sfx"
+        ? setSfxVolume(Number(field.value) / 100)
+        : setMusicVolume(Number(field.value) / 100);
+    const readout = field.parentElement && field.parentElement.querySelector("output");
+    if (readout) readout.textContent = `${Math.round(level * 100)}%`;
   }
 }
 
@@ -17934,6 +18006,7 @@ if (app) {
   installDevNavProbe();
   installDevCastProbe();
   installDevReachProbe();
+  installDevAudioProbe();
   // Before the first render, so a player who finished missions before the Codex existed opens it
   // to their own work rather than to an empty archive. A no-op on every boot after the first.
   backfillCodex();

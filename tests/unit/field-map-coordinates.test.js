@@ -50,6 +50,7 @@ import {
   rectsOverlap,
 } from "../../apps/web/src/main.js";
 import { buildCircuit, findRoute } from "../../apps/web/src/engine/npc-routing.js";
+import { TRACKS } from "../../apps/web/src/engine/audio-engine.js";
 import { UNIT_IDS } from "../../apps/web/src/content/unit-registry.js";
 import institutePalette from "../../apps/web/src/content/tilesets/maps/institute-hall.palette.js";
 import richmondPalette from "../../apps/web/src/content/tilesets/maps/richmond-field.palette.js";
@@ -304,6 +305,47 @@ describe("every field map is registered in the tables outside main.js", () => {
         `validated, it is absent from the field guide, and every table derived from the registry ` +
         `silently skips it`
     ).toContain(unitId);
+  });
+});
+
+// `musicScene` joins the per-unit tables above in the same commit that made it one, which is the
+// rule CLAUDE.md states for exactly this shape. Until Phase 152 it held two values across eight
+// maps — `island` once and `settlement` seven times — so a 1622 Virginia hymn played on a 1767
+// Philadelphia street, an 1873 Kansas railhead and a 1957 suburb.
+//
+// It is the table-with-a-fallback shape twice over: a scene missing from TRACKS falls through to
+// the near-silent `quiet` loop, and the failure is inaudible to every other guard in the repository
+// because **no visual baseline photographs sound**.
+describe("every field map has its own music", () => {
+  it.each(Object.keys(FIELD_MAPS))("%s declares a musicScene the engine knows", (unitId) => {
+    const scene = FIELD_MAPS[unitId].musicScene;
+    expect(
+      TRACKS[scene],
+      `${unitId}'s musicScene "${scene}" is in no TRACKS entry, so scheduleLoop() falls through to ` +
+        `the "quiet" loop — one 261.63 Hz note every six seconds — and the map goes near-silent`
+    ).toBeDefined();
+  });
+
+  it("gives the eight maps eight different scenes (regression — it used to be two)", () => {
+    const scenes = Object.values(FIELD_MAPS).map((map) => map.musicScene);
+    expect(new Set(scenes).size, `the eight maps share scenes: ${scenes.join(", ")}`).toBe(
+      scenes.length
+    );
+  });
+
+  // An interior's own `musicScene` is never read — `sceneForMusic()` takes the outdoor map's, so a
+  // doorway does not restart the track. Held equal anyway: the field documents that decision, and
+  // documentation that can drift into contradicting itself is worse than none.
+  it.each(
+    Object.values(FIELD_MAPS).flatMap((map) =>
+      Object.values(map.interiors || {}).map((room) => [room.id, room.musicScene, map.musicScene])
+    )
+  )("%s inherits its outdoor map's scene", (roomId, roomScene, outdoorScene) => {
+    expect(
+      roomScene,
+      `${roomId} declares musicScene "${roomScene}" while the map outside it plays ` +
+        `"${outdoorScene}" — nothing reads the room's value, so this is a comment that has gone wrong`
+    ).toBe(outdoorScene);
   });
 });
 

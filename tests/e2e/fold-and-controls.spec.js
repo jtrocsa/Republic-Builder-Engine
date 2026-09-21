@@ -349,3 +349,52 @@ test.describe("1280x720", () => {
     });
   }
 });
+
+// **The two landing branches, which no table above can reach.**
+//
+// `FIXED_SCREENS` seeds a `progress.currentScreen`, and the landing screens are not one — they are
+// `showMainMenu`/`landingMode`, module state you arrive at by clicking. So they sat outside this
+// file's reach for the same structural reason the identity screen did before Phase 127, and Phase
+// 152 walked straight into it: two volume sliders added to the Student panel took its content from
+// **exactly 720px to 868px** at 1280x720, and every guard in the repository stayed green.
+//
+// What finally reported it was a **sub-pixel diff on an unrelated visual baseline two screens
+// later** — 604 differing pixels on the Mini-Games shelf, which the landing is merely passed
+// through on the way to. That is not a signal anybody should have to decode twice, hence this.
+//
+// Both branches are nothing but controls, so the rule is the strict one: they do not scroll at all.
+for (const size of SIZES) {
+  test.describe(`${size.width}x${size.height} · the landing`, () => {
+    test.use({ viewport: size });
+
+    test("neither landing branch scrolls", async ({ page }) => {
+      await openSeededSave(page, seedFor("case-001"));
+      await page.click('[data-action="open-main-menu"]');
+      await expect(page.locator(".landing-shell")).toBeVisible();
+
+      const measure = () =>
+        page.evaluate(() => ({
+          scrollH: document.documentElement.scrollHeight,
+          clientH: document.documentElement.clientHeight,
+        }));
+
+      const chooser = await measure();
+      expect(
+        chooser.scrollH,
+        `the Student/Teacher chooser overflows by ${chooser.scrollH - chooser.clientH}px — it is ` +
+          `nothing but controls, so nothing on it may be below the fold`
+      ).toBeLessThanOrEqual(chooser.clientH);
+
+      await page.click('[data-action="landing-student"]');
+      await expect(page.locator('[data-action="open-join-screen"]')).toBeVisible();
+      const student = await measure();
+      expect(
+        student.scrollH,
+        `the Student panel overflows by ${student.scrollH - student.clientH}px. Its content was ` +
+          `already exactly one viewport tall before anything was added to it, so it has no room ` +
+          `to lend — put the new thing on the chooser, which is pinned to the viewport by ` +
+          `min-height with its content well under`
+      ).toBeLessThanOrEqual(student.clientH);
+    });
+  });
+}

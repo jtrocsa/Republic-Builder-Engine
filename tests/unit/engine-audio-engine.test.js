@@ -62,3 +62,82 @@ describe("sound functions while audio is disabled", () => {
     expect(() => updateMusicForScreen("island")).not.toThrow();
   });
 });
+
+/**
+ * **The single most important thing in Phase 152, and the one nothing else could catch.**
+ *
+ * Giving each field map its own `musicScene` is the point of that phase — but `scheduleLoop`
+ * resolves an unknown scene to `quiet`, a single 261.63 Hz note every six seconds. So the rename on
+ * its own would have taken Units 2–8 from the seven-note settlement hymn to near-silence, making
+ * seven of the eight maps *worse* on a change whose premise is that nothing regresses for a player
+ * with no audio files. No visual baseline can photograph sound, so this is the only guard there is.
+ *
+ * It asserts the frequencies actually scheduled, not the contents of the `TRACKS` table — reading
+ * the table back would only restate it.
+ */
+describe("with no audio files on disk, every scene still plays the loop it played before", () => {
+  const MAP_SCENES = [
+    ["island", "island"],
+    ["riverbend", "settlement"],
+    ["philadelphia", "settlement"],
+    ["canal", "settlement"],
+    ["richmond", "settlement"],
+    ["railhead", "settlement"],
+    ["port", "settlement"],
+    ["fairmeadow", "settlement"],
+  ];
+
+  it.each(MAP_SCENES)("%s plays the %s sequence (normal case)", async (scene, sequenceKey) => {
+    localStorage.setItem(STORAGE_KEY, "true");
+    const { installFakeAudioContext } = await import("./helpers/fake-audio-context.js");
+    const contexts = installFakeAudioContext();
+    const { updateMusicForScreen, MUSIC_SEQUENCES, setTrackUrls } =
+      await import("../../apps/web/src/engine/audio-engine.js");
+    setTrackUrls({});
+    updateMusicForScreen(scene);
+    const played = contexts[0].oscillators.map((osc) => osc.frequency.value);
+    const expected = MUSIC_SEQUENCES[sequenceKey].notes;
+    expect(played.slice(0, expected.length)).toEqual(expected);
+  });
+
+  it("the eight map scenes are eight distinct keys (regression — they were two)", async () => {
+    const { TRACKS } = await import("../../apps/web/src/engine/audio-engine.js");
+    const keys = MAP_SCENES.map(([scene]) => scene);
+    expect(new Set(keys).size).toBe(8);
+    for (const key of keys) expect(TRACKS[key]).toBeDefined();
+  });
+});
+
+describe("a scene change while a track is still downloading", () => {
+  // The generation counter. A load that resolves after the player has walked somewhere else must
+  // not start the track they left — which presents as the wrong map's music arriving a second or
+  // two after the screen changed.
+  it("does not start the stale track when its buffer finally arrives (edge case)", async () => {
+    localStorage.setItem(STORAGE_KEY, "true");
+    const { installFakeAudioContext } = await import("./helpers/fake-audio-context.js");
+    installFakeAudioContext();
+    let releaseFetch;
+    globalThis.fetch = () =>
+      new Promise((resolve) => {
+        releaseFetch = () =>
+          resolve({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
+      });
+
+    const { updateMusicForScreen, setTrackUrls, audioDebugState } =
+      await import("../../apps/web/src/engine/audio-engine.js");
+    setTrackUrls({ richmond: "/audio/richmond.ogg" });
+
+    updateMusicForScreen("richmond");
+    expect(audioDebugState().source).toBe("oscillator");
+
+    // The player leaves before the download lands.
+    updateMusicForScreen("island");
+    releaseFetch();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const state = audioDebugState();
+    expect(state.scene).toBe("island");
+    expect(state.file).toBeNull();
+  });
+});

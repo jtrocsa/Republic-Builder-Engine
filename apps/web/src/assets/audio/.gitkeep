@@ -1,0 +1,3 @@
+# Commissioned audio drops in here. See docs/design/AUDIO-PROMPT-BOOK.md for every prompt and
+# the naming convention: <key>.ogg, sting-<name>.ogg, sfx-<name>.ogg. Nothing here yet is not a
+# bug — the engine synthesises until a file exists. See decision log 0151.

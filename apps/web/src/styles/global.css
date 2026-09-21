@@ -3031,6 +3031,33 @@ dd {
 .landing-option-group .completion-actions {
   margin: 0;
 }
+/* The two volume levels, on the landing screen's Student panel rather than in the chrome header —
+   see audioVolumeMarkup() in main.js for why the header is the wrong place (it renders on ~54 of
+   the 61 visual baselines). Scoped under .audio-volume so the shared .audio-toggle button keeps
+   its own chrome styling everywhere else. */
+.audio-volume .audio-toggle {
+  margin-bottom: 12px;
+}
+.audio-volume__row {
+  display: grid;
+  grid-template-columns: 72px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-family: var(--c-font-ui);
+  font-size: 0.875rem;
+  color: var(--paper);
+}
+.audio-volume__row > output {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: #a9cbd8;
+}
+.audio-volume__row > input[type="range"] {
+  width: 100%;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
 /* Full-bleed Pokémon-"meet the Professor" presentation for the 3 director-scene screens
    (welcome/briefing/protocol) — the scene fills the whole stage below the chrome bar instead of
    a small bordered card floating on the page background; main-menu title screen keeps the
