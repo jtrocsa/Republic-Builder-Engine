@@ -182,6 +182,39 @@ test.describe("A student's written work reaches their teacher", () => {
       "the grade did not reach the table, or reached it twice"
     ).toEqual(["2/3"]);
 
+    // --- and the assignment the teacher sets for it ---------------------------------------------
+    // The one thing that has to agree across the whole loop: the id the app **recorded** has to be
+    // an id the create-assignment form can **offer**. It was typed by hand into a free-text box
+    // until Phase 151, next to an example that was an Archive Challenge's quest id — a string
+    // nothing in the game records — so an assignment read 0 submitted forever. See `0150`.
+    await page.locator('[data-action="back-to-teacher-dashboard"]').first().click();
+    await page.locator('[data-action="select-teacher-tab"]', { hasText: "Assignments" }).click();
+
+    const recordedTaskId = supabase.tables.submissions[0].task_id;
+    expect(
+      await page.$$eval("#new-assignment-task option", (nodes) => nodes.map((node) => node.value)),
+      `the work this student just handed in is recorded as "${recordedTaskId}" and no assignment ` +
+        "can be created for it, so the report can only ever say nobody submitted"
+    ).toContain(recordedTaskId);
+
+    await page.fill("#new-assignment-title", "Unit 1 Archive Review");
+    await page.selectOption("#new-assignment-task", recordedTaskId);
+    await page.fill("#new-assignment-due-at", "2026-12-01");
+    await page.locator('[data-action="create-assignment"]').click();
+
+    await expect(
+      main,
+      "the assignment counted nobody, although the one student in the classroom submitted the " +
+        "very task it names"
+    ).toContainText("1/1 submitted");
+    await expect(main, "the grade entered a moment ago was not counted").toContainText(
+      "1/1 graded"
+    );
+    await expect(
+      main,
+      "an assignment created from the picker was reported as naming no assessment"
+    ).not.toContainText("Matches no assessment");
+
     expect(recoveries, `a screen threw: ${recoveries.join(" | ")}`).toEqual([]);
     expect(
       supabase.unsupportedFilters,

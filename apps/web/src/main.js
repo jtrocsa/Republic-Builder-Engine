@@ -7173,6 +7173,80 @@ const SUBMISSION_TASK_TYPE_LABEL = {
 // could ever match.
 const ASSIGNABLE_TASK_TYPES = ["hipp-sourcing", "saq", "dbq"];
 
+/**
+ * **Every task a student in this game can actually submit, and nothing else.**
+ *
+ * An assignment is `(task_type, task_id)` and `computeAssignmentReport()` matches a submission on
+ * both. `task_id` was a **free-text box** until Phase 151, with `placeholder: "e.g.
+ * unit-03-archive-common-cause-saq"` — which is an Archive Challenge's **quest id** and not a task
+ * id at all. Nothing a student can do records that string: the four sites that record one build it
+ * as `source.id` for a source reading, `saq-${unit.id}` for a unit's Archive Review, and
+ * `${questType}-quest-${questId}` for an Archive Challenge. So a teacher who followed the example
+ * created an assignment **no submission could ever match**, and the report read `0/N submitted`
+ * forever with nothing on the screen to say why.
+ *
+ * The hazard was already named three lines up, about the field beside it: `ASSIGNABLE_TASK_TYPES`
+ * is deliberately narrower than the database's own check constraint because offering `leq` "would
+ * let a teacher create an assignment no submission could ever match". One field guarded, its twin a
+ * text box — and a corrected example would not have been the fix, because a typo in a free-text id
+ * fails exactly as silently as a wrong one.
+ *
+ * So the id is **derived from the content rather than typed**, and the task type comes with it:
+ * picking a task is one choice, not two that can disagree.
+ *
+ * A Teacher Mode swap does not affect any of this — `resolveSourceSlot()`/`resolveQuestSlot()`
+ * return `{ ...alt, id: officialSource.id }`, so **a slot keeps its id whatever a classroom
+ * published**, and a task id is the official id for every classroom.
+ */
+export function assignableTasks() {
+  const tasks = [];
+  const add = (taskType, taskId, label) => {
+    if (!ASSIGNABLE_TASK_TYPES.includes(taskType)) return;
+    tasks.push({ taskType, taskId, label });
+  };
+  UNITS.forEach((unit, index) => {
+    const unitLabel = `Unit ${index + 1}`;
+    // The unit's Archive Review SAQ, if it has one — only two units do. `evaluate-saq` records it.
+    if (unitReviewFor(unit)) add("saq", `saq-${unit.id}`, `${unitLabel} · Archive Review (SAQ)`);
+    // Archive Challenges, unit-level and case-level. Only `saq` and `dbq` reach the evaluator at
+    // all; the other four types are scored locally and never produce a submission row. Case-level
+    // challenges are all non-written today, and are read anyway so that a written one authored
+    // later is offered without anybody having to remember this function exists.
+    const written = (challenge) =>
+      challenge && (challenge.questType === "saq" || challenge.questType === "dbq");
+    for (const challenge of (unit.archiveChallenges || []).filter(written)) {
+      const kind = challenge.questType.toUpperCase();
+      add(
+        challenge.questType,
+        `${challenge.questType}-quest-${challenge.questId}`,
+        `${unitLabel} · Archive Challenge (${kind})`
+      );
+    }
+    for (const kase of unit.cases) {
+      if (written(kase.archiveChallenge)) {
+        const { questType, questId } = kase.archiveChallenge;
+        add(
+          questType,
+          `${questType}-quest-${questId}`,
+          `${unitLabel} · ${kase.shortTitle} — Archive Challenge (${questType.toUpperCase()})`
+        );
+      }
+      // A written source reading. A record that answers questions instead — `readerQuestType` —
+      // never reaches the evaluator, so it can never be submitted and must not be offered.
+      for (const source of sourcesForCase(kase.id)) {
+        if (readerQuestsFor(source).length) continue;
+        add("hipp-sourcing", source.id, `${unitLabel} · ${kase.shortTitle} — ${source.title}`);
+      }
+    }
+  });
+  return tasks;
+}
+
+/** The task an assignment names, or `undefined` for a row that can never match a submission. */
+export function assignableTaskFor(taskType, taskId) {
+  return assignableTasks().find((task) => task.taskType === taskType && task.taskId === taskId);
+}
+
 // Pure "class outcome reporting" math (Phase 50D): how many of a classroom's
 // claimed students have submitted / been graded against one assignment.
 // Deliberately student-deduplicated (a revision submission shouldn't double
@@ -7198,18 +7272,22 @@ export function computeAssignmentReport(assignment, roster, submissions, gradedE
   };
 }
 
+// One control for the task, not two: the assessment type is a property of the task rather than a
+// second choice, so picking a type that disagrees with the id is a mistake this form can no longer
+// make. See `assignableTasks()` for what the list is and why it is derived.
 function assignmentCreateFormMarkup() {
+  const options = assignableTasks().map((task) => ({
+    value: task.taskId,
+    label: `${task.label} · ${SUBMISSION_TASK_TYPE_LABEL[task.taskType] || task.taskType}`,
+  }));
   return `<div class="c-panel assignment-create-form">
 ${fieldMarkup({ id: "new-assignment-title", label: "Assignment title", placeholder: "e.g. Unit 3 SAQ: Common Cause", autocomplete: "off" })}
 ${fieldMarkup({
-  id: "new-assignment-task-type",
-  label: "Assessment type",
-  select: ASSIGNABLE_TASK_TYPES.map((value) => ({
-    value,
-    label: SUBMISSION_TASK_TYPE_LABEL[value] || value,
-  })),
+  id: "new-assignment-task",
+  label: "Assessment",
+  help: "Every piece of work a student can submit. The assignment tracks whichever one you pick.",
+  select: [{ value: "", label: "Choose an assessment…" }, ...options],
 })}
-${fieldMarkup({ id: "new-assignment-task-id", label: "Task id", placeholder: "e.g. unit-03-archive-common-cause-saq", help: "The quest/source id this assignment tracks — matches the id a student's submission is recorded under.", autocomplete: "off" })}
 ${fieldMarkup({ id: "new-assignment-due-at", label: "Due date", type: "date" })}
 <button class="btn btn-outline" data-action="create-assignment" type="button">Create assignment</button>
 </div>`;
@@ -7224,7 +7302,14 @@ function assignmentReportRowMarkup(assignment) {
   );
   const dueDate = new Date(assignment.dueAt);
   const isOverdue = dueDate.getTime() < Date.now() && report.submittedCount < report.claimedCount;
-  return `<tr><td>${esc(assignment.title)}<br><span class="c-help">${esc(SUBMISSION_TASK_TYPE_LABEL[assignment.taskType] || assignment.taskType)} · ${esc(assignment.taskId)}</span></td><td>${chip({ label: dueDate.toLocaleDateString(), tone: isOverdue ? "error" : "muted" })}</td><td>${report.submittedCount}/${report.claimedCount} submitted</td><td>${report.gradedCount}/${report.submittedCount || 0} graded</td><td><button class="text-button is-danger" data-action="delete-assignment" data-assignment-id="${esc(assignment.id)}" type="button">Delete</button></td></tr>`;
+  // Rows created before Phase 151 were typed by hand into a free-text box whose example was an
+  // Archive Challenge's quest id rather than a task id, so some of them name nothing. Such a row
+  // reads 0 submitted forever and looks exactly like a class that did not do the work — which is
+  // the one reading it must not be allowed to have.
+  const unknownNote = assignableTaskFor(assignment.taskType, assignment.taskId)
+    ? ""
+    : `<p class="c-help">${chip({ label: "Matches no assessment", tone: "error" })} Nothing a student submits is recorded under this id, so this row can only ever read 0 submitted. Delete it and create the assignment again.</p>`;
+  return `<tr><td>${esc(assignment.title)}<br><span class="c-help">${esc(SUBMISSION_TASK_TYPE_LABEL[assignment.taskType] || assignment.taskType)} · ${esc(assignment.taskId)}</span>${unknownNote}</td><td>${chip({ label: dueDate.toLocaleDateString(), tone: isOverdue ? "error" : "muted" })}</td><td>${report.submittedCount}/${report.claimedCount} submitted</td><td>${report.gradedCount}/${report.submittedCount || 0} graded</td><td><button class="text-button is-danger" data-action="delete-assignment" data-assignment-id="${esc(assignment.id)}" type="button">Delete</button></td></tr>`;
 }
 
 function teacherAssignmentsTabMarkup() {
@@ -17032,14 +17117,18 @@ function handleAuthScreenClick(target, action) {
   if (action === "create-assignment") {
     if (!teacherUiState.selectedClassroomId) return true;
     const title = document.getElementById("new-assignment-title")?.value.trim() || "";
-    const taskType = document.getElementById("new-assignment-task-type")?.value || "";
-    const taskId = document.getElementById("new-assignment-task-id")?.value.trim() || "";
+    const taskId = document.getElementById("new-assignment-task")?.value || "";
     const dueAtInput = document.getElementById("new-assignment-due-at")?.value || "";
-    if (!title || !taskId || !dueAtInput || !ASSIGNABLE_TASK_TYPES.includes(taskType)) {
-      teacherUiState.error = "Enter a title, task id, and due date.";
+    // The type is read off the chosen task rather than off a second control, so the pair stored is
+    // a pair some submission can carry. An id from anywhere else is refused here as well as absent
+    // from the list, because the list is markup and this is the thing that writes the row.
+    const task = assignableTasks().find((candidate) => candidate.taskId === taskId);
+    if (!title || !task || !dueAtInput) {
+      teacherUiState.error = "Enter a title, choose an assessment, and set a due date.";
       render();
       return true;
     }
+    const taskType = task.taskType;
     teacherUiState.error = "";
     // <input type="date"> yields "YYYY-MM-DD" with no time-of-day — treated
     // as end-of-day local time so "due 2026-08-01" doesn't read as already

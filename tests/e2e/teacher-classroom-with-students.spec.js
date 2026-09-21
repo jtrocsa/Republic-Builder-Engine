@@ -43,6 +43,26 @@ const EVALUATION_ID = "00000000-0000-4000-8000-000000000200";
  */
 const DUE_AT = "2026-03-05T23:59:59.000Z";
 
+/** Far enough out that this assignment is never overdue, so the only error chip on its row is its own. */
+const LATER_DUE_AT = "2099-01-15T23:59:59.000Z";
+
+/**
+ * The id a Unit 1 Archive Review is actually recorded under — `evaluate-saq` builds `saq-${unit.id}`.
+ *
+ * This fixture said `unit-01-archive-saq` until Phase 151, which is not an id anything in the game
+ * produces; it matched only because the submission beside it was written to agree. `LEGACY_TASK_ID`
+ * below is the other half of that, kept on purpose.
+ */
+const REAL_TASK_ID = "saq-unit-01";
+
+/**
+ * What the create-assignment form's own placeholder told a teacher to type: an Archive Challenge's
+ * **quest id**, not a task id. No submission carries it, so a row naming it reports `0/N submitted`
+ * forever — which is exactly what a class that did not do the work looks like. Phase 151 replaced
+ * the free-text box with a picker; rows created before it still exist, so the report says so.
+ */
+const LEGACY_TASK_ID = "unit-03-archive-common-cause-saq";
+
 /** Four slots: the three `roster_slots.status` values, and two claimed students, which the report needs. */
 const ROSTER = [
   {
@@ -158,7 +178,7 @@ const TABLES = {
       id: "00000000-0000-4000-8000-000000000300",
       classroom_id: STUB_CLASSROOM_ID,
       task_type: "saq",
-      task_id: "unit-01-archive-saq",
+      task_id: REAL_TASK_ID,
       prompt: "Briefly explain ONE cause of the Navigation Acts.",
       stimulus: "A 1663 bill of lading from Bridgetown.",
       student_response: "One cause was England's attempt to cut Dutch shippers out of the trade.",
@@ -185,9 +205,19 @@ const TABLES = {
       teacher_user_id: STUB_USER_ID,
       title: "Unit 1 Archive SAQ",
       task_type: "saq",
-      task_id: "unit-01-archive-saq",
+      task_id: REAL_TASK_ID,
       due_at: DUE_AT,
       created_at: "2026-02-20T00:00:00.000Z",
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000501",
+      classroom_id: STUB_CLASSROOM_ID,
+      teacher_user_id: STUB_USER_ID,
+      title: "Unit 3 DBQ prep",
+      task_type: "saq",
+      task_id: LEGACY_TASK_ID,
+      due_at: LATER_DUE_AT,
+      created_at: "2026-02-21T00:00:00.000Z",
     },
   ],
 };
@@ -249,11 +279,27 @@ test.describe("Teacher Dashboard — a classroom with students in it", () => {
       "1/1 graded"
     );
     // Past due with one of two claimed students still out, which is the only state that reaches
-    // the overdue branch. Asserted on the chip's tone rather than on a date string.
+    // the overdue branch. Asserted on the chip's tone rather than on a date string, and scoped to
+    // its own row, because the row below it carries an error chip of a different kind.
+    const assignmentRows = main.locator(".roster-table").first().locator("tbody tr");
     await expect(
-      main.locator(".c-chip--error"),
+      assignmentRows.nth(0).locator(".c-chip--error"),
       "an assignment past its due date with work still outstanding was not marked overdue"
     ).toHaveCount(1);
+
+    // --- an assignment naming a task nothing records, which is what the old free-text field made --
+    await expect(
+      assignmentRows.nth(1),
+      `"${LEGACY_TASK_ID}" is an Archive Challenge's quest id, not a task id, and it is what the ` +
+        "create-assignment field's own placeholder told a teacher to type. No submission carries " +
+        "it, so this row reads 0 submitted forever — and a report that cannot say so is a class " +
+        "that looks like it did not do the work"
+    ).toContainText("Matches no assessment");
+    await expect(assignmentRows.nth(1)).toContainText("0/2 submitted");
+    await expect(
+      assignmentRows.nth(0),
+      "a row that names a real assessment was flagged as naming none"
+    ).not.toContainText("Matches no assessment");
 
     // --- the Readiness column, which is the defect this spec found -------------------------------
     await expect(

@@ -359,14 +359,20 @@ test.describe("Teacher Dashboard — the writes", () => {
 
     await openTab(page, "Assignments");
     await page.fill("#new-assignment-title", "Unit 2 Archive SAQ");
-    await page.selectOption("#new-assignment-task-type", "saq");
-    await page.fill("#new-assignment-task-id", "unit-02-archive-saq");
+    // One control, and its value is a real task id. This spec used to type `unit-02-archive-saq`
+    // into a free-text box, which is a string nothing in the game records — so the assignment it
+    // created could never have matched a submission, and the test could not tell. See `0150`.
+    await page.selectOption("#new-assignment-task", "saq-unit-02");
     await page.fill("#new-assignment-due-at", "2026-12-01");
     await page.locator('[data-action="create-assignment"]').first().click();
     await expect(
       page.locator("main"),
       "an assignment a teacher just set does not appear in the assignment list"
     ).toContainText("Unit 2 Archive SAQ");
+    expect(
+      (supabase.tables.assignments || []).map((row) => [row.task_type, row.task_id]),
+      "the type stored was not the chosen task's own type, so the pair can disagree again"
+    ).toEqual([["saq", "saq-unit-02"]]);
     // A due date is an instant, not a date — `<input type="date">` is read as end-of-day local and
     // stored as an ISO string, which is the detail `0144` records. Asserted here as the thing that
     // actually matters: the day the teacher typed is the day that was stored, in this timezone.
