@@ -363,7 +363,8 @@ import {
   buildAuthoredContent,
   defaultAuthoringFields,
   authoringFieldsFromContent,
-  slugify,
+  slotIdOf,
+  newSlotId,
 } from "./engine/custom-content-authoring.js";
 import { HIPP_DIMENSIONS } from "./quest-types/history/source-analysis-quest.js";
 import { validateJoinCode, validateStudentIdCode, validatePassword } from "./engine/auth-flows.js";
@@ -8617,7 +8618,13 @@ function evidenceOrganizingFieldsMarkup(fields) {
   const sources = fields.sources || [];
   const slotRows = slots
     .map(
-      (slot, i) => `<div class="manage-content-evidence-slot-row">
+      // The row carries its own id, because the label is not it — see slotIdOf(). Without this the
+      // id makes a round trip through the DOM as a slug of whatever the teacher has typed, and the
+      // sources filed under it stop matching.
+      (
+        slot,
+        i
+      ) => `<div class="manage-content-evidence-slot-row" data-slot-id="${esc(slotIdOf(slot))}">
 <input type="text" data-slot-label value="${esc(slot.label)}" placeholder="Slot name">
 <button type="button" class="manage-content-row-delete-btn" data-action="remove-evidence-slot" data-row-index="${i}" ${slots.length <= 2 ? "disabled" : ""} title="Remove this slot">×</button>
 </div>`
@@ -8626,7 +8633,7 @@ function evidenceOrganizingFieldsMarkup(fields) {
   const slotOptions = (currentSlotId) =>
     slots
       .map((slot) => {
-        const slotId = slugify(slot.label);
+        const slotId = slotIdOf(slot);
         return `<option value="${esc(slotId)}" ${currentSlotId === slotId ? "selected" : ""}>${esc(slot.label || "(untitled slot)")}</option>`;
       })
       .join("");
@@ -9353,6 +9360,9 @@ function syncAuthoringFieldsFromDom(slotKind, formEl) {
     fields.slots = [
       ...formEl.querySelectorAll('[data-authoring-rows="slots"] .manage-content-evidence-slot-row'),
     ].map((row) => ({
+      // Read back, never re-derived: this is the key every source's correctSlotId points at, and
+      // the label beside it is the one thing about a slot a teacher is free to change.
+      id: row.dataset.slotId,
       label: row.querySelector("[data-slot-label]").value,
     }));
     fields.sources = [
@@ -9479,13 +9489,16 @@ export function removeSequenceItem(fields, index) {
 
 /** A source's `correctSlotId` is a slot label's slug, so a removed slot orphans its sources. */
 export function addEvidenceSlot(fields) {
-  return { ...fields, slots: [...fields.slots, { label: "" }] };
+  // An id at birth, so the slot keeps its identity while the teacher is still deciding what to
+  // call it. Without one its identity is `slugify("")`, which every other unnamed slot also has,
+  // and which changes under the sources filed there the moment a name is typed.
+  return { ...fields, slots: [...fields.slots, { id: newSlotId(), label: "" }] };
 }
 export function removeEvidenceSlot(fields, index) {
   if (fields.slots.length <= 2) return fields;
-  const removedSlotId = slugify(fields.slots[index].label);
+  const removedSlotId = slotIdOf(fields.slots[index]);
   const slots = fields.slots.filter((_, i) => i !== index);
-  const fallbackSlotId = slugify(slots[0].label);
+  const fallbackSlotId = slotIdOf(slots[0]);
   const sources = fields.sources.map((source) =>
     source.correctSlotId === removedSlotId ? { ...source, correctSlotId: fallbackSlotId } : source
   );
@@ -9501,7 +9514,7 @@ export function addEvidenceSource(fields) {
         attribution: "",
         excerpt: "",
         skillCategory: SKILL_CATEGORIES[0],
-        correctSlotId: fields.slots[0] ? slugify(fields.slots[0].label) : "",
+        correctSlotId: fields.slots[0] ? slotIdOf(fields.slots[0]) : "",
         sourcePoolValue: "",
       },
     ],

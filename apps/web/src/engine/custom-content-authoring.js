@@ -19,7 +19,11 @@
  *    directly by the teacher) stays the real answer key.
  *  - Evidence-organizing sources reference slots by id (`correctSlotId`),
  *    resolved live against the current slot rows rather than by matching
- *    free-text labels.
+ *    free-text labels. **This was false until Phase 149** — the id was
+ *    re-derived as `slugify(label)` on every round trip, which is matching
+ *    free-text labels with extra steps, and it silently rewrote the graded
+ *    answer key of any quest whose authored slot ids were not their own
+ *    labels run through `slugify`. See `slotIdOf()` below and decision log `0148`.
  */
 import { buildSourceSchema } from "../content/schemas/source.schema.js";
 import { McqQuestSchema } from "../quest-types/generic/mcq-quest.js";
@@ -44,6 +48,33 @@ export function slugify(text, fallback = "item") {
 
 function shortId(text) {
   return `custom-${slugify(text)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * A slot's identity, which is **not** its label.
+ *
+ * Evidence-organizing is the only quest type in this file whose content cross-references itself: a
+ * source names the slot it belongs in by `correctSlotId`, and that string is the graded answer. So
+ * a slot's id has to survive the editor's round trip, and it did not — `evidenceOrganizingToFields()`
+ * kept only the label and `buildEvidenceOrganizingContent()` re-derived the id as `slugify(label)`.
+ *
+ * Every authored quest writes a short id next to a long label (`agriculture-diet` for "Transformed
+ * Agriculture and Diet"), so the re-derived id matched nothing a source pointed at. The `<select>`
+ * in the form cannot show a value it has no option for, so it fell back to its first option — and
+ * the next read of the form took that back as the teacher's own choice. **A teacher who opened
+ * Case 1.02's editor and pressed Publish without touching anything published an answer key with
+ * every record filed under the first slot**: three of its four records graded wrong, for a class.
+ *
+ * `row.id` is authored or minted; `slugify(row.label)` is the fallback for a legacy fields object
+ * that never carried one. Never re-derive when an id is present.
+ */
+export function slotIdOf(row) {
+  return row?.id || slugify(row?.label);
+}
+
+/** A new slot gets an id at birth, so renaming it afterwards cannot move what points at it. */
+export function newSlotId() {
+  return shortId("slot");
 }
 
 function issuesToMessages(error) {
@@ -263,7 +294,8 @@ export function defaultEvidenceOrganizingFields() {
 export function evidenceOrganizingToFields(quest) {
   return {
     prompt: quest.prompt || "",
-    slots: (quest.slots || []).map((slot) => ({ label: slot.label })),
+    // The id comes with it. Dropping it here is what broke the answer key — see slotIdOf().
+    slots: (quest.slots || []).map((slot) => ({ id: slot.id, label: slot.label })),
     sources: (quest.sources || []).map((source) => ({
       label: source.label,
       attribution: source.attribution,
@@ -281,7 +313,7 @@ export function buildEvidenceOrganizingContent(fields) {
     return { ok: false, errors: ["slots: add at least 2 slots"] };
   }
   const slots = slotRows.map((row) => ({
-    id: slugify(row.label),
+    id: slotIdOf(row),
     label: (row.label || "").trim(),
   }));
   const slotIds = new Set(slots.map((slot) => slot.id));

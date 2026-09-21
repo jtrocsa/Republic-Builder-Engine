@@ -381,3 +381,100 @@ describe("buildAuthoredContent dispatch", () => {
     expect(result.ok).toBe(false);
   });
 });
+
+/**
+ * The slot's id is the graded answer key, and the editor has to hand it back unchanged.
+ *
+ * Evidence-organizing is the only quest type in this file whose content cross-references itself —
+ * `source.correctSlotId` names the slot the record belongs in, and that string is what a student is
+ * marked against. It made a round trip through the editor as `slugify(label)`, and **every authored
+ * quest writes a short id beside a long label**: `agriculture-diet` for "Transformed Agriculture
+ * and Diet". So the rebuilt id matched nothing any source pointed at.
+ *
+ * In the browser that is worse than a dangling reference, because the `<select>` on each source row
+ * cannot display a value it has no option for and falls back to its first option — which the next
+ * read of the form takes as the teacher's own choice. Measured end to end before the fix: opening
+ * Case 1.02's editor and pressing Publish **without touching anything** published a key with all
+ * four records filed under the first slot, three of them wrong. See decision log `0148` and
+ * `tests/e2e/teacher-content-reaches-students.spec.js`, which walks that.
+ */
+describe("evidence-organizing slot identity survives the editor", () => {
+  /** The shape every authored quest has: a short id, a long label, and sources pointing at the id. */
+  const authored = {
+    prompt: "Sort each record beneath the claim it supports.",
+    slots: [
+      { id: "agriculture-diet", label: "Transformed Agriculture and Diet" },
+      { id: "demographic-catastrophe", label: "Caused Demographic Catastrophe" },
+    ],
+    sources: [
+      {
+        id: "maize",
+        label: "Maize",
+        attribution: "José de Acosta, 1590",
+        excerpt: "The principal grain of the Indies is maize.",
+        skillCategory: "Causation",
+        correctSlotId: "agriculture-diet",
+      },
+      {
+        id: "smallpox",
+        label: "Smallpox",
+        attribution: "Motolinía, 1541",
+        excerpt: "They died in heaps.",
+        skillCategory: "Causation",
+        correctSlotId: "demographic-catastrophe",
+      },
+    ],
+    reflectionPrompt: "",
+  };
+
+  const roundTrip = (quest) => buildEvidenceOrganizingContent(evidenceOrganizingToFields(quest));
+
+  it("returns every record to the slot it was authored under", () => {
+    const result = roundTrip(authored);
+    expect(
+      result.ok,
+      `the round trip refused the authored quest: ${result.errors?.join(", ")}`
+    ).toBe(true);
+    expect(
+      result.content.sources.map((source) => [source.label, source.correctSlotId]),
+      "opening a mission's activity and saving it rewrote which slot each record belongs in — the " +
+        "answer key a class is graded against"
+    ).toEqual([
+      ["Maize", "agriculture-diet"],
+      ["Smallpox", "demographic-catastrophe"],
+    ]);
+  });
+
+  it("keeps the slots' own ids rather than re-deriving them from their labels", () => {
+    expect(
+      roundTrip(authored).content.slots.map((slot) => slot.id),
+      "the slots came back with different ids, so every source filed under them is now dangling"
+    ).toEqual(["agriculture-diet", "demographic-catastrophe"]);
+  });
+
+  it("lets a teacher rename a slot without moving what is filed under it", () => {
+    const fields = evidenceOrganizingToFields(authored);
+    const renamed = {
+      ...fields,
+      slots: [{ ...fields.slots[0], label: "Food and Farming" }, fields.slots[1]],
+    };
+    const result = buildEvidenceOrganizingContent(renamed);
+    expect(result.ok, `renaming a slot was refused: ${result.errors?.join(", ")}`).toBe(true);
+    expect(result.content.slots[0].label).toBe("Food and Farming");
+    expect(
+      result.content.sources.map((source) => source.correctSlotId),
+      "renaming a slot emptied it — the label is not the slot's identity, and changing one must " +
+        "not change the other"
+    ).toEqual(["agriculture-diet", "demographic-catastrophe"]);
+  });
+
+  it("still mints an id from the label for a row that never had one", () => {
+    const result = buildEvidenceOrganizingContent({
+      prompt: "Sort these",
+      slots: [{ label: "Category One" }, { label: "Category Two" }],
+      sources: [{ ...authored.sources[0], correctSlotId: "category-one" }],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.content.slots.map((slot) => slot.id)).toEqual(["category-one", "category-two"]);
+  });
+});
