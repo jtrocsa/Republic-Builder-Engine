@@ -387,8 +387,8 @@ export const PLANNED_MAPS = [
       "it. Take the month off Modern Park/tile-B-05, which carries five autumn crowns and three " +
       "of them with fallen leaves at the base — an October map does not need a commission to be " +
       "October. And exclude the modern glass-and-HVAC block at (8,8)-(11,15), which reads 2010s " +
-      "against everything else on the sheet. Nothing here is a gap; the two Unit 9 gaps are " +
-      "indoors, in the two entries under Period 9.",
+      "against everything else on the sheet. Nothing here is a gap; the two Unit 9 gaps were " +
+      "indoors, in the two entries under Period 9, and both closed in Phase 153.",
   },
 
   // ---------------------------------------------------------------------------- Period 9
@@ -407,10 +407,10 @@ export const PLANNED_MAPS = [
     sheets: [
       "office/4.png", // dark panelled walls (rows 2-4); bookcases of binders (12,4)-(13,7)
       "office/3.png", // double-sided stacks (3,3)-(5,4); low bookcases; chairs
-      "University/tile-B-05.png", // long tables and benches; the AV lectern stands in for the reader
+      "University/tile-B-05.png", // long tables and benches
       "office/1.png", // the workstation — and ONLY office/1's, see below
+      "derived/campus-archive.png", // the microfilm reader, and the cases — built in Phase 153
     ],
-    gap: "prop.archive.microfilmReader",
     notes:
       "Surveyed against the pixels in Phase 101 rather than against the catalog's prose, and the " +
       "survey turned up one rule that binds both of Unit 9's rooms: THE OFFICE PACKS DISAGREE " +
@@ -422,7 +422,9 @@ export const PLANNED_MAPS = [
       "sheets can. Draw every screen on this map from office/1 and exclude office/2's and " +
       "office/3's desks, which is an exclusion list rather than a gap — the same discipline " +
       "p8-suburb applies to Highway Rest Area. Everything else this room needs is already here. " +
-      "The gap is the reader, and it is the object the third mission is about.",
+      "The gap was the reader, the object the third mission is about, and it CLOSED in Phase " +
+      "153: derived/campus-archive.png's microfilmReader, modelled in Blender (decision log " +
+      "0152). University/tile-B-05's AV lectern was its stand-in and is no longer needed.",
   },
   {
     id: "p9-processing-room",
@@ -435,16 +437,18 @@ export const PLANNED_MAPS = [
       "office/2.png", // overhead cabinet and counter runs (3,8)-(5,11) — the work counter
       "office/1.png", // grey filing cabinets (0,8); tall double-door storage (0,10); copiers
       "office/3.png", // copiers, trolleys, the water cooler
+      "derived/campus-archive.png", // the record cases: shut, open, stacked, shelved — Phase 153
     ],
-    gap: "prop.archive.recordCarton",
     notes:
       "Basement, and windowless — the summary in unit-09-campaign.js puts it under the reading " +
       "room. The furniture is all present: office/2's counter runs are exactly a processing " +
       "bench, and office/1 supplies the filing cabinets and the tall double-door storage " +
       "cupboards. What is absent is the thing the room exists to make. A processing room with no " +
       "record cartons in it is not an archive workroom, it is an office with a photocopier, and " +
-      "the sheets here will furnish the second and cannot furnish the first. Same monitor " +
-      "exclusion as the reading room above: office/1's screens only.",
+      "the sheets here will furnish the second and cannot furnish the first — which is why the " +
+      "record carton was registered, and it CLOSED in Phase 153 as derived/campus-archive.png " +
+      "(decision log 0152). Same monitor exclusion as the reading room above: office/1's " +
+      "screens only.",
   },
   {
     id: "p9-modern-city",

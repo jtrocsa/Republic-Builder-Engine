@@ -111,3 +111,12 @@ export const SuburbanTract = {
   sedanDarkGreen: tile("derived/suburban-tract.png", 3, 0, { h: 3, w: 2 }),
   stationWagon: tile("derived/suburban-tract.png", 3, 2, { h: 4, w: 2 }),
 };
+
+/** Repacked from the source pack — see the manifest for provenance. */
+export const CampusArchive = {
+  recordCarton: tile("derived/campus-archive.png", 0, 0, { h: 1, w: 1 }),
+  recordCartonOpen: tile("derived/campus-archive.png", 0, 1, { h: 1, w: 1 }),
+  recordCartonStack: tile("derived/campus-archive.png", 0, 2, { h: 1, w: 1 }),
+  recordCartonShelf: tile("derived/campus-archive.png", 0, 3, { h: 2, w: 1 }),
+  microfilmReader: tile("derived/campus-archive.png", 0, 4, { h: 2, w: 2 }),
+};

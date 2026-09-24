@@ -256,8 +256,6 @@ test fails if a planned map claims a gap that is not registered there.
 | **Twentieth-century American commercial block** | The flat-parapet commercial block of roughly 1890–1960: one or two storeys, a plate-glass shopfront under a signboard fascia, no ornament above the cornice. `19th Century European City/tile-B-01` is Second Empire and `Highway Rest Area/tile-B-02` is a strip mall with modern glazing and branding; the library holds nothing between them. Partial; the strip mall's brick units serve at a distance with the branded frontages kept off camera. |
 | **Range cattle**                                | The library has no cattle sprite of any kind. `Wild West` draws a corral as a finished enclosure and the one animal on its sheets is a horse inside a stable frontage. So `railhead-field`s stock pens are empty in the shipping season, which is a real loss on a map about the industry a land sale was for. Not partial — absent.                                                                                                                   |
 | **Antebellum American commercial street**       | Greek Revival storefronts and vernacular brick blocks, c. 1820–1850. `19th Century European City/tile-B-01` is the library's only masonry commercial street and its mansard roofs and railed terraces are Second Empire — twenty years late for 1845. Partial; stand-in, flagged.                                                                                                                                                                      |
-| **Archival record carton**                      | The grey flip-top document box — singly, stacked, and in a shelved run, with manila folders standing in it. The library's storage furniture is filing cabinets and bookcases. The filing cabinet is not a near miss but the **wrong object**: a drawer of hanging files says _current business records_, which is exactly what an archive is not. Absent. This is what makes a room read as an archive rather than an office.                          |
-| **Microfilm reader**                            | Beige console; a large screen raked back about thirty degrees; a film carriage beneath it; two spool arms. Partial — `University/tile-B-05`'s AV lecterns at (4,4) and (4,10) are grey consoles with raked screens and pass at map scale, but neither has reels, and the reels are the whole difference between a microfilm reader and a control panel.                                                                                                |
 
 **The Second Empire substitution, as used a second time on `immigrant-port-field`, where it is not a
 substitution at all.** The Ellis Island Main Building is red brick with limestone trim and a taller
@@ -448,11 +446,22 @@ the same discipline `p8-suburb` applies to Highway Rest Area, and the second tim
 real discipline of a survey turned out to be what to leave out.
 
 **Absent, and both named by records the player is sent to read.** The **record carton** and the
-**microfilm reader**, in the table above. Neither blocks the map, which is a campus quadrangle and is
-fully dressed; both block a faithful _room_. The reader is the sharper of the two, because
-`campus-two-editions` names REEL 47 and the target frame before it, and the mission it feeds is the
-chain paper → film → scan: without a reader the middle step of that chain has no object anywhere in
-the room the mission is set in.
+**microfilm reader**. Neither blocks the map, which is a campus quadrangle and is fully dressed; both
+block a faithful _room_. The reader is the sharper of the two, because `campus-two-editions` names
+REEL 47 and the target frame before it, and the mission it feeds is the chain paper → film → scan:
+without a reader the middle step of that chain has no object anywhere in the room the mission is set
+in.
+
+**Both closed in Phase 153** (decision log `0152`), and not by a purchase: they are the library's
+first objects **modelled in Blender and rendered to pixel art** rather than generated, into
+`derived/campus-archive.png` — the case shut, open with its folders, stacked, and shelved ends-out in
+a steel bay, and the reader on its table with both spool arms. The render copies the office packs'
+own drawing rules, **measured off `office/1` rather than chosen**: fronts drawn square-on with the
+top stacked straight above, a deep top on a low object and a shallow one on a tall object, tops at
+full value and fronts at 0.70 of it, outlines in the object's own colour darkened rather than in
+black, and a one-pixel bevel inside every panel. Two scales, because the packs use two: the three
+single cases fill their tile, as every 1×1 prop does, and the bay and the reader take the packs'
+furniture scale. Neither has been seen in a room yet — the rooms are not built.
 
 **And one thing was deliberately not registered.** A modern card catalogue — the oak cabinet of small
 drawers — is absent from the library too, in any idiom later than `Steampunk/5`'s Victorian brass. It

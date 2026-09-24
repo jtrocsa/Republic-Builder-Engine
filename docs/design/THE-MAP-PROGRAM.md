@@ -372,8 +372,10 @@ only the sheets can, and a room furnished out of all three puts twenty years on 
 exclusion list, not a gap. And **two objects are genuinely absent and both are registered**: the
 archival record carton, without which a processing room is an office with a photocopier, and the
 microfilm reader, without which the middle step of the TRACE's paper → film → scan chain has no
-object in the room. Neither blocks the map; both block a faithful room. **Neither is commissioned** —
-the PixelLab balance is nearly out, and that is a spend decision rather than a build step.
+object in the room. Neither blocks the map; both block a faithful room. **Neither was commissioned**
+— the PixelLab balance is nearly out, and that is a spend decision rather than a build step — and
+**both were built in Phase 153 instead**, modelled in Blender and rendered to pixel art at no cost
+(decision log `0152`; `derived/campus-archive.png`).
 
 **The map's ground shipped in Phase 102** (decision log `0101`) — `furnace-bend-field.tmj`, 56×36,
 95 collision rects, both doors routed; it was committed at 52×34 and resized in Phase 103, see
@@ -432,6 +434,13 @@ sheets across 28 packs, and the `derived-objects` packing pipeline.
    `MERIDIAN-VISUAL-IDENTITY.md` §6 for why that distinction is the whole job.
 6. **The three Meridian props** — the anchor ring is blocking, but nothing is scheduled to build
    `meridian-interior`; these wait on that decision.
+7. ~~**The campus archive's record carton and microfilm reader**~~ — **Built in Phase 153, and not
+   bought.** Registered in Phase 101 and not bought, because the PixelLab balance was nearly out.
+   Modelled in Blender instead and rendered to the office packs' own drawing rules, measured off
+   `office/1`: five objects into `derived/campus-archive.png`. It is the first entry on this list
+   that cost nothing, and the pipeline it proved — `npm run assets:blender` — is the one to try on
+   **Unit 9's cast** next, which is the same balance's other casualty; a character is the harder
+   case and is gated on a side-by-side with Director Hale (see `0152` §7).
 
 Phase 80b's rules bind every character job: **three garment layers is more than 45 pixels of body
 can hold**, and a new character is checked against **whoever stands nearest them**, not against the

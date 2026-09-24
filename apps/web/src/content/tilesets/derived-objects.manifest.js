@@ -377,4 +377,42 @@ export const DERIVED_OBJECTS = [
       { name: "stationWagon", box: [713, 0, 766, 146] },
     ],
   },
+  {
+    // Unit 9's campus archive, and the first commission in this file that nobody generated: it is
+    // modelled in Blender and rendered to pixel art by `npm run assets:blender -- campus-archive`
+    // (scripts/blender/jobs/campus-archive.py, decision log 0152). It closes the two gaps Phase 101
+    // registered and did not buy, because the PixelLab balance was nearly out — `0100` §6.
+    //
+    // **The case is a flip-top document case, not a carton with a lid.** 0100 §3 describes the
+    // grey board box that stands on a shelf like a book, folders upright inside it; the object that
+    // makes a processing room an archive rather than an office. Four states: shut, open with its
+    // folders showing, three lying in an untidy stack, and a bay of steel shelving with the cases
+    // standing in it ends-out, labels and thumb holes to the aisle.
+    //
+    // **Two scales, because the packs use two.** Every 1x1 prop in the library fills its tile
+    // whatever the object is (INVARIANTS), so the shut, open and stacked cases are rendered to 44px
+    // wide rather than to any ratio against a person; the shelving bay and the reader are furniture
+    // and take the office packs' measured 52-64 px per metre, which is why the bay is one tile wide
+    // exactly as office/1's bookcase is. The reader is 62px wide on a table, near office/1's 96px
+    // workstation desk, because a microfilm table is a small table.
+    //
+    // **The reader's spool arms are the point.** `University/tile-B-05`'s AV lectern was the
+    // registered stand-in and it is a raked console with no reels, which is the whole difference —
+    // so the reels are drawn a little larger than a photograph would have them and carry a pale hub,
+    // without which, at 9px, a reel is a loudspeaker.
+    //
+    // Boxes are printed by scripts/assets/pixelize-renders.js, exclusive at x2/y2 as buildSheet()
+    // reads them. A re-render reproduced the strip byte for byte on Blender 5.2.2 (measured); the
+    // strip is committed anyway, as every commission here is, so neither CI nor this file's
+    // --check ever needs Blender installed.
+    from: "Chronicle Commissions/campus-archive.png",
+    out: "campus-archive.png",
+    objects: [
+      { name: "recordCarton", box: [0, 57, 44, 88] },
+      { name: "recordCartonOpen", box: [52, 44, 96, 88] },
+      { name: "recordCartonStack", box: [104, 42, 148, 88] },
+      { name: "recordCartonShelf", box: [156, 1, 204, 88] },
+      { name: "microfilmReader", box: [212, 0, 274, 88] },
+    ],
+  },
 ];

@@ -30,6 +30,7 @@ Benavente
 Bernal
 Bidwell
 Blondheim
+bmesh
 Bocelli
 Bohío
 boroughwoman
@@ -60,6 +61,7 @@ Cuthbert
 Dijkstras
 Donnan's
 Dykstra
+eevee
 ENOENT
 Echota
 Ellsberg
@@ -116,6 +118,8 @@ Linkon
 Lucayan
 Lyria
 López
+mainfile
+mathutils
 modelvisitor
 mortgageofficer
 MULT
@@ -172,6 +176,7 @@ Pucci
 Puebloan
 QUICKREF
 Rathke
+recalc
 Requerimiento's
 Richmonder
 Richmonders
@@ -186,6 +191,7 @@ Singlejack
 SMIL
 SNCC
 SPRITESHEET
+srgb
 Steeltown
 subgrade
 SUPABASE
@@ -200,6 +206,7 @@ Shockoe
 Skanawati
 Stokely
 Supabase's
+supersample
 Szabó
 Sánchez
 TANF
