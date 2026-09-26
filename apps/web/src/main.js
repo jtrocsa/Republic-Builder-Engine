@@ -177,6 +177,7 @@ import {
   codexStats,
 } from "./engine/codex-archive.js";
 import { createEscortWalk, stepEscort } from "./engine/escort-walk.js";
+import { captureFocus, restoreFocus } from "./engine/focus-keeper.js";
 import { createWarpTunnel } from "./engine/warp-tunnel.js";
 import { createScene, stepScene, advanceScene, skipScene } from "./engine/cutscene.js";
 import { CUTSCENES, MERIDIAN_REVEAL_TRIGGER } from "./content/cutscenes.js";
@@ -5555,6 +5556,29 @@ let openSourceId = null;
 // as it picks between them, and read here.
 let renderedView = "";
 let activityView = "";
+// **And the control you pressed does not vanish from under you.** The same wholesale replace takes
+// the focused element with it, so a keyboard player's focus fell to <body> on every press and
+// their next Tab began again at the chrome — see engine/focus-keeper.js for the measurements. Kept
+// only for keyboard input: a pointer press still blurs its target (handleAppClick), and a mouse
+// player's screen looks exactly as it did. `tabInFlight` is a Tab whose destination a committing
+// text field's re-render replaced. `keyRepeating` is whether the key down now is an auto-repeat.
+let keyboardInput = false;
+let tabInFlight = null;
+let keyRepeating = false;
+// Where the keyboard steers a character or advances a scene, a focused button would take Enter and
+// Space from the game — the reason handleAppClick blurs in the first place — so focus is not kept.
+// These are exactly the screens handleWindowKeydown() claims keys on. The landing is never one of
+// them, whatever screen the save underneath it is on.
+const KEYBOARD_STEERED_SCREENS = new Set([
+  "intro-welcome",
+  "intro-briefing",
+  "intro-protocol",
+  "institute",
+  "field",
+  "mini-games",
+]);
+const keyboardKeepsFocus = () =>
+  showMainMenu || !KEYBOARD_STEERED_SCREENS.has(progress.currentScreen);
 // The reader's own refusal line, and the bar it enforces. Both live here rather than inside
 // sourceReader() because the handler writes the first and the renderer reads it.
 const READING_MIN_LENGTH = 15;
@@ -15548,6 +15572,31 @@ function completionScreen() {
   return `${chrome()}<main class="shell completion-shell"><section><p class="kicker">Unit record complete</p><h1>${esc(resolvedUnitTitle(unit))} archived.</h1><p>Your Codex now preserves this investigation. The Institute has logged your sources, practice responses, and completed case records.</p><div class="completion-stats"><span>Cases archived: ${casesDone}/${unit.cases.length}</span>${reviewStats}</div><div class="completion-actions">${onward}${review ? `<button class="btn btn-outline" data-action="review">Review unit work</button>` : ""}</div></section></main>`;
 }
 
+// What a keyboard player is on: the control that has focus — which is the one they just pressed,
+// since handleAppClick no longer blurs a keyboard press on these screens — or, when nothing has, the
+// one a Tab was carrying them to when a text field's `change` rebuilt the page mid-flight.
+function captureAppFocus() {
+  const active = document.activeElement;
+  if (active && active !== document.body && app.contains(active)) return captureFocus(app, active);
+  if (tabInFlight?.from?.isConnected)
+    return captureFocus(app, tabInFlight.from, { step: tabInFlight.step });
+  return null;
+}
+
+// A kept control is focused without scrolling, so the page stays where the render left it. The one
+// exception is a control that has ended up off the screen — a sequencing row moved past the edge,
+// or the field a Tab was carrying the player to — and there the page moves the least distance that
+// shows it, which is what the browser's own Tab does. Never on a steered screen: render() does not
+// keep focus there at all, so the field camera is never touched.
+function keepFocusedControlInView(control) {
+  if (!control) return;
+  const margin = 16;
+  const rect = control.getBoundingClientRect();
+  if (rect.top < 0) window.scrollBy(0, rect.top - margin);
+  else if (rect.bottom > window.innerHeight)
+    window.scrollBy(0, Math.min(rect.top - margin, rect.bottom - window.innerHeight + margin));
+}
+
 function render() {
   if (showTitle) {
     // Boot calls render() again while the title is still up: a signed-in student's session, profile
@@ -15560,8 +15609,16 @@ function render() {
     }
     return;
   }
+  // Taken before anything below can touch the DOM it reads, and applied only if the view survives.
+  const focusSnapshot = keyboardInput && keyboardKeepsFocus() ? captureAppFocus() : null;
   if (showMainMenu) {
+    // The landing is two views of its own — the Student/Teacher chooser and the Student panel —
+    // and its ♫ toggle re-renders it in place, so it keeps focus by the same rule.
+    const menuView = `landing|${landingMode}`;
     app.innerHTML = mainMenuScreen();
+    if (menuView === renderedView && focusSnapshot)
+      keepFocusedControlInView(restoreFocus(app, focusSnapshot));
+    renderedView = menuView;
     return;
   }
   warpRun += 1;
@@ -15698,6 +15755,8 @@ function render() {
   if (view !== renderedView) {
     renderedView = view;
     if (typeof window !== "undefined") window.scrollTo(0, 0);
+  } else if (focusSnapshot) {
+    keepFocusedControlInView(restoreFocus(app, focusSnapshot));
   }
   syncManageContentNativeDialogs();
   if (currentIntroLines()) window.requestAnimationFrame(startIntroTypewriter);
@@ -17438,9 +17497,22 @@ function handleAppClick(event) {
   // have to be unique across every data-action in the game. Checked before that dispatch because
   // INTERVIEW's question chips render inside the field dialogue bubble, on the field screen.
   const activityControl = event.target.closest("[data-activity-action]");
+  // A click the keyboard made (Enter or Space on a focused control; `detail` is 0) keeps its focus
+  // wherever the keyboard is not steering anything, so that render() can find it again and a handler
+  // that only writes a status line does not strand the player on <body>. A pointer click is blurred
+  // exactly as before.
+  const blurPress = event.detail !== 0 || !keyboardKeepsFocus();
+  // **A held key does one thing.** Chrome clicks a focused button on every auto-repeat of Enter.
+  // While the blur above ran on every press, the first click took the focus away and a held key
+  // pressed once; now that the button keeps it, a held Enter would press it again and again — and,
+  // once its own press disabled it, press whatever focus fell back to. See 0153.
+  if (event.detail === 0 && keyRepeating && keyboardKeepsFocus()) {
+    event.preventDefault();
+    return;
+  }
   if (activityControl) {
     event.preventDefault();
-    activityControl.blur?.();
+    if (blurPress) activityControl.blur?.();
     handleActivityAction(activityControl);
     return;
   }
@@ -17464,8 +17536,10 @@ function handleAppClick(event) {
     return;
   }
   event.preventDefault();
-  target.blur?.();
-  document.activeElement?.blur?.();
+  if (blurPress) {
+    target.blur?.();
+    document.activeElement?.blur?.();
+  }
   const action = target.dataset.action;
   for (const handler of CLICK_HANDLER_GROUPS) {
     if (handler(target, action)) return;
@@ -17933,6 +18007,26 @@ function handleWindowKeydown(event) {
   }
 }
 
+// Which kind of input the player last used, for render()'s focus-keeping. Capture phase, so it is
+// noted before any handler below can render. A bare modifier is not a choice of input.
+function noteKeyboardInput(event) {
+  if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
+  keyboardInput = true;
+  keyRepeating = event.repeat;
+  if (event.key === "Tab") {
+    tabInFlight = { from: document.activeElement, step: event.shiftKey ? -1 : 1 };
+    setTimeout(() => (tabInFlight = null));
+  }
+}
+function notePointerInput() {
+  keyboardInput = false;
+}
+// Space presses a button on release, not on the key going down — so a held Space ends in one click,
+// and the note that the key was repeating has to be gone before that click arrives.
+function noteKeyRelease() {
+  keyRepeating = false;
+}
+
 function handleWindowKeyup(event) {
   const key = event.key.toLowerCase();
   if (STORM_MOVE_KEYS[key] !== undefined) stormHeldKeys.delete(key);
@@ -17984,6 +18078,9 @@ if (app) {
   app.addEventListener("pointerdown", handleAppPointerdown);
   window.addEventListener("pointerup", handleAppPointerup);
   window.addEventListener("pointercancel", handleAppPointerup);
+  window.addEventListener("keydown", noteKeyboardInput, true);
+  window.addEventListener("pointerdown", notePointerInput, true);
+  window.addEventListener("keyup", noteKeyRelease, true);
   window.addEventListener("keydown", handleWindowKeydown);
   window.addEventListener("keyup", handleWindowKeyup);
   window.addEventListener("blur", handleWindowBlur);
